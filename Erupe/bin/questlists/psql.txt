@@ -1,0 +1,16 @@
+BEGIN;
+
+CREATE TABLE questlists (
+  ind int NOT NULL PRIMARY KEY,
+  questlist bytea
+);
+
+END;	
+
+INSERT INTO questlists (ind, questlist) VALUES ('0', pg_read_binary_file('c:\save\quest_0_0.bin'));
+INSERT INTO questlists (ind, questlist) VALUES ('42', pg_read_binary_file('c:\save\quest_42_2A.bin'));
+INSERT INTO questlists (ind, questlist) VALUES ('84', pg_read_binary_file('c:\save\quest_84_54.bin'));
+INSERT INTO questlists (ind, questlist) VALUES ('126', pg_read_binary_file('c:\save\quest_126_7E.bin'));
+INSERT INTO questlists (ind, questlist) VALUES ('168', pg_read_binary_file('c:\save\quest_168_A8.bin'));
+
+

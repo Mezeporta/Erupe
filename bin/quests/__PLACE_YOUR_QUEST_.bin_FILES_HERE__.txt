@@ -1,2 +1,0 @@
-place your quest .bin files here
-e.g. 22031d0.bin

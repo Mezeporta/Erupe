@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<!-- To dev i recommand to enable this
+		<meta http-equiv='expires' content='0'>
+		<meta http-equiv='pragma' content='no-cache'>
+		<meta http-equiv='cache-control' content='no-cache'> -->
+		<!-- Disable it if you Dev -->
+		<!-- 7 Days (604800 seconds)-->
+		<meta http-equiv='cache-control' content='max-age=604800, stale-while-revalidate=604800'>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<!-- Load all Scripts CSS -->		
+		<link rel="stylesheet" href="css/dependencies/bootstrap.min.css">
+		<link rel="stylesheet" href="css/main.css">
+		<!-- Load all Scripts JS -->
+		<script type="text/javascript" src="js/dependencies/jquery-3.5.1.min.js"></script>
+		<script type="text/javascript" src="js/dependencies/bootstrap.bundle.min.js"></script>
+		<script type="text/javascript" src="js/dependencies/preloadjs.min.js"></script>
+		<script type="text/javascript" src="js/utilities/preload.js"></script>
+		<script type="text/javascript" src="js/main.js"></script>
+		<script type="text/javascript" src="js/utilities/audio.js"></script>
+		<script type="text/javascript" src="js/utilities/autoscroll.js"></script>
+		<!-- Disable it ! If want to disable a background changement when the launcher is started ! -->
+		<script type="text/javascript" src="js/utilities/randomizer_background.js"></script>
+	</head>
+	<body>
+		<div id="titlebar">
+			<div id="logo" class='left'>
+			<p id="fond_logo"></p>			
+			<div id="version">
+				<p style="font-weight: bold; font-size:15px; margin: auto;">Monster Hunter</p>
+				<p style="font-weight: bold;font-size:15px;margin: auto;position:relative;bottom: 4px;">Frontier Z Launcher </p>
+				<p style="position:relative;bottom: 4px;margin: auto;">release ver. 2.016 (Erupe)</p>
+			</div>
+			<img id="ico_fond" src="ressources/icons/ico_title.png">
+			<img id="logo_pic" src="ressources/logo.png">	
+			</div>
+			<div class='right'>
+				<a id="exit" class="nav-link" href="#" onclick="CUE_Selected()" onmouseover="CUE_Cursor()">&times;</a>
+			</div>
+			<div class='right'>
+				<a id="Reduce" class="nav-link" href="#" onclick="CUE_Selected()" onmouseover="CUE_Cursor()">_</a>
+			</div>
+		</div>    
+		<div class="container-fluid" style="height: 47%!important;width: 51.8%;">
+			<div class="row no-gutters h-100">
+				<div class="col-12">
+					<iframe src="login.html" style="width: 100%; height: 100%; border: none; overflow:hidden;" frameBorder="0" scrolling="no"></iframe>
+				</div>
+			</div>
+		</div>
+		<div class="container-fluid px-0 h-25">
+			<div class="row no-gutters h-100">
+				<div class="col-12">
+				<div class="col-1" style="max-width: 3.5%;"></div>
+					<div id="Box_Diag">
+						<div id = "Dialog_Alert">
+							<div id="alertBox"></div>
+							<div id="alertBox-box"></div>
+						</div>
+					</div>
+					<div id="submitForm">
+						<button id="configButton" class="btn btn-secondary" onclick="CUE_Selected()" onmouseover="CUE_Cursor()">Config</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<footer id="footerID">
+			<div id="AllMark">
+				<div class="row">
+					<div class="column">
+						<a href="https://www.capcom.co.jp/" onclick="window.open(this.href); return false; CUE_Selected();" onmouseover="CUE_Cursor()"></a>
+					</div>
+
+				</div>
+			</div>
+		</footer>
+		<div id="BlockGlobal" style="display: none;">
+			<p style="width: 96.9%;height: 100%;background-image: url(./ressources/st_now.png);background-position: center;background-repeat: no-repeat;"></p>
+		</div>
+	</body>
+</html>

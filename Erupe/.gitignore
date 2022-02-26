@@ -1,0 +1,13 @@
+www/jp/
+
+.idea/
+vendor/
+bin/*.bin
+bin/quests/*.bin
+bin/questlists/*.bin
+bin/scenarios/*.bin
+bin/debug/*.bin
+savedata/
+Erupe.exe
+*.lnk
+*.bat

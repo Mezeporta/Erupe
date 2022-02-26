@@ -1,89 +1,20 @@
-# Erupe
-## WARNING 
-This project is in its infancy and has no reliable active developer, no documentation, and no support.
-
-This project has been solely developed in my spare time for the educational experience of making a server emulator, which I haven't done before. Expectations regarding functionally and code quality should be set accordingly.
-
-# General info
-Currently allows a JP MHF client (with GameGuard removed) to:
-* Login and register an account (registration is automatic if account doesn't exist)
-* Create a character
-* Get ingame to the main city
-* See other players walk around
-* Do quests* (Single player only. Only quests shipped with the game are on the counter. **Requires binary quest files not in the repo**)
-* Use (local) chat*
-
-\* = Very limited or buggy.
+# Erupe Community Reupload
+ This is a community upload of a community project. The amount of people who worked on it is innumerous, and hard to keep track of. But id like to contribute this to the efforts of Ando, Fists Team, the French Team, Mai's Team and the many wondeful members of the MHFZ community who gave their time and energy to help us. No matter the relations, these files will remain public and open source, free for all to use and modify. 
 
 
+A pastebin for general overview, tips, and FAQ: https://pastebin.com/QqAwZSTC
 
-# Installation
-## Server
-1. Clone the repo with `git clone https://github.com/Andoryuuta/Erupe.git`
-2. Install PostgreSQL
-3. Launch psql shell, `CREATE DATABASE erupe;`.
-4. Setup database with golang-migrate:
+An upload for the quest and scenario files will be here: https://github.com/xl3lackout/MHFZ-Quest-Files
+(itll take a while its like 300k+ files)
 
-    Windows:
-    ```
-    > go get -tags 'postgres' -u github.com/golang-migrate/migrate/v4/cmd/migrate/
+Client Files (Game Files) if you need them:
 
-    > set POSTGRESQL_URL=postgres://postgres:password@localhost:5432/erupe?sslmode=disable
+1fichier: https://1fichier.com/?51066bxpv20gpicf780r
+1fichier is very fast and doesn't have a quota, but if your download fails you have to wait two hours. Rather spartan.
+ 
+Drive: https://drive.google.com/file/d/1REYFX6JNANmKR07XaY6yWzucQMc-u-mq/view
+Google Drive is reliable, but there's sometimes an inexplicable quota when too many people download it. Honestly your best choice for pretty much anything since you can also make a copy of the files to your own Drive.
+ 
+Anonfiles: https://anonfiles.com/Jf135bG0x2/Erupe_-_Community_Edition_zip
+Anonfiles is middle-of-the-road speed, but the download will always stay up no matter how many times it's been downloaded by others. A bit untrustworthy but that's just the nature of anonymity.
 
-    > cd erupe
-
-    > migrate -database %POSTGRESQL_URL% -path migrations up
-    ```
-
-    Linux:
-    ```
-    > go get -tags 'postgres' -u github.com/golang-migrate/migrate/v4/cmd/migrate/
-
-    > export POSTGRESQL_URL=postgres://postgres:password@localhost:5432/erupe?sslmode=disable
-
-    > cd erupe
-
-    > migrate -database $POSTGRESQL_URL -path migrations up
-    ```
-
-    (Replacing `postgres:password` with your postgres username and password)
-
-5. Edit the config.json
-
-    Namely:
-    * Update the database username and password
-    * Update the `host_ip` and `ip` fields (there are multiple) to your external IP if you are hosting for multiple clients.
-
-6. Place quest/scenario binaries.
-
-    The quest and scenario binary files should be placed in `bin/quests/` and `bin/scenarios` respectively.
-
-## Launcher
-Erupe ships with a rudimentary custom launcher, so you don't need to obtain the original TW/JP files to simply get ingame. However, it does still support using the original files if you choose to. To set this up, place a copy of the original launcher html/js/css in `./www/tw/`, and `/www/jp/` for the TW and JP files respectively.
-
-Then, modify the the `/launcher/js/launcher.js` file as such:
-* Find the call to `startUpdateProcess();` in a case statement and replace it with `finishUpdateProcess();`. (This disables the file check and updating)
-* (JP ONLY): replace all uses of "https://" with "http://" in the file.
-
-Finally, edit the config.json and set `UseOriginalLauncherFiles` to `true` under the launcher settings.
-
-# Usage
-### Note: If you are switching to/from the custom launcher html, you will have to clear your IE cache @ `C:\Users\<user>\AppData\Local\Microsoft\Windows\INetCache`.
-
-## Server
-```
-cd Erupe
-go run .
-```
-
-## Client
-Add to hosts:
-```
-127.0.0.1 mhfg.capcom.com.tw
-127.0.0.1 mhf-n.capcom.com.tw
-127.0.0.1 cog-members.mhf-z.jp
-127.0.0.1 www.capcom-onlinegames.jp
-127.0.0.1 srv-mhf.capcom-networks.jp
-```
-
-Run mhf.exe normally (with locale emulator or appropriate timezone).
