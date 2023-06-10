@@ -81,6 +81,10 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 		return nil, err
 	}
 
+	if len(saveData.decompSave) < pointerKQF {
+		return nil, err
+	}
+
 	saveData.updateStructWithSaveData()
 
 	return saveData, nil
