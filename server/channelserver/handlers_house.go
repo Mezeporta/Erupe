@@ -4,6 +4,7 @@ import (
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/common/stringsupport"
+	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"fmt"
 	"go.uber.org/zap"
@@ -256,6 +257,9 @@ func handleMsgMhfLoadDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error("Failed to load decomyset", zap.Error(err))
 	}
 	if len(data) == 0 {
+		if s.server.erupeConfig.RealClientMode <= _config.G7 {
+			data = []byte{0x00, 0x00}
+		}
 		data = []byte{0x01, 0x00}
 	}
 	// Validate and fix corrupted data with more than maxDecoMysets presets
