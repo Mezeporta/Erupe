@@ -31,12 +31,13 @@ func handleMsgMhfGetRewardSong(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetRewardSong)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint8(0)           // No error
-	bf.WriteUint8(0)           // Unk
+	bf.WriteUint8(0)           // usage count - common
 	bf.WriteUint32(0)          // Prayer ID
 	bf.WriteUint32(0xFFFFFFFF) // Prayer end
-	for i := 0; i < 4; i++ {
-		bf.WriteUint16(0)
-		bf.WriteUint8(0)
+	for i := 1; i < 5; i++ {
+		bf.WriteUint8(0)   // No error
+		bf.WriteUint8(i)   // ColorID
+		bf.WriteUint8(0)   // usage count - Only Bead of Storms
 	}
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
@@ -48,6 +49,7 @@ func handleMsgMhfUseRewardSong(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAddRewardSongCount(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAddRewardSongCount)
+        //Only Bead of Storms usage count
 	doAckBufSucceed(s, pkt.AckHandle, []byte{0})
 }
 
