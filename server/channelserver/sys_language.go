@@ -132,12 +132,12 @@ func getLangStrings(s *Server) i18n {
 			{id: 17, name: "結集の祈珠", description: "ーけっしゅうのきじゅー\n結集とは確固たる信頼。\n集めるほどに狩人たちの精神力となる。"},
 			{id: 18, name: "歌護の祈珠", description: "ーうたまもりのきじゅー\n歌護とは歌姫の護り。\n集めるほどに狩人たちの支えとなる。"},
 			{id: 19, name: "強撃の祈珠", description: "ーきょうげきのきじゅー\n強撃とは強い声色。\n聞く者の力を研ぎ澄ます。"},
-			{id: 20, name: "封火の祈珠", description: "ーふうかのきじゅー"},
-			{id: 21, name: "封水の祈珠", description: "ーふうすいのきじゅー"},
-			{id: 22, name: "封氷の祈珠", description: "ーふうひょうのきじゅー"},
-			{id: 23, name: "封龍の祈珠", description: "ーふうりゅうのきじゅー"},
-			{id: 24, name: "封雷の祈珠", description: "ーふうらいのきじゅー"},
-			{id: 25, name: "封属の祈珠", description: "ーふうぞくのきじゅー"},
+			{id: 20, name: "封火の祈珠", description: "ーふうかのきじゅー\n封火とは火の封印。\n聞く者に耐性力を与える。"},
+			{id: 21, name: "封水の祈珠", description: "ーふうすいのきじゅー\n封水とは水の封印。\n聞く者に耐性力を与える。"},
+			{id: 22, name: "封氷の祈珠", description: "ーふうひょうのきじゅー\n封氷とは氷の封印。\n聞く者に耐性力を与える。"},
+			{id: 23, name: "封雷の祈珠", description: "ーふうらいのきじゅー\n封雷とは雷の封印。\n聞く者に耐性力を与える。"},
+			{id: 24, name: "封龍の祈珠", description: "ーふうりゅうのきじゅー\n封龍とは龍の封印。\n聞く者に耐性力を与える。"},
+			{id: 25, name: "封属の祈珠", description: "ーふうぞくのきじゅー\n封続とは五つの属性の封印。\n聞く者に耐性力を与える。"},
 		}
 
 		i.commands.noOp = "You don't have permission to use this command"
@@ -214,12 +214,12 @@ func getLangStrings(s *Server) i18n {
 			{id: 17, name: "Bead of Unity", description: "ーけっしゅうのきじゅー\n結集とは確固たる信頼。\n集めるほどに狩人たちの精神力となる。"},
 			{id: 18, name: "Bead of Warding", description: "ーうたまもりのきじゅー\n歌護とは歌姫の護り。\n集めるほどに狩人たちの支えとなる。"},
 			{id: 19, name: "Bead of Fury", description: "ーきょうげきのきじゅー\n強撃とは強い声色。\n聞く者の力を研ぎ澄ます。"},
-			{id: 20, name: "Bead of Fireproof", description: "ーふうかのきじゅー"},
-			{id: 21, name: "Bead of Waterproof", description: "ーふうすいのきじゅー"},
-			{id: 22, name: "Bead of Iceproof", description: "ーふうひょうのきじゅー"},
-			{id: 23, name: "Bead of Dragonproof", description: "ーふうりゅうのきじゅー"},
-			{id: 24, name: "Bead of Thunderproof", description: "ーふうらいのきじゅー"},
-			{id: 25, name: "Bead of Immunity", description: "ーふうぞくのきじゅー"},
+			{id: 20, name: "Bead of Fireproof", description: "ーふうかのきじゅー\n封火とは火の封印。\n聞く者に耐性力を与える。"},
+			{id: 21, name: "Bead of Waterproof", description: "ーふうすいのきじゅー\n封水とは水の封印。\n聞く者に耐性力を与える。"},
+			{id: 22, name: "Bead of Iceproof", description: "ーふうひょうのきじゅー\n封氷とは氷の封印。\n聞く者に耐性力を与える。"},
+			{id: 23, name: "Bead of Thunderproof", description: "ーふうらいのきじゅー\n封雷とは雷の封印。\n聞く者に耐性力を与える。"},
+			{id: 24, name: "Bead of Dragonproof", description: "ーふうりゅうのきじゅー\n封龍とは龍の封印。\n聞く者に耐性力を与える。"},
+			{id: 25, name: "Bead of Immunity", description: "ーふうぞくのきじゅー\n封続とは五つの属性の封印。\n聞く者に耐性力を与える。"},
 		}
 		i.timer = "Time: %02d:%02d:%02d.%03d (%df)"
 
