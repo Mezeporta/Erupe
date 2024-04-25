@@ -49,7 +49,7 @@ func handleMsgMhfUseRewardSong(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAddRewardSongCount(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAddRewardSongCount)
-        //Only Bead of Storms usage count
+        //Only Bead of Storms add usage count
 	doAckBufSucceed(s, pkt.AckHandle, []byte{0})
 }
 
