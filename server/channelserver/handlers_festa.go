@@ -292,7 +292,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	} else {
 		bf.WriteUint32(s.server.erupeConfig.GameplayOptions.MaximumFP)
 	}
-	bf.WriteUint16(500)
+	bf.WriteUint16(100) // Reward multiplier (%)
 
 	var temp uint32
 	bf.WriteUint16(4)

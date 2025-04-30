@@ -10,16 +10,17 @@ on:
       - 'go.mod'
       - 'go.sum'
       - 'main.go'
+      - '.github/workflows/go.yml'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version: '1.21'
 
@@ -27,7 +28,7 @@ jobs:
       run: env GOOS=linux GOARCH=amd64 go build -v
         
     - name: Upload Linux-amd64 artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Linux-amd64
         path: |
@@ -42,7 +43,7 @@ jobs:
       run: env GOOS=windows GOARCH=amd64 go build -v
       
     - name: Upload Windows-amd64 artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Windows-amd64
         path: |

@@ -88,7 +88,7 @@ func updateRights(s *Session) {
 		Rights:              s.courses,
 		UnkSize:             0,
 	}
-	s.QueueSendMHF(update)
+	s.QueueSendMHFNonBlocking(update)
 }
 
 func handleMsgHead(s *Session, p mhfpacket.MHFPacket) {}
@@ -143,7 +143,6 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	s.token = pkt.LoginTokenString
 	s.Unlock()
 
-	updateRights(s)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(TimeAdjusted().Unix())) // Unix timestamp
 
@@ -193,7 +192,7 @@ func logoutPlayer(s *Session) {
 			for _, sess := range s.server.sessions {
 				for rSlot := range stage.reservedClientSlots {
 					if sess.charID == rSlot && sess.stage != nil && sess.stage.id[3:5] != "Qs" {
-						sess.QueueSendMHF(&mhfpacket.MsgSysStageDestruct{})
+						sess.QueueSendMHFNonBlocking(&mhfpacket.MsgSysStageDestruct{})
 					}
 				}
 			}
@@ -1051,32 +1050,58 @@ func handleMsgMhfUpdateEtcPoint(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfStampcardStamp(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfStampcardStamp)
+
+	rewards := []struct {
+		HR        uint16
+		Item1     uint16
+		Quantity1 uint16
+		Item2     uint16
+		Quantity2 uint16
+	}{
+		{0, 6164, 1, 6164, 2},
+		{50, 6164, 2, 6164, 3},
+		{100, 6164, 3, 5392, 1},
+		{300, 5392, 1, 5392, 3},
+		{999, 5392, 1, 5392, 4},
+	}
+	if _config.ErupeConfig.RealClientMode <= _config.Z1 {
+		for _, reward := range rewards {
+			if pkt.HR >= reward.HR {
+				pkt.Item1 = reward.Item1
+				pkt.Quantity1 = reward.Quantity1
+				pkt.Item2 = reward.Item2
+				pkt.Quantity2 = reward.Quantity2
+			}
+		}
+	}
+
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(pkt.HR)
-	var stamps uint16
-	_ = s.server.db.QueryRow(`SELECT stampcard FROM characters WHERE id = $1`, s.charID).Scan(&stamps)
 	if _config.ErupeConfig.RealClientMode >= _config.G1 {
 		bf.WriteUint16(pkt.GR)
 	}
+	var stamps, rewardTier, rewardUnk uint16
+	reward := mhfitem.MHFItemStack{Item: mhfitem.MHFItem{}}
+	s.server.db.QueryRow(`UPDATE characters SET stampcard = stampcard + $1 WHERE id = $2 RETURNING stampcard`, pkt.Stamps, s.charID).Scan(&stamps)
+	bf.WriteUint16(stamps - pkt.Stamps)
 	bf.WriteUint16(stamps)
-	stamps += pkt.Stamps
-	bf.WriteUint16(stamps)
-	s.server.db.Exec(`UPDATE characters SET stampcard = $1 WHERE id = $2`, stamps, s.charID)
-	if stamps%30 == 0 {
-		bf.WriteUint16(2)
-		bf.WriteUint16(pkt.Reward2)
-		bf.WriteUint16(pkt.Item2)
-		bf.WriteUint16(pkt.Quantity2)
-		addWarehouseItem(s, mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: pkt.Item2}, Quantity: pkt.Quantity2})
-	} else if stamps%15 == 0 {
-		bf.WriteUint16(1)
-		bf.WriteUint16(pkt.Reward1)
-		bf.WriteUint16(pkt.Item1)
-		bf.WriteUint16(pkt.Quantity1)
-		addWarehouseItem(s, mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: pkt.Item1}, Quantity: pkt.Quantity1})
-	} else {
-		bf.WriteBytes(make([]byte, 8))
+
+	if stamps/30 > (stamps-pkt.Stamps)/30 {
+		rewardTier = 2
+		rewardUnk = pkt.Reward2
+		reward = mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: pkt.Item2}, Quantity: pkt.Quantity2}
+		addWarehouseItem(s, reward)
+	} else if stamps/15 > (stamps-pkt.Stamps)/15 {
+		rewardTier = 1
+		rewardUnk = pkt.Reward1
+		reward = mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: pkt.Item1}, Quantity: pkt.Quantity1}
+		addWarehouseItem(s, reward)
 	}
+
+	bf.WriteUint16(rewardTier)
+	bf.WriteUint16(rewardUnk)
+	bf.WriteUint16(reward.Item.ItemID)
+	bf.WriteUint16(reward.Quantity)
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 

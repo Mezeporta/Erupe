@@ -54,6 +54,9 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	}
 	characterSaveData.updateStructWithSaveData()
 
+	s.playtime = characterSaveData.Playtime
+	s.playtimeTime = time.Now()
+
 	// Bypass name-checker if new
 	if characterSaveData.IsNewCharacter == true {
 		s.Name = characterSaveData.Name

@@ -367,13 +367,17 @@ func handleMsgMhfAcquireTitle(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfResetTitle(s *Session, p mhfpacket.MHFPacket) {}
 
-func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfOperateWarehouse)
+func initializeWarehouse(s *Session) {
 	var t int
 	err := s.server.db.QueryRow("SELECT character_id FROM warehouse WHERE character_id=$1", s.charID).Scan(&t)
 	if err != nil {
 		s.server.db.Exec("INSERT INTO warehouse (character_id) VALUES ($1)", s.charID)
 	}
+}
+
+func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfOperateWarehouse)
+	initializeWarehouse(s)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint8(pkt.Operation)
 	switch pkt.Operation {
@@ -446,6 +450,7 @@ func addWarehouseEquipment(s *Session, equipment mhfitem.MHFEquipment) {
 }
 
 func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
+	initializeWarehouse(s)
 	var data []byte
 	var items []mhfitem.MHFItemStack
 	s.server.db.QueryRow(fmt.Sprintf(`SELECT item%d FROM warehouse WHERE character_id=$1`, index), s.charID).Scan(&data)

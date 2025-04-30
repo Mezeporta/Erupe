@@ -40,8 +40,8 @@ func (m *MsgSysTerminalLog) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Client
 	entryCount := int(bf.ReadUint16())
 	bf.ReadUint16() // Zeroed
 
-	var e TerminalLogEntry
 	for i := 0; i < entryCount; i++ {
+		var e TerminalLogEntry
 		e.Index = bf.ReadUint32()
 		e.Type1 = bf.ReadUint8()
 		e.Type2 = bf.ReadUint8()

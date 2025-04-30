@@ -59,7 +59,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	s.Unlock()
 
 	// Tell the client to cleanup its current stage objects.
-	s.QueueSendMHF(&mhfpacket.MsgSysCleanupObject{})
+	s.QueueSendMHFNonBlocking(&mhfpacket.MsgSysCleanupObject{})
 
 	// Confirm the stage entry.
 	doAckSimpleSucceed(s, ackHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -112,9 +112,8 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 		s.stage.RUnlock()
 	}
 
-	newNotif.WriteUint16(0x0010) // End it.
 	if len(newNotif.Data()) > 2 {
-		s.QueueSend(newNotif.Data())
+		s.QueueSendNonBlocking(newNotif.Data())
 	}
 }
 
@@ -238,7 +237,7 @@ func handleMsgSysUnlockStage(s *Session, p mhfpacket.MHFPacket) {
 		for charID := range s.reservationStage.reservedClientSlots {
 			session := s.server.FindSessionByCharID(charID)
 			if session != nil {
-				session.QueueSendMHF(&mhfpacket.MsgSysStageDestruct{})
+				session.QueueSendMHFNonBlocking(&mhfpacket.MsgSysStageDestruct{})
 			}
 		}
 
@@ -362,7 +361,7 @@ func handleMsgSysWaitStageBinary(s *Session, p mhfpacket.MHFPacket) {
 			doAckBufSucceed(s, pkt.AckHandle, []byte{0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 			return
 		}
-		for {
+		for i := 0; i < 10; i++ {
 			s.logger.Debug("MsgSysWaitStageBinary before lock and get stage")
 			stage.Lock()
 			stageBinary, gotBinary := stage.rawBinaryData[stageBinaryKey{pkt.BinaryType0, pkt.BinaryType1}]
@@ -370,13 +369,15 @@ func handleMsgSysWaitStageBinary(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Debug("MsgSysWaitStageBinary after lock and get stage")
 			if gotBinary {
 				doAckBufSucceed(s, pkt.AckHandle, stageBinary)
-				break
+				return
 			} else {
 				s.logger.Debug("Waiting stage binary", zap.Uint8("BinaryType0", pkt.BinaryType0), zap.Uint8("pkt.BinaryType1", pkt.BinaryType1))
 				time.Sleep(1 * time.Second)
 				continue
 			}
 		}
+		s.logger.Warn("MsgSysWaitStageBinary stage binary timeout")
+		doAckBufSucceed(s, pkt.AckHandle, []byte{})
 	} else {
 		s.logger.Warn("Failed to get stage", zap.String("StageID", pkt.StageID))
 	}

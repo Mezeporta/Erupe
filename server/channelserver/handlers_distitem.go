@@ -13,6 +13,7 @@ import (
 type Distribution struct {
 	ID              uint32    `db:"id"`
 	Deadline        time.Time `db:"deadline"`
+	Rights          uint32    `db:"rights"`
 	TimesAcceptable uint16    `db:"times_acceptable"`
 	TimesAccepted   uint16    `db:"times_accepted"`
 	MinHR           int16     `db:"min_hr"`
@@ -23,7 +24,7 @@ type Distribution struct {
 	MaxGR           int16     `db:"max_gr"`
 	EventName       string    `db:"event_name"`
 	Description     string    `db:"description"`
-	Data            []byte    `db:"data"`
+	Selection       bool      `db:"selection"`
 }
 
 func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
@@ -32,7 +33,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 	var itemDists []Distribution
 	bf := byteframe.NewByteFrame()
 	rows, err := s.server.db.Queryx(`
-		SELECT d.id, event_name, description, times_acceptable,
+		SELECT d.id, event_name, description, COALESCE(rights, 0) AS rights, COALESCE(selection, false) AS selection, times_acceptable,
 		COALESCE(min_hr, -1) AS min_hr, COALESCE(max_hr, -1) AS max_hr,
 		COALESCE(min_sr, -1) AS min_sr, COALESCE(max_sr, -1) AS max_sr,
 		COALESCE(min_gr, -1) AS min_gr, COALESCE(max_gr, -1) AS max_gr,
@@ -60,7 +61,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 	for _, dist := range itemDists {
 		bf.WriteUint32(dist.ID)
 		bf.WriteUint32(uint32(dist.Deadline.Unix()))
-		bf.WriteUint32(0) // Unk
+		bf.WriteUint32(dist.Rights)
 		bf.WriteUint16(dist.TimesAcceptable)
 		bf.WriteUint16(dist.TimesAccepted)
 		if _config.ErupeConfig.RealClientMode >= _config.G9 {
@@ -79,7 +80,11 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint16(0) // Unk
 		}
 		if _config.ErupeConfig.RealClientMode >= _config.G8 {
-			bf.WriteUint8(0) // Unk
+			if dist.Selection {
+				bf.WriteUint8(2) // Selection
+			} else {
+				bf.WriteUint8(0)
+			}
 		}
 		if _config.ErupeConfig.RealClientMode >= _config.G7 {
 			bf.WriteUint16(0) // Unk

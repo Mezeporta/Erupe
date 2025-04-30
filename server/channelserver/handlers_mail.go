@@ -185,7 +185,7 @@ func SendMailNotification(s *Session, m *Mail, recipient *Session) {
 
 	castedBinary.Build(bf, s.clientContext)
 
-	recipient.QueueSendMHF(castedBinary)
+	recipient.QueueSendMHFNonBlocking(castedBinary)
 }
 
 func getCharacterName(s *Session, charID uint32) string {

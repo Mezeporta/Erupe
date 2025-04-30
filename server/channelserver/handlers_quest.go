@@ -238,8 +238,10 @@ func loadQuestFile(s *Session, questId int) []byte {
 	}
 	questBody.WriteBytes(newStrings.Data())
 
+	s.server.questCacheLock.Lock()
 	s.server.questCacheData[questId] = questBody.Data()
 	s.server.questCacheTime[questId] = time.Now()
+	s.server.questCacheLock.Unlock()
 	return questBody.Data()
 }
 

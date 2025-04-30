@@ -65,6 +65,15 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateAcquireSemaphore)
 	SemaphoreID := pkt.SemaphoreID
 
+	if s.server.HasSemaphore(s) {
+		s.semaphoreMode = !s.semaphoreMode
+	}
+	if s.semaphoreMode {
+		s.semaphoreID[1]++
+	} else {
+		s.semaphoreID[0]++
+	}
+
 	newSemaphore, exists := s.server.semaphore[SemaphoreID]
 	if !exists {
 		s.server.semaphoreLock.Lock()
@@ -77,7 +86,7 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 				maxPlayers: 127,
 			}
 		} else {
-			s.server.semaphore[SemaphoreID] = NewSemaphore(s.server, SemaphoreID, 1)
+			s.server.semaphore[SemaphoreID] = NewSemaphore(s, SemaphoreID, 1)
 		}
 		newSemaphore = s.server.semaphore[SemaphoreID]
 		s.server.semaphoreLock.Unlock()
@@ -103,7 +112,7 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysAcquireSemaphore)
 	if sema, exists := s.server.semaphore[pkt.SemaphoreID]; exists {
-		sema.clients[s] = s.charID
+		sema.host = s
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(sema.id)
 		doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())

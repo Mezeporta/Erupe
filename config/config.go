@@ -81,6 +81,7 @@ type Config struct {
 	QuestCacheExpiry       int    // Number of seconds to keep quest data cached
 	CommandPrefix          string // The prefix for commands
 	AutoCreateAccount      bool   // Automatically create accounts if they don't exist
+	LoopDelay              int    // Delay in milliseconds between each loop iteration
 	DefaultCourses         []uint16
 	EarthStatus            int32
 	EarthID                int32

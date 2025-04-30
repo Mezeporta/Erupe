@@ -29,6 +29,23 @@ func SJISToUTF8(b []byte) string {
 	return string(result)
 }
 
+func ToNGWord(x string) []uint16 {
+	var w []uint16
+	for _, r := range []rune(x) {
+		if r > 0xFF {
+			t := UTF8ToSJIS(string(r))
+			if len(t) > 1 {
+				w = append(w, uint16(t[1])<<8|uint16(t[0]))
+			} else {
+				w = append(w, uint16(t[0]))
+			}
+		} else {
+			w = append(w, uint16(r))
+		}
+	}
+	return w
+}
+
 func PaddedString(x string, size uint, t bool) []byte {
 	if t {
 		e := japanese.ShiftJIS.NewEncoder()

@@ -21,6 +21,7 @@
   "QuestCacheExpiry": 300,
   "CommandPrefix": "!",
   "AutoCreateAccount": true,
+  "LoopDelay": 50,
   "DefaultCourses": [1, 23, 24],
   "EarthStatus": 0,
   "EarthID": 0,
@@ -176,6 +177,11 @@
       "Enabled": true,
       "Description": "Toggle the Quest timer",
       "Prefix": "timer"
+    }, {
+      "Name": "Playtime",
+      "Enabled": true,
+      "Description": "Show your playtime",
+      "Prefix": "playtime"
     }
   ],
   "Courses": [

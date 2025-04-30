@@ -86,7 +86,7 @@ func encodeServerInfo(config *_config.Config, s *Server, local bool) []byte {
 		}
 	}
 	bf.WriteUint32(uint32(channelserver.TimeAdjusted().Unix()))
-	bf.WriteUint32(60)
+	bf.WriteUint32(uint32(s.erupeConfig.GameplayOptions.ClanMemberLimits[len(s.erupeConfig.GameplayOptions.ClanMemberLimits)-1][1]))
 	return bf.Data()
 }
 

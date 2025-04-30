@@ -129,12 +129,12 @@ func (s *Session) notifyRavi() {
 	raviNotif.WriteUint16(0x0010) // End it.
 	if s.server.erupeConfig.GameplayOptions.LowLatencyRaviente {
 		for session := range sema.clients {
-			session.QueueSend(raviNotif.Data())
+			session.QueueSendNonBlocking(raviNotif.Data())
 		}
 	} else {
 		for session := range sema.clients {
 			if session.charID == s.charID {
-				session.QueueSend(raviNotif.Data())
+				session.QueueSendNonBlocking(raviNotif.Data())
 			}
 		}
 	}

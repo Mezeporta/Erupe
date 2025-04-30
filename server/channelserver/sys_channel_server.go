@@ -75,6 +75,7 @@ type Server struct {
 
 	raviente *Raviente
 
+	questCacheLock sync.RWMutex
 	questCacheData map[int][]byte
 	questCacheTime map[int]time.Time
 }
@@ -207,6 +208,7 @@ func (s *Server) Start() error {
 
 	go s.acceptClients()
 	go s.manageSessions()
+	go s.invalidateSessions()
 
 	// Start the discord bot for chat integration.
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
@@ -275,6 +277,21 @@ func (s *Server) manageSessions() {
 			delete(s.sessions, delConn)
 			s.Unlock()
 		}
+	}
+}
+
+func (s *Server) invalidateSessions() {
+	for {
+		if s.isShuttingDown {
+			break
+		}
+		for _, sess := range s.sessions {
+			if time.Now().Sub(sess.lastPacket) > time.Second*time.Duration(30) {
+				s.logger.Info("session timeout", zap.String("Name", sess.Name))
+				logoutPlayer(sess)
+			}
+		}
+		time.Sleep(time.Second * 10)
 	}
 }
 
@@ -424,24 +441,13 @@ func (s *Server) FindObjectByChar(charID uint32) *Object {
 	return nil
 }
 
-func (s *Server) NextSemaphoreID() uint32 {
-	for {
-		exists := false
-		s.semaphoreIndex = s.semaphoreIndex + 1
-		if s.semaphoreIndex > 0xFFFF {
-			s.semaphoreIndex = 1
-		}
-		for _, semaphore := range s.semaphore {
-			if semaphore.id == s.semaphoreIndex {
-				exists = true
-				break
-			}
-		}
-		if !exists {
-			break
+func (s *Server) HasSemaphore(ses *Session) bool {
+	for _, semaphore := range s.semaphore {
+		if semaphore.host == ses {
+			return true
 		}
 	}
-	return s.semaphoreIndex
+	return false
 }
 
 func (s *Server) Season() uint8 {

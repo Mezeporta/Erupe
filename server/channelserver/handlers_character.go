@@ -23,6 +23,7 @@ const (
 	pGalleryData          // +1748
 	pToreData             // +240
 	pGardenData           // +68
+	pPlaytime             // +4
 	pWeaponType           // +1
 	pWeaponID             // +2
 	pHR                   // +2
@@ -45,6 +46,7 @@ type CharacterSaveData struct {
 	GalleryData   []byte
 	ToreData      []byte
 	GardenData    []byte
+	Playtime      uint32
 	WeaponType    uint8
 	WeaponID      uint16
 	HR            uint16
@@ -59,6 +61,7 @@ func getPointers() map[SavePointer]int {
 	pointers := map[SavePointer]int{pGender: 81, lBookshelfData: 5576}
 	switch _config.ErupeConfig.RealClientMode {
 	case _config.ZZ:
+		pointers[pPlaytime] = 128356
 		pointers[pWeaponID] = 128522
 		pointers[pWeaponType] = 128789
 		pointers[pHouseTier] = 129900
@@ -74,6 +77,7 @@ func getPointers() map[SavePointer]int {
 	case _config.Z2, _config.Z1, _config.G101, _config.G10, _config.G91, _config.G9, _config.G81, _config.G8,
 		_config.G7, _config.G61, _config.G6, _config.G52, _config.G51, _config.G5, _config.GG, _config.G32, _config.G31,
 		_config.G3, _config.G2, _config.G1:
+		pointers[pPlaytime] = 92356
 		pointers[pWeaponID] = 92522
 		pointers[pWeaponType] = 92789
 		pointers[pHouseTier] = 93900
@@ -87,6 +91,7 @@ func getPointers() map[SavePointer]int {
 		pointers[pRP] = 106614
 		pointers[pKQF] = 110720
 	case _config.F5, _config.F4:
+		pointers[pPlaytime] = 60356
 		pointers[pWeaponID] = 60522
 		pointers[pWeaponType] = 60789
 		pointers[pHouseTier] = 61900
@@ -98,6 +103,7 @@ func getPointers() map[SavePointer]int {
 		pointers[pGardenData] = 74424
 		pointers[pRP] = 74614
 	case _config.S6:
+		pointers[pPlaytime] = 12356
 		pointers[pWeaponID] = 12522
 		pointers[pWeaponType] = 12789
 		pointers[pHouseTier] = 13900
@@ -231,6 +237,7 @@ func (save *CharacterSaveData) updateStructWithSaveData() {
 			save.GalleryData = save.decompSave[save.Pointers[pGalleryData] : save.Pointers[pGalleryData]+1748]
 			save.ToreData = save.decompSave[save.Pointers[pToreData] : save.Pointers[pToreData]+240]
 			save.GardenData = save.decompSave[save.Pointers[pGardenData] : save.Pointers[pGardenData]+68]
+			save.Playtime = binary.LittleEndian.Uint32(save.decompSave[save.Pointers[pPlaytime] : save.Pointers[pPlaytime]+4])
 			save.WeaponType = save.decompSave[save.Pointers[pWeaponType]]
 			save.WeaponID = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pWeaponID] : save.Pointers[pWeaponID]+2])
 			save.HR = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pHR] : save.Pointers[pHR]+2])

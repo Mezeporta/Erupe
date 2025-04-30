@@ -22,15 +22,18 @@ type Semaphore struct {
 
 	// Max Players for Semaphore
 	maxPlayers uint16
+
+	host *Session
 }
 
 // NewSemaphore creates a new Semaphore with intialized values
-func NewSemaphore(s *Server, ID string, MaxPlayers uint16) *Semaphore {
+func NewSemaphore(s *Session, ID string, MaxPlayers uint16) *Semaphore {
 	sema := &Semaphore{
 		name:       ID,
-		id:         s.NextSemaphoreID(),
+		id:         s.GetSemaphoreID(),
 		clients:    make(map[*Session]uint32),
 		maxPlayers: MaxPlayers,
+		host:       s,
 	}
 	return sema
 }

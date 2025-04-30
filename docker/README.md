@@ -64,3 +64,7 @@ if you want all the logs and you want it to be in an attached state
 ```bash
 docker-compose up
 ```
+
+
+# Troubleshooting
+Q: My Postgres will not populate. A: You're setup.sh is maybe saved as CRLF it needs to be saved as LF. 

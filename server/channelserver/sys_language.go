@@ -10,6 +10,7 @@ type i18n struct {
 		noOp     string
 		disabled string
 		reload   string
+		playtime string
 		kqf      struct {
 			get string
 			set struct {
@@ -175,6 +176,8 @@ func getLangStrings(s *Server) i18n {
 		i.commands.noOp = "You don't have permission to use this command"
 		i.commands.disabled = "%s command is disabled"
 		i.commands.reload = "Reloading players..."
+		i.commands.playtime = "Playtime: %d hours %d minutes %d seconds"
+
 		i.commands.kqf.get = "KQF: %x"
 		i.commands.kqf.set.error = "Error in command. Format: %s set xxxxxxxxxxxxxxxx"
 		i.commands.kqf.set.success = "KQF set, please switch Land/World"

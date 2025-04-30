@@ -21,7 +21,6 @@ func handleMsgMhfLoadPartner(s *Session, p mhfpacket.MHFPacket) {
 		data = make([]byte, 9)
 	}
 	doAckBufSucceed(s, pkt.AckHandle, data)
-	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfSavePartner(s *Session, p mhfpacket.MHFPacket) {
@@ -157,60 +156,60 @@ func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryW)
-	if pkt.Op > 0 {
-		bf := byteframe.NewByteFrame()
-		var pactID uint32
-		var name string
-		var cid uint32
+	bf := byteframe.NewByteFrame()
 
-		s.server.db.QueryRow("SELECT pact_id FROM characters WHERE id=$1", s.charID).Scan(&pactID)
-		if pactID > 0 {
-			s.server.db.QueryRow("SELECT name, id FROM characters WHERE rasta_id = $1", pactID).Scan(&name, &cid)
-			bf.WriteUint8(1) // numLends
-			bf.WriteUint32(pactID)
-			bf.WriteUint32(cid)
-			bf.WriteBool(false) // ?
-			bf.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * -8).Unix()))
-			bf.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * -1).Unix()))
-			bf.WriteBytes(stringsupport.PaddedString(name, 18, true))
-		} else {
-			bf.WriteUint8(0)
-		}
-
-		if pkt.Op < 2 {
-			var loans uint8
-			temp := byteframe.NewByteFrame()
-			rows, _ := s.server.db.Query("SELECT name, id, pact_id FROM characters WHERE pact_id=(SELECT rasta_id FROM characters WHERE id=$1)", s.charID)
-			for rows.Next() {
-				loans++
-				rows.Scan(&name, &cid, &pactID)
-				temp.WriteUint32(pactID)
-				temp.WriteUint32(cid)
-				temp.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * -8).Unix()))
-				temp.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * -1).Unix()))
-				temp.WriteBytes(stringsupport.PaddedString(name, 18, true))
-			}
-			bf.WriteUint8(loans)
-			bf.WriteBytes(temp.Data())
-		}
-		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
-		return
-	}
-	var data []byte
-	var gcp uint32
-	s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id=$1", s.charID).Scan(&data)
-	s.server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id=$1", s.charID).Scan(&gcp)
-
-	resp := byteframe.NewByteFrame()
-	resp.WriteUint16(0)
-	if len(data) == 0 {
-		resp.WriteBool(false)
+	var pactID, cid uint32
+	var name string
+	s.server.db.QueryRow("SELECT pact_id FROM characters WHERE id=$1", s.charID).Scan(&pactID)
+	if pactID > 0 {
+		s.server.db.QueryRow("SELECT name, id FROM characters WHERE rasta_id = $1", pactID).Scan(&name, &cid)
+		bf.WriteUint8(1) // numLends
+		bf.WriteUint32(pactID)
+		bf.WriteUint32(cid)
+		bf.WriteBool(true) // Escort enabled
+		bf.WriteUint32(uint32(TimeAdjusted().Unix()))
+		bf.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * 7).Unix()))
+		bf.WriteBytes(stringsupport.PaddedString(name, 18, true))
 	} else {
-		resp.WriteBool(true)
-		resp.WriteBytes(data)
+		bf.WriteUint8(0)
 	}
-	resp.WriteUint32(gcp)
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+
+	if pkt.Op != 2 && pkt.Op != 5 {
+		var loans uint8
+		temp := byteframe.NewByteFrame()
+		rows, _ := s.server.db.Query("SELECT name, id, pact_id FROM characters WHERE pact_id=(SELECT rasta_id FROM characters WHERE id=$1)", s.charID)
+		for rows.Next() {
+			err := rows.Scan(&name, &cid, &pactID)
+			if err != nil {
+				continue
+			}
+			loans++
+			temp.WriteUint32(pactID)
+			temp.WriteUint32(cid)
+			temp.WriteUint32(uint32(TimeAdjusted().Unix()))
+			temp.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * 7).Unix()))
+			temp.WriteBytes(stringsupport.PaddedString(name, 18, true))
+		}
+		bf.WriteUint8(loans)
+		bf.WriteBytes(temp.Data())
+
+		if pkt.Op != 1 && pkt.Op != 4 {
+			var data []byte
+			var gcp uint32
+			s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id=$1", s.charID).Scan(&data)
+			s.server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id=$1", s.charID).Scan(&gcp)
+
+			if len(data) == 0 {
+				bf.WriteBool(false)
+			} else {
+				bf.WriteBool(true)
+				bf.WriteBytes(data)
+			}
+			bf.WriteUint32(gcp)
+		}
+	}
+
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
 func handleMsgMhfReadMercenaryM(s *Session, p mhfpacket.MHFPacket) {

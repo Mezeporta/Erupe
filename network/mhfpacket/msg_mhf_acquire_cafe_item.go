@@ -31,7 +31,7 @@ func (m *MsgMhfAcquireCafeItem) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cl
 	m.ItemType = bf.ReadUint16()
 	m.ItemID = bf.ReadUint16()
 	m.Quant = bf.ReadUint16()
-	if _config.ErupeConfig.RealClientMode >= _config.G1 {
+	if _config.ErupeConfig.RealClientMode >= _config.G6 {
 		m.PointCost = bf.ReadUint32()
 	} else {
 		m.PointCost = uint32(bf.ReadUint16())

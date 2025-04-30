@@ -61,35 +61,41 @@ func (gm *GuildMember) Save(s *Session) error {
 }
 
 const guildMembersSelectSQL = `
-SELECT * FROM (
-	SELECT
-		g.id AS guild_id,
-		joined_at,
-		COALESCE((SELECT SUM(souls) FROM festa_submissions fs WHERE fs.character_id=c.id), 0) AS souls,
-		COALESCE(rp_today, 0) AS rp_today,
-		COALESCE(rp_yesterday, 0) AS rp_yesterday,
-		c.name,
-		c.id AS character_id,
-		COALESCE(order_index, 0) AS order_index,
-		c.last_login,
-		COALESCE(recruiter, false) AS recruiter,
-		COALESCE(avoid_leadership, false) AS avoid_leadership,
-		c.hr,
-		c.gr,
-		c.weapon_id,
-		c.weapon_type,
-		EXISTS(SELECT 1 FROM guild_applications ga WHERE ga.character_id=c.id AND application_type='applied') AS is_applicant,
-		CASE WHEN g.leader_id = c.id THEN true ELSE false END AS is_leader
+SELECT
+	COALESCE(g.id, 0) AS guild_id,
+	joined_at,
+	COALESCE((SELECT SUM(souls) FROM festa_submissions fs WHERE fs.character_id=c.id), 0) AS souls,
+	COALESCE(rp_today, 0) AS rp_today,
+	COALESCE(rp_yesterday, 0) AS rp_yesterday,
+	c.name,
+	c.id AS character_id,
+	COALESCE(order_index, 0) AS order_index,
+	c.last_login,
+	COALESCE(recruiter, false) AS recruiter,
+	COALESCE(avoid_leadership, false) AS avoid_leadership,
+	c.hr,
+	c.gr,
+	c.weapon_id,
+	c.weapon_type,
+	CASE WHEN g.leader_id = c.id THEN true ELSE false END AS is_leader,
+	character.is_applicant
+	FROM (
+		SELECT character_id, true as is_applicant, guild_id
+		FROM guild_applications ga
+		WHERE ga.application_type = 'applied'
+		UNION
+		SELECT character_id, false as is_applicant, guild_id
 		FROM guild_characters gc
-		LEFT JOIN characters c ON c.id = gc.character_id
-		LEFT JOIN guilds g ON g.id = gc.guild_id
-) AS subquery
+	) character
+	JOIN characters c on character.character_id = c.id
+	LEFT JOIN guild_characters gc ON gc.character_id = character.character_id
+	LEFT JOIN guilds g ON g.id = gc.guild_id
 `
 
 func GetGuildMembers(s *Session, guildID uint32, applicants bool) ([]*GuildMember, error) {
 	rows, err := s.server.db.Queryx(fmt.Sprintf(`
 			%s
-			WHERE guild_id = $1 AND is_applicant = $2
+			WHERE character.guild_id = $1 AND is_applicant = $2
 	`, guildMembersSelectSQL), guildID, applicants)
 
 	if err != nil {
@@ -115,7 +121,7 @@ func GetGuildMembers(s *Session, guildID uint32, applicants bool) ([]*GuildMembe
 }
 
 func GetCharacterGuildData(s *Session, charID uint32) (*GuildMember, error) {
-	rows, err := s.server.db.Queryx(fmt.Sprintf("%s	WHERE character_id=$1", guildMembersSelectSQL), charID)
+	rows, err := s.server.db.Queryx(fmt.Sprintf("%s	WHERE character.character_id=$1", guildMembersSelectSQL), charID)
 
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("failed to retrieve membership data for character '%d'", charID))
