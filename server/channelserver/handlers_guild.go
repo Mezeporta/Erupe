@@ -748,8 +748,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OperateGuildChangePugi3:
 		handleChangePugi(s, uint8(pkt.Data1.ReadUint32()), guild, 3)
 	case mhfpacket.OperateGuildUnlockOutfit:
-		// TODO: This doesn't implement blocking, if someone unlocked the same outfit at the same time
-		s.server.db.Exec(`UPDATE guilds SET pugi_outfits=pugi_outfits+$1 WHERE id=$2`, int(math.Pow(float64(pkt.Data1.ReadUint32()), 2)), guild.ID)
+		s.server.db.Exec(`UPDATE guilds SET pugi_outfits=$1 WHERE id=$2`, pkt.Data1.ReadUint32(), guild.ID)
 	case mhfpacket.OperateGuildDonateRoom:
 		quantity := uint16(pkt.Data1.ReadUint32())
 		bf.WriteBytes(handleDonateRP(s, quantity, guild, 2))
