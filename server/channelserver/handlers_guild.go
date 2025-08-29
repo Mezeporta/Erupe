@@ -8,7 +8,6 @@ import (
 	"erupe-ce/common/mhfitem"
 	_config "erupe-ce/config"
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 	"time"
