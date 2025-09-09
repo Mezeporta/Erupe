@@ -1,12 +1,16 @@
 # Erupe
 
 ## Client Compatibility
+
 ### Platforms
+
 - PC
 - PlayStation 3
 - PlayStation Vita
 - Wii U (Up to Z2)
+
 ### Versions (ClientMode)
+
 - All versions after HR compression (G10-ZZ) have been tested extensively and have great functionality.
 - All versions available on Wii U (G3-Z2) have been tested and should have good functionality.
 - The second oldest found version is Forward.4 (FW.4), this version has basic functionality.
@@ -34,17 +38,18 @@ If you want to modify or compile Erupe yourself, please read on.
 
 ## Docker
 
-Please see [docker/README.md](./docker/README.md). This is intended for quick installs and development, not for production. 
+Please see [docker/README.md](./docker/README.md). This is intended for quick installs and development, not for production.
 
-## Schemas 
+## Schemas
 
-We source control the following schemas: 
+We source control the following schemas:
+
 - Initialization Schema: This initializes the application database to a specific version (9.1.0).
 - Update Schemas: These are update files that should be ran on top of the initialization schema.
 - Patch Schemas: These are for development and should be run after running all initialization and update schema. These get condensed into `Update Schemas` and deleted when updated to a new release.
-- Bundled Schemas: These are demo reference files to give servers standard set-ups. 
+- Bundled Schemas: These are demo reference files to give servers standard set-ups.
 
-Note: Patch schemas are subject to change! You should only be using them if you are following along with development. 
+Note: Patch schemas are subject to change! You should only be using them if you are following along with development.
 
 ## Resources
 
