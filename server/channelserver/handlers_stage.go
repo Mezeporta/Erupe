@@ -75,17 +75,14 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 			if s == session || !session.loaded {
 				continue
 			}
-			temp = &mhfpacket.MsgSysInsertUser{CharID: session.charID}
-			newNotif.WriteUint16(uint16(temp.Opcode()))
-			temp.Build(newNotif, s.clientContext)
-			for i := 0; i < 3; i++ {
-				temp = &mhfpacket.MsgSysNotifyUserBinary{
-					CharID:     session.charID,
-					BinaryType: uint8(i + 1),
-				}
-				newNotif.WriteUint16(uint16(temp.Opcode()))
-				temp.Build(newNotif, s.clientContext)
-			}
+			session.QueueSendMHF(&mhfpacket.MsgSysInsertUser{CharID: s.charID})
+			session.QueueSendMHF(&mhfpacket.MsgSysNotifyUserBinary{CharID: s.charID, BinaryType: 1})
+			session.QueueSendMHF(&mhfpacket.MsgSysNotifyUserBinary{CharID: s.charID, BinaryType: 2})
+			session.QueueSendMHF(&mhfpacket.MsgSysNotifyUserBinary{CharID: s.charID, BinaryType: 3})
+			s.QueueSendMHF(&mhfpacket.MsgSysInsertUser{CharID: session.charID})
+			s.QueueSendMHF(&mhfpacket.MsgSysNotifyUserBinary{CharID: session.charID, BinaryType: 1})
+			s.QueueSendMHF(&mhfpacket.MsgSysNotifyUserBinary{CharID: session.charID, BinaryType: 2})
+			s.QueueSendMHF(&mhfpacket.MsgSysNotifyUserBinary{CharID: session.charID, BinaryType: 3})
 		}
 	}
 
