@@ -68,11 +68,11 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	newNotif := byteframe.NewByteFrame()
 
 	// Cast existing user data to new user
-	if !s.userEnteredStage {
-		s.userEnteredStage = true
+	if !s.loaded {
+		s.loaded = true
 
 		for _, session := range s.server.sessions {
-			if s == session {
+			if s == session || !session.loaded {
 				continue
 			}
 			temp = &mhfpacket.MsgSysInsertUser{CharID: session.charID}
