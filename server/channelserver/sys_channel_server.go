@@ -38,18 +38,17 @@ type userBinaryPartID struct {
 // Server is a MHF channel server.
 type Server struct {
 	sync.Mutex
-	Channels    []*Server
-	ID          uint16
-	GlobalID    string
-	IP          string
-	Port        uint16
-	logger      *zap.Logger
-	db          *sqlx.DB
-	erupeConfig *_config.Config
-	acceptConns chan net.Conn
-	deleteConns chan net.Conn
-	sessions    map[net.Conn]*Session
-	//objectIDs      map[*Session]uint16
+	Channels       []*Server
+	ID             uint16
+	GlobalID       string
+	IP             string
+	Port           uint16
+	logger         *zap.Logger
+	db             *sqlx.DB
+	erupeConfig    *_config.Config
+	acceptConns    chan net.Conn
+	deleteConns    chan net.Conn
+	sessions       map[net.Conn]*Session
 	listener       net.Listener // Listener that is created when Server.Start is called.
 	isShuttingDown bool
 
@@ -148,14 +147,13 @@ func (s *Server) UpdateRavi(semaID uint32, index uint8, value uint32, update boo
 // NewServer creates a new Server type.
 func NewServer(config *Config) *Server {
 	s := &Server{
-		ID:          config.ID,
-		logger:      config.Logger,
-		db:          config.DB,
-		erupeConfig: config.ErupeConfig,
-		acceptConns: make(chan net.Conn),
-		deleteConns: make(chan net.Conn),
-		sessions:    make(map[net.Conn]*Session),
-		//objectIDs:       make(map[*Session]uint16),
+		ID:              config.ID,
+		logger:          config.Logger,
+		db:              config.DB,
+		erupeConfig:     config.ErupeConfig,
+		acceptConns:     make(chan net.Conn),
+		deleteConns:     make(chan net.Conn),
+		sessions:        make(map[net.Conn]*Session),
 		stages:          make(map[string]*Stage),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		semaphore:       make(map[string]*Semaphore),

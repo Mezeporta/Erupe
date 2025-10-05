@@ -8,6 +8,7 @@ import (
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/network/mhfpacket"
+
 	"go.uber.org/zap"
 )
 
@@ -64,7 +65,6 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	// Confirm the stage entry.
 	doAckSimpleSucceed(s, ackHandle, []byte{0x00, 0x00, 0x00, 0x00})
 
-	var temp mhfpacket.MHFPacket
 	newNotif := byteframe.NewByteFrame()
 
 	// Cast existing user data to new user
