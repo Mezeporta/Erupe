@@ -9,3 +9,6 @@ savedata/*/
 *.bat
 /docker/db-data
 screenshots/*
+
+# We don't need the built file
+erupe-ce
