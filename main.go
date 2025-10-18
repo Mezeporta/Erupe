@@ -40,7 +40,7 @@ var Commit = func() string {
 	return "unknown"
 }
 
-func setupDiscordBot(db *discordbot.DiscordBot, logger *zap.Logger) {
+func setupDiscordBot(logger *zap.Logger) *discordbot.DiscordBot {
 	bot, err := discordbot.NewDiscordBot(discordbot.Options{
 		Logger: logger,
 		Config: _config.ErupeConfig,
@@ -57,12 +57,12 @@ func setupDiscordBot(db *discordbot.DiscordBot, logger *zap.Logger) {
 		preventClose(fmt.Sprintf("Discord: Failed to start, %s", err.Error()))
 	}
 
-	*db = *bot
-
 	_, err = bot.Session.ApplicationCommandBulkOverwrite(bot.Session.State.User.ID, "", discordbot.Commands)
 	if err != nil {
 		preventClose(fmt.Sprintf("Discord: Failed to start, %s", err.Error()))
 	}
+
+	return bot
 }
 
 func main() {
@@ -99,7 +99,7 @@ func main() {
 	var discordBot *discordbot.DiscordBot = nil
 
 	if config.Discord.Enabled {
-		setupDiscordBot(discordBot, logger)
+		discordBot = setupDiscordBot(logger)
 
 		logger.Info("Discord: Started successfully")
 	} else {
@@ -232,7 +232,7 @@ func main() {
 				} else {
 					channelQuery += fmt.Sprintf(
 						`INSERT INTO servers (server_id, current_players, world_name, world_description, land) VALUES (%d, 0, '%s', '%s', %d);`,
-						sid, ee.Name, ee.Description, i+1
+						sid, ee.Name, ee.Description, i+1,
 					)
 					channels = append(channels, &c)
 					logger.Info(fmt.Sprintf("Channel %d (%d): Started successfully", count, ce.Port))
