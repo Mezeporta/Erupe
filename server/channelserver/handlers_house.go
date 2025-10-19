@@ -500,10 +500,16 @@ func handleMsgMhfEnumerateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateWarehouse)
+	var err error
 	switch pkt.BoxType {
 	case 0:
 		newStacks := mhfitem.DiffItemStacks(warehouseGetItems(s, pkt.BoxIndex), pkt.UpdatedItems)
-		s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET item%d=$1 WHERE character_id=$2`, pkt.BoxIndex), mhfitem.SerializeWarehouseItems(newStacks), s.charID)
+		_, err = s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET item%d=$1 WHERE character_id=$2`, pkt.BoxIndex), mhfitem.SerializeWarehouseItems(newStacks), s.charID)
+		if err != nil {
+			s.logger.Error("Failed to update warehouse items", zap.Error(err))
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
 	case 1:
 		var fEquip []mhfitem.MHFEquipment
 		oEquips := warehouseGetEquipment(s, pkt.BoxIndex)
@@ -527,7 +533,12 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 				fEquip = append(fEquip, oEquip)
 			}
 		}
-		s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET equip%d=$1 WHERE character_id=$2`, pkt.BoxIndex), mhfitem.SerializeWarehouseEquipment(fEquip), s.charID)
+		_, err = s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET equip%d=$1 WHERE character_id=$2`, pkt.BoxIndex), mhfitem.SerializeWarehouseEquipment(fEquip), s.charID)
+		if err != nil {
+			s.logger.Error("Failed to update warehouse equipment", zap.Error(err))
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

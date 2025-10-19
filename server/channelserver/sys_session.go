@@ -104,10 +104,7 @@ func (s *Session) Start() {
 // QueueSend queues a packet (raw []byte) to be sent.
 func (s *Session) QueueSend(data []byte) {
 	s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
-	err := s.cryptConn.SendPacket(append(data, []byte{0x00, 0x10}...))
-	if err != nil {
-		s.logger.Warn("Failed to send packet")
-	}
+	s.sendPackets <- packet{data, true}
 }
 
 // QueueSendNonBlocking queues a packet (raw []byte) to be sent, dropping the packet entirely if the queue is full.
@@ -156,18 +153,14 @@ func (s *Session) QueueAck(ackHandle uint32, data []byte) {
 }
 
 func (s *Session) sendLoop() {
-	var pkt packet
 	for {
-		var buf []byte
 		if s.closed {
 			return
 		}
+		// Send each packet individually with its own terminator
 		for len(s.sendPackets) > 0 {
-			pkt = <-s.sendPackets
-			buf = append(buf, pkt.data...)
-		}
-		if len(buf) > 0 {
-			err := s.cryptConn.SendPacket(append(buf, []byte{0x00, 0x10}...))
+			pkt := <-s.sendPackets
+			err := s.cryptConn.SendPacket(append(pkt.data, []byte{0x00, 0x10}...))
 			if err != nil {
 				s.logger.Warn("Failed to send packet")
 			}
@@ -250,7 +243,7 @@ func ignored(opcode network.PacketID) bool {
 		network.MSG_SYS_TIME,
 		network.MSG_SYS_EXTEND_THRESHOLD,
 		network.MSG_SYS_POSITION_OBJECT,
-		network.MSG_MHF_SAVEDATA,
+		// network.MSG_MHF_SAVEDATA, // Temporarily enabled for debugging save issues
 	}
 	set := make(map[network.PacketID]struct{}, len(ignoreList))
 	for _, s := range ignoreList {

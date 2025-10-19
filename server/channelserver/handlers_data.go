@@ -31,7 +31,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		diff, err := nullcomp.Decompress(pkt.RawDataPayload)
 		if err != nil {
 			s.logger.Error("Failed to decompress diff", zap.Error(err))
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 		// Perform diff.
@@ -43,7 +43,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		saveData, err := nullcomp.Decompress(pkt.RawDataPayload)
 		if err != nil {
 			s.logger.Error("Failed to decompress savedata from packet", zap.Error(err))
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 		if s.server.erupeConfig.SaveDumps.RawEnabled {
@@ -177,6 +177,8 @@ func handleMsgMhfSaveScenarioData(s *Session, p mhfpacket.MHFPacket) {
 	_, err := s.server.db.Exec("UPDATE characters SET scenariodata = $1 WHERE id = $2", pkt.RawDataPayload, s.charID)
 	if err != nil {
 		s.logger.Error("Failed to update scenario data in db", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
