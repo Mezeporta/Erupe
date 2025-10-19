@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped golang.org/x/net from 0.33.0 to 0.38.0
 - Bumped golang.org/x/crypto from 0.31.0 to 0.35.0
 
+## Removed
+
+- Compatibility with Go 1.21 removed.
+
 ## [9.2.0] - 2023-04-01
 
 ### Added in 9.2.0
