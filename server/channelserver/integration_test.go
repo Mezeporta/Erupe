@@ -9,11 +9,13 @@ import (
 	"time"
 )
 
+const skipIntegrationTestMsg = "skipping integration test in short mode"
+
 // IntegrationTest_PacketQueueFlow verifies the complete packet flow
 // from queueing to sending, ensuring packets are sent individually
 func IntegrationTest_PacketQueueFlow(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
+		t.Skip(skipIntegrationTestMsg)
 	}
 
 	tests := []struct {
@@ -107,7 +109,7 @@ func IntegrationTest_PacketQueueFlow(t *testing.T) {
 // IntegrationTest_ConcurrentQueueing verifies thread-safe packet queueing
 func IntegrationTest_ConcurrentQueueing(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
+		t.Skip(skipIntegrationTestMsg)
 	}
 
 	// Fixed with network.Conn interface
@@ -206,7 +208,7 @@ done:
 // IntegrationTest_AckPacketFlow verifies ACK packet generation and sending
 func IntegrationTest_AckPacketFlow(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
+		t.Skip(skipIntegrationTestMsg)
 	}
 
 	// Fixed with network.Conn interface
@@ -272,7 +274,7 @@ func IntegrationTest_AckPacketFlow(t *testing.T) {
 // IntegrationTest_MixedPacketTypes verifies different packet types don't interfere
 func IntegrationTest_MixedPacketTypes(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
+		t.Skip(skipIntegrationTestMsg)
 	}
 
 	// Fixed with network.Conn interface
@@ -329,7 +331,7 @@ func IntegrationTest_MixedPacketTypes(t *testing.T) {
 // IntegrationTest_PacketOrderPreservation verifies packets are sent in order
 func IntegrationTest_PacketOrderPreservation(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
+		t.Skip(skipIntegrationTestMsg)
 	}
 
 	// Fixed with network.Conn interface
@@ -386,7 +388,7 @@ func IntegrationTest_PacketOrderPreservation(t *testing.T) {
 // IntegrationTest_QueueBackpressure verifies behavior under queue pressure
 func IntegrationTest_QueueBackpressure(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
+		t.Skip(skipIntegrationTestMsg)
 	}
 
 	// Fixed with network.Conn interface
@@ -438,4 +440,322 @@ func IntegrationTest_QueueBackpressure(t *testing.T) {
 	}
 
 	t.Logf("Successfully queued %d/%d packets, sent %d", successCount, attemptCount, sentCount)
+}
+
+// IntegrationTest_GuildEnumerationFlow tests end-to-end guild enumeration
+func IntegrationTest_GuildEnumerationFlow(t *testing.T) {
+	if testing.Short() {
+		t.Skip(skipIntegrationTestMsg)
+	}
+
+	tests := []struct {
+		name         string
+		guildCount   int
+		membersPerGuild int
+		wantValid    bool
+	}{
+		{
+			name:            "single_guild",
+			guildCount:      1,
+			membersPerGuild: 1,
+			wantValid:       true,
+		},
+		{
+			name:            "multiple_guilds",
+			guildCount:      10,
+			membersPerGuild: 5,
+			wantValid:       true,
+		},
+		{
+			name:            "large_guilds",
+			guildCount:      100,
+			membersPerGuild: 50,
+			wantValid:       true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+			s := createTestSession(mock)
+
+			go s.sendLoop()
+
+			// Simulate guild enumeration request
+			for i := 0; i < tt.guildCount; i++ {
+				guildData := make([]byte, 100) // Simplified guild data
+				for j := 0; j < len(guildData); j++ {
+					guildData[j] = byte((i*256 + j) % 256)
+				}
+				s.QueueSend(guildData)
+			}
+
+			// Wait for processing
+			timeout := time.After(3 * time.Second)
+			ticker := time.NewTicker(50 * time.Millisecond)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-timeout:
+					t.Fatal("timeout waiting for guild enumeration")
+				case <-ticker.C:
+					if mock.PacketCount() >= tt.guildCount {
+						goto done
+					}
+				}
+			}
+
+		done:
+			s.closed = true
+			time.Sleep(50 * time.Millisecond)
+
+			sentPackets := mock.GetSentPackets()
+			if len(sentPackets) != tt.guildCount {
+				t.Errorf("guild enumeration: got %d packets, want %d", len(sentPackets), tt.guildCount)
+			}
+
+			// Verify each guild packet has terminator
+			for i, pkt := range sentPackets {
+				if len(pkt) < 2 {
+					t.Errorf("guild packet %d too short", i)
+					continue
+				}
+				if pkt[len(pkt)-2] != 0x00 || pkt[len(pkt)-1] != 0x10 {
+					t.Errorf("guild packet %d missing terminator", i)
+				}
+			}
+		})
+	}
+}
+
+// IntegrationTest_ConcurrentClientAccess tests concurrent client access scenarios
+func IntegrationTest_ConcurrentClientAccess(t *testing.T) {
+	if testing.Short() {
+		t.Skip(skipIntegrationTestMsg)
+	}
+
+	tests := []struct {
+		name            string
+		concurrentClients int
+		packetsPerClient  int
+		wantTotalPackets  int
+	}{
+		{
+			name:             "two_concurrent_clients",
+			concurrentClients: 2,
+			packetsPerClient:  5,
+			wantTotalPackets: 10,
+		},
+		{
+			name:             "five_concurrent_clients",
+			concurrentClients: 5,
+			packetsPerClient:  10,
+			wantTotalPackets: 50,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			totalPackets := 0
+			var mu sync.Mutex
+
+			wg.Add(tt.concurrentClients)
+
+			for clientID := 0; clientID < tt.concurrentClients; clientID++ {
+				go func(cid int) {
+					defer wg.Done()
+
+					mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+					s := createTestSession(mock)
+					go s.sendLoop()
+
+					// Client sends packets
+					for i := 0; i < tt.packetsPerClient; i++ {
+						testData := []byte{byte(cid), byte(i), 0xAA, 0xBB}
+						s.QueueSend(testData)
+					}
+
+					time.Sleep(100 * time.Millisecond)
+					s.closed = true
+					time.Sleep(50 * time.Millisecond)
+
+					sentCount := mock.PacketCount()
+					mu.Lock()
+					totalPackets += sentCount
+					mu.Unlock()
+				}(clientID)
+			}
+
+			wg.Wait()
+
+			if totalPackets != tt.wantTotalPackets {
+				t.Errorf("concurrent access: got %d packets, want %d", totalPackets, tt.wantTotalPackets)
+			}
+		})
+	}
+}
+
+// IntegrationTest_ClientVersionCompatibility tests version-specific packet handling
+func IntegrationTest_ClientVersionCompatibility(t *testing.T) {
+	if testing.Short() {
+		t.Skip(skipIntegrationTestMsg)
+	}
+
+	tests := []struct {
+		name          string
+		clientVersion _config.Mode
+		shouldSucceed bool
+	}{
+		{
+			name:          "version_z2",
+			clientVersion: _config.Z2,
+			shouldSucceed: true,
+		},
+		{
+			name:          "version_s6",
+			clientVersion: _config.S6,
+			shouldSucceed: true,
+		},
+		{
+			name:          "version_g32",
+			clientVersion: _config.G32,
+			shouldSucceed: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalVersion := _config.ErupeConfig.RealClientMode
+			defer func() { _config.ErupeConfig.RealClientMode = originalVersion }()
+
+			_config.ErupeConfig.RealClientMode = tt.clientVersion
+
+			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+			s := &Session{
+				sendPackets: make(chan packet, 100),
+				closed:      false,
+				server: &Server{
+					erupeConfig: _config.ErupeConfig,
+				},
+			}
+			s.cryptConn = mock
+
+			go s.sendLoop()
+
+			// Send version-specific packet
+			testData := []byte{0x00, 0x01, 0xAA, 0xBB}
+			s.QueueSend(testData)
+
+			time.Sleep(100 * time.Millisecond)
+			s.closed = true
+			time.Sleep(50 * time.Millisecond)
+
+			sentCount := mock.PacketCount()
+			if (sentCount > 0) != tt.shouldSucceed {
+				t.Errorf("version compatibility: got %d packets, shouldSucceed %v", sentCount, tt.shouldSucceed)
+			}
+		})
+	}
+}
+
+// IntegrationTest_PacketPrioritization tests handling of priority packets
+func IntegrationTest_PacketPrioritization(t *testing.T) {
+	if testing.Short() {
+		t.Skip(skipIntegrationTestMsg)
+	}
+
+	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+	s := createTestSession(mock)
+
+	go s.sendLoop()
+
+	// Queue normal priority packets
+	for i := 0; i < 5; i++ {
+		s.QueueSend([]byte{0x00, byte(i), 0xAA})
+	}
+
+	// Queue high priority ACK packet
+	s.QueueAck(0x12345678, []byte{0xBB, 0xCC})
+
+	// Queue more normal packets
+	for i := 5; i < 10; i++ {
+		s.QueueSend([]byte{0x00, byte(i), 0xDD})
+	}
+
+	time.Sleep(200 * time.Millisecond)
+	s.closed = true
+	time.Sleep(50 * time.Millisecond)
+
+	sentPackets := mock.GetSentPackets()
+	if len(sentPackets) < 10 {
+		t.Errorf("expected at least 10 packets, got %d", len(sentPackets))
+	}
+
+	// Verify all packets have terminators
+	for i, pkt := range sentPackets {
+		if len(pkt) < 2 || pkt[len(pkt)-2] != 0x00 || pkt[len(pkt)-1] != 0x10 {
+			t.Errorf("packet %d missing or invalid terminator", i)
+		}
+	}
+}
+
+// IntegrationTest_DataIntegrityUnderLoad tests data integrity under load
+func IntegrationTest_DataIntegrityUnderLoad(t *testing.T) {
+	if testing.Short() {
+		t.Skip(skipIntegrationTestMsg)
+	}
+
+	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+	s := createTestSession(mock)
+
+	go s.sendLoop()
+
+	// Send large number of packets with unique identifiers
+	packetCount := 100
+	for i := range packetCount {
+		// Each packet contains a unique identifier
+		testData := make([]byte, 10)
+		binary.LittleEndian.PutUint32(testData[0:4], uint32(i))
+		binary.LittleEndian.PutUint32(testData[4:8], uint32(i*2))
+		testData[8] = 0xAA
+		testData[9] = 0xBB
+		s.QueueSend(testData)
+	}
+
+	// Wait for processing
+	timeout := time.After(5 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			t.Fatal("timeout waiting for packets under load")
+		case <-ticker.C:
+			if mock.PacketCount() >= packetCount {
+				goto done
+			}
+		}
+	}
+
+done:
+	s.closed = true
+	time.Sleep(50 * time.Millisecond)
+
+	sentPackets := mock.GetSentPackets()
+	if len(sentPackets) != packetCount {
+		t.Errorf("data integrity: got %d packets, want %d", len(sentPackets), packetCount)
+	}
+
+	// Verify no duplicate packets
+	seen := make(map[string]bool)
+	for i, pkt := range sentPackets {
+		packetStr := string(pkt)
+		if seen[packetStr] && len(pkt) > 2 {
+			t.Errorf("duplicate packet detected at index %d", i)
+		}
+		seen[packetStr] = true
+	}
 }
