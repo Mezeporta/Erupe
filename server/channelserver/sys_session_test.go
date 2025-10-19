@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // MockCryptConn simulates the encrypted connection for testing
@@ -45,11 +47,30 @@ func (m *MockCryptConn) PacketCount() int {
 	return len(m.sentPackets)
 }
 
+// createTestSession creates a properly initialized session for testing
+func createTestSession(mock network.Conn) *Session {
+	// Create a production logger for testing (will output to stderr)
+	logger, _ := zap.NewProduction()
+
+	s := &Session{
+		logger:      logger,
+		sendPackets: make(chan packet, 20),
+		closed:      false,
+		cryptConn:   mock,
+		server: &Server{
+			erupeConfig: &_config.Config{
+				DebugOptions: _config.DebugOptions{
+					LogOutboundMessages: false,
+				},
+			},
+		},
+	}
+	return s
+}
+
 // TestPacketQueueIndividualSending verifies that packets are sent individually
 // with their own terminators instead of being concatenated
 func TestPacketQueueIndividualSending(t *testing.T) {
-	t.Skip("skipping test - requires interface-based CryptConn mock")
-
 	tests := []struct {
 		name           string
 		packetCount    int
@@ -79,15 +100,7 @@ func TestPacketQueueIndividualSending(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
-
-			// Create a minimal session for testing
-			s := &Session{
-				sendPackets: make(chan packet, 20),
-				closed:      false,
-			}
-
-			// Replace the cryptConn with our mock
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+			s := createTestSession(mock)
 
 			// Start the send loop in a goroutine
 			go s.sendLoop()
@@ -134,15 +147,8 @@ func TestPacketQueueIndividualSending(t *testing.T) {
 // TestPacketQueueNoConcatenation verifies that packets are NOT concatenated
 // This test specifically checks the bug that was fixed
 func TestPacketQueueNoConcatenation(t *testing.T) {
-	t.Skip("skipping test - requires interface-based CryptConn mock")
-
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
-
-	s := &Session{
-		sendPackets: make(chan packet, 20),
-		closed:      false,
-	}
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+	s := createTestSession(mock)
 
 	go s.sendLoop()
 
@@ -184,22 +190,8 @@ func TestPacketQueueNoConcatenation(t *testing.T) {
 // TestQueueSendUsesQueue verifies that QueueSend actually queues packets
 // instead of sending them directly (the bug we fixed)
 func TestQueueSendUsesQueue(t *testing.T) {
-	t.Skip("skipping test - requires interface-based CryptConn mock")
-
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
-
-	s := &Session{
-		sendPackets: make(chan packet, 20),
-		closed:      false,
-		server: &Server{
-			erupeConfig: &_config.Config{
-				DebugOptions: _config.DebugOptions{
-					LogOutboundMessages: false,
-				},
-			},
-		},
-	}
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+	s := createTestSession(mock)
 
 	// Don't start sendLoop yet - we want to verify packets are queued
 
@@ -233,15 +225,8 @@ func TestQueueSendUsesQueue(t *testing.T) {
 
 // TestPacketTerminatorFormat verifies the exact terminator format
 func TestPacketTerminatorFormat(t *testing.T) {
-	t.Skip("skipping test - requires interface-based CryptConn mock")
-
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
-
-	s := &Session{
-		sendPackets: make(chan packet, 20),
-		closed:      false,
-	}
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+	s := createTestSession(mock)
 
 	go s.sendLoop()
 
@@ -283,20 +268,12 @@ func TestPacketTerminatorFormat(t *testing.T) {
 
 // TestQueueSendNonBlockingDropsOnFull verifies non-blocking queue behavior
 func TestQueueSendNonBlockingDropsOnFull(t *testing.T) {
-	t.Skip("skipping test - requires interface-based CryptConn mock")
+	// Create a mock logger to avoid nil pointer in QueueSendNonBlocking
+	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 
 	// Create session with small queue
-	s := &Session{
-		sendPackets: make(chan packet, 2),
-		closed:      false,
-		server: &Server{
-			erupeConfig: &_config.Config{
-				DebugOptions: _config.DebugOptions{
-					LogOutboundMessages: false,
-				},
-			},
-		},
-	}
+	s := createTestSession(mock)
+	s.sendPackets = make(chan packet, 2) // Override with smaller queue
 
 	// Don't start sendLoop - let queue fill up
 
@@ -322,22 +299,8 @@ func TestQueueSendNonBlockingDropsOnFull(t *testing.T) {
 
 // TestPacketQueueAckFormat verifies ACK packet format
 func TestPacketQueueAckFormat(t *testing.T) {
-	t.Skip("skipping test - requires interface-based CryptConn mock")
-
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
-
-	s := &Session{
-		sendPackets: make(chan packet, 20),
-		closed:      false,
-		server: &Server{
-			erupeConfig: &_config.Config{
-				DebugOptions: _config.DebugOptions{
-					LogOutboundMessages: false,
-				},
-			},
-		},
-	}
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+	s := createTestSession(mock)
 
 	go s.sendLoop()
 

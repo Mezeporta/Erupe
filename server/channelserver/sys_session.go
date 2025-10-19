@@ -31,7 +31,7 @@ type Session struct {
 	logger        *zap.Logger
 	server        *Server
 	rawConn       net.Conn
-	cryptConn     *network.CryptConn
+	cryptConn     network.Conn
 	sendPackets   chan packet
 	clientContext *clientctx.ClientContext
 	lastPacket    time.Time

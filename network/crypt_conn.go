@@ -10,6 +10,16 @@ import (
 	"net"
 )
 
+// Conn defines the interface for a packet-based connection.
+// This interface allows for mocking of connections in tests.
+type Conn interface {
+	// ReadPacket reads and decrypts a packet from the connection
+	ReadPacket() ([]byte, error)
+
+	// SendPacket encrypts and sends a packet on the connection
+	SendPacket(data []byte) error
+}
+
 // CryptConn represents a MHF encrypted two-way connection,
 // it automatically handles encryption, decryption, and key rotation via it's methods.
 type CryptConn struct {

@@ -16,9 +16,6 @@ func IntegrationTest_PacketQueueFlow(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	// Skip this test as it requires interface-based CryptConn mock
-	t.Skip("skipping integration test - requires interface-based CryptConn mock")
-
 	tests := []struct {
 		name         string
 		packetCount  int
@@ -54,7 +51,7 @@ func IntegrationTest_PacketQueueFlow(t *testing.T) {
 					},
 				},
 			}
-			// s.cryptConn = mock
+			s.cryptConn = mock
 
 			// Start send loop
 			go s.sendLoop()
@@ -113,8 +110,8 @@ func IntegrationTest_ConcurrentQueueing(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	// Skip this test as it requires interface-based CryptConn mock
-	t.Skip("skipping integration test - requires interface-based CryptConn mock")
+	// Fixed with network.Conn interface
+	// Mock implementation available
 
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 
@@ -129,7 +126,7 @@ func IntegrationTest_ConcurrentQueueing(t *testing.T) {
 			},
 		},
 	}
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+		s.cryptConn = mock
 
 	go s.sendLoop()
 
@@ -212,8 +209,8 @@ func IntegrationTest_AckPacketFlow(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	// Skip this test as it requires interface-based CryptConn mock
-	t.Skip("skipping integration test - requires interface-based CryptConn mock")
+	// Fixed with network.Conn interface
+	// Mock implementation available
 
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 
@@ -228,7 +225,7 @@ func IntegrationTest_AckPacketFlow(t *testing.T) {
 			},
 		},
 	}
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+		s.cryptConn = mock
 
 	go s.sendLoop()
 
@@ -278,8 +275,8 @@ func IntegrationTest_MixedPacketTypes(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	// Skip this test as it requires interface-based CryptConn mock
-	t.Skip("skipping integration test - requires interface-based CryptConn mock")
+	// Fixed with network.Conn interface
+	// Mock implementation available
 
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 
@@ -294,7 +291,7 @@ func IntegrationTest_MixedPacketTypes(t *testing.T) {
 			},
 		},
 	}
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+		s.cryptConn = mock
 
 	go s.sendLoop()
 
@@ -335,8 +332,8 @@ func IntegrationTest_PacketOrderPreservation(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	// Skip this test as it requires interface-based CryptConn mock
-	t.Skip("skipping integration test - requires interface-based CryptConn mock")
+	// Fixed with network.Conn interface
+	// Mock implementation available
 
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 
@@ -351,7 +348,7 @@ func IntegrationTest_PacketOrderPreservation(t *testing.T) {
 			},
 		},
 	}
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+		s.cryptConn = mock
 
 	go s.sendLoop()
 
@@ -392,8 +389,8 @@ func IntegrationTest_QueueBackpressure(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	// Skip this test as it requires interface-based CryptConn mock
-	t.Skip("skipping integration test - requires interface-based CryptConn mock")
+	// Fixed with network.Conn interface
+	// Mock implementation available
 
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 
@@ -410,7 +407,7 @@ func IntegrationTest_QueueBackpressure(t *testing.T) {
 			},
 		},
 	}
-	// s.cryptConn = mock  # TODO: Fix type mismatch
+		s.cryptConn = mock
 
 	go s.sendLoop()
 
