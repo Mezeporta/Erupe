@@ -232,8 +232,8 @@ func TestWarehouseEquipmentMerge(t *testing.T) {
 			}
 
 			// Verify merge result count
-			if finalEquip == nil {
-				t.Error("invalid merged equipment count")
+			if len(finalEquip) != tt.wantMerged {
+				t.Errorf("expected %d merged equipment, got %d", tt.wantMerged, len(finalEquip))
 			}
 		})
 	}
