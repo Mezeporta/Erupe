@@ -111,13 +111,13 @@ func TestSessionClosedFlag(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	if session.closed {
+	if session.closed.Load() {
 		t.Error("new session should not be closed")
 	}
 
-	session.closed = true
+	session.closed.Store(true)
 
-	if !session.closed {
+	if !session.closed.Load() {
 		t.Error("session closed flag should be settable")
 	}
 }

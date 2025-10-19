@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"erupe-ce/common/byteframe"
@@ -84,7 +85,8 @@ type Session struct {
 	mailList     []int // Maps accumulated indices to actual mail IDs
 
 	// Connection state
-	closed bool // Whether connection has been closed (prevents double-cleanup)
+	// Use atomic.Bool for thread-safe access from multiple goroutines
+	closed atomic.Bool // Whether connection has been closed (prevents double-cleanup)
 }
 
 // NewSession creates and initializes a new Session for an incoming connection.
@@ -233,7 +235,7 @@ func (s *Session) QueueAck(ackHandle uint32, data []byte) {
 
 func (s *Session) sendLoop() {
 	for {
-		if s.closed {
+		if s.closed.Load() {
 			return
 		}
 		// Send each packet individually with its own terminator
@@ -254,7 +256,7 @@ func (s *Session) recvLoop() {
 			logoutPlayer(s)
 			return
 		}
-		if s.closed {
+		if s.closed.Load() {
 			logoutPlayer(s)
 			return
 		}
@@ -291,7 +293,7 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	s.logMessage(opcodeUint16, pktGroup, s.Name, "Server")
 
 	if opcode == network.MSG_SYS_LOGOUT {
-		s.closed = true
+		s.closed.Store(true)
 		return
 	}
 	// Get the packet parser and handler for this opcode.
