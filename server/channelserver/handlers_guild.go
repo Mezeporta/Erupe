@@ -602,10 +602,10 @@ func GetGuildInfoByCharacterId(s *Session, charID uint32) (*Guild, error) {
 	return buildGuildObjectFromDbResult(rows, err, s)
 }
 
-func buildGuildObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (*Guild, error) {
+func buildGuildObjectFromDbResult(result *sqlx.Rows, _ error, s *Session) (*Guild, error) {
 	guild := &Guild{}
 
-	err = result.StructScan(guild)
+	err := result.StructScan(guild)
 
 	if err != nil {
 		s.logger.Error("failed to retrieve guild data from database", zap.Error(err))
@@ -1853,12 +1853,11 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 				if err != nil {
 					continue
 				}
-				count++
-				if count > 255 {
-					count = 255
+				if count == 255 {
 					rows.Close()
 					break
 				}
+				count++
 				bf.WriteUint32(huntID)
 				bf.WriteUint32(monID)
 			}

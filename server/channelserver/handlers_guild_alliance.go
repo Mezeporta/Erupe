@@ -61,10 +61,10 @@ func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {
 	return buildAllianceObjectFromDbResult(rows, err, s)
 }
 
-func buildAllianceObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (*GuildAlliance, error) {
+func buildAllianceObjectFromDbResult(result *sqlx.Rows, _ error, s *Session) (*GuildAlliance, error) {
 	alliance := &GuildAlliance{}
 
-	err = result.StructScan(alliance)
+	err := result.StructScan(alliance)
 
 	if err != nil {
 		s.logger.Error("failed to retrieve alliance from database", zap.Error(err))

@@ -62,7 +62,7 @@ func TestWarehouseItemSerialization(t *testing.T) {
 			}
 
 			// Verify we can work with the serialized data
-			if len(serialized) < 0 {
+			if serialized == nil {
 				t.Error("invalid serialized length")
 			}
 		})
@@ -100,7 +100,7 @@ func TestWarehouseEquipmentSerialization(t *testing.T) {
 			}
 
 			// Verify we can work with the serialized data
-			if len(serialized) < 0 {
+			if serialized == nil {
 				t.Error("invalid serialized length")
 			}
 		})
@@ -232,7 +232,7 @@ func TestWarehouseEquipmentMerge(t *testing.T) {
 			}
 
 			// Verify merge result count
-			if len(finalEquip) < 0 {
+			if finalEquip == nil {
 				t.Error("invalid merged equipment count")
 			}
 		})
@@ -477,5 +477,6 @@ func BenchmarkWarehouseEquipmentMerge(b *testing.B) {
 				finalEquip = append(finalEquip, oEquip)
 			}
 		}
+		_ = finalEquip // Use finalEquip to avoid unused variable warning
 	}
 }

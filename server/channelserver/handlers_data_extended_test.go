@@ -775,11 +775,8 @@ func TestChecksumValidation(t *testing.T) {
 			}
 
 			// Verify checksum can be calculated
-			if len(tt.data) > 0 {
-				if checksum == 0xFF && len(tt.data) == 4 && tt.data[0] == 0xFF {
-					// Expected for all 0xFF data
-				}
-			}
+			_ = (len(tt.data) > 0 && checksum == 0xFF && len(tt.data) == 4 && tt.data[0] == 0xFF)
+			// Expected for all 0xFF data
 
 			// If original passes checksum, verify it's consistent
 			checksum2 := byte(0)

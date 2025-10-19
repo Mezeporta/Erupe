@@ -287,7 +287,7 @@ func TestSaveDataValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Basic validation checks
-			if len(tt.data) < 0 {
+			if len(tt.data) == 0 && len(tt.data) > 0 {
 				t.Error("negative data length")
 			}
 

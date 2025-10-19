@@ -318,13 +318,13 @@ func spendGachaCoin(s *Session, quantity uint16) {
 	}
 }
 
-func transactGacha(s *Session, gachaID uint32, rollID uint8) (error, int) {
+func transactGacha(s *Session, gachaID uint32, rollID uint8) (int, error) {
 	var itemType uint8
 	var itemNumber uint16
 	var rolls int
 	err := s.server.db.QueryRowx(`SELECT item_type, item_number, rolls FROM gacha_entries WHERE gacha_id = $1 AND entry_type = $2`, gachaID, rollID).Scan(&itemType, &itemNumber, &rolls)
 	if err != nil {
-		return err, 0
+		return 0, err
 	}
 	switch itemType {
 	/*
@@ -345,7 +345,7 @@ func transactGacha(s *Session, gachaID uint32, rollID uint8) (error, int) {
 	case 21:
 		s.server.db.Exec("UPDATE users u SET frontier_points=frontier_points-$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", itemNumber, s.charID)
 	}
-	return nil, rolls
+	return rolls, nil
 }
 
 func getGuaranteedItems(s *Session, gachaID uint32, rollID uint8) []GachaItem {
@@ -450,7 +450,7 @@ func handleMsgMhfPlayNormalGacha(s *Session, p mhfpacket.MHFPacket) {
 	var entry GachaEntry
 	var rewards []GachaItem
 	var reward GachaItem
-	err, rolls := transactGacha(s, pkt.GachaID, pkt.RollType)
+	rolls, err := transactGacha(s, pkt.GachaID, pkt.RollType)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
@@ -502,7 +502,7 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 	var entry GachaEntry
 	var rewards []GachaItem
 	var reward GachaItem
-	err, rolls := transactGacha(s, pkt.GachaID, pkt.RollType)
+	rolls, err := transactGacha(s, pkt.GachaID, pkt.RollType)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
@@ -605,7 +605,7 @@ func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 	var entry GachaEntry
 	var rewards []GachaItem
 	var reward GachaItem
-	err, rolls := transactGacha(s, pkt.GachaID, pkt.RollType)
+	rolls, err := transactGacha(s, pkt.GachaID, pkt.RollType)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return

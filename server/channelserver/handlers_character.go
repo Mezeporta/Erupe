@@ -251,7 +251,6 @@ func (save *CharacterSaveData) updateStructWithSaveData() {
 			}
 		}
 	}
-	return
 }
 
 func handleMsgMhfSexChanger(s *Session, p mhfpacket.MHFPacket) {
