@@ -12,3 +12,6 @@ screenshots/*
 
 # We don't need the built file
 erupe-ce
+
+# config is install dependent
+config.json
