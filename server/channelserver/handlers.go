@@ -179,9 +179,7 @@ func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 
 func logoutPlayer(s *Session) {
 	s.server.Lock()
-	if _, exists := s.server.sessions[s.rawConn]; exists {
-		delete(s.server.sessions, s.rawConn)
-	}
+	delete(s.server.sessions, s.rawConn)
 	s.rawConn.Close()
 	delete(s.server.objectIDs, s)
 	s.server.Unlock()
@@ -244,9 +242,7 @@ func logoutPlayer(s *Session) {
 
 	s.server.Lock()
 	for _, stage := range s.server.stages {
-		if _, exists := stage.reservedClientSlots[s.charID]; exists {
-			delete(stage.reservedClientSlots, s.charID)
-		}
+		delete(stage.reservedClientSlots, s.charID)
 	}
 	s.server.Unlock()
 
@@ -366,10 +362,7 @@ func handleMsgSysRightsReload(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfTransitMessage)
 
-	local := false
-	if strings.Split(s.rawConn.RemoteAddr().String(), ":")[0] == "127.0.0.1" {
-		local = true
-	}
+	local := strings.Split(s.rawConn.RemoteAddr().String(), ":")[0] == "127.0.0.1"
 
 	var maxResults, port, count uint16
 	var cid uint32

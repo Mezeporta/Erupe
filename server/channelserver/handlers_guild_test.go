@@ -50,20 +50,20 @@ func TestGuildCreation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			guild := &Guild{
-				ID:           1,
-				Name:         tt.guildName,
-				MainMotto:    tt.motto,
-				SubMotto:     1,
-				CreatedAt:    time.Now(),
-				MemberCount:  1,
-				RankRP:       0,
-				EventRP:      0,
-				RoomRP:       0,
-				Comment:      "Test guild",
-				Recruiting:   true,
+				ID:            1,
+				Name:          tt.guildName,
+				MainMotto:     tt.motto,
+				SubMotto:      1,
+				CreatedAt:     time.Now(),
+				MemberCount:   1,
+				RankRP:        0,
+				EventRP:       0,
+				RoomRP:        0,
+				Comment:       "Test guild",
+				Recruiting:    true,
 				FestivalColor: FestivalColorNone,
-				Souls:        0,
-				AllianceID:   0,
+				Souls:         0,
+				AllianceID:    0,
 				GuildLeader: GuildLeader{
 					LeaderCharID: tt.leaderId,
 					LeaderName:   "TestLeader",
@@ -74,8 +74,8 @@ func TestGuildCreation(t *testing.T) {
 				t.Errorf("guild name validity check failed for '%s'", guild.Name)
 			}
 
-			if guild.GuildLeader.LeaderCharID != tt.leaderId {
-				t.Errorf("guild leader ID mismatch: got %d, want %d", guild.GuildLeader.LeaderCharID, tt.leaderId)
+			if guild.LeaderCharID != tt.leaderId {
+				t.Errorf("guild leader ID mismatch: got %d, want %d", guild.LeaderCharID, tt.leaderId)
 			}
 		})
 	}
@@ -290,12 +290,12 @@ func TestGuildLeaderAssignment(t *testing.T) {
 				},
 			}
 
-			if guild.GuildLeader.LeaderCharID != tt.leaderId {
-				t.Errorf("leader ID mismatch: got %d, want %d", guild.GuildLeader.LeaderCharID, tt.leaderId)
+			if guild.LeaderCharID != tt.leaderId {
+				t.Errorf("leader ID mismatch: got %d, want %d", guild.LeaderCharID, tt.leaderId)
 			}
 
-			if guild.GuildLeader.LeaderName != tt.leaderName {
-				t.Errorf("leader name mismatch: got %s, want %s", guild.GuildLeader.LeaderName, tt.leaderName)
+			if guild.LeaderName != tt.leaderName {
+				t.Errorf("leader name mismatch: got %s, want %s", guild.LeaderName, tt.leaderName)
 			}
 		})
 	}
@@ -345,7 +345,7 @@ func TestGuildApplicationTypes(t *testing.T) {
 // TestGuildApplicationCreation tests guild application creation
 func TestGuildApplicationCreation(t *testing.T) {
 	tests := []struct {
-		name  string
+		name    string
 		guildId uint32
 		charId  uint32
 		valid   bool
@@ -481,11 +481,11 @@ func TestGuildMemberCount(t *testing.T) {
 // TestGuildRP tests guild RP (rank points and event points)
 func TestGuildRP(t *testing.T) {
 	tests := []struct {
-		name     string
-		rankRP   uint32
-		eventRP  uint32
-		roomRP   uint16
-		valid    bool
+		name    string
+		rankRP  uint32
+		eventRP uint32
+		roomRP  uint16
+		valid   bool
 	}{
 		{
 			name:    "minimal_rp",
@@ -580,10 +580,10 @@ func TestGuildCommentHandling(t *testing.T) {
 // TestGuildMottoSelection tests guild motto (main and sub mottos)
 func TestGuildMottoSelection(t *testing.T) {
 	tests := []struct {
-		name     string
-		mainMot  uint8
-		subMot   uint8
-		valid    bool
+		name    string
+		mainMot uint8
+		subMot  uint8
+		valid   bool
 	}{
 		{
 			name:    "motto_pair_0_0",
@@ -691,38 +691,38 @@ func TestGuildSoulTracking(t *testing.T) {
 // TestGuildPugiData tests guild pug i (treasure chest) names and outfits
 func TestGuildPugiData(t *testing.T) {
 	tests := []struct {
-		name       string
-		pugiNames  [3]string
+		name        string
+		pugiNames   [3]string
 		pugiOutfits [3]uint8
-		valid      bool
+		valid       bool
 	}{
 		{
-			name:       "empty_pugi_data",
-			pugiNames:  [3]string{"", "", ""},
+			name:        "empty_pugi_data",
+			pugiNames:   [3]string{"", "", ""},
 			pugiOutfits: [3]uint8{0, 0, 0},
-			valid:      true,
+			valid:       true,
 		},
 		{
-			name:       "all_pugi_filled",
-			pugiNames:  [3]string{"Chest1", "Chest2", "Chest3"},
+			name:        "all_pugi_filled",
+			pugiNames:   [3]string{"Chest1", "Chest2", "Chest3"},
 			pugiOutfits: [3]uint8{1, 2, 3},
-			valid:      true,
+			valid:       true,
 		},
 		{
-			name:       "mixed_pugi_data",
-			pugiNames:  [3]string{"MainChest", "", "AltChest"},
+			name:        "mixed_pugi_data",
+			pugiNames:   [3]string{"MainChest", "", "AltChest"},
 			pugiOutfits: [3]uint8{5, 0, 10},
-			valid:      true,
+			valid:       true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			guild := &Guild{
-				ID:         1,
-				PugiName1:  tt.pugiNames[0],
-				PugiName2:  tt.pugiNames[1],
-				PugiName3:  tt.pugiNames[2],
+				ID:          1,
+				PugiName1:   tt.pugiNames[0],
+				PugiName2:   tt.pugiNames[1],
+				PugiName3:   tt.pugiNames[2],
 				PugiOutfit1: tt.pugiOutfits[0],
 				PugiOutfit2: tt.pugiOutfits[1],
 				PugiOutfit3: tt.pugiOutfits[2],
@@ -766,7 +766,7 @@ func TestGuildRoomExpiry(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			guild := &Guild{
-				ID:        1,
+				ID:         1,
 				RoomExpiry: tt.expiry,
 			}
 
@@ -777,7 +777,7 @@ func TestGuildRoomExpiry(t *testing.T) {
 				}
 			}
 
-			if guild.RoomExpiry == tt.expiry {
+			if guild.RoomExpiry.Equal(tt.expiry) {
 				// Success - times match
 			} else if !tt.hasExpiry && guild.RoomExpiry.IsZero() {
 				// Success - both zero
@@ -789,23 +789,23 @@ func TestGuildRoomExpiry(t *testing.T) {
 // TestGuildAllianceRelationship tests guild alliance ID tracking
 func TestGuildAllianceRelationship(t *testing.T) {
 	tests := []struct {
-		name       string
-		allianceId uint32
+		name        string
+		allianceId  uint32
 		hasAlliance bool
 	}{
 		{
-			name:       "no_alliance",
-			allianceId: 0,
+			name:        "no_alliance",
+			allianceId:  0,
 			hasAlliance: false,
 		},
 		{
-			name:       "single_alliance",
-			allianceId: 1,
+			name:        "single_alliance",
+			allianceId:  1,
 			hasAlliance: true,
 		},
 		{
-			name:       "large_alliance_id",
-			allianceId: 999999,
+			name:        "large_alliance_id",
+			allianceId:  999999,
 			hasAlliance: true,
 		},
 	}
@@ -813,7 +813,7 @@ func TestGuildAllianceRelationship(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			guild := &Guild{
-				ID:        1,
+				ID:         1,
 				AllianceID: tt.allianceId,
 			}
 

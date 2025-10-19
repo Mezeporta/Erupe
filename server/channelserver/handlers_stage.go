@@ -195,13 +195,9 @@ func handleMsgSysBackStage(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	if _, exists := s.stage.reservedClientSlots[s.charID]; exists {
-		delete(s.stage.reservedClientSlots, s.charID)
-	}
+	delete(s.stage.reservedClientSlots, s.charID)
 
-	if _, exists := s.server.stages[backStage].reservedClientSlots[s.charID]; exists {
-		delete(s.server.stages[backStage].reservedClientSlots, s.charID)
-	}
+	delete(s.server.stages[backStage].reservedClientSlots, s.charID)
 
 	doStageTransfer(s, pkt.AckHandle, backStage)
 }
@@ -293,9 +289,7 @@ func handleMsgSysUnreserveStage(s *Session, p mhfpacket.MHFPacket) {
 	s.Unlock()
 	if stage != nil {
 		stage.Lock()
-		if _, exists := stage.reservedClientSlots[s.charID]; exists {
-			delete(stage.reservedClientSlots, s.charID)
-		}
+		delete(stage.reservedClientSlots, s.charID)
 		stage.Unlock()
 	}
 }

@@ -281,12 +281,10 @@ func (s *Server) manageSessions() {
 }
 
 func (s *Server) invalidateSessions() {
-	for {
-		if s.isShuttingDown {
-			break
-		}
+	for !s.isShuttingDown {
+
 		for _, sess := range s.sessions {
-			if time.Now().Sub(sess.lastPacket) > time.Second*time.Duration(30) {
+			if time.Since(sess.lastPacket) > time.Second*time.Duration(30) {
 				s.logger.Info("session timeout", zap.String("Name", sess.Name))
 				logoutPlayer(sess)
 			}
