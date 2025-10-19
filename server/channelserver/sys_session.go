@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"erupe-ce/common/byteframe"
@@ -69,7 +70,7 @@ type Session struct {
 
 	// For Debuging
 	Name     string
-	closed   bool
+	closed   atomic.Bool
 	ackStart map[uint32]time.Time
 }
 
@@ -154,7 +155,7 @@ func (s *Session) QueueAck(ackHandle uint32, data []byte) {
 
 func (s *Session) sendLoop() {
 	for {
-		if s.closed {
+		if s.closed.Load() {
 			return
 		}
 		// Send each packet individually with its own terminator
@@ -171,7 +172,7 @@ func (s *Session) sendLoop() {
 
 func (s *Session) recvLoop() {
 	for {
-		if s.closed {
+		if s.closed.Load() {
 			logoutPlayer(s)
 			return
 		}
@@ -211,7 +212,7 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	s.logMessage(opcodeUint16, pktGroup, s.Name, "Server")
 
 	if opcode == network.MSG_SYS_LOGOUT {
-		s.closed = true
+		s.closed.Store(true)
 		return
 	}
 	// Get the packet parser and handler for this opcode.

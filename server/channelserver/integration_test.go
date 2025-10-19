@@ -44,8 +44,7 @@ func IntegrationTest_PacketQueueFlow(t *testing.T) {
 
 			s := &Session{
 				sendPackets: make(chan packet, 100),
-				closed:      false,
-				server: &Server{
+					server: &Server{
 					erupeConfig: &_config.Config{
 						DebugOptions: _config.DebugOptions{
 							LogOutboundMessages: false,
@@ -84,7 +83,7 @@ func IntegrationTest_PacketQueueFlow(t *testing.T) {
 			}
 
 		done:
-			s.closed = true
+			s.closed.Store(true)
 			time.Sleep(50 * time.Millisecond)
 
 			sentPackets := mock.GetSentPackets()
@@ -119,7 +118,6 @@ func IntegrationTest_ConcurrentQueueing(t *testing.T) {
 
 	s := &Session{
 		sendPackets: make(chan packet, 200),
-		closed:      false,
 		server: &Server{
 			erupeConfig: &_config.Config{
 				DebugOptions: _config.DebugOptions{
@@ -176,7 +174,7 @@ func IntegrationTest_ConcurrentQueueing(t *testing.T) {
 	}
 
 done:
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	sentPackets := mock.GetSentPackets()
@@ -218,7 +216,6 @@ func IntegrationTest_AckPacketFlow(t *testing.T) {
 
 	s := &Session{
 		sendPackets: make(chan packet, 100),
-		closed:      false,
 		server: &Server{
 			erupeConfig: &_config.Config{
 				DebugOptions: _config.DebugOptions{
@@ -241,7 +238,7 @@ func IntegrationTest_AckPacketFlow(t *testing.T) {
 
 	// Wait for ACKs to be sent
 	time.Sleep(200 * time.Millisecond)
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	sentPackets := mock.GetSentPackets()
@@ -284,7 +281,6 @@ func IntegrationTest_MixedPacketTypes(t *testing.T) {
 
 	s := &Session{
 		sendPackets: make(chan packet, 100),
-		closed:      false,
 		server: &Server{
 			erupeConfig: &_config.Config{
 				DebugOptions: _config.DebugOptions{
@@ -312,7 +308,7 @@ func IntegrationTest_MixedPacketTypes(t *testing.T) {
 
 	// Wait for all packets
 	time.Sleep(200 * time.Millisecond)
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	sentPackets := mock.GetSentPackets()
@@ -341,7 +337,6 @@ func IntegrationTest_PacketOrderPreservation(t *testing.T) {
 
 	s := &Session{
 		sendPackets: make(chan packet, 100),
-		closed:      false,
 		server: &Server{
 			erupeConfig: &_config.Config{
 				DebugOptions: _config.DebugOptions{
@@ -363,7 +358,7 @@ func IntegrationTest_PacketOrderPreservation(t *testing.T) {
 
 	// Wait for packets
 	time.Sleep(300 * time.Millisecond)
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	sentPackets := mock.GetSentPackets()
@@ -399,7 +394,6 @@ func IntegrationTest_QueueBackpressure(t *testing.T) {
 	// Small queue to test backpressure
 	s := &Session{
 		sendPackets: make(chan packet, 5),
-		closed:      false,
 		server: &Server{
 			erupeConfig: &_config.Config{
 				DebugOptions: _config.DebugOptions{
@@ -430,7 +424,7 @@ func IntegrationTest_QueueBackpressure(t *testing.T) {
 
 	// Wait for processing
 	time.Sleep(1 * time.Second)
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	// Some packets should have been sent
@@ -507,7 +501,7 @@ func IntegrationTest_GuildEnumerationFlow(t *testing.T) {
 			}
 
 		done:
-			s.closed = true
+			s.closed.Store(true)
 			time.Sleep(50 * time.Millisecond)
 
 			sentPackets := mock.GetSentPackets()
@@ -578,7 +572,7 @@ func IntegrationTest_ConcurrentClientAccess(t *testing.T) {
 					}
 
 					time.Sleep(100 * time.Millisecond)
-					s.closed = true
+					s.closed.Store(true)
 					time.Sleep(50 * time.Millisecond)
 
 					sentCount := mock.PacketCount()
@@ -635,8 +629,7 @@ func IntegrationTest_ClientVersionCompatibility(t *testing.T) {
 			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 			s := &Session{
 				sendPackets: make(chan packet, 100),
-				closed:      false,
-				server: &Server{
+					server: &Server{
 					erupeConfig: _config.ErupeConfig,
 				},
 			}
@@ -649,7 +642,7 @@ func IntegrationTest_ClientVersionCompatibility(t *testing.T) {
 			s.QueueSend(testData)
 
 			time.Sleep(100 * time.Millisecond)
-			s.closed = true
+			s.closed.Store(true)
 			time.Sleep(50 * time.Millisecond)
 
 			sentCount := mock.PacketCount()
@@ -685,7 +678,7 @@ func IntegrationTest_PacketPrioritization(t *testing.T) {
 	}
 
 	time.Sleep(200 * time.Millisecond)
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	sentPackets := mock.GetSentPackets()
@@ -741,7 +734,7 @@ func IntegrationTest_DataIntegrityUnderLoad(t *testing.T) {
 	}
 
 done:
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	sentPackets := mock.GetSentPackets()

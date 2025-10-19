@@ -55,7 +55,6 @@ func createTestSession(mock network.Conn) *Session {
 	s := &Session{
 		logger:      logger,
 		sendPackets: make(chan packet, 20),
-		closed:      false,
 		cryptConn:   mock,
 		server: &Server{
 			erupeConfig: &_config.Config{
@@ -115,7 +114,7 @@ func TestPacketQueueIndividualSending(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 
 			// Stop the session
-			s.closed = true
+			s.closed.Store(true)
 			time.Sleep(50 * time.Millisecond)
 
 			// Verify packet count
@@ -162,7 +161,7 @@ func TestPacketQueueNoConcatenation(t *testing.T) {
 	s.sendPackets <- packet{packet3, true}
 
 	time.Sleep(100 * time.Millisecond)
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	sentPackets := mock.GetSentPackets()
@@ -220,7 +219,7 @@ func TestQueueSendUsesQueue(t *testing.T) {
 		t.Errorf("expected 1 packet sent after sendLoop, got %d", mock.PacketCount())
 	}
 
-	s.closed = true
+	s.closed.Store(true)
 }
 
 // TestPacketTerminatorFormat verifies the exact terminator format
@@ -234,7 +233,7 @@ func TestPacketTerminatorFormat(t *testing.T) {
 	s.sendPackets <- packet{testData, true}
 
 	time.Sleep(100 * time.Millisecond)
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	sentPackets := mock.GetSentPackets()
@@ -294,7 +293,7 @@ func TestQueueSendNonBlockingDropsOnFull(t *testing.T) {
 		t.Errorf("expected 2 packets in queue, got %d", len(s.sendPackets))
 	}
 
-	s.closed = true
+	s.closed.Store(true)
 }
 
 // TestPacketQueueAckFormat verifies ACK packet format
@@ -310,7 +309,7 @@ func TestPacketQueueAckFormat(t *testing.T) {
 	s.QueueAck(ackHandle, ackData)
 
 	time.Sleep(100 * time.Millisecond)
-	s.closed = true
+	s.closed.Store(true)
 	time.Sleep(50 * time.Millisecond)
 
 	sentPackets := mock.GetSentPackets()
