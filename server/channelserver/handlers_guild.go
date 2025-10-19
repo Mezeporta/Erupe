@@ -642,6 +642,10 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOperateGuild)
 
 	guild, err := GetGuildInfoByID(s, pkt.GuildID)
+	if err != nil {
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	characterGuildInfo, err := GetCharacterGuildData(s, s.charID)
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -1535,9 +1539,9 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildManageRight)
 
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
 	if guild == nil || s.prevGuildID != 0 {
-		guild, err = GetGuildInfoByID(s, s.prevGuildID)
+		guild, err := GetGuildInfoByID(s, s.prevGuildID)
 		s.prevGuildID = 0
 		if guild == nil || err != nil {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))

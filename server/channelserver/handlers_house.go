@@ -442,13 +442,6 @@ func addWarehouseItem(s *Session, item mhfitem.MHFItemStack) {
 	s.server.db.Exec("UPDATE warehouse SET item10=$1 WHERE character_id=$2", mhfitem.SerializeWarehouseItems(giftBox), s.charID)
 }
 
-func addWarehouseEquipment(s *Session, equipment mhfitem.MHFEquipment) {
-	giftBox := warehouseGetEquipment(s, 10)
-	equipment.WarehouseID = token.RNG.Uint32()
-	giftBox = append(giftBox, equipment)
-	s.server.db.Exec("UPDATE warehouse SET equip10=$1 WHERE character_id=$2", mhfitem.SerializeWarehouseEquipment(giftBox), s.charID)
-}
-
 func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
 	initializeWarehouse(s)
 	var data []byte

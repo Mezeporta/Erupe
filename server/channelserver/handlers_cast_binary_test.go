@@ -693,7 +693,7 @@ func BenchmarkSlicesContains(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		slices.Contains(courses, target)
+		_ = slices.Contains(courses, target)
 	}
 }
 
@@ -708,6 +708,6 @@ func BenchmarkSlicesIndexFunc(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		slices.IndexFunc(courses, predicate)
+		_ = slices.IndexFunc(courses, predicate)
 	}
 }

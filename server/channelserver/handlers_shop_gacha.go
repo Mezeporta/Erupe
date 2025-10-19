@@ -469,10 +469,10 @@ func handleMsgMhfPlayNormalGacha(s *Session, p mhfpacket.MHFPacket) {
 		entries = append(entries, entry)
 	}
 
-	rewardEntries, err := getRandomEntries(entries, rolls, false)
+	rewardEntries, _ := getRandomEntries(entries, rolls, false)
 	temp := byteframe.NewByteFrame()
 	for i := range rewardEntries {
-		rows, err = s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = $1`, rewardEntries[i].ID)
+		rows, err := s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = $1`, rewardEntries[i].ID)
 		if err != nil {
 			continue
 		}
@@ -525,10 +525,10 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	guaranteedItems := getGuaranteedItems(s, pkt.GachaID, pkt.RollType)
-	rewardEntries, err := getRandomEntries(entries, rolls, false)
+	rewardEntries, _ := getRandomEntries(entries, rolls, false)
 	temp := byteframe.NewByteFrame()
 	for i := range rewardEntries {
-		rows, err = s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = $1`, rewardEntries[i].ID)
+		rows, err := s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = $1`, rewardEntries[i].ID)
 		if err != nil {
 			continue
 		}
@@ -621,7 +621,7 @@ func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 			entries = append(entries, entry)
 		}
 	}
-	rewardEntries, err := getRandomEntries(entries, rolls, true)
+	rewardEntries, _ := getRandomEntries(entries, rolls, true)
 	for i := range rewardEntries {
 		items, err := s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = $1`, rewardEntries[i].ID)
 		if err != nil {
