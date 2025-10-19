@@ -1,5 +1,8 @@
 # Erupe
 
+Erupe is a community-maintained server for Monster Hunter Frontier Z.
+It is written in Go, and uses no code from Capcom.
+
 ## Client Compatibility
 
 ### Platforms
@@ -33,12 +36,13 @@ If you want to modify or compile Erupe yourself, please read on.
 
 1. Bring up a fresh database by using the [backup file attached with the latest release](https://github.com/ZeruLight/Erupe/releases/latest/download/SCHEMA.sql).
 2. Run each script under [patch-schema](./schemas/patch-schema) as they introduce newer schema.
-3. Edit [config.json](./config.json) such that the database password matches your PostgreSQL setup.
+3. Copy [config.example.json](./config.example.json) to `config.json`, and edit it. Change the "Database" field such that the database password matches your PostgreSQL setup.
 4. Run `go build` or `go run .` to compile Erupe.
 
 ## Docker
 
-Please see [docker/README.md](./docker/README.md). This is intended for quick installs and development, not for production.
+Please see [docker/README.md](./docker/README.md).
+This is intended for quick installs and development, not for production.
 
 ## Schemas
 
@@ -55,3 +59,15 @@ Note: Patch schemas are subject to change! You should only be using them if you 
 
 - [Quest and Scenario Binary Files](https://files.catbox.moe/xf0l7w.7z)
 - [Mezeporta Square Discord](https://discord.gg/DnwcpXM488)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution guidelines.
+
+## Changelog
+
+View [CHANGELOG.md](CHANGELOG.md)
+
+## Authors
+
+A list of authors can be found at [AUTHORS.md](AUTHORS.md).
