@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Config file handling and validation
 - Fixes 3 critical race condition in handlers_stage.go.
+- Fix an issue causing a crash on clans with 0 members.
 
 ### Security
 

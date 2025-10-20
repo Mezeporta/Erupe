@@ -338,10 +338,17 @@ func (s *Session) makeSignResponse(uid uint32) []byte {
 		bf.WriteBytes(stringsupport.PaddedString(psnUser, 20, true))
 	}
 
-	bf.WriteUint16(s.server.erupeConfig.DebugOptions.CapLink.Values[0])
-	if s.server.erupeConfig.DebugOptions.CapLink.Values[0] == 51728 {
-		bf.WriteUint16(s.server.erupeConfig.DebugOptions.CapLink.Values[1])
-		if s.server.erupeConfig.DebugOptions.CapLink.Values[1] == 20000 || s.server.erupeConfig.DebugOptions.CapLink.Values[1] == 20002 {
+	// CapLink.Values requires at least 5 elements to avoid index out of range panics
+	// Provide safe defaults if array is too small
+	capLinkValues := s.server.erupeConfig.DebugOptions.CapLink.Values
+	if len(capLinkValues) < 5 {
+		capLinkValues = []uint16{0, 0, 0, 0, 0}
+	}
+
+	bf.WriteUint16(capLinkValues[0])
+	if capLinkValues[0] == 51728 {
+		bf.WriteUint16(capLinkValues[1])
+		if capLinkValues[1] == 20000 || capLinkValues[1] == 20002 {
 			ps.Uint16(bf, s.server.erupeConfig.DebugOptions.CapLink.Key, false)
 		}
 	}
@@ -356,10 +363,10 @@ func (s *Session) makeSignResponse(uid uint32) []byte {
 		bf.WriteUint32(caStruct[i].Unk1)
 		ps.Uint8(bf, caStruct[i].Unk2, false)
 	}
-	bf.WriteUint16(s.server.erupeConfig.DebugOptions.CapLink.Values[2])
-	bf.WriteUint16(s.server.erupeConfig.DebugOptions.CapLink.Values[3])
-	bf.WriteUint16(s.server.erupeConfig.DebugOptions.CapLink.Values[4])
-	if s.server.erupeConfig.DebugOptions.CapLink.Values[2] == 51729 && s.server.erupeConfig.DebugOptions.CapLink.Values[3] == 1 && s.server.erupeConfig.DebugOptions.CapLink.Values[4] == 20000 {
+	bf.WriteUint16(capLinkValues[2])
+	bf.WriteUint16(capLinkValues[3])
+	bf.WriteUint16(capLinkValues[4])
+	if capLinkValues[2] == 51729 && capLinkValues[3] == 1 && capLinkValues[4] == 20000 {
 		ps.Uint16(bf, fmt.Sprintf(`%s:%d`, s.server.erupeConfig.DebugOptions.CapLink.Host, s.server.erupeConfig.DebugOptions.CapLink.Port), false)
 	}
 
