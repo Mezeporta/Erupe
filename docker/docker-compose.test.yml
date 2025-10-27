@@ -1,0 +1,25 @@
+version: "3.9"
+# Docker Compose configuration for running integration tests
+# Usage: docker-compose -f docker/docker-compose.test.yml up -d
+services:
+  test-db:
+    image: postgres:15-alpine
+    container_name: erupe-test-db
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: erupe_test
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts with main DB
+    # Use tmpfs for faster tests (in-memory database)
+    tmpfs:
+      - /var/lib/postgresql/data
+    # Mount schema files for initialization
+    volumes:
+      - ../schemas/:/schemas/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d erupe_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
