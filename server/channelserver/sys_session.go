@@ -104,7 +104,9 @@ func (s *Session) Start() {
 
 // QueueSend queues a packet (raw []byte) to be sent.
 func (s *Session) QueueSend(data []byte) {
-	s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+	if len(data) >= 2 {
+		s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+	}
 	s.sendPackets <- packet{data, true}
 }
 
@@ -112,7 +114,9 @@ func (s *Session) QueueSend(data []byte) {
 func (s *Session) QueueSendNonBlocking(data []byte) {
 	select {
 	case s.sendPackets <- packet{data, true}:
-		s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+		if len(data) >= 2 {
+			s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+		}
 	default:
 		s.logger.Warn("Packet queue too full, dropping!")
 	}
@@ -163,7 +167,7 @@ func (s *Session) sendLoop() {
 			pkt := <-s.sendPackets
 			err := s.cryptConn.SendPacket(append(pkt.data, []byte{0x00, 0x10}...))
 			if err != nil {
-				s.logger.Warn("Failed to send packet")
+				s.logger.Warn("Failed to send packet", zap.Error(err))
 			}
 		}
 		time.Sleep(time.Duration(_config.ErupeConfig.LoopDelay) * time.Millisecond)

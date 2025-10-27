@@ -59,7 +59,8 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	s.Unlock()
 
 	// Tell the client to cleanup its current stage objects.
-	s.QueueSendMHFNonBlocking(&mhfpacket.MsgSysCleanupObject{})
+	// Use blocking send to ensure this critical cleanup packet is not dropped.
+	s.QueueSendMHF(&mhfpacket.MsgSysCleanupObject{})
 
 	// Confirm the stage entry.
 	doAckSimpleSucceed(s, ackHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -131,9 +132,11 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 		}
 	}
 
-	if len(newNotif.Data()) > 2 {
-		s.QueueSendNonBlocking(newNotif.Data())
-	}
+	// FIX: Always send stage transfer packet, even if empty.
+	// The client expects this packet to complete the zone change, regardless of content.
+	// Previously, if newNotif was empty (no users, no objects), no packet was sent,
+	// causing the client to timeout after 60 seconds.
+	s.QueueSend(newNotif.Data())
 }
 
 func destructEmptyStages(s *Session) {
@@ -159,7 +162,6 @@ func removeSessionFromStage(s *Session) {
 	// Acquire stage lock to protect concurrent access to clients and objects maps
 	// This prevents race conditions when multiple goroutines access these maps
 	s.stage.Lock()
-	defer s.stage.Unlock()
 
 	// Remove client from old stage.
 	delete(s.stage.clients, s)
@@ -173,11 +175,18 @@ func removeSessionFromStage(s *Session) {
 		}
 	}
 
-	// Now delete the objects after iteration is complete
-	s.logger.Info("Sending notification to old stage clients")
+	// Delete from map while still holding lock
+	for _, object := range objectsToDelete {
+		delete(s.stage.objects, object.ownerCharID)
+	}
+
+	// CRITICAL FIX: Unlock BEFORE broadcasting to avoid deadlock
+	// BroadcastMHF also tries to lock the stage, so we must release our lock first
+	s.stage.Unlock()
+
+	// Now broadcast the deletions (without holding the lock)
 	for _, object := range objectsToDelete {
 		s.stage.BroadcastMHF(&mhfpacket.MsgSysDeleteObject{ObjID: object.id}, s)
-		delete(s.stage.objects, object.ownerCharID)
 	}
 
 	destructEmptyStages(s)
