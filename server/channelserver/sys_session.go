@@ -147,7 +147,10 @@ func (s *Session) Start() {
 //
 // Thread Safety: Safe for concurrent calls from multiple goroutines.
 func (s *Session) QueueSend(data []byte) {
-	s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+	// FIX: Check data length before reading opcode to prevent crash on empty packets
+	if len(data) >= 2 {
+		s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+	}
 	select {
 	case s.sendPackets <- packet{data, false}:
 		// Enqueued data
@@ -182,7 +185,9 @@ func (s *Session) QueueSend(data []byte) {
 func (s *Session) QueueSendNonBlocking(data []byte) {
 	select {
 	case s.sendPackets <- packet{data, true}:
-		s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+		if len(data) >= 2 {
+			s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+		}
 	default:
 		s.logger.Warn("Packet queue too full, dropping!")
 	}
@@ -231,10 +236,13 @@ func (s *Session) sendLoop() {
 		if s.closed {
 			return
 		}
-		pkt := <-s.sendPackets
-		err := s.cryptConn.SendPacket(append(pkt.data, []byte{0x00, 0x10}...))
-		if err != nil {
-			s.logger.Warn("Failed to send packet")
+		// Send each packet individually with its own terminator
+		for len(s.sendPackets) > 0 {
+			pkt := <-s.sendPackets
+			err := s.cryptConn.SendPacket(append(pkt.data, []byte{0x00, 0x10}...))
+			if err != nil {
+				s.logger.Warn("Failed to send packet", zap.Error(err))
+			}
 		}
 		time.Sleep(10 * time.Millisecond)
 	}

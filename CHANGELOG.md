@@ -25,6 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Race condition in stage broadcast causing nil pointer panics during player logout
 - Client crash when loading decoration presets (decomyset) with more than 40 entries
+- Config file handling and validation
+- Fixes 3 critical race conditions in handlers_stage.go
+- Fix an issue causing a crash on clans with 0 members
+- Fixed deadlock in zone change causing 60-second timeout when players change zones
+- Fixed crash when sending empty packets in QueueSend/QueueSendNonBlocking
+- Fixed missing stage transfer packet for empty zones
+
+### Security
+
+- Bumped golang.org/x/net from 0.33.0 to 0.38.0
+- Bumped golang.org/x/crypto from 0.31.0 to 0.35.0
 
 ## [9.2.0] - 2023-04-01
 
