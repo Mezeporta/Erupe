@@ -177,35 +177,158 @@ func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 	logoutPlayer(s)
 }
 
+// saveAllCharacterData saves all character data to the database with proper error handling.
+// This function ensures data persistence even if the client disconnects unexpectedly.
+// It handles:
+// - Main savedata blob (compressed)
+// - User binary data (house, gallery, etc.)
+// - Playtime updates
+// - RP updates
+// - Name corruption prevention
+func saveAllCharacterData(s *Session, rpToAdd int) error {
+	saveStart := time.Now()
+
+	// Get current savedata from database
+	characterSaveData, err := GetCharacterSaveData(s, s.charID)
+	if err != nil {
+		s.logger.Error("Failed to retrieve character save data",
+			zap.Error(err),
+			zap.Uint32("charID", s.charID),
+			zap.String("name", s.Name),
+		)
+		return err
+	}
+
+	if characterSaveData == nil {
+		s.logger.Warn("Character save data is nil, skipping save",
+			zap.Uint32("charID", s.charID),
+			zap.String("name", s.Name),
+		)
+		return nil
+	}
+
+	// Force name to match to prevent corruption detection issues
+	// This handles SJIS/UTF-8 encoding differences across game versions
+	if characterSaveData.Name != s.Name {
+		s.logger.Debug("Correcting name mismatch before save",
+			zap.String("savedata_name", characterSaveData.Name),
+			zap.String("session_name", s.Name),
+			zap.Uint32("charID", s.charID),
+		)
+		characterSaveData.Name = s.Name
+		characterSaveData.updateSaveDataWithStruct()
+	}
+
+	// Update playtime from session
+	if !s.playtimeTime.IsZero() {
+		sessionPlaytime := uint32(time.Since(s.playtimeTime).Seconds())
+		s.playtime += sessionPlaytime
+		s.logger.Debug("Updated playtime",
+			zap.Uint32("session_playtime_seconds", sessionPlaytime),
+			zap.Uint32("total_playtime", s.playtime),
+			zap.Uint32("charID", s.charID),
+		)
+	}
+	characterSaveData.Playtime = s.playtime
+
+	// Update RP if any gained during session
+	if rpToAdd > 0 {
+		characterSaveData.RP += uint16(rpToAdd)
+		if characterSaveData.RP >= s.server.erupeConfig.GameplayOptions.MaximumRP {
+			characterSaveData.RP = s.server.erupeConfig.GameplayOptions.MaximumRP
+			s.logger.Debug("RP capped at maximum",
+				zap.Uint16("max_rp", s.server.erupeConfig.GameplayOptions.MaximumRP),
+				zap.Uint32("charID", s.charID),
+			)
+		}
+		s.logger.Debug("Added RP",
+			zap.Int("rp_gained", rpToAdd),
+			zap.Uint16("new_rp", characterSaveData.RP),
+			zap.Uint32("charID", s.charID),
+		)
+	}
+
+	// Save to database (main savedata + user_binary)
+	characterSaveData.Save(s)
+
+	saveDuration := time.Since(saveStart)
+	s.logger.Info("Saved character data successfully",
+		zap.Uint32("charID", s.charID),
+		zap.String("name", s.Name),
+		zap.Duration("duration", saveDuration),
+		zap.Int("rp_added", rpToAdd),
+		zap.Uint32("playtime", s.playtime),
+	)
+
+	return nil
+}
+
 func logoutPlayer(s *Session) {
+	logoutStart := time.Now()
+
+	// Log logout initiation with session details
+	sessionDuration := time.Duration(0)
+	if s.sessionStart > 0 {
+		sessionDuration = time.Since(time.Unix(s.sessionStart, 0))
+	}
+
+	s.logger.Info("Player logout initiated",
+		zap.Uint32("charID", s.charID),
+		zap.String("name", s.Name),
+		zap.Duration("session_duration", sessionDuration),
+	)
+
+	// Calculate session metrics FIRST (before cleanup)
+	var timePlayed int
+	var sessionTime int
+	var rpGained int
+
+	if s.charID != 0 {
+		_ = s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed)
+		sessionTime = int(TimeAdjusted().Unix()) - int(s.sessionStart)
+		timePlayed += sessionTime
+
+		if mhfcourse.CourseExists(30, s.courses) {
+			rpGained = timePlayed / 900
+			timePlayed = timePlayed % 900
+			s.server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.charID)
+		} else {
+			rpGained = timePlayed / 1800
+			timePlayed = timePlayed % 1800
+		}
+
+		s.logger.Debug("Session metrics calculated",
+			zap.Uint32("charID", s.charID),
+			zap.Int("session_time_seconds", sessionTime),
+			zap.Int("rp_gained", rpGained),
+			zap.Int("time_played_remainder", timePlayed),
+		)
+
+		// Save all character data ONCE with all updates
+		// This is the safety net that ensures data persistence even if client
+		// didn't send save packets before disconnecting
+		if err := saveAllCharacterData(s, rpGained); err != nil {
+			s.logger.Error("Failed to save character data during logout",
+				zap.Error(err),
+				zap.Uint32("charID", s.charID),
+				zap.String("name", s.Name),
+			)
+			// Continue with logout even if save fails
+		}
+
+		// Update time_played and guild treasure hunt
+		s.server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.charID)
+		s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE character_id=$1`, s.charID)
+	}
+
+	// NOW do cleanup (after save is complete)
 	s.server.Lock()
 	delete(s.server.sessions, s.rawConn)
 	s.rawConn.Close()
 	delete(s.server.objectIDs, s)
 	s.server.Unlock()
 
-	// Save all character data before logout to prevent data loss
-	// This ensures data is persisted even if client disconnects unexpectedly
-	if s.charID != 0 {
-		characterSaveData, err := GetCharacterSaveData(s, s.charID)
-		if err == nil && characterSaveData != nil {
-			// Force name to match to prevent corruption detection issues
-			characterSaveData.Name = s.Name
-			characterSaveData.updateSaveDataWithStruct()
-
-			// Update playtime in savedata before saving
-			if !s.playtimeTime.IsZero() {
-				s.playtime += uint32(time.Since(s.playtimeTime).Seconds())
-			}
-			characterSaveData.Playtime = s.playtime
-
-			characterSaveData.Save(s)
-			s.logger.Info("Saved character data during logout", zap.Uint32("charID", s.charID))
-		} else if err != nil {
-			s.logger.Warn("Failed to retrieve character save data during logout", zap.Error(err), zap.Uint32("charID", s.charID))
-		}
-	}
-
+	// Stage cleanup
 	for _, stage := range s.server.stages {
 		// Tell sessions registered to disconnecting players quest to unregister
 		if stage.host != nil && stage.host.charID == s.charID {
@@ -224,6 +347,7 @@ func logoutPlayer(s *Session) {
 		}
 	}
 
+	// Update sign sessions and server player count
 	_, err := s.server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.token)
 	if err != nil {
 		panic(err)
@@ -234,30 +358,17 @@ func logoutPlayer(s *Session) {
 		panic(err)
 	}
 
-	var timePlayed int
-	var sessionTime int
-	_ = s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed)
-	sessionTime = int(TimeAdjusted().Unix()) - int(s.sessionStart)
-	timePlayed += sessionTime
-
-	var rpGained int
-	if mhfcourse.CourseExists(30, s.courses) {
-		rpGained = timePlayed / 900
-		timePlayed = timePlayed % 900
-		s.server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.charID)
-	} else {
-		rpGained = timePlayed / 1800
-		timePlayed = timePlayed % 1800
-	}
-
-	s.server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.charID)
-
-	s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE character_id=$1`, s.charID)
-
 	if s.stage == nil {
+		logoutDuration := time.Since(logoutStart)
+		s.logger.Info("Player logout completed",
+			zap.Uint32("charID", s.charID),
+			zap.String("name", s.Name),
+			zap.Duration("logout_duration", logoutDuration),
+		)
 		return
 	}
 
+	// Broadcast user deletion and final cleanup
 	s.server.BroadcastMHF(&mhfpacket.MsgSysDeleteUser{
 		CharID: s.charID,
 	}, s)
@@ -271,16 +382,13 @@ func logoutPlayer(s *Session) {
 	removeSessionFromSemaphore(s)
 	removeSessionFromStage(s)
 
-	saveData, err := GetCharacterSaveData(s, s.charID)
-	if err != nil || saveData == nil {
-		s.logger.Error("Failed to get savedata")
-		return
-	}
-	saveData.RP += uint16(rpGained)
-	if saveData.RP >= s.server.erupeConfig.GameplayOptions.MaximumRP {
-		saveData.RP = s.server.erupeConfig.GameplayOptions.MaximumRP
-	}
-	saveData.Save(s)
+	logoutDuration := time.Since(logoutStart)
+	s.logger.Info("Player logout completed",
+		zap.Uint32("charID", s.charID),
+		zap.String("name", s.Name),
+		zap.Duration("logout_duration", logoutDuration),
+		zap.Int("rp_gained", rpGained),
+	)
 }
 
 func handleMsgSysSetStatus(s *Session, p mhfpacket.MHFPacket) {}

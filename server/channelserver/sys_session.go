@@ -177,16 +177,38 @@ func (s *Session) sendLoop() {
 func (s *Session) recvLoop() {
 	for {
 		if s.closed.Load() {
+			// Graceful disconnect - client sent logout packet
+			s.logger.Info("Session closed gracefully",
+				zap.Uint32("charID", s.charID),
+				zap.String("name", s.Name),
+				zap.String("disconnect_type", "graceful"),
+			)
 			logoutPlayer(s)
 			return
 		}
 		pkt, err := s.cryptConn.ReadPacket()
 		if err == io.EOF {
-			s.logger.Info(fmt.Sprintf("[%s] Disconnected", s.Name))
+			// Connection lost - client disconnected without logout packet
+			sessionDuration := time.Duration(0)
+			if s.sessionStart > 0 {
+				sessionDuration = time.Since(time.Unix(s.sessionStart, 0))
+			}
+			s.logger.Info("Connection lost (EOF)",
+				zap.Uint32("charID", s.charID),
+				zap.String("name", s.Name),
+				zap.String("disconnect_type", "connection_lost"),
+				zap.Duration("session_duration", sessionDuration),
+			)
 			logoutPlayer(s)
 			return
 		} else if err != nil {
-			s.logger.Warn("Error on ReadPacket, exiting recv loop", zap.Error(err))
+			// Connection error - network issue or malformed packet
+			s.logger.Warn("Connection error, exiting recv loop",
+				zap.Error(err),
+				zap.Uint32("charID", s.charID),
+				zap.String("name", s.Name),
+				zap.String("disconnect_type", "error"),
+			)
 			logoutPlayer(s)
 			return
 		}

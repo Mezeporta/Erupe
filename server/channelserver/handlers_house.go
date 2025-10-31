@@ -493,17 +493,39 @@ func handleMsgMhfEnumerateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateWarehouse)
+	saveStart := time.Now()
+
 	var err error
+	var boxTypeName string
+	var dataSize int
+
 	switch pkt.BoxType {
 	case 0:
+		boxTypeName = "items"
 		newStacks := mhfitem.DiffItemStacks(warehouseGetItems(s, pkt.BoxIndex), pkt.UpdatedItems)
-		_, err = s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET item%d=$1 WHERE character_id=$2`, pkt.BoxIndex), mhfitem.SerializeWarehouseItems(newStacks), s.charID)
+		serialized := mhfitem.SerializeWarehouseItems(newStacks)
+		dataSize = len(serialized)
+
+		s.logger.Debug("Warehouse save request",
+			zap.Uint32("charID", s.charID),
+			zap.String("box_type", boxTypeName),
+			zap.Uint8("box_index", pkt.BoxIndex),
+			zap.Int("item_count", len(pkt.UpdatedItems)),
+			zap.Int("data_size", dataSize),
+		)
+
+		_, err = s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET item%d=$1 WHERE character_id=$2`, pkt.BoxIndex), serialized, s.charID)
 		if err != nil {
-			s.logger.Error("Failed to update warehouse items", zap.Error(err))
+			s.logger.Error("Failed to update warehouse items",
+				zap.Error(err),
+				zap.Uint32("charID", s.charID),
+				zap.Uint8("box_index", pkt.BoxIndex),
+			)
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 	case 1:
+		boxTypeName = "equipment"
 		var fEquip []mhfitem.MHFEquipment
 		oEquips := warehouseGetEquipment(s, pkt.BoxIndex)
 		for _, uEquip := range pkt.UpdatedEquipment {
@@ -526,12 +548,38 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 				fEquip = append(fEquip, oEquip)
 			}
 		}
-		_, err = s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET equip%d=$1 WHERE character_id=$2`, pkt.BoxIndex), mhfitem.SerializeWarehouseEquipment(fEquip), s.charID)
+
+		serialized := mhfitem.SerializeWarehouseEquipment(fEquip)
+		dataSize = len(serialized)
+
+		s.logger.Debug("Warehouse save request",
+			zap.Uint32("charID", s.charID),
+			zap.String("box_type", boxTypeName),
+			zap.Uint8("box_index", pkt.BoxIndex),
+			zap.Int("equip_count", len(pkt.UpdatedEquipment)),
+			zap.Int("data_size", dataSize),
+		)
+
+		_, err = s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET equip%d=$1 WHERE character_id=$2`, pkt.BoxIndex), serialized, s.charID)
 		if err != nil {
-			s.logger.Error("Failed to update warehouse equipment", zap.Error(err))
+			s.logger.Error("Failed to update warehouse equipment",
+				zap.Error(err),
+				zap.Uint32("charID", s.charID),
+				zap.Uint8("box_index", pkt.BoxIndex),
+			)
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 	}
+
+	saveDuration := time.Since(saveStart)
+	s.logger.Info("Warehouse saved successfully",
+		zap.Uint32("charID", s.charID),
+		zap.String("box_type", boxTypeName),
+		zap.Uint8("box_index", pkt.BoxIndex),
+		zap.Int("data_size", dataSize),
+		zap.Duration("duration", saveDuration),
+	)
+
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

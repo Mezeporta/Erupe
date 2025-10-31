@@ -11,10 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Alpelo object system backport functionality
 - Better config file handling and structure
+- Comprehensive production logging for save operations (warehouse, Koryo points, savedata)
+- Disconnect type tracking (graceful, connection_lost, error) with detailed logging
+- Session lifecycle logging with duration and metrics tracking
 
 ### Changed
 
 - Improved config handling
+- Refactored logout flow to save all data before cleanup (prevents data loss race conditions)
+- Unified save operation into single `saveAllCharacterData()` function with proper error handling
+- Removed duplicate save calls in `logoutPlayer()` function
 
 ### Fixed
 
@@ -26,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed missing stage transfer packet for empty zones
 - Fixed save data corruption check rejecting valid saves due to name encoding mismatches (SJIS/UTF-8)
 - Fixed incomplete saves during logout - character savedata now persisted even during ungraceful disconnects
+- Fixed double-save bug in logout flow that caused unnecessary database operations
+- Fixed save operation ordering - now saves data before session cleanup instead of after
 
 ### Security
 
