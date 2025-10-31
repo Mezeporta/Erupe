@@ -3,6 +3,8 @@ package channelserver
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
+	
 	_config "erupe-ce/config"
 	"erupe-ce/network"
 	"sync"
@@ -29,8 +31,9 @@ func (m *MockCryptConn) SendPacket(data []byte) error {
 }
 
 func (m *MockCryptConn) ReadPacket() ([]byte, error) {
-	// Mock implementation for testing
-	return nil, nil
+	// Return EOF to simulate graceful disconnect
+	// This makes recvLoop() exit and call logoutPlayer()
+	return nil, io.EOF
 }
 
 func (m *MockCryptConn) GetSentPackets() [][]byte {
