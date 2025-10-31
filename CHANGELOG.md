@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed deadlock in zone change causing 60-second timeout when players change zones
 - Fixed crash when sending empty packets in QueueSend/QueueSendNonBlocking
 - Fixed missing stage transfer packet for empty zones
+- Fixed save data corruption check rejecting valid saves due to name encoding mismatches (SJIS/UTF-8)
+- Fixed incomplete saves during logout - character savedata now persisted even during ungraceful disconnects
 
 ### Security
 

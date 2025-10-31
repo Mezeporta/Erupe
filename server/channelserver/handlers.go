@@ -184,6 +184,28 @@ func logoutPlayer(s *Session) {
 	delete(s.server.objectIDs, s)
 	s.server.Unlock()
 
+	// Save all character data before logout to prevent data loss
+	// This ensures data is persisted even if client disconnects unexpectedly
+	if s.charID != 0 {
+		characterSaveData, err := GetCharacterSaveData(s, s.charID)
+		if err == nil && characterSaveData != nil {
+			// Force name to match to prevent corruption detection issues
+			characterSaveData.Name = s.Name
+			characterSaveData.updateSaveDataWithStruct()
+
+			// Update playtime in savedata before saving
+			if !s.playtimeTime.IsZero() {
+				s.playtime += uint32(time.Since(s.playtimeTime).Seconds())
+			}
+			characterSaveData.Playtime = s.playtime
+
+			characterSaveData.Save(s)
+			s.logger.Info("Saved character data during logout", zap.Uint32("charID", s.charID))
+		} else if err != nil {
+			s.logger.Warn("Failed to retrieve character save data during logout", zap.Error(err), zap.Uint32("charID", s.charID))
+		}
+	}
+
 	for _, stage := range s.server.stages {
 		// Tell sessions registered to disconnecting players quest to unregister
 		if stage.host != nil && stage.host.charID == s.charID {

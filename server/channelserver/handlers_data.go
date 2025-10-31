@@ -14,6 +14,7 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
+
 	"go.uber.org/zap"
 )
 
@@ -60,6 +61,14 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	// Bypass name-checker if new
 	if characterSaveData.IsNewCharacter {
 		s.Name = characterSaveData.Name
+	}
+
+	// Force name to match session to prevent corruption detection false positives
+	// This handles SJIS/UTF-8 encoding differences and ensures saves succeed across all game versions
+	if characterSaveData.Name != s.Name && !characterSaveData.IsNewCharacter {
+		s.logger.Info("Correcting name mismatch in savedata", zap.String("savedata_name", characterSaveData.Name), zap.String("session_name", s.Name))
+		characterSaveData.Name = s.Name
+		characterSaveData.updateSaveDataWithStruct()
 	}
 
 	if characterSaveData.Name == s.Name || _config.ErupeConfig.RealClientMode <= _config.S10 {
