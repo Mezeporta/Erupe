@@ -1,7 +1,7 @@
 # Docker for erupe
 
 ## Building the container
-Run the following from the route of the soruce folder. In this example we give it the tag of dev to seperate it from any other container verions. 
+Run the following from the route of the source folder. In this example we give it the tag of dev to seperate it from any other container verions. 
 ```bash
 docker build . -t erupe:dev
 ```
