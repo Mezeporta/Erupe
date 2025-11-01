@@ -69,6 +69,15 @@ func handleMsgMhfLoadHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveHunterNavi)
+	saveStart := time.Now()
+
+	s.logger.Debug("Hunter Navi save request",
+		zap.Uint32("charID", s.charID),
+		zap.Bool("is_diff", pkt.IsDataDiff),
+		zap.Int("data_size", len(pkt.RawDataPayload)),
+	)
+
+	var dataSize int
 	if pkt.IsDataDiff {
 		naviLength := 552
 		if s.server.erupeConfig.RealClientMode <= _config.G7 {
@@ -78,7 +87,10 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 		// Load existing save
 		err := s.server.db.QueryRow("SELECT hunternavi FROM characters WHERE id = $1", s.charID).Scan(&data)
 		if err != nil {
-			s.logger.Error("Failed to load hunternavi", zap.Error(err))
+			s.logger.Error("Failed to load hunternavi",
+				zap.Error(err),
+				zap.Uint32("charID", s.charID),
+			)
 		}
 
 		// Check if we actually had any hunternavi data, using a blank buffer if not.
@@ -88,21 +100,49 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 		}
 
 		// Perform diff and compress it to write back to db
-		s.logger.Info("Diffing...")
+		s.logger.Debug("Applying Hunter Navi diff",
+			zap.Uint32("charID", s.charID),
+			zap.Int("base_size", len(data)),
+			zap.Int("diff_size", len(pkt.RawDataPayload)),
+		)
 		saveOutput := deltacomp.ApplyDataDiff(pkt.RawDataPayload, data)
+		dataSize = len(saveOutput)
+
 		_, err = s.server.db.Exec("UPDATE characters SET hunternavi=$1 WHERE id=$2", saveOutput, s.charID)
 		if err != nil {
-			s.logger.Error("Failed to save hunternavi", zap.Error(err))
+			s.logger.Error("Failed to save hunternavi",
+				zap.Error(err),
+				zap.Uint32("charID", s.charID),
+				zap.Int("data_size", dataSize),
+			)
+			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+			return
 		}
-		s.logger.Info("Wrote recompressed hunternavi back to DB")
 	} else {
 		dumpSaveData(s, pkt.RawDataPayload, "hunternavi")
+		dataSize = len(pkt.RawDataPayload)
+
 		// simply update database, no extra processing
 		_, err := s.server.db.Exec("UPDATE characters SET hunternavi=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
 		if err != nil {
-			s.logger.Error("Failed to save hunternavi", zap.Error(err))
+			s.logger.Error("Failed to save hunternavi",
+				zap.Error(err),
+				zap.Uint32("charID", s.charID),
+				zap.Int("data_size", dataSize),
+			)
+			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+			return
 		}
 	}
+
+	saveDuration := time.Since(saveStart)
+	s.logger.Info("Hunter Navi saved successfully",
+		zap.Uint32("charID", s.charID),
+		zap.Bool("was_diff", pkt.IsDataDiff),
+		zap.Int("data_size", dataSize),
+		zap.Duration("duration", saveDuration),
+	)
+
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 

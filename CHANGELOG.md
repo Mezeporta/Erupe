@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Alpelo object system backport functionality
 - Better config file handling and structure
-- Comprehensive production logging for save operations (warehouse, Koryo points, savedata)
+- Comprehensive production logging for save operations (warehouse, Koryo points, savedata, Hunter Navi, plate equipment)
 - Disconnect type tracking (graceful, connection_lost, error) with detailed logging
 - Session lifecycle logging with duration and metrics tracking
+- Structured logging with timing metrics for all database save operations
 
 ### Changed
 
