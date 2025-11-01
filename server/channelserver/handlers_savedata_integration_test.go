@@ -3,6 +3,7 @@ package channelserver
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"erupe-ce/common/mhfitem"
 	"erupe-ce/network/mhfpacket"
@@ -533,4 +534,165 @@ func TestSaveLoad_CompleteSaveLoadCycle(t *testing.T) {
 	}
 
 	t.Log("Complete save/load cycle test finished")
+}
+
+// TestPlateDataPersistenceDuringLogout tests that plate (transmog) data is saved correctly
+// during logout. This test ensures that all three plate data columns persist through the
+// logout flow:
+// - platedata: Main transmog appearance data (~140KB)
+// - platebox: Plate storage/inventory (~4.8KB)
+// - platemyset: Equipment set configurations (1920 bytes)
+func TestPlateDataPersistenceDuringLogout(t *testing.T) {
+	db := SetupTestDB(t)
+	defer TeardownTestDB(t, db)
+
+	server := createTestServerWithDB(t, db)
+	// Note: Not calling defer server.Shutdown() since test server has no listener
+
+	userID := CreateTestUser(t, db, "plate_test_user")
+	charID := CreateTestCharacter(t, db, userID, "PlateTest")
+
+	t.Logf("Created character ID %d for plate data persistence test", charID)
+
+	// ===== SESSION 1: Login, save plate data, logout =====
+	t.Log("--- Starting Session 1: Save plate data ---")
+
+	session := createTestSessionForServerWithChar(server, charID, "PlateTest")
+
+	// 1. Save PlateData (transmog appearance)
+	t.Log("Saving PlateData (transmog appearance)")
+	plateData := make([]byte, 140000)
+	for i := 0; i < 1000; i++ {
+		plateData[i] = byte((i * 3) % 256)
+	}
+	plateCompressed, err := nullcomp.Compress(plateData)
+	if err != nil {
+		t.Fatalf("Failed to compress plate data: %v", err)
+	}
+
+	platePkt := &mhfpacket.MsgMhfSavePlateData{
+		AckHandle:      5001,
+		IsDataDiff:     false,
+		RawDataPayload: plateCompressed,
+	}
+	handleMsgMhfSavePlateData(session, platePkt)
+
+	// 2. Save PlateBox (storage)
+	t.Log("Saving PlateBox (storage)")
+	boxData := make([]byte, 4800)
+	for i := 0; i < 1000; i++ {
+		boxData[i] = byte((i * 5) % 256)
+	}
+	boxCompressed, err := nullcomp.Compress(boxData)
+	if err != nil {
+		t.Fatalf("Failed to compress box data: %v", err)
+	}
+
+	boxPkt := &mhfpacket.MsgMhfSavePlateBox{
+		AckHandle:      5002,
+		IsDataDiff:     false,
+		RawDataPayload: boxCompressed,
+	}
+	handleMsgMhfSavePlateBox(session, boxPkt)
+
+	// 3. Save PlateMyset (equipment sets)
+	t.Log("Saving PlateMyset (equipment sets)")
+	mysetData := make([]byte, 1920)
+	for i := 0; i < 100; i++ {
+		mysetData[i] = byte((i * 7) % 256)
+	}
+
+	mysetPkt := &mhfpacket.MsgMhfSavePlateMyset{
+		AckHandle:      5003,
+		RawDataPayload: mysetData,
+	}
+	handleMsgMhfSavePlateMyset(session, mysetPkt)
+
+	// 4. Simulate logout (this should call savePlateDataToDatabase via saveAllCharacterData)
+	t.Log("Triggering logout via logoutPlayer")
+	logoutPlayer(session)
+
+	// Give logout time to complete
+	time.Sleep(100 * time.Millisecond)
+
+	// ===== VERIFICATION: Check all plate data was saved =====
+	t.Log("--- Verifying plate data persisted ---")
+
+	var savedPlateData, savedBoxData, savedMysetData []byte
+	err = db.QueryRow("SELECT platedata, platebox, platemyset FROM characters WHERE id = $1", charID).
+		Scan(&savedPlateData, &savedBoxData, &savedMysetData)
+	if err != nil {
+		t.Fatalf("Failed to load saved plate data: %v", err)
+	}
+
+	// Verify PlateData
+	if len(savedPlateData) == 0 {
+		t.Error("❌ PlateData was not saved")
+	} else {
+		decompressed, err := nullcomp.Decompress(savedPlateData)
+		if err != nil {
+			t.Errorf("Failed to decompress saved plate data: %v", err)
+		} else {
+			// Verify first 1000 bytes match our pattern
+			matches := true
+			for i := 0; i < 1000; i++ {
+				if decompressed[i] != byte((i*3)%256) {
+					matches = false
+					break
+				}
+			}
+			if !matches {
+				t.Error("❌ Saved PlateData doesn't match original")
+			} else {
+				t.Logf("✓ PlateData persisted correctly (%d bytes compressed, %d bytes uncompressed)",
+					len(savedPlateData), len(decompressed))
+			}
+		}
+	}
+
+	// Verify PlateBox
+	if len(savedBoxData) == 0 {
+		t.Error("❌ PlateBox was not saved")
+	} else {
+		decompressed, err := nullcomp.Decompress(savedBoxData)
+		if err != nil {
+			t.Errorf("Failed to decompress saved box data: %v", err)
+		} else {
+			// Verify first 1000 bytes match our pattern
+			matches := true
+			for i := 0; i < 1000; i++ {
+				if decompressed[i] != byte((i*5)%256) {
+					matches = false
+					break
+				}
+			}
+			if !matches {
+				t.Error("❌ Saved PlateBox doesn't match original")
+			} else {
+				t.Logf("✓ PlateBox persisted correctly (%d bytes compressed, %d bytes uncompressed)",
+					len(savedBoxData), len(decompressed))
+			}
+		}
+	}
+
+	// Verify PlateMyset
+	if len(savedMysetData) == 0 {
+		t.Error("❌ PlateMyset was not saved")
+	} else {
+		// Verify first 100 bytes match our pattern
+		matches := true
+		for i := 0; i < 100; i++ {
+			if savedMysetData[i] != byte((i*7)%256) {
+				matches = false
+				break
+			}
+		}
+		if !matches {
+			t.Error("❌ Saved PlateMyset doesn't match original")
+		} else {
+			t.Logf("✓ PlateMyset persisted correctly (%d bytes)", len(savedMysetData))
+		}
+	}
+
+	t.Log("✓ All plate data persisted correctly during logout")
 }

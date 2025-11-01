@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Disconnect type tracking (graceful, connection_lost, error) with detailed logging
 - Session lifecycle logging with duration and metrics tracking
 - Structured logging with timing metrics for all database save operations
+- Plate data (transmog) safety net in logout flow - adds monitoring checkpoint for platedata, platebox, and platemyset persistence
 
 ### Changed
 

@@ -1,4 +1,3 @@
-version: "3.9"
 # Docker Compose configuration for running integration tests
 # Usage: docker-compose -f docker/docker-compose.test.yml up -d
 services:

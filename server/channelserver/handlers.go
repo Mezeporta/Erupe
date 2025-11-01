@@ -182,6 +182,7 @@ func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 // It handles:
 // - Main savedata blob (compressed)
 // - User binary data (house, gallery, etc.)
+// - Plate data (transmog appearance, storage, equipment sets)
 // - Playtime updates
 // - RP updates
 // - Name corruption prevention
@@ -250,6 +251,17 @@ func saveAllCharacterData(s *Session, rpToAdd int) error {
 
 	// Save to database (main savedata + user_binary)
 	characterSaveData.Save(s)
+
+	// Save auxiliary data types
+	// Note: Plate data saves immediately when client sends save packets,
+	// so this is primarily a safety net for monitoring and consistency
+	if err := savePlateDataToDatabase(s); err != nil {
+		s.logger.Error("Failed to save plate data during logout",
+			zap.Error(err),
+			zap.Uint32("charID", s.charID),
+		)
+		// Don't return error - continue with logout even if plate save fails
+	}
 
 	saveDuration := time.Since(saveStart)
 	s.logger.Info("Saved character data successfully",
