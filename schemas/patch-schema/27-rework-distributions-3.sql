@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE distribution ALTER COLUMN data DROP NOT NULL;
+
+END;
