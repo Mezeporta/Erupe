@@ -1,26 +1,76 @@
 # Erupe Community Edition
 
-Erupe is a community-built server for Monster Hunter Frontier - All versions.
-It is a complete reverse engineered solution to self-host a Monter Hunter Frontier server.
+Erupe is a community-maintained server emulator for Monster Hunter Frontier written in Go. It is a complete reverse-engineered solution to self-host a Monster Hunter Frontier server, using no code from Capcom.
 
-> ![IMPORTANT]
+> [!IMPORTANT]
 > The purpose of this branch is to have a clean transition from a functional 9.2.0 release, to a future 9.3.0 version.
 > Over the last 2 years after the release of 9.2.0, many commits introduced broken features.
 
-## Setup
+## Features
 
-If you are only looking to install Erupe, please use a [pre-compiled binary](https://github.com/ZeruLight/Erupe/releases/latest).
+- **Multi-version Support**: Compatible with all Monster Hunter Frontier versions from Season 6.0 to ZZ
+- **Multi-platform**: Supports PC, PlayStation 3, PlayStation Vita, and Wii U (up to Z2)
+- **Complete Server Emulation**: Entry/Sign server, Channel server, and Launcher server
+- **Gameplay Customization**: Configurable multipliers for experience, currency, and materials
+- **Event Systems**: Support for Raviente, MezFes, Diva, Festa, and Tournament events
+- **Discord Integration**: Optional real-time Discord bot integration
+- **In-game Commands**: Extensible command system with configurable prefixes
+- **Developer Tools**: Comprehensive logging, packet debugging, and save data dumps
 
-If you want to modify or compile Erupe yourself, please read on.
+## Architecture
 
-### Requirements
+Erupe consists of three main server components:
 
-Install is simple, you need:
+- **Sign Server** (Port 53312): Handles authentication and account management
+- **Entrance Server** (Port 53310): Manages world/server selection
+- **Channel Servers** (Ports 54001+): Handle game sessions, quests, and player interactions
 
-- [Go 1.25+](https://go.dev/dl/): programming language for the server logic
-- [PostgreSQL](https://www.postgresql.org/download/): server database
+Multiple channel servers can run simultaneously, organized by world types:
 
-### Installation
+- **Newbie**: For new players
+- **Normal**: Standard gameplay
+- **Cities**: City-focused instances
+- **Tavern**: Special tavern area
+- **Return**: For returning players
+- **MezFes**: Festival events
+
+## Client Compatibility
+
+### Platforms
+
+- PC
+- PlayStation 3
+- PlayStation Vita
+- Wii U (Up to Z2)
+
+### Versions
+
+- **G10-ZZ** (ClientMode): Extensively tested with great functionality
+- **G3-Z2** (Wii U): Tested with good functionality
+- **Forward.4**: Basic functionality
+- **Season 6.0**: Limited functionality (oldest supported version)
+
+If you have an **installed** copy of Monster Hunter Frontier on an old hard drive, **please** get in contact so we can archive it!
+
+## Requirements
+
+- [Go 1.25+](https://go.dev/dl/)
+- [PostgreSQL](https://www.postgresql.org/download/)
+- Monster Hunter Frontier client (see [Client Setup](#client-setup))
+- Quest and scenario binary files (see [Resources](#resources))
+
+## Installation
+
+### Quick Start (Pre-compiled Binary)
+
+If you only want to run Erupe, download a [pre-compiled binary](https://github.com/ZeruLight/Erupe/releases/latest):
+
+- `erupe-ce` for Linux
+- `erupe.exe` for Windows
+
+Then proceed to [Configuration](#configuration).
+
+### Building from Source
 
 #### First-time Setup
 
@@ -31,7 +81,7 @@ Install is simple, you need:
    cd Erupe
    ```
 
-2. Create a new PostgreSQL database and install the schema:
+2. Create a PostgreSQL database and install the base schema:
 
    ```bash
    # Download and apply the base schema
@@ -39,32 +89,37 @@ Install is simple, you need:
    psql -U your_user -d your_database -f SCHEMA.sql
    ```
 
-3. Run each script under [patch-schema](./patch-schema) to apply schema updates:
+3. Apply schema patches in order:
 
    ```bash
    psql -U your_user -d your_database -f patch-schema/01_patch.sql
-   # Repeat for each patch file in order
+   # Repeat for each patch file in numerical order
    ```
 
-4. Copy [config.example.json](./config.example.json) to `config.json` and edit it:
+4. Copy and configure the config file:
 
    ```bash
    cp config.example.json config.json
-   # Edit config.json with your database credentials
+   # Edit config.json with your settings (see Configuration section)
    ```
 
-5. Install dependencies and run:
+5. Install dependencies and build:
 
    ```bash
    go mod download
-   go run .
+   go build
    ```
 
-   Or build a binary:
+6. Run the server:
 
    ```bash
-   go build
    ./erupe-ce
+   ```
+
+   Or run directly without building:
+
+   ```bash
+   go run .
    ```
 
 #### Updating an Existing Installation
@@ -81,7 +136,7 @@ Install is simple, you need:
    go mod tidy
    ```
 
-3. Apply any new schema patches from [patch-schema](./patch-schema)
+3. Apply any new schema patches from [patch-schema](./patch-schema) that you haven't run yet
 
 4. Rebuild and restart:
 
@@ -90,14 +145,191 @@ Install is simple, you need:
    ./erupe-ce
    ```
 
-### Note
+### Docker Installation
 
-You will need to acquire and install the client files and quest binaries separately.
-See the [resources](#resources) for details.
+For quick setup and development (not recommended for production), see [docker/README.md](./docker/README.md).
+
+## Configuration
+
+Edit `config.json` to configure your server. Key settings include:
+
+### Core Settings
+
+```json
+{
+  "Host": "127.0.0.1",           // Server binding address
+  "BinPath": "bin",              // Path to quest/scenario binaries
+  "Language": "en",              // "en" or "jp"
+  "ClientMode": "ZZ"             // Target client version
+}
+```
+
+### Database
+
+```json
+{
+  "Database": {
+    "Host": "localhost",
+    "Port": 5432,
+    "User": "postgres",
+    "Password": "your_password",
+    "Database": "erupe"
+  }
+}
+```
+
+### Server Ports
+
+```json
+{
+  "Sign": {
+    "Enabled": true,
+    "Port": 53312              // Authentication server
+  },
+  "Entrance": {
+    "Enabled": true,
+    "Port": 53310              // World selection server
+  }
+}
+```
+
+Channel servers are configured under `Entrance.Entries[].Channels[]` with individual ports (default: 54001+).
+
+### Development Options
+
+```json
+{
+  "DevMode": true,
+  "DevModeOptions": {
+    "AutoCreateAccount": true,     // Auto-create accounts on first login
+    "LogInboundMessages": false,   // Log incoming packets
+    "LogOutboundMessages": false,  // Log outgoing packets
+    "MaxHexdumpLength": 256       // Max bytes for hexdump logs
+  }
+}
+```
+
+### Gameplay Options
+
+```json
+{
+  "GameplayOptions": {
+    "MaximumNP": 100000,           // Max Netcafe Points
+    "MaximumRP": 50000,            // Max Road Points
+    "BoostTimeDuration": 120,      // Login boost duration (minutes)
+    "BonusQuestAllowance": 3,      // Daily bonus quests
+    "DailyQuestAllowance": 1       // Daily quest limit
+  }
+}
+```
+
+### In-game Commands
+
+Configure available commands and their prefixes:
+
+```json
+{
+  "Commands": [
+    {"Name": "Raviente", "Enabled": true, "Prefix": "!ravi"},
+    {"Name": "Reload", "Enabled": true, "Prefix": "!reload"},
+    {"Name": "Course", "Enabled": true, "Prefix": "!course"}
+  ]
+}
+```
+
+For a complete configuration example, see [config.example.json](./config.example.json).
+
+## Client Setup
+
+1. Download and install a Monster Hunter Frontier client (version G10 or later recommended)
+2. Download [Quest and Scenario Binary Files](https://files.catbox.moe/xf0l7w.7z)
+3. Extract the binary files to the `bin` directory in your Erupe installation
+4. Configure your client to point to your Erupe server IP/hostname
+5. Modify the client's `host.txt` or use a launcher to redirect to your server
+
+## Database Schemas
+
+Erupe uses a structured schema system:
+
+- **Initialization Schema**: Bootstraps database to version 9.1.0
+- **Update Schemas**: Production-ready updates for new releases
+- **Patch Schemas**: Development updates (subject to change)
+- **Bundled Schemas**: Demo templates for shops, distributions, events, and gacha in [schemas/bundled-schema/](./schemas/bundled-schema/)
+
+**Note**: Only use patch schemas if you're following active development. They get consolidated into update schemas on release.
+
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+go test -v ./...
+
+# Check for race conditions
+go test -v -race ./...
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### Server won't start
+
+- Verify PostgreSQL is running: `systemctl status postgresql` (Linux) or `pg_ctl status` (Windows)
+- Check database credentials in `config.json`
+- Ensure all required ports are available and not blocked by firewall
+
+#### Client can't connect
+
+- Verify server is listening: `netstat -an | grep 53310`
+- Check firewall rules allow traffic on ports 53310, 53312, and 54001+
+- Ensure client's `host.txt` points to correct server IP
+- For remote connections, set `"Host"` in config.json to `0.0.0.0` or your server's IP
+
+#### Database schema errors
+
+- Ensure all patch files are applied in order
+- Check PostgreSQL logs for detailed error messages
+- Verify database user has sufficient privileges
+
+#### Quest files not loading
+
+- Confirm `BinPath` in config.json points to extracted quest/scenario files
+- Verify binary files match your `ClientMode` setting
+- Check file permissions
+
+### Debug Logging
+
+Enable detailed logging in `config.json`:
+
+```json
+{
+  "DevModeOptions": {
+    "LogInboundMessages": true,
+    "LogOutboundMessages": true
+  }
+}
+```
 
 ## Resources
 
-- [Quest and Scenario Binary Files](https://files.catbox.moe/xf0l7w.7z)
-- [PewPewDojo Discord](https://discord.gg/CFnzbhQ): community for discussion.
-- [Mogapedia's Discord](https://discord.gg/f77VwBX5w7): Discord community responsible for this branch.
-- [Community FAQ Pastebin](https://pastebin.com/QqAwZSTC)
+- **Binary Files**: [Quest and Scenario Binary Files](https://files.catbox.moe/xf0l7w.7z)
+- **Discord Communities**:
+  - [Mezeporta Square Discord](https://discord.gg/DnwcpXM488)
+  - [Mogapedia's Discord](https://discord.gg/f77VwBX5w7) - Maintainers of this branch
+  - [PewPewDojo Discord](https://discord.gg/CFnzbhQ) - General community
+- **Documentation**: [Erupe Wiki](https://github.com/Mezeporta/Erupe/wiki)
+- **FAQ**: [Community FAQ Pastebin](https://pastebin.com/QqAwZSTC)
+
+## Changelog
+
+View [CHANGELOG.md](CHANGELOG.md) for version history and changes.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Authors
+
+A list of contributors can be found at AUTHORS.md (if available) or in the git commit history.
