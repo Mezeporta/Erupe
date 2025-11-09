@@ -86,7 +86,18 @@ func encodeServerInfo(config *_config.Config, s *Server, local bool) []byte {
 		}
 	}
 	bf.WriteUint32(uint32(channelserver.TimeAdjusted().Unix()))
-	bf.WriteUint32(uint32(s.erupeConfig.GameplayOptions.ClanMemberLimits[len(s.erupeConfig.GameplayOptions.ClanMemberLimits)-1][1]))
+
+	// ClanMemberLimits requires at least 1 element with 2 columns to avoid index out of range panics
+	// Use default value (60) if array is empty or last row is too small
+	var maxClanMembers uint8 = 60
+	if len(s.erupeConfig.GameplayOptions.ClanMemberLimits) > 0 {
+		lastRow := s.erupeConfig.GameplayOptions.ClanMemberLimits[len(s.erupeConfig.GameplayOptions.ClanMemberLimits)-1]
+		if len(lastRow) > 1 {
+			maxClanMembers = lastRow[1]
+		}
+	}
+	bf.WriteUint32(uint32(maxClanMembers))
+
 	return bf.Data()
 }
 

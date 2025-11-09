@@ -103,7 +103,6 @@ func (b *ByteFrame) Seek(offset int64, whence int) (int64, error) {
 			return int64(b.index), errors.New("cannot seek beyond the max index")
 		}
 		b.index = uint(offset)
-		break
 	case io.SeekCurrent:
 		newPos := int64(b.index) + offset
 		if newPos > int64(b.usedSize) {
@@ -112,7 +111,6 @@ func (b *ByteFrame) Seek(offset int64, whence int) (int64, error) {
 			return int64(b.index), errors.New("cannot seek before the buffer start")
 		}
 		b.index = uint(newPos)
-		break
 	case io.SeekEnd:
 		newPos := int64(b.usedSize) + offset
 		if newPos > int64(b.usedSize) {
@@ -121,7 +119,6 @@ func (b *ByteFrame) Seek(offset int64, whence int) (int64, error) {
 			return int64(b.index), errors.New("cannot seek before the buffer start")
 		}
 		b.index = uint(newPos)
-		break
 
 	}
 

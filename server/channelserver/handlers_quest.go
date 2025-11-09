@@ -258,7 +258,7 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 
 	data := loadQuestFile(s, questId)
 	if data == nil {
-		return nil, fmt.Errorf(fmt.Sprintf("failed to load quest file (%d)", questId))
+		return nil, fmt.Errorf("failed to load quest file (%d)", questId)
 	}
 
 	bf := byteframe.NewByteFrame()

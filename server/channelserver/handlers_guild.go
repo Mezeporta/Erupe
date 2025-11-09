@@ -190,7 +190,7 @@ func (guild *Guild) Save(s *Session) error {
 		UPDATE guilds SET main_motto=$2, sub_motto=$3, comment=$4, pugi_name_1=$5, pugi_name_2=$6, pugi_name_3=$7,
 		pugi_outfit_1=$8, pugi_outfit_2=$9, pugi_outfit_3=$10, pugi_outfits=$11, icon=$12, leader_id=$13 WHERE id=$1
 	`, guild.ID, guild.MainMotto, guild.SubMotto, guild.Comment, guild.PugiName1, guild.PugiName2, guild.PugiName3,
-		guild.PugiOutfit1, guild.PugiOutfit2, guild.PugiOutfit3, guild.PugiOutfits, guild.Icon, guild.GuildLeader.LeaderCharID)
+		guild.PugiOutfit1, guild.PugiOutfit2, guild.PugiOutfit3, guild.PugiOutfits, guild.Icon, guild.LeaderCharID)
 
 	if err != nil {
 		s.logger.Error("failed to update guild data", zap.Error(err), zap.Uint32("guildID", guild.ID))
@@ -602,10 +602,10 @@ func GetGuildInfoByCharacterId(s *Session, charID uint32) (*Guild, error) {
 	return buildGuildObjectFromDbResult(rows, err, s)
 }
 
-func buildGuildObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (*Guild, error) {
+func buildGuildObjectFromDbResult(result *sqlx.Rows, _ error, s *Session) (*Guild, error) {
 	guild := &Guild{}
 
-	err = result.StructScan(guild)
+	err := result.StructScan(guild)
 
 	if err != nil {
 		s.logger.Error("failed to retrieve guild data from database", zap.Error(err))
@@ -642,6 +642,10 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOperateGuild)
 
 	guild, err := GetGuildInfoByID(s, pkt.GuildID)
+	if err != nil {
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	characterGuildInfo, err := GetCharacterGuildData(s, s.charID)
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -1535,9 +1539,9 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildManageRight)
 
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
 	if guild == nil || s.prevGuildID != 0 {
-		guild, err = GetGuildInfoByID(s, s.prevGuildID)
+		guild, err := GetGuildInfoByID(s, s.prevGuildID)
 		s.prevGuildID = 0
 		if guild == nil || err != nil {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -1849,12 +1853,11 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 				if err != nil {
 					continue
 				}
-				count++
-				if count > 255 {
-					count = 255
+				if count == 255 {
 					rows.Close()
 					break
 				}
+				count++
 				bf.WriteUint32(huntID)
 				bf.WriteUint32(monID)
 			}

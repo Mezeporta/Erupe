@@ -14,6 +14,7 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
+
 	"go.uber.org/zap"
 )
 
@@ -31,7 +32,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		diff, err := nullcomp.Decompress(pkt.RawDataPayload)
 		if err != nil {
 			s.logger.Error("Failed to decompress diff", zap.Error(err))
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 		// Perform diff.
@@ -43,7 +44,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		saveData, err := nullcomp.Decompress(pkt.RawDataPayload)
 		if err != nil {
 			s.logger.Error("Failed to decompress savedata from packet", zap.Error(err))
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 		if s.server.erupeConfig.SaveDumps.RawEnabled {
@@ -58,8 +59,16 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	s.playtimeTime = time.Now()
 
 	// Bypass name-checker if new
-	if characterSaveData.IsNewCharacter == true {
+	if characterSaveData.IsNewCharacter {
 		s.Name = characterSaveData.Name
+	}
+
+	// Force name to match session to prevent corruption detection false positives
+	// This handles SJIS/UTF-8 encoding differences and ensures saves succeed across all game versions
+	if characterSaveData.Name != s.Name && !characterSaveData.IsNewCharacter {
+		s.logger.Info("Correcting name mismatch in savedata", zap.String("savedata_name", characterSaveData.Name), zap.String("session_name", s.Name))
+		characterSaveData.Name = s.Name
+		characterSaveData.updateSaveDataWithStruct()
 	}
 
 	if characterSaveData.Name == s.Name || _config.ErupeConfig.RealClientMode <= _config.S10 {
@@ -177,6 +186,8 @@ func handleMsgMhfSaveScenarioData(s *Session, p mhfpacket.MHFPacket) {
 	_, err := s.server.db.Exec("UPDATE characters SET scenariodata = $1 WHERE id = $2", pkt.RawDataPayload, s.charID)
 	if err != nil {
 		s.logger.Error("Failed to update scenario data in db", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

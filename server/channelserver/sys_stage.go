@@ -84,15 +84,3 @@ func (s *Stage) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
 		session.QueueSendNonBlocking(bf.Data())
 	}
 }
-
-func (s *Stage) isCharInQuestByID(charID uint32) bool {
-	if _, exists := s.reservedClientSlots[charID]; exists {
-		return exists
-	}
-
-	return false
-}
-
-func (s *Stage) isQuest() bool {
-	return len(s.reservedClientSlots) > 0
-}

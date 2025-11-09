@@ -120,7 +120,7 @@ func (s *Server) getFriendsForCharacters(chars []character) []members {
 	friends := make([]members, 0)
 	for _, char := range chars {
 		friendsCSV := ""
-		err := s.db.QueryRow("SELECT friends FROM characters WHERE id=$1", char.ID).Scan(&friendsCSV)
+		_ = s.db.QueryRow("SELECT friends FROM characters WHERE id=$1", char.ID).Scan(&friendsCSV)
 		friendsSlice := strings.Split(friendsCSV, ",")
 		friendQuery := "SELECT id, name FROM characters WHERE id="
 		for i := 0; i < len(friendsSlice); i++ {
@@ -130,7 +130,7 @@ func (s *Server) getFriendsForCharacters(chars []character) []members {
 			}
 		}
 		charFriends := make([]members, 0)
-		err = s.db.Select(&charFriends, friendQuery)
+		err := s.db.Select(&charFriends, friendQuery)
 		if err != nil {
 			continue
 		}
@@ -173,6 +173,9 @@ func (s *Server) deleteCharacter(cid int, token string, tokenID uint32) error {
 	}
 	var isNew bool
 	err := s.db.QueryRow("SELECT is_new_character FROM characters WHERE id = $1", cid).Scan(&isNew)
+	if err != nil {
+		return err
+	}
 	if isNew {
 		_, err = s.db.Exec("DELETE FROM characters WHERE id = $1", cid)
 	} else {
@@ -182,19 +185,6 @@ func (s *Server) deleteCharacter(cid int, token string, tokenID uint32) error {
 		return err
 	}
 	return nil
-}
-
-// Unused
-func (s *Server) checkToken(uid uint32) (bool, error) {
-	var exists int
-	err := s.db.QueryRow("SELECT count(*) FROM sign_sessions WHERE user_id = $1", uid).Scan(&exists)
-	if err != nil {
-		return false, err
-	}
-	if exists > 0 {
-		return true, nil
-	}
-	return false, nil
 }
 
 func (s *Server) registerUidToken(uid uint32) (uint32, string, error) {

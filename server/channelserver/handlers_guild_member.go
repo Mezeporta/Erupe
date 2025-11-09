@@ -139,10 +139,10 @@ func GetCharacterGuildData(s *Session, charID uint32) (*GuildMember, error) {
 	return buildGuildMemberObjectFromDBResult(rows, err, s)
 }
 
-func buildGuildMemberObjectFromDBResult(rows *sqlx.Rows, err error, s *Session) (*GuildMember, error) {
+func buildGuildMemberObjectFromDBResult(rows *sqlx.Rows, _ error, s *Session) (*GuildMember, error) {
 	memberData := &GuildMember{}
 
-	err = rows.StructScan(&memberData)
+	err := rows.StructScan(&memberData)
 
 	if err != nil {
 		s.logger.Error("failed to retrieve guild data from database", zap.Error(err))

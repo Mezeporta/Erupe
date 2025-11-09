@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"erupe-ce/server/channelserver/compression/nullcomp"
@@ -68,7 +68,7 @@ var tests = []struct {
 }
 
 func readTestDataFile(filename string) []byte {
-	data, err := ioutil.ReadFile(fmt.Sprintf("./test_data/%s", filename))
+	data, err := os.ReadFile(fmt.Sprintf("./test_data/%s", filename))
 	if err != nil {
 		panic(err)
 	}

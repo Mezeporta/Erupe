@@ -11,19 +11,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Alpelo object system backport functionality
 - Better config file handling and structure
+- Comprehensive production logging for save operations (warehouse, Koryo points, savedata, Hunter Navi, plate equipment)
+- Disconnect type tracking (graceful, connection_lost, error) with detailed logging
+- Session lifecycle logging with duration and metrics tracking
+- Structured logging with timing metrics for all database save operations
+- Plate data (transmog) safety net in logout flow - adds monitoring checkpoint for platedata, platebox, and platemyset persistence
 
 ### Changed
 
 - Improved config handling
+- Refactored logout flow to save all data before cleanup (prevents data loss race conditions)
+- Unified save operation into single `saveAllCharacterData()` function with proper error handling
+- Removed duplicate save calls in `logoutPlayer()` function
 
 ### Fixed
 
 - Config file handling and validation
+- Fixes 3 critical race condition in handlers_stage.go.
+- Fix an issue causing a crash on clans with 0 members.
+- Fixed deadlock in zone change causing 60-second timeout when players change zones
+- Fixed crash when sending empty packets in QueueSend/QueueSendNonBlocking
+- Fixed missing stage transfer packet for empty zones
+- Fixed save data corruption check rejecting valid saves due to name encoding mismatches (SJIS/UTF-8)
+- Fixed incomplete saves during logout - character savedata now persisted even during ungraceful disconnects
+- Fixed double-save bug in logout flow that caused unnecessary database operations
+- Fixed save operation ordering - now saves data before session cleanup instead of after
+- Fixed stale transmog/armor appearance shown to other players - user binary cache now invalidated when plate data is saved
 
 ### Security
 
 - Bumped golang.org/x/net from 0.33.0 to 0.38.0
 - Bumped golang.org/x/crypto from 0.31.0 to 0.35.0
+
+## Removed
+
+- Compatibility with Go 1.21 removed.
 
 ## [9.2.0] - 2023-04-01
 

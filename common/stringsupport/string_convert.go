@@ -31,7 +31,7 @@ func SJISToUTF8(b []byte) string {
 
 func ToNGWord(x string) []uint16 {
 	var w []uint16
-	for _, r := range []rune(x) {
+	for _, r := range x {
 		if r > 0xFF {
 			t := UTF8ToSJIS(string(r))
 			if len(t) > 1 {

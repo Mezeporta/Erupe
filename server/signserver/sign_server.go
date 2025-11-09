@@ -24,7 +24,6 @@ type Server struct {
 	sync.Mutex
 	logger         *zap.Logger
 	erupeConfig    *_config.Config
-	sessions       map[int]*Session
 	db             *sqlx.DB
 	listener       net.Listener
 	isShuttingDown bool

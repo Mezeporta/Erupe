@@ -115,10 +115,8 @@ func (s *Server) handleEntranceServerConnection(conn net.Conn) {
 		fmt.Printf("[Client] -> [Server]\nData [%d bytes]:\n%s\n", len(pkt), hex.Dump(pkt))
 	}
 
-	local := false
-	if strings.Split(conn.RemoteAddr().String(), ":")[0] == "127.0.0.1" {
-		local = true
-	}
+	local := strings.Split(conn.RemoteAddr().String(), ":")[0] == "127.0.0.1"
+
 	data := makeSv2Resp(s.erupeConfig, s, local)
 	if len(pkt) > 5 {
 		data = append(data, makeUsrResp(pkt, s)...)

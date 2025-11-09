@@ -12,8 +12,8 @@ import (
 	"erupe-ce/network/binpacket"
 	"erupe-ce/network/mhfpacket"
 	"fmt"
-	"golang.org/x/exp/slices"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -243,9 +243,10 @@ func parseChatCommand(s *Session, command string) {
 				sendServerChatMessage(s, s.server.i18n.commands.kqf.version)
 			} else {
 				if len(args) > 1 {
-					if args[1] == "get" {
+					switch args[1] {
+					case "get":
 						sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.kqf.get, s.kqf))
-					} else if args[1] == "set" {
+					case "set":
 						if len(args) > 2 && len(args[2]) == 16 {
 							hexd, _ := hex.DecodeString(args[2])
 							s.kqf = hexd
@@ -281,13 +282,13 @@ func parseChatCommand(s *Session, command string) {
 			if len(args) > 1 {
 				for _, course := range mhfcourse.Courses() {
 					for _, alias := range course.Aliases() {
-						if strings.ToLower(args[1]) == strings.ToLower(alias) {
+						if strings.EqualFold(args[1], alias) {
 							if slices.Contains(s.server.erupeConfig.Courses, _config.Course{Name: course.Aliases()[0], Enabled: true}) {
 								var delta, rightsInt uint32
 								if mhfcourse.CourseExists(course.ID, s.courses) {
 									ei := slices.IndexFunc(s.courses, func(c mhfcourse.Course) bool {
 										for _, alias := range c.Aliases() {
-											if strings.ToLower(args[1]) == strings.ToLower(alias) {
+											if strings.EqualFold(args[1], alias) {
 												return true
 											}
 										}
@@ -409,7 +410,7 @@ func parseChatCommand(s *Session, command string) {
 		}
 	case commands["Playtime"].Prefix:
 		if commands["Playtime"].Enabled || s.isOp() {
-			playtime := s.playtime + uint32(time.Now().Sub(s.playtimeTime).Seconds())
+			playtime := s.playtime + uint32(time.Since(s.playtimeTime).Seconds())
 			sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.playtime, playtime/60/60, playtime/60%60, playtime%60))
 		} else {
 			sendDisabledCommandMessage(s, commands["Playtime"])

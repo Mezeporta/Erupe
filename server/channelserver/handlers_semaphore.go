@@ -12,9 +12,7 @@ import (
 func removeSessionFromSemaphore(s *Session) {
 	s.server.semaphoreLock.Lock()
 	for _, semaphore := range s.server.semaphore {
-		if _, exists := semaphore.clients[s]; exists {
-			delete(semaphore.clients, s)
-		}
+		delete(semaphore.clients, s)
 	}
 	s.server.semaphoreLock.Unlock()
 }

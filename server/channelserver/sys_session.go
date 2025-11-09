@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"erupe-ce/common/byteframe"
@@ -31,7 +32,7 @@ type Session struct {
 	logger        *zap.Logger
 	server        *Server
 	rawConn       net.Conn
-	cryptConn     *network.CryptConn
+	cryptConn     network.Conn
 	sendPackets   chan packet
 	clientContext *clientctx.ClientContext
 	lastPacket    time.Time
@@ -69,7 +70,7 @@ type Session struct {
 
 	// For Debuging
 	Name     string
-	closed   bool
+	closed   atomic.Bool
 	ackStart map[uint32]time.Time
 }
 
@@ -103,18 +104,19 @@ func (s *Session) Start() {
 
 // QueueSend queues a packet (raw []byte) to be sent.
 func (s *Session) QueueSend(data []byte) {
-	s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
-	err := s.cryptConn.SendPacket(append(data, []byte{0x00, 0x10}...))
-	if err != nil {
-		s.logger.Warn("Failed to send packet")
+	if len(data) >= 2 {
+		s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
 	}
+	s.sendPackets <- packet{data, true}
 }
 
 // QueueSendNonBlocking queues a packet (raw []byte) to be sent, dropping the packet entirely if the queue is full.
 func (s *Session) QueueSendNonBlocking(data []byte) {
 	select {
 	case s.sendPackets <- packet{data, true}:
-		s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+		if len(data) >= 2 {
+			s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
+		}
 	default:
 		s.logger.Warn("Packet queue too full, dropping!")
 	}
@@ -156,20 +158,16 @@ func (s *Session) QueueAck(ackHandle uint32, data []byte) {
 }
 
 func (s *Session) sendLoop() {
-	var pkt packet
 	for {
-		var buf []byte
-		if s.closed {
+		if s.closed.Load() {
 			return
 		}
+		// Send each packet individually with its own terminator
 		for len(s.sendPackets) > 0 {
-			pkt = <-s.sendPackets
-			buf = append(buf, pkt.data...)
-		}
-		if len(buf) > 0 {
-			err := s.cryptConn.SendPacket(append(buf, []byte{0x00, 0x10}...))
+			pkt := <-s.sendPackets
+			err := s.cryptConn.SendPacket(append(pkt.data, []byte{0x00, 0x10}...))
 			if err != nil {
-				s.logger.Warn("Failed to send packet")
+				s.logger.Warn("Failed to send packet", zap.Error(err))
 			}
 		}
 		time.Sleep(time.Duration(_config.ErupeConfig.LoopDelay) * time.Millisecond)
@@ -178,17 +176,39 @@ func (s *Session) sendLoop() {
 
 func (s *Session) recvLoop() {
 	for {
-		if s.closed {
+		if s.closed.Load() {
+			// Graceful disconnect - client sent logout packet
+			s.logger.Info("Session closed gracefully",
+				zap.Uint32("charID", s.charID),
+				zap.String("name", s.Name),
+				zap.String("disconnect_type", "graceful"),
+			)
 			logoutPlayer(s)
 			return
 		}
 		pkt, err := s.cryptConn.ReadPacket()
 		if err == io.EOF {
-			s.logger.Info(fmt.Sprintf("[%s] Disconnected", s.Name))
+			// Connection lost - client disconnected without logout packet
+			sessionDuration := time.Duration(0)
+			if s.sessionStart > 0 {
+				sessionDuration = time.Since(time.Unix(s.sessionStart, 0))
+			}
+			s.logger.Info("Connection lost (EOF)",
+				zap.Uint32("charID", s.charID),
+				zap.String("name", s.Name),
+				zap.String("disconnect_type", "connection_lost"),
+				zap.Duration("session_duration", sessionDuration),
+			)
 			logoutPlayer(s)
 			return
 		} else if err != nil {
-			s.logger.Warn("Error on ReadPacket, exiting recv loop", zap.Error(err))
+			// Connection error - network issue or malformed packet
+			s.logger.Warn("Connection error, exiting recv loop",
+				zap.Error(err),
+				zap.Uint32("charID", s.charID),
+				zap.String("name", s.Name),
+				zap.String("disconnect_type", "error"),
+			)
 			logoutPlayer(s)
 			return
 		}
@@ -218,7 +238,7 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	s.logMessage(opcodeUint16, pktGroup, s.Name, "Server")
 
 	if opcode == network.MSG_SYS_LOGOUT {
-		s.closed = true
+		s.closed.Store(true)
 		return
 	}
 	// Get the packet parser and handler for this opcode.
@@ -250,7 +270,7 @@ func ignored(opcode network.PacketID) bool {
 		network.MSG_SYS_TIME,
 		network.MSG_SYS_EXTEND_THRESHOLD,
 		network.MSG_SYS_POSITION_OBJECT,
-		network.MSG_MHF_SAVEDATA,
+		// network.MSG_MHF_SAVEDATA, // Temporarily enabled for debugging save issues
 	}
 	set := make(map[network.PacketID]struct{}, len(ignoreList))
 	for _, s := range ignoreList {
