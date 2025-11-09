@@ -1,0 +1,71 @@
+version: "3.9"
+# 1. docker-compose up db pgadmin
+# 2. Use pgadmin to restore db and also apply patch-schema
+# 3. Configure the config.json example. in docker you can point to the service name for the database i.e db
+# 4. In seperate terminal docker-compose up server
+# 5. If all went well happy hunting!
+services:
+  db:
+    image: postgres
+    environment:
+    # (Make sure these match config.json)
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=erupe
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db-data/:/var/lib/postgresql/data/
+      - ../schemas/:/schemas/
+      - ./init/setup.sh:/docker-entrypoint-initdb.d/setup.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user@pgadmin.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    ports:
+      - "5050:80"
+    depends_on:
+      db:
+        condition: service_healthy
+  server:
+    depends_on:
+      db:
+        condition: service_healthy
+    # If using prebuilt container change paths and config
+    build:
+      context: ../
+    volumes:
+      - ../config.json:/app/erupe/config.json
+      - ../bin:/app/erupe/bin
+      - ./savedata:/app/erupe/savedata
+    ports:
+      # (Make sure these match config.json)
+      - "53312:53312" #Sign V1
+      - "8080:8080"   #Sign V2
+      - "53310:53310" #Entrance
+      # Channels
+      - "54001:54001"
+      - "54002:54002"
+      - "54003:54003"
+      - "54004:54004"
+      - "54005:54005"
+      - "54006:54006"
+      - "54007:54007"
+      - "54008:54008"
+  web:
+    image: httpd:latest
+    container_name: my-apache-app
+    ports:
+      - '80:80'
+    volumes:
+      - ./Servers:/usr/local/apache2/htdocs
+    depends_on:
+      db:
+        condition: service_healthy
