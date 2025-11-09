@@ -2,8 +2,13 @@
 
 www/jp/
 vendor/
+
+# Quest files
 *.bin
 savedata/*/
+
+# Executables
 *.exe
 *.lnk
 *.bat
+erupe-ce
