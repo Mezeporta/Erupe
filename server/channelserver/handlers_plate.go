@@ -11,6 +11,11 @@
 // The logout flow includes a safety check via savePlateDataToDatabase()
 // to ensure no data loss if packets are lost or client disconnects.
 //
+// Cache Management:
+// When plate data is saved, the server's user binary cache (types 2-3)
+// is invalidated to ensure other players see updated appearance immediately.
+// This prevents stale transmog/armor being displayed after zone changes.
+//
 // Thread Safety:
 // All handlers use session-scoped database operations, making them
 // inherently thread-safe as each session is single-threaded.
@@ -114,6 +119,13 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
+	// Invalidate user binary cache so other players see updated appearance
+	// User binary types 2 and 3 contain equipment/appearance data
+	s.server.userBinaryPartsLock.Lock()
+	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 2})
+	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 3})
+	s.server.userBinaryPartsLock.Unlock()
+
 	saveDuration := time.Since(saveStart)
 	s.logger.Info("PlateData saved successfully",
 		zap.Uint32("charID", s.charID),
@@ -189,6 +201,13 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Error("Failed to save platebox", zap.Error(err))
 		}
 	}
+
+	// Invalidate user binary cache so other players see updated appearance
+	s.server.userBinaryPartsLock.Lock()
+	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 2})
+	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 3})
+	s.server.userBinaryPartsLock.Unlock()
+
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
@@ -228,6 +247,13 @@ func handleMsgMhfSavePlateMyset(s *Session, p mhfpacket.MHFPacket) {
 			zap.Duration("duration", saveDuration),
 		)
 	}
+
+	// Invalidate user binary cache so other players see updated appearance
+	s.server.userBinaryPartsLock.Lock()
+	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 2})
+	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 3})
+	s.server.userBinaryPartsLock.Unlock()
+
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 

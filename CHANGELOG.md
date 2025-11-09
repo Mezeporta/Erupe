@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed incomplete saves during logout - character savedata now persisted even during ungraceful disconnects
 - Fixed double-save bug in logout flow that caused unnecessary database operations
 - Fixed save operation ordering - now saves data before session cleanup instead of after
+- Fixed stale transmog/armor appearance shown to other players - user binary cache now invalidated when plate data is saved
 
 ### Security
 
