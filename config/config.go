@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -149,12 +150,27 @@ type EntranceChannelInfo struct {
 var ErupeConfig *Config
 
 func init() {
+	// Skip config loading during tests
+	if isTestMode() {
+		return
+	}
+
 	var err error
 	ErupeConfig, err = LoadConfig()
 	if err != nil {
 		preventClose(fmt.Sprintf("Failed to load config: %s", err.Error()))
 	}
 
+}
+
+func isTestMode() bool {
+	// Check if we're running in test mode
+	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "-test.") {
+			return true
+		}
+	}
+	return false
 }
 
 // getOutboundIP4 gets the preferred outbound ip4 of this machine
@@ -200,7 +216,7 @@ func LoadConfig() (*Config, error) {
 }
 
 func preventClose(text string) {
-	if ErupeConfig.DisableSoftCrash {
+	if ErupeConfig != nil && ErupeConfig.DisableSoftCrash {
 		os.Exit(0)
 	}
 	fmt.Println("\nFailed to start Erupe:\n" + text)

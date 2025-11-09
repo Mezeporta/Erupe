@@ -39,6 +39,12 @@ var commands map[string]config.Command
 
 func init() {
 	commands = make(map[string]config.Command)
+
+	// Skip initialization if config is not loaded (e.g., during tests)
+	if config.ErupeConfig == nil {
+		return
+	}
+
 	zapConfig := zap.NewDevelopmentConfig()
 	zapConfig.DisableCaller = true
 	zapLogger, _ := zapConfig.Build()

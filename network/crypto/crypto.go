@@ -18,6 +18,16 @@ func Decrypt(data []byte, key uint32, overrideByteKey *byte) (outputData []byte,
 	return _generalCrypt(data, key, 1, overrideByteKey)
 }
 
+// Crypto is a unified interface for both encryption and decryption.
+// If encrypt is true, it encrypts the data; otherwise it decrypts.
+// This function exists for compatibility with tests.
+func Crypto(data []byte, rotKey uint32, encrypt bool, overrideByteKey *byte) ([]byte, uint16, uint16, uint16, uint16) {
+	if encrypt {
+		return Encrypt(data, rotKey, overrideByteKey)
+	}
+	return Decrypt(data, rotKey, overrideByteKey)
+}
+
 // _generalCrypt is a generalized MHF crypto function that can perform both encryption and decryption,
 // these two crypto operations are combined into a single function because they shared most of their logic.
 //		encrypt: cryptType==0

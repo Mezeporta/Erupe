@@ -65,7 +65,7 @@ func TestEncrypt(t *testing.T) {
 	for k, tt := range tests {
 		testname := fmt.Sprintf("encrypt_test_%d", k)
 		t.Run(testname, func(t *testing.T) {
-			out, cc, c0, c1, c2 := Encrypt(tt.decryptedData, tt.key, nil)
+			out, cc, c0, c1, c2 := Crypto(tt.decryptedData, tt.key, true, nil)
 			if cc != tt.ecc {
 				t.Errorf("got cc 0x%X, want 0x%X", cc, tt.ecc)
 			} else if c0 != tt.ec0 {
@@ -86,7 +86,7 @@ func TestDecrypt(t *testing.T) {
 	for k, tt := range tests {
 		testname := fmt.Sprintf("decrypt_test_%d", k)
 		t.Run(testname, func(t *testing.T) {
-			out, cc, c0, c1, c2 := Decrypt(tt.encryptedData, tt.key, nil)
+			out, cc, c0, c1, c2 := Crypto(tt.encryptedData, tt.key, false, nil)
 			if cc != tt.ecc {
 				t.Errorf("got cc 0x%X, want 0x%X", cc, tt.ecc)
 			} else if c0 != tt.ec0 {
