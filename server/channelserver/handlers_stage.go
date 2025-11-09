@@ -59,7 +59,8 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	s.Unlock()
 
 	// Tell the client to cleanup its current stage objects.
-	s.QueueSendMHFNonBlocking(&mhfpacket.MsgSysCleanupObject{})
+	// Use blocking send to ensure this critical cleanup packet is not dropped.
+	s.QueueSendMHF(&mhfpacket.MsgSysCleanupObject{})
 
 	// Confirm the stage entry.
 	doAckSimpleSucceed(s, ackHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -71,10 +72,20 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	if !s.userEnteredStage {
 		s.userEnteredStage = true
 
+		// Lock server to safely iterate over sessions map
+		// We need to copy the session list first to avoid holding the lock during packet building
+		s.server.Lock()
+		var sessionList []*Session
 		for _, session := range s.server.sessions {
 			if s == session {
 				continue
 			}
+			sessionList = append(sessionList, session)
+		}
+		s.server.Unlock()
+
+		// Build packets for each session without holding the lock
+		for _, session := range sessionList {
 			temp = &mhfpacket.MsgSysInsertUser{CharID: session.charID}
 			newNotif.WriteUint16(uint16(temp.Opcode()))
 			temp.Build(newNotif, s.clientContext)
@@ -92,12 +103,22 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	if s.stage != nil { // avoids lock up when using bed for dream quests
 		// Notify the client to duplicate the existing objects.
 		s.logger.Info(fmt.Sprintf("Sending existing stage objects to %s", s.Name))
+
+		// Lock stage to safely iterate over objects map
+		// We need to copy the objects list first to avoid holding the lock during packet building
 		s.stage.RLock()
-		var temp mhfpacket.MHFPacket
+		var objectList []*Object
 		for _, obj := range s.stage.objects {
 			if obj.ownerCharID == s.charID {
 				continue
 			}
+			objectList = append(objectList, obj)
+		}
+		s.stage.RUnlock()
+
+		// Build packets for each object without holding the lock
+		var temp mhfpacket.MHFPacket
+		for _, obj := range objectList {
 			temp = &mhfpacket.MsgSysDuplicateObject{
 				ObjID:       obj.id,
 				X:           obj.x,
@@ -109,12 +130,13 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 			newNotif.WriteUint16(uint16(temp.Opcode()))
 			temp.Build(newNotif, s.clientContext)
 		}
-		s.stage.RUnlock()
 	}
 
-	if len(newNotif.Data()) > 2 {
-		s.QueueSendNonBlocking(newNotif.Data())
-	}
+	// FIX: Always send stage transfer packet, even if empty.
+	// The client expects this packet to complete the zone change, regardless of content.
+	// Previously, if newNotif was empty (no users, no objects), no packet was sent,
+	// causing the client to timeout after 60 seconds.
+	s.QueueSend(newNotif.Data())
 }
 
 func destructEmptyStages(s *Session) {
@@ -123,7 +145,12 @@ func destructEmptyStages(s *Session) {
 	for _, stage := range s.server.stages {
 		// Destroy empty Quest/My series/Guild stages.
 		if stage.id[3:5] == "Qs" || stage.id[3:5] == "Ms" || stage.id[3:5] == "Gs" || stage.id[3:5] == "Ls" {
-			if len(stage.reservedClientSlots) == 0 && len(stage.clients) == 0 {
+			// Lock stage to safely check its client and reservation counts
+			stage.Lock()
+			isEmpty := len(stage.reservedClientSlots) == 0 && len(stage.clients) == 0
+			stage.Unlock()
+
+			if isEmpty {
 				delete(s.server.stages, stage.id)
 				s.logger.Debug("Destructed stage", zap.String("stage.id", stage.id))
 			}
@@ -132,27 +159,60 @@ func destructEmptyStages(s *Session) {
 }
 
 func removeSessionFromStage(s *Session) {
+	// Acquire stage lock to protect concurrent access to clients and objects maps
+	// This prevents race conditions when multiple goroutines access these maps
+	s.stage.Lock()
+
 	// Remove client from old stage.
 	delete(s.stage.clients, s)
 
 	// Delete old stage objects owned by the client.
-	s.logger.Info("Sending notification to old stage clients")
+	// We must copy the objects to delete to avoid modifying the map while iterating
+	var objectsToDelete []*Object
 	for _, object := range s.stage.objects {
 		if object.ownerCharID == s.charID {
-			s.stage.BroadcastMHF(&mhfpacket.MsgSysDeleteObject{ObjID: object.id}, s)
-			delete(s.stage.objects, object.ownerCharID)
+			objectsToDelete = append(objectsToDelete, object)
 		}
 	}
+
+	// Delete from map while still holding lock
+	for _, object := range objectsToDelete {
+		delete(s.stage.objects, object.ownerCharID)
+	}
+
+	// CRITICAL FIX: Unlock BEFORE broadcasting to avoid deadlock
+	// BroadcastMHF also tries to lock the stage, so we must release our lock first
+	s.stage.Unlock()
+
+	// Now broadcast the deletions (without holding the lock)
+	for _, object := range objectsToDelete {
+		s.stage.BroadcastMHF(&mhfpacket.MsgSysDeleteObject{ObjID: object.id}, s)
+	}
+
 	destructEmptyStages(s)
 	destructEmptySemaphores(s)
 }
 
 func isStageFull(s *Session, StageID string) bool {
-	if stage, exists := s.server.stages[StageID]; exists {
-		if _, exists := stage.reservedClientSlots[s.charID]; exists {
+	s.server.Lock()
+	stage, exists := s.server.stages[StageID]
+	s.server.Unlock()
+
+	if exists {
+		// Lock stage to safely check client counts
+		// Read the values we need while holding RLock, then release immediately
+		// to avoid deadlock with other functions that might hold server lock
+		stage.RLock()
+		reserved := len(stage.reservedClientSlots)
+		clients := len(stage.clients)
+		_, hasReservation := stage.reservedClientSlots[s.charID]
+		maxPlayers := stage.maxPlayers
+		stage.RUnlock()
+
+		if hasReservation {
 			return false
 		}
-		return len(stage.reservedClientSlots)+len(stage.clients) >= int(stage.maxPlayers)
+		return reserved+clients >= int(maxPlayers)
 	}
 	return false
 }
@@ -195,13 +255,9 @@ func handleMsgSysBackStage(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	if _, exists := s.stage.reservedClientSlots[s.charID]; exists {
-		delete(s.stage.reservedClientSlots, s.charID)
-	}
+	delete(s.stage.reservedClientSlots, s.charID)
 
-	if _, exists := s.server.stages[backStage].reservedClientSlots[s.charID]; exists {
-		delete(s.server.stages[backStage].reservedClientSlots, s.charID)
-	}
+	delete(s.server.stages[backStage].reservedClientSlots, s.charID)
 
 	doStageTransfer(s, pkt.AckHandle, backStage)
 }
@@ -293,9 +349,7 @@ func handleMsgSysUnreserveStage(s *Session, p mhfpacket.MHFPacket) {
 	s.Unlock()
 	if stage != nil {
 		stage.Lock()
-		if _, exists := stage.reservedClientSlots[s.charID]; exists {
-			delete(stage.reservedClientSlots, s.charID)
-		}
+		delete(stage.reservedClientSlots, s.charID)
 		stage.Unlock()
 	}
 }
