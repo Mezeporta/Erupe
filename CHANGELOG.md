@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated minimum Go version requirement from 1.23 to 1.25
 - Improved config handling
 - Refactored logout flow to save all data before cleanup (prevents data loss race conditions)
 - Unified save operation into single `saveAllCharacterData()` function with proper error handling
