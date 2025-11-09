@@ -22,9 +22,9 @@ Install is simple, you need:
 
 ### Installation
 
-1. Bring up a fresh database by using the [backup file attached with the latest release](https://github.com/ZeruLight/Erupe/releases/latest/download/SCHEMA.sql).
+1. Create a new database, and install the schema with the [backup file attached with the latest release](https://github.com/ZeruLight/Erupe/releases/latest/download/SCHEMA.sql).
 2. Run each script under [patch-schema](./patch-schema) as they introduce newer schema.
-3. Edit [config.json](./config.json) such that the database password matches your PostgreSQL setup.
+3. Copy [config.example.json](./config.example.json) to `config.json`. Edit the new file so that the database password matches your PostgreSQL setup.
 4. Launch `go run .` to run erupe directly, or use `go build` to compile Erupe.
 
 ### Note
@@ -35,5 +35,6 @@ See the [resources](#resources) for details.
 ## Resources
 
 - [Quest and Scenario Binary Files](https://files.catbox.moe/xf0l7w.7z)
-- [PewPewDojo Discord](https://discord.gg/CFnzbhQ)
+- [PewPewDojo Discord](https://discord.gg/CFnzbhQ): community for discussion.
+- [Mogapedia's Discord](https://discord.gg/f77VwBX5w7): Discord community responsible for this branch.
 - [Community FAQ Pastebin](https://pastebin.com/QqAwZSTC)

@@ -3,12 +3,13 @@
 www/jp/
 vendor/
 
-# Quest files
-*.bin
-savedata/*/
-
 # Executables
 *.exe
 *.lnk
 *.bat
 erupe-ce
+
+# Quest files
+*.bin
+savedata/*/
+config.json
