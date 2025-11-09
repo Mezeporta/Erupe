@@ -1,6 +1,6 @@
 module erupe-ce
 
-go 1.19
+go 1.25
 
 require (
 	github.com/bwmarrin/discordgo v0.23.2

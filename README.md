@@ -17,15 +17,78 @@ If you want to modify or compile Erupe yourself, please read on.
 
 Install is simple, you need:
 
-- [Go](https://go.dev/dl/): programming language for the server logic
-- [PostgreSQL](https://www.postgresql.org/download/): server database.
+- [Go 1.25+](https://go.dev/dl/): programming language for the server logic
+- [PostgreSQL](https://www.postgresql.org/download/): server database
 
 ### Installation
 
-1. Create a new database, and install the schema with the [backup file attached with the latest release](https://github.com/ZeruLight/Erupe/releases/latest/download/SCHEMA.sql).
-2. Run each script under [patch-schema](./patch-schema) as they introduce newer schema.
-3. Copy [config.example.json](./config.example.json) to `config.json`. Edit the new file so that the database password matches your PostgreSQL setup.
-4. Launch `go run .` to run erupe directly, or use `go build` to compile Erupe.
+#### First-time Setup
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/ZeruLight/Erupe.git
+   cd Erupe
+   ```
+
+2. Create a new PostgreSQL database and install the schema:
+
+   ```bash
+   # Download and apply the base schema
+   wget https://github.com/ZeruLight/Erupe/releases/latest/download/SCHEMA.sql
+   psql -U your_user -d your_database -f SCHEMA.sql
+   ```
+
+3. Run each script under [patch-schema](./patch-schema) to apply schema updates:
+
+   ```bash
+   psql -U your_user -d your_database -f patch-schema/01_patch.sql
+   # Repeat for each patch file in order
+   ```
+
+4. Copy [config.example.json](./config.example.json) to `config.json` and edit it:
+
+   ```bash
+   cp config.example.json config.json
+   # Edit config.json with your database credentials
+   ```
+
+5. Install dependencies and run:
+
+   ```bash
+   go mod download
+   go run .
+   ```
+
+   Or build a binary:
+
+   ```bash
+   go build
+   ./erupe-ce
+   ```
+
+#### Updating an Existing Installation
+
+1. Pull the latest changes:
+
+   ```bash
+   git pull origin main
+   ```
+
+2. Update dependencies:
+
+   ```bash
+   go mod tidy
+   ```
+
+3. Apply any new schema patches from [patch-schema](./patch-schema)
+
+4. Rebuild and restart:
+
+   ```bash
+   go build
+   ./erupe-ce
+   ```
 
 ### Note
 
