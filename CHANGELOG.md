@@ -182,8 +182,165 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## Pre-9.0.0 Development (2022-02-25 to 2022-08-03)
+
+The period before version 9.0.0 represents the early community development phase, starting with the Community Edition reupload and continuing through multiple feature additions leading up to the first semantic versioning release.
+
+### [Pre-release] - 2022-06-01 to 2022-08-03
+
+Major feature implementations leading to 9.0.0:
+
+#### Added (June-August 2022)
+
+- **Friend System**: Friend list functionality with cross-character enumeration
+- **Blacklist System**: Player blocking functionality
+- **My Series System**: Basic My Series functionality with shared data and bookshelf support
+- **Guild Treasure Hunts**: Complete guild treasure hunting system with cooldowns
+- **House System**:
+  - House interior updates and furniture loading
+  - House entry handling improvements
+  - Visit other players' houses with correct furniture display
+- **Festa System**:
+  - Initial Festa build and decoding
+  - Canned Festa prizes implementation
+  - Festa finale acquisition handling
+  - Festa info and packet handling improvements
+- **Achievement System**: Hunting career achievements concept implementation
+- **Object System**:
+  - Object indexing (v3, v3.1)
+  - Semaphore indexes
+  - Object index limits and reuse prevention
+- **Transit Message**: Correct parsing of transit messages for minigames
+- **World Chat**: Enabled world chat functionality
+- **Rights System**: Rights command and permission updates on login
+- **Customizable Login Notice**: Support for custom login notices
+
+#### Changed (June-August 2022)
+
+- **Stage System**: Major stage rework and improvements
+- **Raviente System**: Cleanup, fixes, and announcement improvements
+- **Discord Integration**: Mediated Discord handling improvements
+- **Server Logging**: Improved server logging throughout
+- **Configuration**: Edited default configs
+- **Repository**: Extensive repository cleanup
+- **Build System**: Implemented build actions and artifact generation
+
+#### Fixed (June-August 2022)
+
+- Critical semaphore bug fixes
+- Raviente-related fixes and cleanup
+- Read-locked channels issue
+- Stubbed title enumeration
+- Object index reuse prevention
+- Crash when not in guild on logout
+- Invalid schema issues
+- Stage enumeration crash prevention
+- Gook (book) enumeration and cleanup
+- Guild SQL fixes
+- Various packet parsing improvements
+- Semaphore checking changes
+- User insertion not broadcasting
+
+### [Pre-release] - 2022-05-01 to 2022-06-01
+
+Guild system enhancements and social features:
+
+#### Added (May-June 2022)
+
+- **Guild Features**:
+  - Guild alliance support with complete implementation
+  - Guild member (Pugi) management and renaming
+  - Guild post SJIS (Japanese) character encoding support
+  - Guild message board functionality
+  - Guild meal system
+  - Diva Hall adventure cat support
+  - Guild adventure cat implementation
+  - Alliance members included in guild member enumeration
+- **Character System**:
+  - Mail locking mechanism
+  - Favorite quest save/load functionality
+  - Title/achievement enumeration parsing
+  - Character data handler rewrite
+- **Game Features**:
+  - Item distribution handling system
+  - Road Shop weekly rotation
+  - Scenario counter implementation
+  - Diva adventure dispatch parsing
+  - House interior query support
+  - Entrance and sign server response improvements
+- **Launcher**:
+  - Discord bot integration with configurable channels and dev roles
+  - Launcher error handling improvements
+  - Launcher finalization with modal, news, menu, safety links
+  - Auto character addition
+  - Variable centered text support
+  - Last login timestamp updates
+
+#### Changed (May-June 2022)
+
+- Stage and semaphore overhaul with improved casting handling
+- Simplified guild handler code
+- String support improvements with PascalString helpers
+- Byte frame converted to local package
+- Local package conversions (byteframe, pascalstring)
+
+#### Fixed (May-June 2022)
+
+- SJIS guild post support
+- Nil guild failsafes
+- SQL queries with missing counter functionality
+- Enumerate airoulist parsing
+- Mail item description crashes
+- Ambiguous mail query
+- Last character updates
+- Compatibility issues
+- Various packet files
+
+### [Pre-release] - 2022-02-25 to 2022-05-01
+
+Initial Community Edition and foundational work:
+
+#### Added (February-May 2022)
+
+- **Core Systems**:
+  - Japanese Shift-JIS character name support
+  - Character creation with automatic addition
+  - Raviente system patches
+  - Diva reward handling
+  - Conquest quest support
+  - Quest clear timer
+  - Garden cat/shared account box implementation
+- **Guild Features**:
+  - Guild hall available on creation
+  - Unlocked all street titles
+  - Guild schema corrections
+- **Launcher**:
+  - Complete launcher implementation
+  - Modal dialogs
+  - News system
+  - Menu and safety links
+  - Button functionality
+  - Caching system
+
+#### Changed (February-May 2022)
+
+- Save compression updates
+- Migration folder moved to root
+- Improved launcher code structure
+
+#### Fixed (February-May 2022)
+
+- Mercenary/cat handler fixes
+- Error code 10054 (savedata directory creation)
+- Conflicts resolution
+- Various syntax corrections
+
+---
+
 ## Historical Context
 
-This changelog documents releases from v9.0.0 onwards. For a complete history of all changes, refer to the [git repository](https://github.com/Mezeporta/Erupe).
+This changelog documents all known changes from the Community Edition reupload (February 25, 2022) onwards. The period before this (Einherjar Team era, ~2020-2022) has no public git history.
 
-The project follows semantic versioning and maintains tagged releases for stable versions. Development continues on the main branch with features merged from feature branches.
+Earlier development by Cappuccino/Ellie42 (March 2020) focused on basic server infrastructure, multiplayer systems, and core functionality. See [AUTHORS.md](AUTHORS.md) for detailed development history.
+
+The project began following semantic versioning with v9.0.0 (August 3, 2022) and maintains tagged releases for stable versions. Development continues on the main branch with features merged from feature branches.
