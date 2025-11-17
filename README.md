@@ -151,112 +151,49 @@ For quick setup and development (not recommended for production), see [docker/RE
 
 ## Configuration
 
-Edit `config.json` to configure your server. Key settings include:
+Erupe is configured via `config.json`. Copy [config.example.json](./config.example.json) to get started.
 
-### Core Settings
+### Quick Configuration Overview
 
 ```json
 {
-  "Host": "127.0.0.1",           // Server binding address
-  "BinPath": "bin",              // Path to quest/scenario binaries
+  "Host": "127.0.0.1",           // Server IP (leave empty for auto-detect)
+  "BinPath": "bin",              // Path to quest/scenario files
   "Language": "en",              // "en" or "jp"
-  "ClientMode": "ZZ"             // Target client version
-}
-```
 
-### Database
-
-```json
-{
   "Database": {
     "Host": "localhost",
     "Port": 5432,
     "User": "postgres",
     "Password": "your_password",
     "Database": "erupe"
-  }
-}
-```
-
-### Server Ports
-
-```json
-{
-  "Sign": {
-    "Enabled": true,
-    "Port": 53312              // Authentication server
   },
-  "Entrance": {
-    "Enabled": true,
-    "Port": 53310              // World selection server
-  }
+
+  "Sign": {"Enabled": true, "Port": 53312},
+  "Entrance": {"Enabled": true, "Port": 53310}
 }
 ```
 
-Channel servers are configured under `Entrance.Entries[].Channels[]` with individual ports (default: 54001+).
+### Detailed Configuration Documentation
 
-### Development Options
+For comprehensive configuration details, see the [docs/](./docs/) directory:
 
-```json
-{
-  "DevMode": true,
-  "DevModeOptions": {
-    "AutoCreateAccount": true,     // Auto-create accounts on first login
-    "LogInboundMessages": false,   // Log incoming packets
-    "LogOutboundMessages": false,  // Log outgoing packets
-    "MaxHexdumpLength": 256       // Max bytes for hexdump logs
-  }
-}
-```
+- **[Configuration Overview](docs/README.md)** - Start here for quick setup guide
+- **[Basic Settings](docs/basic-settings.md)** - Host, language, paths, login notices
+- **[Server Configuration](docs/server-configuration.md)** - Sign, Entrance, and Channel servers
+- **[Database Setup](docs/database.md)** - PostgreSQL configuration and schema management
+- **[Gameplay Options](docs/gameplay-options.md)** - NP/RP caps, boost times, quest allowances
+- **[Development Mode](docs/development-mode.md)** - Debug options and testing tools
+- **[Logging](docs/logging.md)** - File logging, rotation, and analysis
+- **[In-Game Commands](docs/commands.md)** - Chat commands configuration
+- **[Courses](docs/courses.md)** - Subscription courses
+- **[Discord Integration](docs/discord-integration.md)** - Optional Discord bot setup
 
-### Gameplay Options
+**Example configurations:**
 
-```json
-{
-  "GameplayOptions": {
-    "MaximumNP": 100000,           // Max Netcafe Points
-    "MaximumRP": 50000,            // Max Road Points
-    "BoostTimeDuration": 120,      // Login boost duration (minutes)
-    "BonusQuestAllowance": 3,      // Daily bonus quests
-    "DailyQuestAllowance": 1       // Daily quest limit
-  }
-}
-```
-
-### Logging
-
-Erupe supports automatic file-based logging with rotation for production environments:
-
-```json
-{
-  "Logging": {
-    "LogToFile": true,                  // Enable file logging (default: true)
-    "LogFilePath": "logs/erupe.log",    // Log file path (default: "logs/erupe.log")
-    "LogMaxSize": 100,                  // Max file size in MB before rotation (default: 100)
-    "LogMaxBackups": 3,                 // Number of old log files to keep (default: 3)
-    "LogMaxAge": 28,                    // Max days to retain old logs (default: 28)
-    "LogCompress": true                 // Compress rotated logs (default: true)
-  }
-}
-```
-
-Logs are written to both console and file simultaneously. The log analyzer tool in `tools/loganalyzer/` provides commands to filter, analyze errors, track connections, and generate statistics from log files.
-
-### In-game Commands
-
-Configure available commands and their prefixes:
-
-```json
-{
-  "Commands": [
-    {"Name": "Raviente", "Enabled": true, "Prefix": "!ravi"},
-    {"Name": "Reload", "Enabled": true, "Prefix": "!reload"},
-    {"Name": "Course", "Enabled": true, "Prefix": "!course"}
-  ]
-}
-```
-
-For a complete configuration example, see [config.example.json](./config.example.json).
+- [Local Development](docs/README.md#local-development-server) - Auto-account creation, debug logging
+- [Production Server](docs/README.md#production-server-minimal) - Secure production settings
+- [Community Server](docs/README.md#community-server) - Feature-rich with Discord integration
 
 ## Client Setup
 
@@ -277,7 +214,11 @@ Erupe uses a structured schema system:
 
 **Note**: Only use patch schemas if you're following active development. They get consolidated into update schemas on release.
 
+For detailed database setup instructions, see [Database Configuration](docs/database.md).
+
 ## Development
+
+For development guidelines, code architecture, and contribution instructions, see [CLAUDE.md](CLAUDE.md).
 
 ### Running Tests
 
@@ -289,47 +230,34 @@ go test -v ./...
 go test -v -race ./...
 ```
 
+### Log Analysis
+
+Erupe includes a log analyzer tool in [tools/loganalyzer/](tools/loganalyzer/) for filtering, analyzing errors, tracking connections, and generating statistics. See [Logging Documentation](docs/logging.md) for details.
+
 ## Troubleshooting
 
-### Common Issues
+### Quick Fixes
 
-#### Server won't start
+| Issue | Solution |
+|-------|----------|
+| Server won't start | Check PostgreSQL is running and database password is set |
+| Client can't connect | Verify ports 53310, 53312, 54001+ are open in firewall |
+| Database errors | Apply all schema patches in order (see [Database Setup](docs/database.md)) |
+| Quest files not loading | Verify `BinPath` points to extracted binary files |
 
-- Verify PostgreSQL is running: `systemctl status postgresql` (Linux) or `pg_ctl status` (Windows)
-- Check database credentials in `config.json`
-- Ensure all required ports are available and not blocked by firewall
+### Detailed Troubleshooting
 
-#### Client can't connect
+For comprehensive troubleshooting guides, see:
 
-- Verify server is listening: `netstat -an | grep 53310`
-- Check firewall rules allow traffic on ports 53310, 53312, and 54001+
-- Ensure client's `host.txt` points to correct server IP
-- For remote connections, set `"Host"` in config.json to `0.0.0.0` or your server's IP
+- [Database Troubleshooting](docs/database.md#troubleshooting) - Connection, authentication, and schema issues
+- [Server Configuration](docs/server-configuration.md#troubleshooting) - Port conflicts, connectivity issues
+- [Development Mode](docs/development-mode.md#packet-logging) - Enable debug logging for packet analysis
 
-#### Database schema errors
+## Documentation
 
-- Ensure all patch files are applied in order
-- Check PostgreSQL logs for detailed error messages
-- Verify database user has sufficient privileges
-
-#### Quest files not loading
-
-- Confirm `BinPath` in config.json points to extracted quest/scenario files
-- Verify binary files match your `ClientMode` setting
-- Check file permissions
-
-### Debug Logging
-
-Enable detailed logging in `config.json`:
-
-```json
-{
-  "DevModeOptions": {
-    "LogInboundMessages": true,
-    "LogOutboundMessages": true
-  }
-}
-```
+- **[Configuration Documentation](docs/README.md)** - Complete configuration guide
+- **[CLAUDE.md](CLAUDE.md)** - Development guide and architecture overview
+- **[config.example.json](config.example.json)** - Full configuration example
 
 ## Resources
 
@@ -338,8 +266,9 @@ Enable detailed logging in `config.json`:
   - [Mezeporta Square Discord](https://discord.gg/DnwcpXM488)
   - [Mogapedia's Discord](https://discord.gg/f77VwBX5w7) - Maintainers of this branch
   - [PewPewDojo Discord](https://discord.gg/CFnzbhQ) - General community
-- **Documentation**: [Erupe Wiki](https://github.com/Mezeporta/Erupe/wiki)
-- **FAQ**: [Community FAQ Pastebin](https://pastebin.com/QqAwZSTC)
+- **Additional Resources**:
+  - [Erupe Wiki](https://github.com/Mezeporta/Erupe/wiki)
+  - [Community FAQ](https://pastebin.com/QqAwZSTC)
 
 ## Changelog
 
