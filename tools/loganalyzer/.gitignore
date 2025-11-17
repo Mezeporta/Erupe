@@ -1,0 +1,6 @@
+# Binary
+loganalyzer
+loganalyzer.exe
+
+# Test files
+*.test.log
