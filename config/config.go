@@ -27,6 +27,7 @@ type Config struct {
 
 	DevModeOptions  DevModeOptions
 	GameplayOptions GameplayOptions
+	Logging         Logging
 	Discord         Discord
 	Commands        []Command
 	Courses         []Course
@@ -71,6 +72,16 @@ type GameplayOptions struct {
 	GuildMealDuration   int    // The number of minutes a Guild Meal can be activated for after cooking
 	BonusQuestAllowance uint32 // Number of Bonus Point Quests to allow daily
 	DailyQuestAllowance uint32 // Number of Daily Quests to allow daily
+}
+
+// Logging holds the logging configuration.
+type Logging struct {
+	LogToFile     bool   // Enable/disable file logging (default: true)
+	LogFilePath   string // File path for logs (default: "logs/erupe.log")
+	LogMaxSize    int    // Max size in MB before rotation (default: 100)
+	LogMaxBackups int    // Number of old log files to keep (default: 3)
+	LogMaxAge     int    // Max days to retain old logs (default: 28)
+	LogCompress   bool   // Compress rotated logs (default: true)
 }
 
 // Discord holds the discord integration config.
@@ -195,6 +206,15 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("DevModeOptions.SaveDumps", SaveDumpOptions{
 		Enabled:   false,
 		OutputDir: "savedata",
+	})
+
+	viper.SetDefault("Logging", Logging{
+		LogToFile:     true,
+		LogFilePath:   "logs/erupe.log",
+		LogMaxSize:    100,
+		LogMaxBackups: 3,
+		LogMaxAge:     28,
+		LogCompress:   true,
 	})
 
 	err := viper.ReadInConfig()

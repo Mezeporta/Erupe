@@ -223,6 +223,25 @@ Channel servers are configured under `Entrance.Entries[].Channels[]` with indivi
 }
 ```
 
+### Logging
+
+Erupe supports automatic file-based logging with rotation for production environments:
+
+```json
+{
+  "Logging": {
+    "LogToFile": true,                  // Enable file logging (default: true)
+    "LogFilePath": "logs/erupe.log",    // Log file path (default: "logs/erupe.log")
+    "LogMaxSize": 100,                  // Max file size in MB before rotation (default: 100)
+    "LogMaxBackups": 3,                 // Number of old log files to keep (default: 3)
+    "LogMaxAge": 28,                    // Max days to retain old logs (default: 28)
+    "LogCompress": true                 // Compress rotated logs (default: true)
+  }
+}
+```
+
+Logs are written to both console and file simultaneously. The log analyzer tool in `tools/loganalyzer/` provides commands to filter, analyze errors, track connections, and generate statistics from log files.
+
 ### In-game Commands
 
 Configure available commands and their prefixes:

@@ -29,7 +29,7 @@ import (
 func runFilter(args []string) {
 	fs := flag.NewFlagSet("filter", flag.ExitOnError)
 
-	logFile := fs.String("f", "erupe.log", "Path to log file")
+	logFile := fs.String("f", "logs/erupe.log", "Path to log file")
 	level := fs.String("level", "", "Filter by log level (info, warn, error, fatal)")
 	logger := fs.String("logger", "", "Filter by logger name (supports wildcards)")
 	message := fs.String("msg", "", "Filter by message content (case-insensitive)")

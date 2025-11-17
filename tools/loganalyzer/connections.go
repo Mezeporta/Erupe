@@ -54,7 +54,7 @@ type ConnectionStats struct {
 //   - Provides verbose session details including objects and stage changes
 //
 // Options:
-//   - f: Path to log file (default: "erupe.log")
+//   - f: Path to log file (default: "logs/erupe.log")
 //   - player: Filter sessions by player name (case-insensitive substring match)
 //   - sessions: Show individual player sessions
 //   - stats: Show connection statistics (default: true)
@@ -67,7 +67,7 @@ type ConnectionStats struct {
 func runConnections(args []string) {
 	fs := flag.NewFlagSet("connections", flag.ExitOnError)
 
-	logFile := fs.String("f", "erupe.log", "Path to log file")
+	logFile := fs.String("f", "logs/erupe.log", "Path to log file")
 	player := fs.String("player", "", "Filter by player name")
 	showSessions := fs.Bool("sessions", false, "Show individual player sessions")
 	showStats := fs.Bool("stats", true, "Show connection statistics")

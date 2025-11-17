@@ -21,7 +21,7 @@ import (
 // Both phases support filtering by log level and colorized output.
 //
 // Options:
-//   - f: Path to log file (default: "erupe.log")
+//   - f: Path to log file (default: "logs/erupe.log")
 //   - n: Number of initial lines to show (default: 10)
 //   - follow: Whether to continue following the file (default: true)
 //   - level: Filter by log level (info, warn, error, fatal)
@@ -37,7 +37,7 @@ import (
 func runTail(args []string) {
 	fs := flag.NewFlagSet("tail", flag.ExitOnError)
 
-	logFile := fs.String("f", "erupe.log", "Path to log file")
+	logFile := fs.String("f", "logs/erupe.log", "Path to log file")
 	lines := fs.Int("n", 10, "Number of initial lines to show")
 	follow := fs.Bool("follow", true, "Follow the log file (like tail -f)")
 	level := fs.String("level", "", "Filter by log level")

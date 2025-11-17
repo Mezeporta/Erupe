@@ -44,7 +44,7 @@ type LogStats struct {
 // patterns, peak usage times, and potential issues.
 //
 // Options:
-//   - f: Path to log file (default: "erupe.log")
+//   - f: Path to log file (default: "logs/erupe.log")
 //   - top: Number of top items to show in detailed view (default: 10)
 //   - detailed: Show detailed statistics including temporal patterns and top messages
 //
@@ -55,7 +55,7 @@ type LogStats struct {
 func runStats(args []string) {
 	fs := flag.NewFlagSet("stats", flag.ExitOnError)
 
-	logFile := fs.String("f", "erupe.log", "Path to log file")
+	logFile := fs.String("f", "logs/erupe.log", "Path to log file")
 	topN := fs.Int("top", 10, "Show top N messages/loggers")
 	detailed := fs.Bool("detailed", false, "Show detailed statistics")
 

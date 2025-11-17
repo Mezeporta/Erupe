@@ -42,6 +42,14 @@
     "BonusQuestAllowance": 3,
     "DailyQuestAllowance": 1
   },
+  "Logging": {
+    "LogToFile": true,
+    "LogFilePath": "logs/erupe.log",
+    "LogMaxSize": 100,
+    "LogMaxBackups": 3,
+    "LogMaxAge": 28,
+    "LogCompress": true
+  },
   "Discord": {
     "Enabled": false,
     "BotToken": "",

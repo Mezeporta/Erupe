@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
 	"syscall"
 	"time"
@@ -19,6 +20,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // Temporary DB auto clean on startup for quick development & testing.
@@ -41,16 +44,76 @@ var Commit = func() string {
 	return "unknown"
 }
 
+// initLogger initializes the zap logger with file logging support
+func initLogger(cfg *config.Config) *zap.Logger {
+	var zapConfig zap.Config
+
+	// Base configuration based on DevMode
+	if cfg.DevMode {
+		zapConfig = zap.NewDevelopmentConfig()
+	} else {
+		zapConfig = zap.NewProductionConfig()
+	}
+
+	// Configure output paths
+	if cfg.Logging.LogToFile {
+		// Ensure the log directory exists
+		logDir := filepath.Dir(cfg.Logging.LogFilePath)
+		if err := os.MkdirAll(logDir, 0755); err != nil {
+			fmt.Printf("Failed to create log directory: %s\n", err)
+			os.Exit(1)
+		}
+
+		// Create lumberjack logger for file rotation
+		fileWriter := &lumberjack.Logger{
+			Filename:   cfg.Logging.LogFilePath,
+			MaxSize:    cfg.Logging.LogMaxSize,
+			MaxBackups: cfg.Logging.LogMaxBackups,
+			MaxAge:     cfg.Logging.LogMaxAge,
+			Compress:   cfg.Logging.LogCompress,
+		}
+
+		// Create encoder
+		encoderConfig := zapConfig.EncoderConfig
+		var encoder zapcore.Encoder
+		if cfg.DevMode {
+			encoder = zapcore.NewConsoleEncoder(encoderConfig)
+		} else {
+			encoder = zapcore.NewJSONEncoder(encoderConfig)
+		}
+
+		// Create cores for both console and file output
+		consoleCore := zapcore.NewCore(
+			encoder,
+			zapcore.AddSync(os.Stderr),
+			zapConfig.Level,
+		)
+		fileCore := zapcore.NewCore(
+			encoder,
+			zapcore.AddSync(fileWriter),
+			zapConfig.Level,
+		)
+
+		// Combine cores
+		core := zapcore.NewTee(consoleCore, fileCore)
+		logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
+		return logger
+	}
+
+	// File logging disabled, use default configuration
+	logger, err := zapConfig.Build()
+	if err != nil {
+		fmt.Printf("Failed to initialize logger: %s\n", err)
+		os.Exit(1)
+	}
+	return logger
+}
+
 func main() {
 	var err error
 
-	var zapLogger *zap.Logger
-	if config.ErupeConfig.DevMode {
-		zapLogger, _ = zap.NewDevelopment()
-	} else {
-		zapLogger, _ = zap.NewProduction()
-	}
-
+	// Initialize logger with file support
+	zapLogger := initLogger(config.ErupeConfig)
 	defer zapLogger.Sync()
 	logger := zapLogger.Named("main")
 

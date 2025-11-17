@@ -36,7 +36,7 @@ type ErrorGroup struct {
 //   - Tracks which callers produced each error
 //
 // Options:
-//   - f: Path to log file (default: "erupe.log")
+//   - f: Path to log file (default: "logs/erupe.log")
 //   - group: Group errors by "message", "caller", or "logger" (default: "message")
 //   - stack: Show stack traces in detailed view
 //   - limit: Maximum number of example entries per group (default: 10)
@@ -50,7 +50,7 @@ type ErrorGroup struct {
 func runErrors(args []string) {
 	fs := flag.NewFlagSet("errors", flag.ExitOnError)
 
-	logFile := fs.String("f", "erupe.log", "Path to log file")
+	logFile := fs.String("f", "logs/erupe.log", "Path to log file")
 	groupBy := fs.String("group", "message", "Group errors by: message, caller, or logger")
 	showStack := fs.Bool("stack", false, "Show stack traces")
 	limit := fs.Int("limit", 10, "Limit number of examples per error group")
