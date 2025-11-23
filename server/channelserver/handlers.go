@@ -171,13 +171,13 @@ func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 
 func logoutPlayer(s *Session) {
 	s.server.Lock()
-	if _, exists := s.server.sessions[s.rawConn]; exists {
-		delete(s.server.sessions, s.rawConn)
-	}
+	delete(s.server.sessions, s.rawConn)
 	s.rawConn.Close()
 	s.server.Unlock()
 
+	s.server.stagesLock.RLock()
 	for _, stage := range s.server.stages {
+		stage.Lock()
 		// Tell sessions registered to disconnecting players quest to unregister
 		if stage.host != nil && stage.host.charID == s.charID {
 			for _, sess := range s.server.sessions {
@@ -193,7 +193,9 @@ func logoutPlayer(s *Session) {
 				delete(stage.clients, session)
 			}
 		}
+		stage.Unlock()
 	}
+	s.server.stagesLock.RUnlock()
 
 	_, err := s.server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.token)
 	if err != nil {

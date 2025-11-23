@@ -334,6 +334,41 @@ func handleMsgMhfYourPacket(s *Session, p mhfpacket.MHFPacket) {
 - Passes all existing tests
 - Updated documentation if needed
 
+## Remote Server Operations
+
+Environment variables for remote operations are stored in `.env` (gitignored). Copy from `.env.example` if needed.
+
+### Fetch Logs
+
+```bash
+# Load environment and fetch logs
+source .env
+scp -r $SERVER:$REMOTE_LOGS/* $LOCAL_LOGS/
+```
+
+### Deploy
+
+```bash
+# Build for Linux, upload, and restart
+source .env
+GOOS=linux GOARCH=amd64 go build -o erupe-ce
+scp erupe-ce $SERVER:$REMOTE_BIN
+ssh $SERVER "cd $REMOTE_DIR && sudo systemctl restart erupe"
+```
+
+### Quick Commands
+
+```bash
+# Check server status
+source .env && ssh $SERVER "systemctl status erupe"
+
+# Tail remote logs
+source .env && ssh $SERVER "tail -f $REMOTE_LOGS/erupe.log"
+
+# View recent errors
+source .env && ssh $SERVER "grep -E 'level.*(error|warn)' $REMOTE_LOGS/erupe.log | tail -50"
+```
+
 ## Discord Integration
 
 Optional Discord bot in `server/discordbot/` provides:

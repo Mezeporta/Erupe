@@ -17,3 +17,5 @@ config.json
 
 # Logs
 logs/
+
+.env

@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded Go version requirement from 1.19 to 1.25
 - Renamed `config.json` to `config.example.json` as template file
 
+### Fixed
+
+- Race condition in stage broadcast causing nil pointer panics during player logout
+
 ## [9.2.0] - 2023-04-01
 
 ### Added in 9.2.0
