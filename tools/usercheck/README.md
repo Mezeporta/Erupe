@@ -14,6 +14,8 @@ go build -o usercheck
 ./usercheck <command> [options]
 ```
 
+By default, the tool reads database credentials from `config.json` in the project root.
+
 ### Commands
 
 | Command | Description |
@@ -27,28 +29,42 @@ go build -o usercheck
 ### Examples
 
 ```bash
-# List connected users
-./usercheck list -password "dbpass"
+# List connected users (uses config.json)
+./usercheck list
 
 # Verbose output with last login times
-./usercheck list -v -password "dbpass"
+./usercheck list -v
 
 # Search for a player
-./usercheck search -name "Hunter" -password "dbpass"
+./usercheck search -name "Hunter"
 
 # Show server status
-./usercheck servers -password "dbpass"
+./usercheck servers
 
 # Player login history
-./usercheck history -name "Hunter" -password "dbpass"
+./usercheck history -name "Hunter"
+
+# Use a specific config file
+./usercheck list -config /path/to/config.json
+
+# Override database password
+./usercheck list -password "different_password"
 ```
 
-### Database Options
+### Configuration Priority
 
-| Flag | Env Variable | Default |
-|------|--------------|---------|
-| `-host` | `ERUPE_DB_HOST` | localhost |
-| `-port` | - | 5432 |
-| `-user` | `ERUPE_DB_USER` | postgres |
-| `-password` | `ERUPE_DB_PASSWORD` | (required) |
-| `-dbname` | `ERUPE_DB_NAME` | erupe |
+1. CLI flags (highest priority)
+2. Environment variables (`ERUPE_DB_*`)
+3. `config.json` file
+4. Default values (lowest priority)
+
+### Database Flags
+
+| Flag | Env Variable | Description |
+|------|--------------|-------------|
+| `-config` | - | Path to config.json |
+| `-host` | `ERUPE_DB_HOST` | Database host |
+| `-port` | - | Database port |
+| `-user` | `ERUPE_DB_USER` | Database user |
+| `-password` | `ERUPE_DB_PASSWORD` | Database password |
+| `-dbname` | `ERUPE_DB_NAME` | Database name |
