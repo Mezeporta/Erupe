@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Race condition in stage broadcast causing nil pointer panics during player logout
+- Client crash when loading decoration presets (decomyset) with more than 40 entries
 
 ## [9.2.0] - 2023-04-01
 

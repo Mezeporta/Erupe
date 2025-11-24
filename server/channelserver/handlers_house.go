@@ -241,6 +241,13 @@ func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
+// maxDecoMysets is the maximum number of decoration presets allowed per character.
+// The client has a fixed buffer for 40 presets and will crash if more are sent.
+const maxDecoMysets = 40
+
+// decoMysetSize is the size in bytes of each decoration preset entry (2 byte index + 76 byte data).
+const decoMysetSize = 78
+
 func handleMsgMhfLoadDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadDecoMyset)
 	var data []byte
@@ -250,6 +257,24 @@ func handleMsgMhfLoadDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	}
 	if len(data) == 0 {
 		data = []byte{0x01, 0x00}
+	}
+	// Validate and fix corrupted data with more than maxDecoMysets presets
+	if len(data) >= 2 && data[1] > maxDecoMysets {
+		s.logger.Warn("Decoration myset data exceeds limit, truncating",
+			zap.Uint32("charID", s.charID),
+			zap.Uint8("savedSets", data[1]),
+			zap.Uint8("maxSets", maxDecoMysets))
+		// Truncate to maxDecoMysets: 2 byte header + (maxDecoMysets * decoMysetSize)
+		maxLen := 2 + (maxDecoMysets * decoMysetSize)
+		if len(data) > maxLen {
+			data = data[:maxLen]
+		}
+		data[1] = maxDecoMysets
+		// Update the database with the fixed data
+		_, err := s.server.db.Exec("UPDATE characters SET decomyset=$1 WHERE id=$2", data, s.charID)
+		if err != nil {
+			s.logger.Error("Failed to save truncated decomyset", zap.Error(err))
+		}
 	}
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
@@ -280,7 +305,14 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 			setBytes := append([]byte{uint8(writeSet >> 8), uint8(writeSet & 0xff)}, dataChunk...)
 			for x := 0; true; x++ {
 				if x == int(savedSets) {
-					// appending set
+					// appending set - check limit before adding
+					if savedSets >= maxDecoMysets {
+						s.logger.Warn("Decoration myset limit reached, ignoring new preset",
+							zap.Uint32("charID", s.charID),
+							zap.Uint8("currentSets", savedSets),
+							zap.Uint8("maxSets", maxDecoMysets))
+						break
+					}
 					if loadData[len(loadData)-1] == 0x10 {
 						// sanity check for if there was a messy manual import
 						loadData = append(loadData[:len(loadData)-2], setBytes...)
@@ -296,7 +328,14 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 					loadData = append(loadData[:2+(x*78)], append(setBytes, loadData[2+((x+1)*78):]...)...)
 					break
 				} else if int(currentSet) > int(writeSet) {
-					// inserting before current set
+					// inserting before current set - check limit before adding
+					if savedSets >= maxDecoMysets {
+						s.logger.Warn("Decoration myset limit reached, ignoring new preset",
+							zap.Uint32("charID", s.charID),
+							zap.Uint8("currentSets", savedSets),
+							zap.Uint8("maxSets", maxDecoMysets))
+						break
+					}
 					loadData = append(loadData[:2+((x)*78)], append(setBytes, loadData[2+((x)*78):]...)...)
 					savedSets++
 					break
