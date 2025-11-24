@@ -1,17 +1,17 @@
 package mhfpacket
 
 import (
- "errors"
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfLoadGuildCooking represents the MSG_MHF_LOAD_GUILD_COOKING
-type MsgMhfLoadGuildCooking struct{
-	AckHandle   uint32
-	MaxMeals    uint8
+type MsgMhfLoadGuildCooking struct {
+	AckHandle uint32
+	MaxMeals  uint8
 }
 
 // Opcode returns the ID associated with this packet type.

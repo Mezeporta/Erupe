@@ -1,17 +1,17 @@
 package mhfpacket
 
 import (
- "errors"
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfGetDistDescription represents the MSG_MHF_GET_DIST_DESCRIPTION
-type MsgMhfGetDistDescription struct{
-	AckHandle uint32
-	Unk0 uint8
+type MsgMhfGetDistDescription struct {
+	AckHandle      uint32
+	Unk0           uint8
 	DistributionID uint32
 }
 
@@ -27,6 +27,7 @@ func (m *MsgMhfGetDistDescription) Parse(bf *byteframe.ByteFrame, ctx *clientctx
 	m.DistributionID = bf.ReadUint32()
 	return nil
 }
+
 // Build builds a binary packet from the current data.
 func (m *MsgMhfGetDistDescription) Build(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	return errors.New("NOT IMPLEMENTED")

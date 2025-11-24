@@ -3,8 +3,8 @@ package mhfpacket
 import (
 	"errors"
 
-	"erupe-ce/common/byteframe"
 	"erupe-ce/common/bfutil"
+	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )

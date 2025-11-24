@@ -1,11 +1,11 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfGetEarthValue represents the MSG_MHF_GET_EARTH_VALUE
@@ -13,7 +13,7 @@ type MsgMhfGetEarthValue struct {
 	AckHandle uint32
 	Unk0      uint32
 	Unk1      uint32
-	ReqType      uint32
+	ReqType   uint32
 	Unk3      uint32
 	Unk4      uint32
 	Unk5      uint32

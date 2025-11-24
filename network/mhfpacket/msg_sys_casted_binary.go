@@ -1,9 +1,9 @@
 package mhfpacket
 
 import (
+	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
-	"erupe-ce/common/byteframe"
 )
 
 // MsgSysCastedBinary represents the MSG_SYS_CASTED_BINARY

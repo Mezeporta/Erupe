@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	"erupe-ce/common/bfutil"
+	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
-	"erupe-ce/common/byteframe"
 )
 
 type scenarioFileIdentifer struct {

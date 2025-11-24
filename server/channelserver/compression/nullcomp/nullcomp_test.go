@@ -69,9 +69,9 @@ func TestDecompress_WithValidHeader(t *testing.T) {
 
 func TestDecompress_WithoutHeader(t *testing.T) {
 	tests := []struct {
-		name          string
-		input         []byte
-		expectError   bool
+		name           string
+		input          []byte
+		expectError    bool
 		expectOriginal bool // Expect original data returned
 	}{
 		{

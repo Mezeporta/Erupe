@@ -1,17 +1,17 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgSysRightsReload represents the MSG_SYS_RIGHTS_RELOAD
-type MsgSysRightsReload struct{
+type MsgSysRightsReload struct {
 	AckHandle uint32
-	Unk0 byte
+	Unk0      byte
 }
 
 // Opcode returns the ID associated with this packet type.

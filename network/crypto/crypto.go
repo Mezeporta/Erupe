@@ -30,8 +30,9 @@ func Crypto(data []byte, rotKey uint32, encrypt bool, overrideByteKey *byte) ([]
 
 // _generalCrypt is a generalized MHF crypto function that can perform both encryption and decryption,
 // these two crypto operations are combined into a single function because they shared most of their logic.
-//		encrypt: cryptType==0
-//		decrypt: cryptType==1
+//
+//	encrypt: cryptType==0
+//	decrypt: cryptType==1
 func _generalCrypt(data []byte, rotKey uint32, cryptType int, overrideByteKey *byte) ([]byte, uint16, uint16, uint16, uint16) {
 	cryptKeyTruncByte := byte(((rotKey >> 1) % 999983) & 0xFF)
 	if overrideByteKey != nil {

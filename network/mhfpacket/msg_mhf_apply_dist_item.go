@@ -1,18 +1,18 @@
 package mhfpacket
 
 import (
+	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
-	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfApplyDistItem represents the MSG_MHF_APPLY_DIST_ITEM
 type MsgMhfApplyDistItem struct {
-	AckHandle   uint32
+	AckHandle        uint32
 	DistributionType uint8
-	DistributionID uint32
-	Unk2        uint32
-	Unk3        uint32
+	DistributionID   uint32
+	Unk2             uint32
+	Unk3             uint32
 }
 
 // Opcode returns the ID associated with this packet type.

@@ -1,9 +1,9 @@
 package mhfpacket
 
 import (
+	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
-	"erupe-ce/common/byteframe"
 )
 
 // MsgSysNop represents the MSG_SYS_NOP

@@ -1,17 +1,17 @@
 package mhfpacket
 
 import (
- "errors"
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgSysSetStagePass represents the MSG_SYS_SET_STAGE_PASS
 type MsgSysSetStagePass struct {
-	Unk0           uint8 // Hardcoded 0 in the binary
-	Password       string // NULL-terminated string
+	Unk0     uint8  // Hardcoded 0 in the binary
+	Password string // NULL-terminated string
 }
 
 // Opcode returns the ID associated with this packet type.

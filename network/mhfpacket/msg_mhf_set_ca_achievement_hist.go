@@ -1,18 +1,18 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfSetCaAchievementHist represents the MSG_MHF_SET_CA_ACHIEVEMENT_HIST
-type MsgMhfSetCaAchievementHist struct{
+type MsgMhfSetCaAchievementHist struct {
 	AckHandle uint32
-	Unk0 uint32
-	Unk1 uint32
+	Unk0      uint32
+	Unk1      uint32
 }
 
 // Opcode returns the ID associated with this packet type.

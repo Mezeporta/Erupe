@@ -68,7 +68,7 @@ func (s *Server) Shutdown() {
 	s.listener.Close()
 }
 
-//acceptClients handles accepting new clients in a loop.
+// acceptClients handles accepting new clients in a loop.
 func (s *Server) acceptClients() {
 	for {
 		conn, err := s.listener.Accept()

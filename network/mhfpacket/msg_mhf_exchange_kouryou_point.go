@@ -1,15 +1,15 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfExchangeKouryouPoint represents the MSG_MHF_EXCHANGE_KOURYOU_POINT
-type MsgMhfExchangeKouryouPoint struct{
+type MsgMhfExchangeKouryouPoint struct {
 	AckHandle     uint32
 	KouryouPoints uint32
 }

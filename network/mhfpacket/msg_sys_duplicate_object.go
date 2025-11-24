@@ -1,9 +1,9 @@
 package mhfpacket
 
 import (
+	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
-	"erupe-ce/common/byteframe"
 )
 
 // MsgSysDuplicateObject represents the MSG_SYS_DUPLICATE_OBJECT

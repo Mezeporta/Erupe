@@ -1,19 +1,19 @@
 package mhfpacket
 
 import (
- "errors"
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfRegistGuildCooking represents the MSG_MHF_REGIST_GUILD_COOKING
-type MsgMhfRegistGuildCooking struct{
-	AckHandle uint32
+type MsgMhfRegistGuildCooking struct {
+	AckHandle   uint32
 	OverwriteID uint32
-	MealID uint16
-	Success uint8
+	MealID      uint16
+	Success     uint8
 }
 
 // Opcode returns the ID associated with this packet type.

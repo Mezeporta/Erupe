@@ -1,18 +1,18 @@
 package mhfpacket
 
 import (
- "errors"
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfAddGuildMissionCount represents the MSG_MHF_ADD_GUILD_MISSION_COUNT
 type MsgMhfAddGuildMissionCount struct {
-  AckHandle uint32
-  MissionID uint32
-  Count uint32
+	AckHandle uint32
+	MissionID uint32
+	Count     uint32
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -22,10 +22,10 @@ func (m *MsgMhfAddGuildMissionCount) Opcode() network.PacketID {
 
 // Parse parses the packet from binary
 func (m *MsgMhfAddGuildMissionCount) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-  m.AckHandle = bf.ReadUint32()
-  m.MissionID = bf.ReadUint32()
-  m.Count = bf.ReadUint32()
-  return nil
+	m.AckHandle = bf.ReadUint32()
+	m.MissionID = bf.ReadUint32()
+	m.Count = bf.ReadUint32()
+	return nil
 }
 
 // Build builds a binary packet from the current data.
