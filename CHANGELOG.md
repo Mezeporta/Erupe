@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- New `usercheck` CLI tool in `tools/usercheck/` for querying connected users and server status
+  - `list` command: List all currently connected users with character details
+  - `count` command: Show count of connected users per server/channel
+  - `search` command: Search for specific connected users by name
+  - `servers` command: Display server/channel status and player counts
+  - `history` command: Show recent login history for a player
+
 ### Changed
 
 - Upgraded Go version requirement from 1.19 to 1.25
