@@ -167,9 +167,10 @@ func connectDB(cfg *DBConfig) (*sql.DB, error) {
 		return nil, err
 	}
 
+	// Use single quotes around values to handle special characters in passwords
 	connStr := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName,
+		"host='%s' port='%d' user='%s' password='%s' dbname='%s' sslmode=disable",
+		cfg.Host, cfg.Port, cfg.User, escapeConnStringValue(cfg.Password), cfg.DBName,
 	)
 
 	db, err := sql.Open("postgres", connStr)
@@ -183,6 +184,24 @@ func connectDB(cfg *DBConfig) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+// escapeConnStringValue escapes single quotes in connection string values.
+func escapeConnStringValue(s string) string {
+	// In PostgreSQL connection strings, single quotes inside quoted values
+	// must be escaped by doubling them
+	result := ""
+	for _, c := range s {
+		switch c {
+		case '\'':
+			result += "''"
+		case '\\':
+			result += "\\\\"
+		default:
+			result += string(c)
+		}
+	}
+	return result
 }
 
 // ConnectedUser represents a user currently connected to the server.
