@@ -5,10 +5,49 @@ import (
 	"erupe-ce/network/mhfpacket"
 )
 
+// handlerFunc is the signature for all packet handler functions.
+//
+// Handler functions are called when a packet with a matching opcode is received.
+// They process the packet and typically respond using the session's Queue methods.
+//
+// Parameters:
+//   - s: The session that received the packet (contains player state, connection)
+//   - p: The parsed packet (must be type-asserted to the specific packet type)
+//
+// Handler functions should:
+//  1. Type-assert the packet to its specific type
+//  2. Validate the packet data and session state
+//  3. Perform the requested operation (database query, state change, etc.)
+//  4. Send a response using doAckBufSucceed/Fail or s.QueueSendMHF
+//  5. Handle errors gracefully (log and send error response to client)
 type handlerFunc func(s *Session, p mhfpacket.MHFPacket)
 
+// handlerTable maps packet opcodes to their handler functions.
+//
+// This is the central routing table for all incoming packets. When a packet
+// arrives, the session's handlePacketGroup() function:
+//  1. Reads the opcode from the packet header
+//  2. Looks up the handler in this table
+//  3. Calls the handler with the session and parsed packet
+//
+// The table is initialized in init() and contains ~400+ packet handlers covering:
+//   - System packets (MSG_SYS_*): Connection, stages, objects, semaphores
+//   - MHF packets (MSG_MHF_*): Game features (quests, guilds, items, events)
+//   - CA packets (MSG_CA_*): Caravan system
+//
+// If a packet has no registered handler, it's ignored (logged in dev mode).
 var handlerTable map[network.PacketID]handlerFunc
 
+// init registers all packet handlers in the handlerTable.
+//
+// Handlers are organized by feature:
+//   - handlers_*.go files implement related handler functions
+//   - This init function registers them all in the central table
+//
+// Adding a new handler:
+//  1. Implement handleMsgYourPacket() in appropriate handlers_*.go file
+//  2. Add registration here: handlerTable[network.MSG_YOUR_PACKET] = handleMsgYourPacket
+//  3. Define the packet structure in network/mhfpacket/msg_*.go
 func init() {
 	handlerTable = make(map[network.PacketID]handlerFunc)
 	handlerTable[network.MSG_HEAD] = handleMsgHead

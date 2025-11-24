@@ -1,3 +1,29 @@
+// Package channelserver implements the Monster Hunter Frontier channel server.
+//
+// The channel server is the core gameplay component that handles actual game sessions,
+// quests, player interactions, and all in-game activities. It uses a stage-based
+// architecture where players move between stages (game areas/rooms) and interact
+// with other players in real-time.
+//
+// Architecture Overview:
+//
+// The channel server manages three primary concepts:
+//   - Sessions: Individual player connections with their state and packet queues
+//   - Stages: Game rooms/areas where players interact (towns, quests, lobbies)
+//   - Semaphores: Resource locks for coordinating multiplayer activities (quests, events)
+//
+// Multiple channel servers can run simultaneously on different ports, allowing
+// horizontal scaling and separation of different world types (Newbie, Normal, etc).
+//
+// Thread Safety:
+//
+// This package extensively uses goroutines and shared state. All shared resources
+// are protected by mutexes. When modifying code, always consider thread safety:
+//   - Server-level: s.Lock() / s.Unlock() for session map
+//   - Stage-level: s.stagesLock.RLock() / s.stagesLock.Lock() for stage map
+//   - Session-level: session.Lock() / session.Unlock() for session state
+//
+// Use 'go test -race ./...' to detect race conditions during development.
 package channelserver
 
 import (
@@ -16,91 +42,120 @@ import (
 	"go.uber.org/zap"
 )
 
-// Config struct allows configuring the server.
+// Config holds configuration parameters for creating a new channel server.
 type Config struct {
-	ID          uint16
-	Logger      *zap.Logger
-	DB          *sqlx.DB
-	DiscordBot  *discordbot.DiscordBot
-	ErupeConfig *config.Config
-	Name        string
-	Enable      bool
+	ID          uint16                // Channel server ID (unique identifier)
+	Logger      *zap.Logger           // Logger instance for this channel server
+	DB          *sqlx.DB              // Database connection pool
+	DiscordBot  *discordbot.DiscordBot // Optional Discord bot for chat integration
+	ErupeConfig *config.Config        // Global Erupe configuration
+	Name        string                // Display name for the server (shown in broadcasts)
+	Enable      bool                  // Whether this server is enabled
 }
 
-// Map key type for a user binary part.
+// userBinaryPartID is a composite key for identifying a specific part of a user's binary data.
+// User binary data is split into multiple indexed parts and stored separately.
 type userBinaryPartID struct {
-	charID uint32
-	index  uint8
+	charID uint32 // Character ID who owns this binary data
+	index  uint8  // Part index (binary data is chunked into multiple parts)
 }
 
-// Server is a MHF channel server.
+// Server represents a Monster Hunter Frontier channel server instance.
+//
+// The Server manages all active player sessions, game stages, and shared resources.
+// It runs two main goroutines: one for accepting connections and one for managing
+// the session lifecycle.
+//
+// Thread Safety:
+// Server embeds sync.Mutex for protecting the sessions map. Use Lock()/Unlock()
+// when reading or modifying s.sessions. The stages map uses a separate RWMutex
+// (stagesLock) to allow concurrent reads during normal gameplay.
 type Server struct {
-	sync.Mutex
-	Channels       []*Server
-	ID             uint16
-	GlobalID       string
-	IP             string
-	Port           uint16
-	logger         *zap.Logger
-	db             *sqlx.DB
-	erupeConfig    *config.Config
-	acceptConns    chan net.Conn
-	deleteConns    chan net.Conn
-	sessions       map[net.Conn]*Session
-	listener       net.Listener // Listener that is created when Server.Start is called.
-	isShuttingDown bool
+	sync.Mutex // Protects sessions map and isShuttingDown flag
 
-	stagesLock sync.RWMutex
-	stages     map[string]*Stage
+	// Server identity and network configuration
+	Channels []*Server // Reference to all channel servers (for world broadcasts)
+	ID       uint16    // This server's ID
+	GlobalID string    // Global identifier string
+	IP       string    // Server IP address
+	Port     uint16    // Server listening port
 
-	// Used to map different languages
-	dict map[string]string
+	// Core dependencies
+	logger      *zap.Logger    // Logger instance
+	db          *sqlx.DB       // Database connection pool
+	erupeConfig *config.Config // Global configuration
 
-	// UserBinary
-	userBinaryPartsLock sync.RWMutex
-	userBinaryParts     map[userBinaryPartID][]byte
+	// Connection management
+	acceptConns    chan net.Conn            // Channel for new accepted connections
+	deleteConns    chan net.Conn            // Channel for connections to be cleaned up
+	sessions       map[net.Conn]*Session    // Active sessions keyed by connection
+	listener       net.Listener             // TCP listener (created when Server.Start is called)
+	isShuttingDown bool                     // Shutdown flag to stop goroutines gracefully
 
-	// Semaphore
-	semaphoreLock  sync.RWMutex
-	semaphore      map[string]*Semaphore
-	semaphoreIndex uint32
+	// Stage (game room) management
+	stagesLock sync.RWMutex         // Protects stages map (RWMutex for concurrent reads)
+	stages     map[string]*Stage    // Active stages keyed by stage ID string
 
-	// Discord chat integration
-	discordBot *discordbot.DiscordBot
+	// Localization
+	dict map[string]string // Language string mappings for server messages
 
-	name string
+	// User binary data storage
+	// Binary data is player-specific custom data that the client stores on the server
+	userBinaryPartsLock sync.RWMutex                // Protects userBinaryParts map
+	userBinaryParts     map[userBinaryPartID][]byte // Chunked binary data by character
 
-	raviente *Raviente
+	// Semaphore (multiplayer coordination) management
+	semaphoreLock  sync.RWMutex           // Protects semaphore map and semaphoreIndex
+	semaphore      map[string]*Semaphore  // Active semaphores keyed by semaphore ID
+	semaphoreIndex uint32                 // Auto-incrementing ID for new semaphores (starts at 7)
+
+	// Optional integrations
+	discordBot *discordbot.DiscordBot // Discord bot for chat relay (nil if disabled)
+	name       string                 // Server display name (used in chat messages)
+
+	// Special event system: Raviente (large-scale multiplayer raid)
+	raviente *Raviente // Raviente event state and coordination
 }
 
+// Raviente manages the Raviente raid event, a large-scale multiplayer encounter.
+//
+// Raviente is a special monster that requires coordination between many players
+// across multiple phases. This struct tracks registration, event state, and
+// support/assistance data for the active Raviente encounter.
 type Raviente struct {
-	sync.Mutex
+	sync.Mutex // Protects all Raviente data during concurrent access
 
-	register *RavienteRegister
-	state    *RavienteState
-	support  *RavienteSupport
+	register *RavienteRegister // Player registration and event timing
+	state    *RavienteState    // Current state of the Raviente encounter
+	support  *RavienteSupport  // Support/assistance tracking data
 }
 
+// RavienteRegister tracks player registration and timing for Raviente events.
 type RavienteRegister struct {
-	nextTime     uint32
-	startTime    uint32
-	postTime     uint32
-	killedTime   uint32
-	ravienteType uint32
-	maxPlayers   uint32
-	carveQuest   uint32
-	register     []uint32
+	nextTime     uint32   // Timestamp for next Raviente event
+	startTime    uint32   // Event start timestamp
+	postTime     uint32   // Event post-completion timestamp
+	killedTime   uint32   // Timestamp when Raviente was defeated
+	ravienteType uint32   // Raviente variant (2=Berserk, 3=Extreme, 4=Extreme Limited, 5=Berserk Small)
+	maxPlayers   uint32   // Maximum players allowed (determines scaling)
+	carveQuest   uint32   // Quest ID for carving phase after defeat
+	register     []uint32 // List of registered player IDs (up to 5 slots)
 }
 
+// RavienteState holds the dynamic state data for an active Raviente encounter.
+// The state array contains 29 uint32 values tracking encounter progress.
 type RavienteState struct {
-	stateData []uint32
+	stateData []uint32 // Raviente encounter state (29 values)
 }
 
+// RavienteSupport tracks support and assistance data for Raviente encounters.
+// The support array contains 25 uint32 values for coordination features.
 type RavienteSupport struct {
-	supportData []uint32
+	supportData []uint32 // Support/assistance data (25 values)
 }
 
-// Set up the Raviente variables for the server
+// NewRaviente creates and initializes a new Raviente event manager with default values.
+// All state and support arrays are initialized to zero, ready for a new event.
 func NewRaviente() *Raviente {
 	ravienteRegister := &RavienteRegister{
 		nextTime:     0,
@@ -125,6 +180,15 @@ func NewRaviente() *Raviente {
 	return raviente
 }
 
+// GetRaviMultiplier calculates the difficulty multiplier for Raviente based on player count.
+//
+// Raviente scales its difficulty based on the number of active participants. If there
+// are fewer players than the minimum threshold, the encounter becomes easier by returning
+// a multiplier < 1. Returns 1.0 for full groups, or 0 if the semaphore doesn't exist.
+//
+// Minimum player thresholds:
+//   - Large Raviente (maxPlayers > 8): 24 players minimum
+//   - Small Raviente (maxPlayers <= 8): 4 players minimum
 func (r *Raviente) GetRaviMultiplier(s *Server) float64 {
 	raviSema := getRaviSemaphore(s)
 	if raviSema != nil {
@@ -142,7 +206,19 @@ func (r *Raviente) GetRaviMultiplier(s *Server) float64 {
 	return 0
 }
 
-// NewServer creates a new Server type.
+// NewServer creates and initializes a new channel server with the given configuration.
+//
+// The server is initialized with default persistent stages (town areas that always exist):
+//   - sl1Ns200p0a0u0: Mezeporta (main town)
+//   - sl1Ns211p0a0u0: Rasta bar
+//   - sl1Ns260p0a0u0: Pallone Caravan
+//   - sl1Ns262p0a0u0: Pallone Guest House 1st Floor
+//   - sl1Ns263p0a0u0: Pallone Guest House 2nd Floor
+//   - sl2Ns379p0a0u0: Diva fountain / prayer fountain
+//   - sl1Ns462p0a0u0: MezFes (festival area)
+//
+// Additional dynamic stages are created by players when they create quests or rooms.
+// The semaphore index starts at 7 to avoid reserved IDs 0-6.
 func NewServer(config *Config) *Server {
 	s := &Server{
 		ID:              config.ID,
@@ -187,7 +263,16 @@ func NewServer(config *Config) *Server {
 	return s
 }
 
-// Start starts the server in a new goroutine.
+// Start begins listening for connections and starts the server's main goroutines.
+//
+// This method:
+//  1. Creates a TCP listener on the configured port
+//  2. Launches acceptClients() goroutine to accept new connections
+//  3. Launches manageSessions() goroutine to handle session lifecycle
+//  4. Optionally starts Discord chat integration
+//
+// Returns an error if the listener cannot be created (e.g., port in use).
+// The server runs asynchronously after Start() returns successfully.
 func (s *Server) Start() error {
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", s.Port))
 	if err != nil {
@@ -206,7 +291,15 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Shutdown tries to shut down the server gracefully.
+// Shutdown gracefully stops the server and all its goroutines.
+//
+// This method:
+//  1. Sets the shutdown flag to stop accepting new connections
+//  2. Closes the TCP listener (causes acceptClients to exit)
+//  3. Closes the acceptConns channel (signals manageSessions to exit)
+//
+// Existing sessions are not forcibly disconnected but will eventually timeout
+// or disconnect naturally. For a complete shutdown, wait for all sessions to close.
 func (s *Server) Shutdown() {
 	s.Lock()
 	s.isShuttingDown = true
@@ -267,7 +360,17 @@ func (s *Server) manageSessions() {
 	}
 }
 
-// BroadcastMHF queues a MHFPacket to be sent to all sessions.
+// BroadcastMHF sends a packet to all active sessions on this channel server.
+//
+// The packet is built individually for each session to handle per-session state
+// (like client version differences). Packets are queued in a non-blocking manner,
+// so if a session's queue is full, the packet is dropped for that session only.
+//
+// Parameters:
+//   - pkt: The MHFPacket to broadcast to all sessions
+//   - ignoredSession: Optional session to exclude from the broadcast (typically the sender)
+//
+// Thread Safety: This method locks the server's session map during iteration.
 func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
 	// Broadcast the data.
 	s.Lock()
@@ -289,6 +392,16 @@ func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) 
 	}
 }
 
+// WorldcastMHF broadcasts a packet to all channel servers (world-wide broadcast).
+//
+// This is used for server-wide announcements like Raviente events that should be
+// visible to all players across all channels. The packet is sent to every channel
+// server except the one specified in ignoredChannel.
+//
+// Parameters:
+//   - pkt: The MHFPacket to broadcast across all channels
+//   - ignoredSession: Optional session to exclude from broadcasts
+//   - ignoredChannel: Optional channel server to skip (typically the originating channel)
 func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, ignoredChannel *Server) {
 	for _, c := range s.Channels {
 		if c == ignoredChannel {
@@ -298,7 +411,13 @@ func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, 
 	}
 }
 
-// BroadcastChatMessage broadcasts a simple chat message to all the sessions.
+// BroadcastChatMessage sends a simple chat message to all sessions on this server.
+//
+// The message appears as a system message with the server's configured name as the sender.
+// This is typically used for server announcements, maintenance notifications, or events.
+//
+// Parameters:
+//   - message: The text message to broadcast to all players
 func (s *Server) BroadcastChatMessage(message string) {
 	bf := byteframe.NewByteFrame()
 	bf.SetLE()

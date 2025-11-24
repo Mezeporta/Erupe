@@ -11,11 +11,28 @@ import (
 	"go.uber.org/zap"
 )
 
+// handleMsgSysCreateStage creates a new stage (room/quest instance).
+//
+// This is called when a player:
+//   - Posts a quest
+//   - Creates a private room
+//   - Initiates any activity requiring a new stage instance
+//
+// The handler:
+//  1. Checks if stage already exists (return failure if it does)
+//  2. Creates new stage with the requesting session as host
+//  3. Sets max player count from packet
+//  4. Adds stage to server's stage map
+//  5. Responds with success/failure
+//
+// Note: This only creates the stage; the player must call MSG_SYS_ENTER_STAGE
+// to actually enter it after creation.
 func handleMsgSysCreateStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateStage)
 	s.server.Lock()
 	defer s.server.Unlock()
 	if _, exists := s.server.stages[pkt.StageID]; exists {
+		// Stage already exists, cannot create duplicate
 		doAckSimpleFail(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 	} else {
 		stage := NewStage(pkt.StageID)
@@ -28,6 +45,27 @@ func handleMsgSysCreateStage(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysStageDestruct(s *Session, p mhfpacket.MHFPacket) {}
 
+// doStageTransfer handles the common logic for entering/moving to a stage.
+//
+// This is a helper function called by handleMsgSysEnterStage and handleMsgSysMoveStage.
+// It performs the full stage entry process:
+//
+//  1. Find or create the target stage
+//  2. Add session to the stage's client map
+//  3. Remove session from previous stage (if any)
+//  4. Update session's stage pointers
+//  5. Send cleanup command to client (clear old stage objects)
+//  6. Send acknowledgment
+//  7. Synchronize existing stage objects to the new player
+//  8. Notify other players in the stage about new player
+//
+// If the stage doesn't exist, it creates it automatically (for persistent town stages).
+// For quest stages, MSG_SYS_CREATE_STAGE should be called first.
+//
+// Parameters:
+//   - s: The session entering the stage
+//   - ackHandle: The ack handle to respond to
+//   - stageID: The stage ID to enter
 func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	s.server.Lock()
 	stage, exists := s.server.stages[stageID]
@@ -37,7 +75,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 		stage.Lock()
 		stage.clients[s] = s.charID
 		stage.Unlock()
-	} else { // Create new stage object
+	} else { // Create new stage object (for persistent stages like towns)
 		s.server.Lock()
 		s.server.stages[stageID] = NewStage(stageID)
 		stage = s.server.stages[stageID]
@@ -48,21 +86,21 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 		stage.Unlock()
 	}
 
-	// Ensure this session no longer belongs to reservations.
+	// Ensure this session no longer belongs to their previous stage
 	if s.stage != nil {
 		removeSessionFromStage(s)
 	}
 
-	// Save our new stage ID and pointer to the new stage itself.
+	// Save our new stage ID and pointer to the new stage itself
 	s.Lock()
 	s.stageID = stageID
 	s.stage = s.server.stages[stageID]
 	s.Unlock()
 
-	// Tell the client to cleanup its current stage objects.
+	// Tell the client to cleanup its current stage objects
 	s.QueueSendMHF(&mhfpacket.MsgSysCleanupObject{})
 
-	// Confirm the stage entry.
+	// Confirm the stage entry
 	doAckSimpleSucceed(s, ackHandle, []byte{0x00, 0x00, 0x00, 0x00})
 
 	var temp mhfpacket.MHFPacket

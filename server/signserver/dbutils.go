@@ -177,7 +177,7 @@ func (s *Server) getGuildmatesForCharacters(chars []character) []members {
 			if err != nil {
 				continue
 			}
-			for i, _ := range charGuildmates {
+			for i := range charGuildmates {
 				charGuildmates[i].CID = char.ID
 			}
 			guildmates = append(guildmates, charGuildmates...)

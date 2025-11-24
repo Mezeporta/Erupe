@@ -18,54 +18,85 @@ import (
 	"go.uber.org/zap"
 )
 
+// packet is an internal wrapper for queued outbound packets.
 type packet struct {
-	data        []byte
-	nonBlocking bool
+	data        []byte // Raw packet bytes to send
+	nonBlocking bool   // If true, drop packet if queue is full instead of blocking
 }
 
-// Session holds state for the channel server connection.
+// Session represents an active player connection to the channel server.
+//
+// Each Session manages a single player's connection lifecycle, including:
+//   - Packet send/receive loops running in separate goroutines
+//   - Current stage (game area) and stage movement history
+//   - Character state (ID, courses, guild, etc.)
+//   - Mail system state
+//   - Quest/semaphore participation
+//
+// Lifecycle:
+//  1. Created by NewSession() when a player connects
+//  2. Started with Start() which launches send/recv goroutines
+//  3. Processes packets through handlePacketGroup() -> handler functions
+//  4. Cleaned up when connection closes or times out (30 second inactivity)
+//
+// Thread Safety:
+// Session embeds sync.Mutex to protect mutable state. Most handler functions
+// acquire the session lock when modifying session fields. The packet queue
+// (sendPackets channel) is safe for concurrent access.
 type Session struct {
-	sync.Mutex
-	logger        *zap.Logger
-	server        *Server
-	rawConn       net.Conn
-	cryptConn     *network.CryptConn
-	sendPackets   chan packet
-	clientContext *clientctx.ClientContext
-	lastPacket    time.Time
+	sync.Mutex // Protects session state during concurrent handler execution
 
-	userEnteredStage bool // If the user has entered a stage before
-	stageID          string
-	stage            *Stage
-	reservationStage *Stage // Required for the stateful MsgSysUnreserveStage packet.
-	stagePass        string // Temporary storage
-	prevGuildID      uint32 // Stores the last GuildID used in InfoGuild
-	charID           uint32
-	logKey           []byte
-	sessionStart     int64
-	courses          []mhfcourse.Course
-	token            string
-	kqf              []byte
-	kqfOverride      bool
+	// Core connection and logging
+	logger        *zap.Logger                // Logger with connection address
+	server        *Server                    // Parent server reference
+	rawConn       net.Conn                   // Underlying TCP connection
+	cryptConn     *network.CryptConn         // Encrypted connection wrapper
+	sendPackets   chan packet                // Outbound packet queue (buffered, size 20)
+	clientContext *clientctx.ClientContext   // Client version and capabilities
+	lastPacket    time.Time                  // Timestamp of last received packet (for timeout detection)
 
-	semaphore *Semaphore // Required for the stateful MsgSysUnreserveStage packet.
+	// Stage (game area) state
+	userEnteredStage bool    // Whether player has entered any stage during this session
+	stageID          string  // Current stage ID string (e.g., "sl1Ns200p0a0u0")
+	stage            *Stage  // Pointer to current stage object
+	reservationStage *Stage  // Stage reserved for quest (used by unreserve packet)
+	stagePass        string  // Temporary password storage for password-protected stages
+	stageMoveStack   *stringstack.StringStack // Navigation history for "back" functionality
 
-	// A stack containing the stage movement history (push on enter/move, pop on back)
-	stageMoveStack *stringstack.StringStack
+	// Player identity and state
+	charID       uint32               // Character ID for this session
+	Name         string               // Character name (for debugging/logging)
+	prevGuildID  uint32               // Last guild ID queried (cached for InfoGuild)
+	token        string               // Authentication token from sign server
+	logKey       []byte               // Logging encryption key
+	sessionStart int64                // Session start timestamp (Unix time)
+	courses      []mhfcourse.Course   // Active Monster Hunter courses (buffs/subscriptions)
+	kqf          []byte               // Key Quest Flags (quest progress tracking)
+	kqfOverride  bool                 // Whether KQF is being overridden
 
-	// Accumulated index used for identifying mail for a client
-	// I'm not certain why this is used, but since the client is sending it
-	// I want to rely on it for now as it might be important later.
-	mailAccIndex uint8
-	// Contains the mail list that maps accumulated indexes to mail IDs
-	mailList []int
+	// Quest/event coordination
+	semaphore *Semaphore // Semaphore for quest/event participation (if in a coordinated activity)
 
-	// For Debuging
-	Name   string
-	closed bool
+	// Mail system state
+	// The mail system uses an accumulated index system where the client tracks
+	// mail by incrementing indices rather than direct mail IDs
+	mailAccIndex uint8 // Current accumulated mail index for this session
+	mailList     []int // Maps accumulated indices to actual mail IDs
+
+	// Connection state
+	closed bool // Whether connection has been closed (prevents double-cleanup)
 }
 
-// NewSession creates a new Session type.
+// NewSession creates and initializes a new Session for an incoming connection.
+//
+// The session is created with:
+//   - A logger tagged with the connection's remote address
+//   - An encrypted connection wrapper
+//   - A buffered packet send queue (size 20)
+//   - Initialized stage movement stack for navigation
+//   - Session start time set to current time
+//
+// After creation, call Start() to begin processing packets.
 func NewSession(server *Server, conn net.Conn) *Session {
 	s := &Session{
 		logger:         server.logger.Named(conn.RemoteAddr().String()),
@@ -81,7 +112,17 @@ func NewSession(server *Server, conn net.Conn) *Session {
 	return s
 }
 
-// Start starts the session packet send and recv loop(s).
+// Start begins the session's packet processing by launching send and receive goroutines.
+//
+// This method spawns two long-running goroutines:
+//  1. sendLoop(): Continuously sends queued packets to the client
+//  2. recvLoop(): Continuously receives and processes packets from the client
+//
+// The receive loop handles packet parsing, routing to handlers, and recursive
+// packet group processing (when multiple packets arrive in one read).
+//
+// Both loops run until the connection closes or times out. Unlike the sign and
+// entrance servers, the channel server does NOT expect an 8-byte NULL initialization.
 func (s *Session) Start() {
 	go func() {
 		s.logger.Debug("New connection", zap.String("RemoteAddr", s.rawConn.RemoteAddr().String()))
@@ -92,7 +133,19 @@ func (s *Session) Start() {
 	}()
 }
 
-// QueueSend queues a packet (raw []byte) to be sent.
+// QueueSend queues a packet for transmission to the client (blocking).
+//
+// This method:
+//  1. Logs the outbound packet (if dev mode is enabled)
+//  2. Attempts to enqueue the packet to the send channel
+//  3. If the queue is full, flushes non-blocking packets and retries
+//
+// Blocking vs Non-blocking:
+// This is a blocking send - if the queue fills, it will flush non-blocking
+// packets (broadcasts, non-critical messages) to make room for this packet.
+// Use QueueSendNonBlocking() for packets that can be safely dropped.
+//
+// Thread Safety: Safe for concurrent calls from multiple goroutines.
 func (s *Session) QueueSend(data []byte) {
 	s.logMessage(binary.BigEndian.Uint16(data[0:2]), data, "Server", s.Name)
 	select {
@@ -114,7 +167,18 @@ func (s *Session) QueueSend(data []byte) {
 	}
 }
 
-// QueueSendNonBlocking queues a packet (raw []byte) to be sent, dropping the packet entirely if the queue is full.
+// QueueSendNonBlocking queues a packet for transmission (non-blocking, lossy).
+//
+// Unlike QueueSend(), this method drops the packet immediately if the send queue
+// is full. This is used for broadcast messages, stage updates, and other packets
+// where occasional packet loss is acceptable (client will re-sync or request again).
+//
+// Use cases:
+//   - Stage broadcasts (player movement, chat)
+//   - Server-wide announcements
+//   - Non-critical status updates
+//
+// Thread Safety: Safe for concurrent calls from multiple goroutines.
 func (s *Session) QueueSendNonBlocking(data []byte) {
 	select {
 	case s.sendPackets <- packet{data, true}:
@@ -124,7 +188,15 @@ func (s *Session) QueueSendNonBlocking(data []byte) {
 	}
 }
 
-// QueueSendMHF queues a MHFPacket to be sent.
+// QueueSendMHF queues a structured MHFPacket for transmission to the client.
+//
+// This is a convenience method that:
+//  1. Creates a byteframe and writes the packet opcode
+//  2. Calls the packet's Build() method to serialize its data
+//  3. Queues the resulting bytes using QueueSend()
+//
+// The packet is built with the session's clientContext, allowing version-specific
+// packet formatting when needed.
 func (s *Session) QueueSendMHF(pkt mhfpacket.MHFPacket) {
 	// Make the header
 	bf := byteframe.NewByteFrame()
@@ -137,7 +209,15 @@ func (s *Session) QueueSendMHF(pkt mhfpacket.MHFPacket) {
 	s.QueueSend(bf.Data())
 }
 
-// QueueAck is a helper function to queue an MSG_SYS_ACK with the given ack handle and data.
+// QueueAck sends an acknowledgment packet with optional response data.
+//
+// Many client packets include an "ack handle" field - a unique identifier the client
+// uses to match responses to requests. This method constructs and queues a MSG_SYS_ACK
+// packet containing the ack handle and response data.
+//
+// Parameters:
+//   - ackHandle: The ack handle from the original client packet
+//   - data: Response payload bytes (can be empty for simple acks)
 func (s *Session) QueueAck(ackHandle uint32, data []byte) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(uint16(network.MSG_SYS_ACK))
