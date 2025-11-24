@@ -1,0 +1,32 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: 1.25
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Run tests with race detector
+      run: go test -race ./...
+
+    - name: Generate coverage
+      run: go test -coverprofile=coverage.out ./...
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        files: ./coverage.out
+        flags: unittests
+        name: codecov-umbrella
+      continue-on-error: true
