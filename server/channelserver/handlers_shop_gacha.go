@@ -144,6 +144,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(uint16(len(gachas)))
 		bf.WriteUint16(uint16(len(gachas)))
 		for _, g := range gachas {
+			bf.WriteUint32(g.ID)
 			if _config.ErupeConfig.RealClientMode >= _config.GG { //GG之前这段数据都没有 G1就没有如下数据 G1只有ID和名字 Before GG, there was no data for G1, so there was no data for G1 except for ID and name
 				//TODO 但是G2 和G3 的差异还需要测试，G1和GG的数据已经清晰 But the difference between G2 and G3 still needs to be tested, and the data for G1 and GG are already clear
 				bf.WriteUint32(0) // Unknown rank restrictions
