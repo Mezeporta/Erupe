@@ -36,8 +36,10 @@ type Session struct {
 	clientContext *clientctx.ClientContext
 	lastPacket    time.Time
 
-	objectIndex      uint16
-	userEnteredStage bool // If the user has entered a stage before
+	objectID    uint16
+	objectIndex uint16
+	loaded      bool
+
 	stage            *Stage
 	reservationStage *Stage // Required for the stateful MsgSysUnreserveStage packet.
 	stagePass        string // Temporary storage
@@ -83,12 +85,12 @@ func NewSession(server *Server, conn net.Conn) *Session {
 		sendPackets:    make(chan packet, 20),
 		clientContext:  &clientctx.ClientContext{}, // Unused
 		lastPacket:     time.Now(),
+		objectID:       server.getObjectId(),
 		sessionStart:   TimeAdjusted().Unix(),
 		stageMoveStack: stringstack.New(),
 		ackStart:       make(map[uint32]time.Time),
 		semaphoreID:    make([]uint16, 2),
 	}
-	s.SetObjectID()
 	return s
 }
 
@@ -292,30 +294,9 @@ func (s *Session) logMessage(opcode uint16, data []byte, sender string, recipien
 	}
 }
 
-func (s *Session) SetObjectID() {
-	for i := uint16(1); i < 127; i++ {
-		exists := false
-		for _, j := range s.server.objectIDs {
-			if i == j {
-				exists = true
-				break
-			}
-		}
-		if !exists {
-			s.server.objectIDs[s] = i
-			return
-		}
-	}
-	s.server.objectIDs[s] = 0
-}
-
-func (s *Session) NextObjectID() uint32 {
-	bf := byteframe.NewByteFrame()
-	bf.WriteUint16(s.server.objectIDs[s])
+func (s *Session) getObjectId() uint32 {
 	s.objectIndex++
-	bf.WriteUint16(s.objectIndex)
-	bf.Seek(0, 0)
-	return bf.ReadUint32()
+	return uint32(s.objectID)<<16 | uint32(s.objectIndex)
 }
 
 func (s *Session) GetSemaphoreID() uint32 {

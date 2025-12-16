@@ -12,7 +12,7 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 
 	s.stage.Lock()
 	newObj := &Object{
-		id:          s.NextObjectID(),
+		id:          s.getObjectId(),
 		ownerCharID: s.charID,
 		x:           pkt.X,
 		y:           pkt.Y,

@@ -183,7 +183,6 @@ func logoutPlayer(s *Session) {
 		delete(s.server.sessions, s.rawConn)
 	}
 	s.rawConn.Close()
-	delete(s.server.objectIDs, s)
 	s.server.Unlock()
 
 	for _, stage := range s.server.stages {
