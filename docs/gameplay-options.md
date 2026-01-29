@@ -13,7 +13,7 @@ Gameplay modifiers and balance settings for Erupe.
     "DisableLoginBoost": false,
     "DisableBoostTime": false,
     "BoostTimeDuration": 120,
-    "GuildMealDuration": 60,
+    "ClanMealDuration": 3600,
     "BonusQuestAllowance": 3,
     "DailyQuestAllowance": 1
   }
@@ -30,7 +30,7 @@ Gameplay modifiers and balance settings for Erupe.
 | `DisableLoginBoost` | boolean | `false` | Disable login boost system entirely |
 | `DisableBoostTime` | boolean | `false` | Disable daily NetCafe boost time |
 | `BoostTimeDuration` | number | `120` | NetCafe boost time duration in minutes |
-| `GuildMealDuration` | number | `60` | Guild meal activation duration in minutes |
+| `ClanMealDuration` | number | `3600` | Clan meal activation duration in seconds |
 | `BonusQuestAllowance` | number | `3` | Daily Bonus Point Quest allowance |
 | `DailyQuestAllowance` | number | `1` | Daily Quest allowance |
 
@@ -80,17 +80,17 @@ Daily time-limited boost that simulates NetCafe benefits:
 - `DisableBoostTime: false` - Boost time is active
 - `BoostTimeDuration: 120` - Lasts 120 minutes (2 hours)
 
-### Guild Meals
+### Clan Meals
 
-Guild meals are buffs that guild members can activate:
+Clan meals are buffs that clan members can activate and share:
 
 ```json
 {
-  "GuildMealDuration": 60
+  "ClanMealDuration": 3600
 }
 ```
 
-Duration in minutes after cooking before the meal expires.
+Duration in seconds after cooking before the meal expires (3600 = 1 hour).
 
 ### Quest Allowances
 
@@ -114,7 +114,7 @@ Set to `0` to disable limits entirely.
     "DisableLoginBoost": false,
     "DisableBoostTime": false,
     "BoostTimeDuration": 240,
-    "GuildMealDuration": 120,
+    "ClanMealDuration": 7200,
     "BonusQuestAllowance": 10,
     "DailyQuestAllowance": 5
   }
@@ -132,7 +132,7 @@ Set to `0` to disable limits entirely.
     "DisableLoginBoost": false,
     "DisableBoostTime": false,
     "BoostTimeDuration": 120,
-    "GuildMealDuration": 60,
+    "ClanMealDuration": 3600,
     "BonusQuestAllowance": 3,
     "DailyQuestAllowance": 1
   }

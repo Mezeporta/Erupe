@@ -105,7 +105,7 @@ This guide explains the important configuration sections in `config.json`. Use [
     "DisableLoginBoost": false,
     "DisableBoostTime": false,
     "BoostTimeDuration": 120,
-    "GuildMealDuration": 60,
+    "ClanMealDuration": 3600,
     "BonusQuestAllowance": 3,
     "DailyQuestAllowance": 1
   }
@@ -120,7 +120,7 @@ This guide explains the important configuration sections in `config.json`. Use [
 | `DisableLoginBoost` | boolean | Disable login boost system |
 | `DisableBoostTime` | boolean | Disable daily NetCafe boost time |
 | `BoostTimeDuration` | number | NetCafe boost time duration in minutes (default: 120) |
-| `GuildMealDuration` | number | Guild meal activation duration in minutes (default: 60) |
+| `ClanMealDuration` | number | Clan meal activation duration in seconds (default: 3600) |
 | `BonusQuestAllowance` | number | Daily Bonus Point Quest allowance |
 | `DailyQuestAllowance` | number | Daily Quest allowance |
 

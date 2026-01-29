@@ -69,7 +69,7 @@ type GameplayOptions struct {
 	DisableLoginBoost   bool   // Disables the Login Boost system
 	DisableBoostTime    bool   // Disables the daily NetCafe Boost Time
 	BoostTimeDuration   int    // The number of minutes NetCafe Boost Time lasts for
-	GuildMealDuration   int    // The number of minutes a Guild Meal can be activated for after cooking
+	ClanMealDuration    int    // Seconds that a Clan Meal can be activated for after cooking
 	BonusQuestAllowance uint32 // Number of Bonus Point Quests to allow daily
 	DailyQuestAllowance uint32 // Number of Daily Quests to allow daily
 }

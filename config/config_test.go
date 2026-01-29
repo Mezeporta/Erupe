@@ -501,7 +501,7 @@ func TestConfigCompleteStructure(t *testing.T) {
 			MaximumRP:           65535,
 			DisableLoginBoost:   false,
 			BoostTimeDuration:   60,
-			GuildMealDuration:   30,
+			ClanMealDuration:    1800,
 			BonusQuestAllowance: 10,
 			DailyQuestAllowance: 5,
 		},
