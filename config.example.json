@@ -12,6 +12,7 @@
   "ScreenshotAPIURL": "",
   "DeleteOnSaveCorruption": false,
   "DevMode": true,
+  "ClientMode": "ZZ",
   "DevModeOptions": {
     "AutoCreateAccount": true,
     "CleanDB": false,
@@ -39,6 +40,7 @@
     "DisableBoostTime": false,
     "BoostTimeDuration": 120,
     "ClanMealDuration": 3600,
+    "ClanMemberLimits": [[0, 30], [3, 40], [7, 50], [10, 60]],
     "BonusQuestAllowance": 3,
     "DailyQuestAllowance": 1
   },
