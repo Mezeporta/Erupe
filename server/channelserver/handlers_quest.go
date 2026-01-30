@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -8,9 +9,81 @@ import (
 	"path/filepath"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"go.uber.org/zap"
 )
+
+func findSubSliceIndices(data []byte, sub []byte) []int {
+	var indices []int
+	lenSub := len(sub)
+	for i := range len(data) {
+		if i+lenSub > len(data) {
+			break
+		}
+		if equal(data[i:i+lenSub], sub) {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
+
+func equal(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// BackportQuest modifies quest data for compatibility with older client versions.
+func BackportQuest(data []byte) []byte {
+	wp := binary.LittleEndian.Uint32(data[0:4]) + 96
+	rp := wp + 4
+	for i := range uint32(6) {
+		if i != 0 {
+			wp += 4
+			rp += 8
+		}
+		copy(data[wp:wp+4], data[rp:rp+4])
+	}
+
+	fillLength := uint32(108)
+	if _config.ErupeConfig.RealClientMode <= _config.S6 {
+		fillLength = 44
+	} else if _config.ErupeConfig.RealClientMode <= _config.F5 {
+		fillLength = 52
+	} else if _config.ErupeConfig.RealClientMode <= _config.G101 {
+		fillLength = 76
+	}
+
+	copy(data[wp:wp+fillLength], data[rp:rp+fillLength])
+	if _config.ErupeConfig.RealClientMode <= _config.G91 {
+		patterns := [][]byte{
+			{0x0A, 0x00, 0x01, 0x33, 0xD7, 0x00}, // 10% Armor Sphere -> Stone
+			{0x06, 0x00, 0x02, 0x33, 0xD8, 0x00}, // 6% Armor Sphere+ -> Iron Ore
+			{0x0A, 0x00, 0x03, 0x33, 0xD7, 0x00}, // 10% Adv Armor Sphere -> Stone
+			{0x06, 0x00, 0x04, 0x33, 0xDB, 0x00}, // 6% Hard Armor Sphere -> Dragonite Ore
+			{0x0A, 0x00, 0x05, 0x33, 0xD9, 0x00}, // 10% Heaven Armor Sphere -> Earth Crystal
+			{0x06, 0x00, 0x06, 0x33, 0xDB, 0x00}, // 6% True Armor Sphere -> Dragonite Ore
+		}
+		for i := range patterns {
+			j := findSubSliceIndices(data, patterns[i][0:4])
+			for k := range j {
+				copy(data[j[k]+2:j[k]+4], patterns[i][4:6])
+			}
+		}
+	}
+
+	if _config.ErupeConfig.RealClientMode <= _config.S6 {
+		binary.LittleEndian.PutUint32(data[16:20], binary.LittleEndian.Uint32(data[8:12]))
+	}
+	return data
+}
 
 func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysGetFile)
