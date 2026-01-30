@@ -15,6 +15,7 @@ import (
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/common/stringsupport"
+	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
@@ -1041,10 +1042,11 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint16(uint16(len(applicants)))
 			for _, applicant := range applicants {
 				bf.WriteUint32(applicant.CharID)
-				bf.WriteUint16(0)
-				bf.WriteUint16(0)
+				bf.WriteUint32(0)
 				bf.WriteUint16(applicant.HRP)
-				bf.WriteUint16(applicant.GR)
+				if s.server.erupeConfig.RealClientMode >= _config.G10 {
+					bf.WriteUint16(applicant.GR)
+				}
 				ps.Uint8(bf, applicant.Name, true)
 			}
 		}
