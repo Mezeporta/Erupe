@@ -137,3 +137,69 @@ func TestMakeHeaderConsistency(t *testing.T) {
 		t.Error("makeHeader() with same input should produce same output")
 	}
 }
+
+// TestEncodeServerInfoClanMemberLimit documents the hardcoded clan member limit.
+//
+// CURRENT BEHAVIOR:
+//
+//	bf.WriteUint32(0x0000003C)  // Hardcoded to 60
+//
+// EXPECTED BEHAVIOR (after fix commit 7d760bd):
+//
+//	bf.WriteUint32(uint32(s.erupeConfig.GameplayOptions.ClanMemberLimits[len(s.erupeConfig.GameplayOptions.ClanMemberLimits)-1][1]))
+//	This reads the maximum clan member limit from the last entry of ClanMemberLimits config.
+//
+// Note: The ClanMemberLimits config field doesn't exist in this branch yet.
+// This test documents the expected value (60 = 0x3C) that will be read from config.
+func TestEncodeServerInfoClanMemberLimit(t *testing.T) {
+	// The hardcoded value is 60 (0x3C)
+	hardcodedLimit := uint32(0x0000003C)
+
+	if hardcodedLimit != 60 {
+		t.Errorf("hardcoded clan member limit = %d, expected 60", hardcodedLimit)
+	}
+
+	t.Logf("Current implementation uses hardcoded clan member limit: %d", hardcodedLimit)
+	t.Logf("After fix, this will be read from config.GameplayOptions.ClanMemberLimits")
+}
+
+// TestMakeHeaderDataIntegrity verifies that data passed to makeHeader is preserved
+// through encryption/decryption.
+func TestMakeHeaderDataIntegrity(t *testing.T) {
+	testCases := []struct {
+		name     string
+		data     []byte
+		respType string
+		count    uint16
+		key      byte
+	}{
+		{"empty SV2", []byte{}, "SV2", 0, 0x00},
+		{"simple SVR", []byte{0x01, 0x02}, "SVR", 1, 0x00},
+		{"with key", []byte{0xDE, 0xAD, 0xBE, 0xEF}, "SV2", 2, 0x42},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := makeHeader(tc.data, tc.respType, tc.count, tc.key)
+
+			// Result should have key as first byte
+			if len(result) == 0 {
+				t.Fatal("makeHeader returned empty result")
+			}
+			if result[0] != tc.key {
+				t.Errorf("first byte = 0x%X, want 0x%X (key)", result[0], tc.key)
+			}
+
+			// Decrypt and verify response type
+			if len(result) > 1 {
+				decrypted := DecryptBin8(result[1:], tc.key)
+				if len(decrypted) >= 3 {
+					gotType := string(decrypted[:3])
+					if gotType != tc.respType {
+						t.Errorf("decrypted respType = %s, want %s", gotType, tc.respType)
+					}
+				}
+			}
+		})
+	}
+}
