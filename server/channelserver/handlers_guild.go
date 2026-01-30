@@ -1456,8 +1456,7 @@ func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildManageRight)
 
 	guild, err := GetGuildInfoByCharacterId(s, s.charID)
-
-	if guild == nil && s.prevGuildID != 0 {
+	if guild == nil || s.prevGuildID != 0 {
 		guild, err = GetGuildInfoByID(s, s.prevGuildID)
 		s.prevGuildID = 0
 		if guild == nil || err != nil {
