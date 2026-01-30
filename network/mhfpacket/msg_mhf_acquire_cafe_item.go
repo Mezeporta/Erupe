@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -30,7 +31,11 @@ func (m *MsgMhfAcquireCafeItem) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cl
 	m.ItemType = bf.ReadUint16()
 	m.ItemID = bf.ReadUint16()
 	m.Quant = bf.ReadUint16()
-	m.PointCost = bf.ReadUint32()
+	if _config.ErupeConfig.RealClientMode >= _config.G6 {
+		m.PointCost = bf.ReadUint32()
+	} else {
+		m.PointCost = uint32(bf.ReadUint16())
+	}
 	m.Unk0 = bf.ReadUint16()
 	return nil
 }
