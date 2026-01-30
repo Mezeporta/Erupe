@@ -5,9 +5,17 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
+	"erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
+
+func init() {
+	// Initialize ErupeConfig for tests that access it
+	config.ErupeConfig = &config.Config{
+		RealClientMode: config.ZZ, // Default to ZZ for tests
+	}
+}
 
 func TestMsgMhfAcquireCafeItemOpcode(t *testing.T) {
 	pkt := &MsgMhfAcquireCafeItem{}
