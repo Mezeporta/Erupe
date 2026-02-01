@@ -2,6 +2,131 @@
 
 This document outlines prioritized improvements identified through codebase analysis.
 
+---
+
+## Cherry-Pick from Main Branch
+
+The `main` branch is 589 commits ahead of `9.2.0-clean` but is unstable for players. The following commits should be cherry-picked (and fixed if necessary) for 9.3.0.
+
+### Tier 1: Critical Stability Fixes (Cherry-pick immediately)
+
+| Commit | Description | Files Changed | Risk |
+|--------|-------------|---------------|------|
+| `e1a461e` | fix(stage): fix deadlock preventing stage change | handlers_stage.go, sys_session.go | Low |
+| `060635e` | fix(stage): fix race condition with stages | handlers_stage.go | Low |
+| `1c32be9` | fix(session): race condition | sys_session.go | Low |
+| `73e874f` | fix: array bound crashes on clans | Multiple | Low |
+| `5028355` | prevent nil pointer in MhfGetGuildManageRight | handlers_guild.go | Low |
+| `ba1eea8` | prevent save error crashes | handlers.go, handlers_character.go | Low |
+| `60e86c7` | mitigate LoadDecoMyset crashing on older versions | handlers | Low |
+
+**Command:**
+```bash
+git cherry-pick e1a461e 060635e 1c32be9 73e874f 5028355 ba1eea8 60e86c7
+```
+
+### Tier 2: Security Updates (Cherry-pick after Tier 1)
+
+| Commit | Description | Risk |
+|--------|-------------|------|
+| `c13d6e6` | Bump golang.org/x/net from 0.33.0 to 0.38.0 | Low |
+| `da43ad0` | Bump golang.org/x/crypto from 0.31.0 to 0.35.0 | Low |
+| `0bf39b9` | Bump golang.org/x/net from 0.23.0 to 0.33.0 | Low |
+| `c715578` | Bump golang.org/x/crypto from 0.15.0 to 0.17.0 | Low |
+
+**Note:** May need to cherry-pick in order or resolve conflicts.
+
+### Tier 3: Important Bug Fixes (Review before cherry-pick)
+
+| Commit | Description | Files | Notes |
+|--------|-------------|-------|-------|
+| `d1dfc3f` | packet queue fix proposal | 6 files | Review carefully - touches core networking |
+| `76858bb` | bypass full Stage check if reserve slot | handlers_stage.go | Simple fix |
+| `c539905` | implement SysWaitStageBinary timeout | handlers_stage.go | Simple fix |
+| `7459ded` | fix guild poogie outfit unlock | handlers | Simple fix |
+| `8a55c5f` | fix inflated festa rewards | handlers | Review impact |
+| `7d760bd` | fix EntranceServer clan member list limits | entranceserver | Simple fix |
+
+### Tier 4: Version Compatibility Fixes
+
+| Commit | Description | Versions Affected |
+|--------|-------------|-------------------|
+| `8d1c6a7` | S6 compatibility fix | Season 6.0 |
+| `d26ae45` | fix G1 compatibility | G1 |
+| `3d0114c` | fix MhfAcquireCafeItem cost in G1-G5.2 | G1-G5.2 |
+| `8c219be` | fix InfoGuild response on <G10 | Pre-G10 |
+| `183f886` | fix InfoFesta response on S6.0 | S6.0 |
+| `1c4370b` | fix EnumerateFestaMember prior to Z2 | Pre-Z2 |
+
+### Tier 5: Warehouse & Save System Fixes (Test thoroughly)
+
+These commits fix critical player data issues but require careful testing:
+
+| Commit | Description | Risk |
+|--------|-------------|------|
+| `9f19358` | fix Warehouse serialisation across versions | Medium - test all versions |
+| `caf4deb` | fix Warehouse Equipment dereference | Medium |
+| `e80a03d` | fix Warehouse Item functions | Medium |
+| `b969c53` | fix Warehouse packet parsing | Medium |
+| `717d785` | fix possible warehouse error | Low |
+
+**Warning:** Save system changes (`36065ce`, `afc554f`, `18592c5`) are experimental and may have caused the instability on main. Test in isolation first.
+
+### Tier 6: Features to Consider
+
+| Commit | Feature | Dependencies | Notes |
+|--------|---------|--------------|-------|
+| `4eed6a9` | playtime chat command | None | Safe to cherry-pick |
+| `0caaeac` | ngword filter | stringsupport | Useful for moderation |
+| `1ab6940` | extra Distribution fields | Schema patch 23 | Requires DB migration |
+| `2c58968` | emulate retail semaphore logic | None | May improve stability |
+
+### Schema Patches Required
+
+Main branch has 28 patch schema files. Cherry-picked commits may require these:
+
+| Patch | Required For |
+|-------|--------------|
+| `23-rework-distributions-2.sql` | Distribution fields (`1ab6940`) |
+| `24-fix-weekly-stamps.sql` | Weekly stamp fixes |
+| `25-fix-rasta-id.sql` | Rasta ID fixes |
+| `26-fix-mail.sql` | Mail fixes |
+| `27-fix-character-defaults.sql` | Stage deadlock fix (`e1a461e`) |
+
+### Commits to AVOID
+
+These commits caused or may cause instability:
+
+| Commit | Reason |
+|--------|--------|
+| `edd357f` | concatenate packets during send - later reverted |
+| `ae32951` | packet concatenation - caused issues |
+| `36065ce`, `afc554f`, `18592c5` | Save system changes - incomplete/experimental |
+| Large feature branches | Event cycling, Discord improvements - too complex for point cherry-pick |
+
+### Cherry-Pick Strategy
+
+1. **Create feature branch:** `git checkout -b cherry-pick-stability`
+2. **Cherry-pick Tier 1** (critical fixes) one by one, testing after each
+3. **Run tests:** `go test -race ./...`
+4. **Cherry-pick Tier 2** (security)
+5. **Test with local client** before proceeding to Tier 3+
+6. **Document any conflicts** and resolutions
+7. **Apply required schema patches** to test database
+
+### Verification Checklist
+
+After cherry-picking, verify:
+- [ ] Server starts without errors
+- [ ] Player can log in
+- [ ] Stage changes work (test quest entry/exit)
+- [ ] No race conditions: `go test -race ./...`
+- [ ] Guild operations work
+- [ ] Warehouse access works
+- [ ] Save/load works correctly
+
+---
+
 ## Critical Priority
 
 ### 1. Test Coverage
