@@ -341,3 +341,115 @@ func BenchmarkStringStack_Set(b *testing.B) {
 		s.Set("test string")
 	}
 }
+
+func TestStringStack_Lock(t *testing.T) {
+	s := New()
+
+	// Initially not locked
+	if s.Locked {
+		t.Error("New StringStack should not be locked")
+	}
+
+	// Lock it
+	s.Lock()
+	if !s.Locked {
+		t.Error("Lock() should set Locked to true")
+	}
+
+	// Lock again (should be idempotent)
+	s.Lock()
+	if !s.Locked {
+		t.Error("Lock() on already locked stack should remain locked")
+	}
+}
+
+func TestStringStack_Unlock(t *testing.T) {
+	s := New()
+
+	// Lock then unlock
+	s.Lock()
+	if !s.Locked {
+		t.Error("Lock() should set Locked to true")
+	}
+
+	s.Unlock()
+	if s.Locked {
+		t.Error("Unlock() should set Locked to false")
+	}
+
+	// Unlock again (should be idempotent)
+	s.Unlock()
+	if s.Locked {
+		t.Error("Unlock() on already unlocked stack should remain unlocked")
+	}
+}
+
+func TestStringStack_LockUnlockCycle(t *testing.T) {
+	s := New()
+
+	// Multiple lock/unlock cycles
+	for i := 0; i < 5; i++ {
+		s.Lock()
+		if !s.Locked {
+			t.Errorf("Cycle %d: Lock() should set Locked to true", i)
+		}
+
+		s.Unlock()
+		if s.Locked {
+			t.Errorf("Cycle %d: Unlock() should set Locked to false", i)
+		}
+	}
+}
+
+func TestStringStack_LockDoesNotAffectOperations(t *testing.T) {
+	s := New()
+	s.Push("item1")
+	s.Lock()
+
+	// Lock is just a flag - operations still work
+	s.Push("item2")
+	if len(s.stack) != 2 {
+		t.Error("Push() should work on locked stack")
+	}
+
+	val, err := s.Pop()
+	if err != nil {
+		t.Errorf("Pop() on locked stack returned error: %v", err)
+	}
+	if val != "item2" {
+		t.Errorf("Pop() = %q, want %q", val, "item2")
+	}
+
+	s.Set("reset")
+	if len(s.stack) != 1 || s.stack[0] != "reset" {
+		t.Error("Set() should work on locked stack")
+	}
+}
+
+func TestStringStack_NewUnlocked(t *testing.T) {
+	s := New()
+	if s.Locked != false {
+		t.Error("New() should create an unlocked StringStack")
+	}
+}
+
+func TestStringStack_UnlockOnUnlocked(t *testing.T) {
+	s := New()
+
+	// Unlock on already unlocked should be safe
+	s.Unlock()
+	if s.Locked {
+		t.Error("Unlock() on unlocked stack should keep it unlocked")
+	}
+}
+
+func TestStringStack_LockOnLocked(t *testing.T) {
+	s := New()
+	s.Lock()
+
+	// Lock on already locked should be safe
+	s.Lock()
+	if !s.Locked {
+		t.Error("Lock() on locked stack should keep it locked")
+	}
+}
