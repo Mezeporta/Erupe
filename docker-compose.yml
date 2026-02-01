@@ -1,23 +1,20 @@
-version: "3.9"
-# 1. docker-compose up db pgadmin
-# 2. Use pgadmin to restore db and also apply patch-schema
-# 3. Configure the config.json example. in docker you can point to the service name for the database i.e db
-# 4. In seperate terminal docker-compose up server
-# 5. If all went well happy hunting!
+# Root-level docker-compose for easy usage: docker compose up
+# For development: docker compose up db pgadmin
+# For full stack: docker compose up
 services:
   db:
     image: postgres
     environment:
-    # (Make sure these match config.json)
+      # (Make sure these match config.json)
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=erupe
     ports:
       - "5432:5432"
     volumes:
-      - ./db-data/:/var/lib/postgresql/data/
-      - ../schemas/:/schemas/
-      - ./init/setup.sh:/docker-entrypoint-initdb.d/setup.sh
+      - ./docker/db-data/:/var/lib/postgresql/data/
+      - ./schemas/:/schemas/
+      - ./docker/setup.sh:/docker-entrypoint-initdb.d/setup.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -38,13 +35,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # If using prebuilt container change paths and config
     build:
-      context: ../
+      context: .
     volumes:
-      - ../config.json:/app/erupe/config.json
-      - ../bin:/app/erupe/bin
-      - ./savedata:/app/erupe/savedata
+      - ./config.json:/app/erupe/config.json
+      - ./bin:/app/erupe/bin
+      - ./docker/savedata:/app/erupe/savedata
     ports:
       # (Make sure these match config.json)
       - "53312:53312" #Sign V1
@@ -65,7 +61,7 @@ services:
     ports:
       - '80:80'
     volumes:
-      - ./Servers:/usr/local/apache2/htdocs
+      - ./docker/Servers:/usr/local/apache2/htdocs
     depends_on:
       db:
         condition: service_healthy

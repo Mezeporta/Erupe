@@ -1,1 +1,35 @@
+# Build artifacts
 bin/
+erupe-ce
+*.exe
+
+# Docker data directories
+docker/db-data/
+docker/savedata/
+docker/Servers/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation and config examples
+*.md
+!README.md
+.env
+.env.*
+config.json
+
+# Logs
+logs/
+*.log
+
+# Test artifacts
+coverage.out
+*.test

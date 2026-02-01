@@ -1,5 +1,5 @@
 # Docker Compose configuration for running integration tests
-# Usage: docker-compose -f docker/docker-compose.test.yml up -d
+# Usage: docker compose -f docker/docker-compose.test.yml up -d
 services:
   test-db:
     image: postgres:15-alpine
