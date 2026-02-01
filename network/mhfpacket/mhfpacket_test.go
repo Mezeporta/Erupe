@@ -461,3 +461,383 @@ func TestMHFSaveLoad(t *testing.T) {
 		})
 	}
 }
+
+func TestMsgSysCreateStageParse(t *testing.T) {
+	tests := []struct {
+		name        string
+		data        []byte
+		wantHandle  uint32
+		wantUnk0    uint8
+		wantPlayers uint8
+		wantStageID string
+	}{
+		{
+			name:        "simple stage",
+			data:        append([]byte{0x00, 0x00, 0x00, 0x01, 0x02, 0x04, 0x05}, []byte("test")...),
+			wantHandle:  1,
+			wantUnk0:    2,
+			wantPlayers: 4,
+			wantStageID: "test",
+		},
+		{
+			name:        "empty stage ID",
+			data:        []byte{0x12, 0x34, 0x56, 0x78, 0x01, 0x02, 0x00},
+			wantHandle:  0x12345678,
+			wantUnk0:    1,
+			wantPlayers: 2,
+			wantStageID: "",
+		},
+		{
+			name:        "with null terminator",
+			data:        append([]byte{0x00, 0x00, 0x00, 0x0A, 0x01, 0x01, 0x08}, append([]byte("stage01"), 0x00)...),
+			wantHandle:  10,
+			wantUnk0:    1,
+			wantPlayers: 1,
+			wantStageID: "stage01",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bf := byteframe.NewByteFrame()
+			bf.WriteBytes(tt.data)
+			bf.Seek(0, io.SeekStart)
+
+			pkt := &MsgSysCreateStage{}
+			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+
+			if pkt.AckHandle != tt.wantHandle {
+				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.wantHandle)
+			}
+			if pkt.Unk0 != tt.wantUnk0 {
+				t.Errorf("Unk0 = %d, want %d", pkt.Unk0, tt.wantUnk0)
+			}
+			if pkt.PlayerCount != tt.wantPlayers {
+				t.Errorf("PlayerCount = %d, want %d", pkt.PlayerCount, tt.wantPlayers)
+			}
+			if pkt.StageID != tt.wantStageID {
+				t.Errorf("StageID = %q, want %q", pkt.StageID, tt.wantStageID)
+			}
+		})
+	}
+}
+
+func TestMsgSysEnterStageParse(t *testing.T) {
+	tests := []struct {
+		name        string
+		data        []byte
+		wantHandle  uint32
+		wantUnkBool uint8
+		wantStageID string
+	}{
+		{
+			name:        "enter mezeporta",
+			data:        append([]byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x0F}, []byte("sl1Ns200p0a0u0")...),
+			wantHandle:  1,
+			wantUnkBool: 0,
+			wantStageID: "sl1Ns200p0a0u0",
+		},
+		{
+			name:        "with unk bool set",
+			data:        append([]byte{0xAB, 0xCD, 0xEF, 0x12, 0x01, 0x05}, []byte("room1")...),
+			wantHandle:  0xABCDEF12,
+			wantUnkBool: 1,
+			wantStageID: "room1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bf := byteframe.NewByteFrame()
+			bf.WriteBytes(tt.data)
+			bf.Seek(0, io.SeekStart)
+
+			pkt := &MsgSysEnterStage{}
+			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+
+			if pkt.AckHandle != tt.wantHandle {
+				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.wantHandle)
+			}
+			if pkt.UnkBool != tt.wantUnkBool {
+				t.Errorf("UnkBool = %d, want %d", pkt.UnkBool, tt.wantUnkBool)
+			}
+			if pkt.StageID != tt.wantStageID {
+				t.Errorf("StageID = %q, want %q", pkt.StageID, tt.wantStageID)
+			}
+		})
+	}
+}
+
+func TestMsgSysMoveStageParse(t *testing.T) {
+	tests := []struct {
+		name        string
+		data        []byte
+		wantHandle  uint32
+		wantUnkBool uint8
+		wantStageID string
+	}{
+		{
+			name:        "move to quest stage",
+			data:        append([]byte{0x00, 0x00, 0x12, 0x34, 0x00, 0x06}, []byte("quest1")...),
+			wantHandle:  0x1234,
+			wantUnkBool: 0,
+			wantStageID: "quest1",
+		},
+		{
+			name:        "with null in string",
+			data:        append([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x08}, append([]byte("stage"), []byte{0x00, 0x00, 0x00}...)...),
+			wantHandle:  0xFFFFFFFF,
+			wantUnkBool: 1,
+			wantStageID: "stage",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bf := byteframe.NewByteFrame()
+			bf.WriteBytes(tt.data)
+			bf.Seek(0, io.SeekStart)
+
+			pkt := &MsgSysMoveStage{}
+			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+
+			if pkt.AckHandle != tt.wantHandle {
+				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.wantHandle)
+			}
+			if pkt.UnkBool != tt.wantUnkBool {
+				t.Errorf("UnkBool = %d, want %d", pkt.UnkBool, tt.wantUnkBool)
+			}
+			if pkt.StageID != tt.wantStageID {
+				t.Errorf("StageID = %q, want %q", pkt.StageID, tt.wantStageID)
+			}
+		})
+	}
+}
+
+func TestMsgSysLockStageParse(t *testing.T) {
+	tests := []struct {
+		name        string
+		data        []byte
+		wantHandle  uint32
+		wantUnk0    uint8
+		wantUnk1    uint8
+		wantStageID string
+	}{
+		{
+			name:        "lock stage",
+			data:        append([]byte{0x00, 0x00, 0x00, 0x05, 0x01, 0x01, 0x06}, []byte("room01")...),
+			wantHandle:  5,
+			wantUnk0:    1,
+			wantUnk1:    1,
+			wantStageID: "room01",
+		},
+		{
+			name:        "different unk values",
+			data:        append([]byte{0x12, 0x34, 0x56, 0x78, 0x02, 0x03, 0x04}, []byte("test")...),
+			wantHandle:  0x12345678,
+			wantUnk0:    2,
+			wantUnk1:    3,
+			wantStageID: "test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bf := byteframe.NewByteFrame()
+			bf.WriteBytes(tt.data)
+			bf.Seek(0, io.SeekStart)
+
+			pkt := &MsgSysLockStage{}
+			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+
+			if pkt.AckHandle != tt.wantHandle {
+				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.wantHandle)
+			}
+			if pkt.Unk0 != tt.wantUnk0 {
+				t.Errorf("Unk0 = %d, want %d", pkt.Unk0, tt.wantUnk0)
+			}
+			if pkt.Unk1 != tt.wantUnk1 {
+				t.Errorf("Unk1 = %d, want %d", pkt.Unk1, tt.wantUnk1)
+			}
+			if pkt.StageID != tt.wantStageID {
+				t.Errorf("StageID = %q, want %q", pkt.StageID, tt.wantStageID)
+			}
+		})
+	}
+}
+
+func TestMsgSysUnlockStageRoundTrip(t *testing.T) {
+	tests := []struct {
+		name string
+		unk0 uint16
+	}{
+		{"zero value", 0},
+		{"typical value", 1},
+		{"max value", 0xFFFF},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			original := &MsgSysUnlockStage{Unk0: tt.unk0}
+			ctx := &clientctx.ClientContext{}
+
+			// Build
+			bf := byteframe.NewByteFrame()
+			err := original.Build(bf, ctx)
+			if err != nil {
+				t.Fatalf("Build() error = %v", err)
+			}
+
+			// Parse
+			bf.Seek(0, io.SeekStart)
+			parsed := &MsgSysUnlockStage{}
+			err = parsed.Parse(bf, ctx)
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+
+			// Compare
+			if parsed.Unk0 != original.Unk0 {
+				t.Errorf("Unk0 = %d, want %d", parsed.Unk0, original.Unk0)
+			}
+		})
+	}
+}
+
+func TestMsgSysBackStageParse(t *testing.T) {
+	tests := []struct {
+		name       string
+		data       []byte
+		wantHandle uint32
+	}{
+		{"simple handle", []byte{0x00, 0x00, 0x00, 0x01}, 1},
+		{"large handle", []byte{0xDE, 0xAD, 0xBE, 0xEF}, 0xDEADBEEF},
+		{"zero handle", []byte{0x00, 0x00, 0x00, 0x00}, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bf := byteframe.NewByteFrame()
+			bf.WriteBytes(tt.data)
+			bf.Seek(0, io.SeekStart)
+
+			pkt := &MsgSysBackStage{}
+			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+
+			if pkt.AckHandle != tt.wantHandle {
+				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.wantHandle)
+			}
+		})
+	}
+}
+
+func TestMsgSysLogoutParse(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		wantUnk0 uint8
+	}{
+		{"typical logout", []byte{0x01}, 1},
+		{"zero value", []byte{0x00}, 0},
+		{"max value", []byte{0xFF}, 255},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bf := byteframe.NewByteFrame()
+			bf.WriteBytes(tt.data)
+			bf.Seek(0, io.SeekStart)
+
+			pkt := &MsgSysLogout{}
+			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+
+			if pkt.Unk0 != tt.wantUnk0 {
+				t.Errorf("Unk0 = %d, want %d", pkt.Unk0, tt.wantUnk0)
+			}
+		})
+	}
+}
+
+func TestMsgSysLoginParse(t *testing.T) {
+	tests := []struct {
+		name             string
+		ackHandle        uint32
+		charID0          uint32
+		loginTokenNumber uint32
+		hardcodedZero0   uint16
+		requestVersion   uint16
+		charID1          uint32
+		hardcodedZero1   uint16
+		tokenStrLen      uint16
+		tokenString      string
+	}{
+		{
+			name:             "typical login",
+			ackHandle:        1,
+			charID0:          12345,
+			loginTokenNumber: 67890,
+			hardcodedZero0:   0,
+			requestVersion:   1,
+			charID1:          12345,
+			hardcodedZero1:   0,
+			tokenStrLen:      0x11,
+			tokenString:      "abc123token",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bf := byteframe.NewByteFrame()
+			bf.WriteUint32(tt.ackHandle)
+			bf.WriteUint32(tt.charID0)
+			bf.WriteUint32(tt.loginTokenNumber)
+			bf.WriteUint16(tt.hardcodedZero0)
+			bf.WriteUint16(tt.requestVersion)
+			bf.WriteUint32(tt.charID1)
+			bf.WriteUint16(tt.hardcodedZero1)
+			bf.WriteUint16(tt.tokenStrLen)
+			bf.WriteBytes(append([]byte(tt.tokenString), 0x00)) // null terminated
+			bf.Seek(0, io.SeekStart)
+
+			pkt := &MsgSysLogin{}
+			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+
+			if pkt.AckHandle != tt.ackHandle {
+				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.ackHandle)
+			}
+			if pkt.CharID0 != tt.charID0 {
+				t.Errorf("CharID0 = %d, want %d", pkt.CharID0, tt.charID0)
+			}
+			if pkt.LoginTokenNumber != tt.loginTokenNumber {
+				t.Errorf("LoginTokenNumber = %d, want %d", pkt.LoginTokenNumber, tt.loginTokenNumber)
+			}
+			if pkt.RequestVersion != tt.requestVersion {
+				t.Errorf("RequestVersion = %d, want %d", pkt.RequestVersion, tt.requestVersion)
+			}
+			if pkt.LoginTokenString != tt.tokenString {
+				t.Errorf("LoginTokenString = %q, want %q", pkt.LoginTokenString, tt.tokenString)
+			}
+		})
+	}
+}

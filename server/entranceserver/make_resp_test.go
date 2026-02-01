@@ -203,3 +203,199 @@ func TestMakeHeaderDataIntegrity(t *testing.T) {
 		})
 	}
 }
+
+// TestMakeHeaderStructure verifies the internal structure of makeHeader output
+func TestMakeHeaderStructure(t *testing.T) {
+	tests := []struct {
+		name       string
+		data       []byte
+		respType   string
+		entryCount uint16
+		key        byte
+	}{
+		{"SV2 response", []byte{0x01, 0x02, 0x03, 0x04}, "SV2", 5, 0x00},
+		{"SVR response", []byte{0xAA, 0xBB}, "SVR", 10, 0x10},
+		{"USR response", []byte{0x00}, "USR", 1, 0xFF},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := makeHeader(tt.data, tt.respType, tt.entryCount, tt.key)
+
+			// Result should not be empty
+			if len(result) == 0 {
+				t.Fatal("makeHeader returned empty result")
+			}
+
+			// First byte should be the key
+			if result[0] != tt.key {
+				t.Errorf("first byte = 0x%X, want 0x%X", result[0], tt.key)
+			}
+
+			// Decrypt the rest
+			encrypted := result[1:]
+			decrypted := DecryptBin8(encrypted, tt.key)
+
+			// First 3 bytes should be respType
+			if len(decrypted) < 3 {
+				t.Fatal("decrypted data too short for respType")
+			}
+			if string(decrypted[:3]) != tt.respType {
+				t.Errorf("respType = %s, want %s", string(decrypted[:3]), tt.respType)
+			}
+
+			// Next 2 bytes should be entry count (big endian)
+			if len(decrypted) < 5 {
+				t.Fatal("decrypted data too short for entry count")
+			}
+			gotCount := uint16(decrypted[3])<<8 | uint16(decrypted[4])
+			if gotCount != tt.entryCount {
+				t.Errorf("entryCount = %d, want %d", gotCount, tt.entryCount)
+			}
+
+			// Next 2 bytes should be data length (big endian)
+			if len(decrypted) < 7 {
+				t.Fatal("decrypted data too short for data length")
+			}
+			gotLen := uint16(decrypted[5])<<8 | uint16(decrypted[6])
+			if gotLen != uint16(len(tt.data)) {
+				t.Errorf("dataLen = %d, want %d", gotLen, len(tt.data))
+			}
+		})
+	}
+}
+
+// TestMakeHeaderChecksum verifies that checksum is correctly calculated
+func TestMakeHeaderChecksum(t *testing.T) {
+	data := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
+	key := byte(0x00)
+
+	result := makeHeader(data, "SV2", 1, key)
+
+	// Decrypt
+	decrypted := DecryptBin8(result[1:], key)
+
+	// After respType(3) + entryCount(2) + dataLen(2) = 7 bytes
+	// Next 4 bytes should be checksum
+	if len(decrypted) < 11 {
+		t.Fatal("decrypted data too short for checksum")
+	}
+
+	expectedChecksum := CalcSum32(data)
+	gotChecksum := uint32(decrypted[7])<<24 | uint32(decrypted[8])<<16 | uint32(decrypted[9])<<8 | uint32(decrypted[10])
+
+	if gotChecksum != expectedChecksum {
+		t.Errorf("checksum = 0x%X, want 0x%X", gotChecksum, expectedChecksum)
+	}
+}
+
+// TestMakeHeaderDataPreservation verifies original data is preserved in output
+func TestMakeHeaderDataPreservation(t *testing.T) {
+	originalData := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE}
+	key := byte(0x00)
+
+	result := makeHeader(originalData, "SV2", 1, key)
+
+	// Decrypt
+	decrypted := DecryptBin8(result[1:], key)
+
+	// Header: respType(3) + entryCount(2) + dataLen(2) + checksum(4) = 11 bytes
+	// Data starts at offset 11
+	if len(decrypted) < 11+len(originalData) {
+		t.Fatalf("decrypted data too short: got %d, want at least %d", len(decrypted), 11+len(originalData))
+	}
+
+	recoveredData := decrypted[11 : 11+len(originalData)]
+	if !bytes.Equal(recoveredData, originalData) {
+		t.Errorf("recovered data = %X, want %X", recoveredData, originalData)
+	}
+}
+
+// TestMakeHeaderEmptyDataNoChecksum verifies empty data doesn't include checksum
+func TestMakeHeaderEmptyDataNoChecksum(t *testing.T) {
+	result := makeHeader([]byte{}, "SV2", 0, 0x00)
+
+	// Decrypt
+	decrypted := DecryptBin8(result[1:], 0x00)
+
+	// Header without data: respType(3) + entryCount(2) + dataLen(2) = 7 bytes
+	// No checksum for empty data
+	if len(decrypted) != 7 {
+		t.Errorf("decrypted length = %d, want 7 (no checksum for empty data)", len(decrypted))
+	}
+
+	// Verify data length is 0
+	gotLen := uint16(decrypted[5])<<8 | uint16(decrypted[6])
+	if gotLen != 0 {
+		t.Errorf("dataLen = %d, want 0", gotLen)
+	}
+}
+
+// TestMakeHeaderKeyVariation verifies different keys produce different output
+func TestMakeHeaderKeyVariation(t *testing.T) {
+	data := []byte{0x01, 0x02, 0x03}
+
+	result1 := makeHeader(data, "SV2", 1, 0x00)
+	result2 := makeHeader(data, "SV2", 1, 0x55)
+	result3 := makeHeader(data, "SV2", 1, 0xAA)
+
+	// All results should have different first bytes (the key)
+	if result1[0] == result2[0] || result2[0] == result3[0] {
+		t.Error("different keys should produce different first bytes")
+	}
+
+	// Encrypted portions should also differ
+	if bytes.Equal(result1[1:], result2[1:]) {
+		t.Error("different keys should produce different encrypted data")
+	}
+	if bytes.Equal(result2[1:], result3[1:]) {
+		t.Error("different keys should produce different encrypted data")
+	}
+}
+
+// TestCalcSum32EdgeCases tests edge cases for the checksum function
+func TestCalcSum32EdgeCases(t *testing.T) {
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{"single byte", []byte{0x00}},
+		{"all zeros", make([]byte, 10)},
+		{"all ones", bytes.Repeat([]byte{0xFF}, 10)},
+		{"alternating", []byte{0xAA, 0x55, 0xAA, 0x55}},
+		{"sequential", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Should not panic
+			result := CalcSum32(tt.data)
+
+			// Result should be deterministic
+			result2 := CalcSum32(tt.data)
+			if result != result2 {
+				t.Errorf("CalcSum32 not deterministic: got %X and %X", result, result2)
+			}
+		})
+	}
+}
+
+// TestCalcSum32Uniqueness verifies different inputs produce different checksums
+func TestCalcSum32Uniqueness(t *testing.T) {
+	inputs := [][]byte{
+		{0x01},
+		{0x02},
+		{0x01, 0x02},
+		{0x02, 0x01},
+		{0x01, 0x02, 0x03},
+	}
+
+	checksums := make(map[uint32]int)
+	for i, input := range inputs {
+		sum := CalcSum32(input)
+		if prevIdx, exists := checksums[sum]; exists {
+			t.Errorf("collision: input %d and %d both produce checksum 0x%X", prevIdx, i, sum)
+		}
+		checksums[sum] = i
+	}
+}
