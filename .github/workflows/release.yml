@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: ''
+            archive: tar.gz
+          - goos: windows
+            goarch: amd64
+            suffix: '.exe'
+            archive: zip
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: 1.25
+
+    - name: Get version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Build
+      run: |
+        env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v -ldflags "-X main.Version=${{ steps.version.outputs.VERSION }}" -o erupe-ce${{ matrix.suffix }}
+
+    - name: Prepare release directory
+      run: |
+        mkdir -p release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+        cp erupe-ce${{ matrix.suffix }} release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}/
+        cp config.json release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}/
+        cp -r www/ release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}/
+        cp -r savedata/ release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}/
+        cp -r bin/ release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}/
+        cp -r bundled-schema/ release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}/
+        cp -r schemas/ release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}/
+        [ -f README.md ] && cp README.md release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}/ || true
+        [ -f CHANGELOG.md ] && cp CHANGELOG.md release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}/ || true
+
+    - name: Create tar.gz archive
+      if: matrix.archive == 'tar.gz'
+      run: |
+        cd release
+        tar -czvf erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+
+    - name: Create zip archive
+      if: matrix.archive == 'zip'
+      run: |
+        cd release
+        zip -r erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v5
+      with:
+        name: erupe-ce-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: release/erupe-ce-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.archive }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Get version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v5
+      with:
+        path: artifacts
+
+    - name: Extract changelog for release
+      id: changelog
+      run: |
+        if [ -f CHANGELOG.md ]; then
+          # Extract content between the version header and the next version header
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # Remove 'v' prefix for changelog matching
+          VERSION_NUM="${VERSION#v}"
+
+          # Try to extract section for this version, fall back to Unreleased
+          NOTES=$(awk "/^## \[?${VERSION_NUM}\]?|^## \[?${VERSION}\]?/,/^## \[?[0-9]/" CHANGELOG.md | head -n -1)
+
+          if [ -z "$NOTES" ]; then
+            NOTES=$(awk '/^## \[?Unreleased\]?/,/^## \[?[0-9]/' CHANGELOG.md | head -n -1)
+          fi
+
+          if [ -z "$NOTES" ]; then
+            NOTES="Release ${VERSION}"
+          fi
+
+          # Write to file for multiline support
+          echo "$NOTES" > release_notes.md
+        else
+          echo "Release ${{ steps.version.outputs.VERSION }}" > release_notes.md
+        fi
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: Erupe ${{ steps.version.outputs.VERSION }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: ${{ contains(steps.version.outputs.VERSION, '-rc') || contains(steps.version.outputs.VERSION, '-beta') || contains(steps.version.outputs.VERSION, '-alpha') }}
+        files: |
+          artifacts/**/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -33,6 +33,9 @@ func cleanDB(db *sqlx.DB) {
 	_ = db.MustExec("DELETE FROM users")
 }
 
+// Version is set at build time via -ldflags "-X main.Version=v1.0.0"
+var Version = "dev"
+
 var Commit = func() string {
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, setting := range info.Settings {
@@ -117,7 +120,11 @@ func main() {
 	defer zapLogger.Sync()
 	logger := zapLogger.Named("main")
 
-	logger.Info(fmt.Sprintf("Starting Erupe (9.2-%s)", Commit()))
+	if Version == "dev" {
+		logger.Info(fmt.Sprintf("Starting Erupe (dev-%s)", Commit()))
+	} else {
+		logger.Info(fmt.Sprintf("Starting Erupe (%s-%s)", Version, Commit()))
+	}
 
 	if config.ErupeConfig.Database.Password == "" {
 		preventClose("Database password is blank")
