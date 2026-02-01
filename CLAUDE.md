@@ -389,3 +389,13 @@ The codebase supports multiple game client versions through:
 - Binary file compatibility (quests/scenarios in `bin/`)
 
 Primary focus: G10-ZZ (ClientMode), with varying support for older versions.
+
+## Project Roadmap
+
+See [IMPROVEMENTS.md](IMPROVEMENTS.md) for:
+
+- Prioritized improvement recommendations
+- Release milestones for 9.3.0
+- Database performance optimizations
+- Feature completeness tracking
+- Technical debt items
