@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"erupe-ce/config"
+	"erupe-ce/network/mhfpacket"
 
 	"go.uber.org/zap"
 )
@@ -480,5 +481,267 @@ func TestConfigStruct(t *testing.T) {
 	}
 	if !cfg.Enable {
 		t.Error("Config Enable should be true")
+	}
+}
+
+func TestServerBroadcastMHF_NoSessions(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	cfg := &Config{
+		ID:          1,
+		Logger:      logger,
+		ErupeConfig: &config.Config{DevMode: true},
+	}
+
+	s := NewServer(cfg)
+
+	// Should not panic with no sessions
+	pkt := &mhfpacket.MsgSysAck{
+		AckHandle:        1,
+		IsBufferResponse: false,
+		ErrorCode:        0,
+		AckData:          []byte{0x00},
+	}
+
+	s.BroadcastMHF(pkt, nil)
+}
+
+func TestServerBroadcastMHF_WithSession(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	cfg := &Config{
+		ID:          1,
+		Logger:      logger,
+		ErupeConfig: &config.Config{DevMode: true},
+	}
+
+	s := NewServer(cfg)
+	session := createMockSession(1, s)
+	s.sessions[nil] = session
+
+	pkt := &mhfpacket.MsgSysAck{
+		AckHandle:        1,
+		IsBufferResponse: false,
+		ErrorCode:        0,
+		AckData:          []byte{0x00},
+	}
+
+	s.BroadcastMHF(pkt, nil)
+
+	// Check if packet was queued
+	select {
+	case p := <-session.sendPackets:
+		if p.data == nil {
+			t.Error("Packet data should not be nil")
+		}
+	default:
+		t.Error("No packet queued to session")
+	}
+}
+
+func TestServerBroadcastMHF_SkipsOrigin(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	cfg := &Config{
+		ID:          1,
+		Logger:      logger,
+		ErupeConfig: &config.Config{DevMode: true},
+	}
+
+	s := NewServer(cfg)
+	session1 := createMockSession(1, s)
+	session2 := createMockSession(2, s)
+	s.sessions[nil] = session1
+	s.sessions[session2.rawConn] = session2
+
+	pkt := &mhfpacket.MsgSysAck{
+		AckHandle:        1,
+		IsBufferResponse: false,
+		ErrorCode:        0,
+		AckData:          []byte{0x00},
+	}
+
+	// Broadcast from session1 - should skip session1
+	s.BroadcastMHF(pkt, session1)
+
+	// session1 should not receive the packet
+	select {
+	case <-session1.sendPackets:
+		t.Error("Origin session should not receive broadcast")
+	default:
+		// Good - no packet for origin
+	}
+}
+
+func TestServerFindSessionByCharID_Found(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	cfg := &Config{
+		ID:          1,
+		Logger:      logger,
+		ErupeConfig: &config.Config{DevMode: true},
+	}
+
+	s := NewServer(cfg)
+	s.Channels = []*Server{s}
+
+	session := createMockSession(12345, s)
+	s.sessions[nil] = session
+
+	// Search for existing character
+	found := s.FindSessionByCharID(12345)
+	if found == nil {
+		t.Error("Expected to find session")
+	}
+	if found != session {
+		t.Error("Found wrong session")
+	}
+}
+
+func TestServerFindObjectByChar_Found(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	cfg := &Config{
+		ID:          1,
+		Logger:      logger,
+		ErupeConfig: &config.Config{DevMode: true},
+	}
+
+	s := NewServer(cfg)
+
+	// Add a stage with an object
+	stage := NewStage("test_obj_stage")
+	obj := &Object{
+		id:          1,
+		ownerCharID: 12345,
+		x:           100.0,
+		y:           200.0,
+		z:           300.0,
+	}
+	stage.objects[obj.ownerCharID] = obj
+	s.stages["test_obj_stage"] = stage
+
+	// Search for existing object
+	found := s.FindObjectByChar(12345)
+	if found == nil {
+		t.Error("Expected to find object")
+	}
+	if found != obj {
+		t.Error("Found wrong object")
+	}
+}
+
+func TestServerConcurrentBinaryPartsAccess(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	cfg := &Config{
+		ID:          1,
+		Logger:      logger,
+		ErupeConfig: &config.Config{DevMode: true},
+	}
+
+	s := NewServer(cfg)
+
+	var wg sync.WaitGroup
+
+	// Concurrent writers
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				partID := userBinaryPartID{charID: uint32(id), index: uint8(j % 4)}
+				s.userBinaryPartsLock.Lock()
+				s.userBinaryParts[partID] = []byte{byte(id), byte(j)}
+				s.userBinaryPartsLock.Unlock()
+			}
+		}(i)
+	}
+
+	// Concurrent readers
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 20; j++ {
+				s.userBinaryPartsLock.RLock()
+				_ = len(s.userBinaryParts)
+				s.userBinaryPartsLock.RUnlock()
+			}
+		}()
+	}
+
+	wg.Wait()
+}
+
+func TestServerNextSemaphoreID(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	cfg := &Config{
+		ID:          1,
+		Logger:      logger,
+		ErupeConfig: &config.Config{DevMode: true},
+	}
+
+	s := NewServer(cfg)
+
+	// Get multiple IDs and verify they're unique
+	ids := make(map[uint32]bool)
+	for i := 0; i < 10; i++ {
+		id := s.NextSemaphoreID()
+		if ids[id] {
+			t.Errorf("Duplicate semaphore ID: %d", id)
+		}
+		ids[id] = true
+
+		// IDs should be >= 7 (reserved indexes skipped)
+		if id < 7 {
+			t.Errorf("Semaphore ID %d should be >= 7", id)
+		}
+	}
+}
+
+func TestServerNextSemaphoreID_WrapAround(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	cfg := &Config{
+		ID:          1,
+		Logger:      logger,
+		ErupeConfig: &config.Config{DevMode: true},
+	}
+
+	s := NewServer(cfg)
+
+	// Set semaphoreIndex to near max uint32 to test wrap-around
+	s.semaphoreIndex = ^uint32(0) - 1 // Max uint32 - 1
+
+	id1 := s.NextSemaphoreID()
+	id2 := s.NextSemaphoreID()
+
+	// After wrap-around, should skip to 7
+	if id1 < 7 && id1 != 0 {
+		t.Errorf("After wrap-around, first ID should be >= 7, got %d", id1)
+	}
+
+	if id1 == id2 {
+		t.Error("IDs should be different")
+	}
+}
+
+func TestServerNextSemaphoreID_SkipsExisting(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	cfg := &Config{
+		ID:          1,
+		Logger:      logger,
+		ErupeConfig: &config.Config{DevMode: true},
+	}
+
+	s := NewServer(cfg)
+
+	// Pre-populate with some semaphores
+	for i := uint32(7); i <= 15; i++ {
+		s.semaphore["test_"+string(rune('a'+i))] = &Semaphore{id: i}
+	}
+
+	// Get a new ID - should skip the existing ones
+	id := s.NextSemaphoreID()
+
+	// Verify ID is not one of the existing ones
+	for _, sema := range s.semaphore {
+		if sema.id == id {
+			t.Errorf("NextSemaphoreID returned existing ID: %d", id)
+		}
 	}
 }

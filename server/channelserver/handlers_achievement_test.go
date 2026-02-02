@@ -2,6 +2,8 @@ package channelserver
 
 import (
 	"testing"
+
+	"erupe-ce/network/mhfpacket"
 )
 
 func TestGetAchData_Level0(t *testing.T) {
@@ -187,5 +189,54 @@ func TestAchievementCurveMap_Coverage(t *testing.T) {
 		if !found {
 			t.Errorf("Achievement ID %d maps to unknown curve", id)
 		}
+	}
+}
+
+func TestHandleMsgMhfSetCaAchievementHist(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfSetCaAchievementHist{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfSetCaAchievementHist(session, pkt)
+
+	// Verify response packet was queued
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// Test empty achievement handlers don't panic
+func TestEmptyAchievementHandlers(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	tests := []struct {
+		name    string
+		handler func(s *Session, p mhfpacket.MHFPacket)
+	}{
+		{"handleMsgMhfResetAchievement", handleMsgMhfResetAchievement},
+		{"handleMsgMhfPaymentAchievement", handleMsgMhfPaymentAchievement},
+		{"handleMsgMhfDisplayedAchievement", handleMsgMhfDisplayedAchievement},
+		{"handleMsgMhfGetCaAchievementHist", handleMsgMhfGetCaAchievementHist},
+		{"handleMsgMhfSetCaAchievement", handleMsgMhfSetCaAchievement},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s panicked: %v", tt.name, r)
+				}
+			}()
+			tt.handler(session, nil)
+		})
 	}
 }

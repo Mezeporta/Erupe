@@ -110,3 +110,47 @@ func TestHandleMsgMhfEnumerateRanking_State3(t *testing.T) {
 		t.Error("No response packet queued")
 	}
 }
+
+func TestHandleMsgMhfVoteFesta(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfVoteFesta{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfVoteFesta(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestEmptyFestaHandlers(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	tests := []struct {
+		name    string
+		handler func(s *Session, p mhfpacket.MHFPacket)
+	}{
+		{"handleMsgMhfEntryTournament", handleMsgMhfEntryTournament},
+		{"handleMsgMhfAcquireTournament", handleMsgMhfAcquireTournament},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s panicked: %v", tt.name, r)
+				}
+			}()
+			tt.handler(session, nil)
+		})
+	}
+}

@@ -101,6 +101,21 @@ func TestEmptyReserveHandlers(t *testing.T) {
 		{"handleMsgSysReserve18F", handleMsgSysReserve18F},
 		{"handleMsgSysReserve19E", handleMsgSysReserve19E},
 		{"handleMsgSysReserve19F", handleMsgSysReserve19F},
+		{"handleMsgSysReserve1A4", handleMsgSysReserve1A4},
+		{"handleMsgSysReserve1A6", handleMsgSysReserve1A6},
+		{"handleMsgSysReserve1A7", handleMsgSysReserve1A7},
+		{"handleMsgSysReserve1A8", handleMsgSysReserve1A8},
+		{"handleMsgSysReserve1A9", handleMsgSysReserve1A9},
+		{"handleMsgSysReserve1AA", handleMsgSysReserve1AA},
+		{"handleMsgSysReserve1AB", handleMsgSysReserve1AB},
+		{"handleMsgSysReserve1AC", handleMsgSysReserve1AC},
+		{"handleMsgSysReserve1AD", handleMsgSysReserve1AD},
+		{"handleMsgSysReserve1AE", handleMsgSysReserve1AE},
+		{"handleMsgSysReserve1AF", handleMsgSysReserve1AF},
+		{"handleMsgSysReserve19B", handleMsgSysReserve19B},
+		{"handleMsgSysReserve192", handleMsgSysReserve192},
+		{"handleMsgSysReserve193", handleMsgSysReserve193},
+		{"handleMsgSysReserve194", handleMsgSysReserve194},
 	}
 
 	for _, tt := range tests {

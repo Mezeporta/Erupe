@@ -200,3 +200,115 @@ func TestSessionQueueSendNonBlocking_FullQueue(t *testing.T) {
 		t.Error("QueueSendNonBlocking blocked on full queue")
 	}
 }
+
+// Additional handler tests for coverage
+
+func TestHandleMsgMhfGetGuildWeeklyBonusMaster(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetGuildWeeklyBonusMaster{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfGetGuildWeeklyBonusMaster(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgMhfGetGuildWeeklyBonusActiveCount(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetGuildWeeklyBonusActiveCount{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfGetGuildWeeklyBonusActiveCount(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgMhfAddGuildWeeklyBonusExceptionalUser(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfAddGuildWeeklyBonusExceptionalUser{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfAddGuildWeeklyBonusExceptionalUser(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestEmptyHandlers_NoDb(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	// Test handlers that are empty and should not panic
+	tests := []struct {
+		name    string
+		handler func(s *Session, p mhfpacket.MHFPacket)
+	}{
+		{"handleMsgHead", handleMsgHead},
+		{"handleMsgSysExtendThreshold", handleMsgSysExtendThreshold},
+		{"handleMsgSysEnd", handleMsgSysEnd},
+		{"handleMsgSysNop", handleMsgSysNop},
+		{"handleMsgSysAck", handleMsgSysAck},
+		{"handleMsgSysUpdateRight", handleMsgSysUpdateRight},
+		{"handleMsgSysAuthQuery", handleMsgSysAuthQuery},
+		{"handleMsgSysAuthTerminal", handleMsgSysAuthTerminal},
+		{"handleMsgCaExchangeItem", handleMsgCaExchangeItem},
+		{"handleMsgMhfServerCommand", handleMsgMhfServerCommand},
+		{"handleMsgMhfSetLoginwindow", handleMsgMhfSetLoginwindow},
+		{"handleMsgSysTransBinary", handleMsgSysTransBinary},
+		{"handleMsgSysCollectBinary", handleMsgSysCollectBinary},
+		{"handleMsgSysGetState", handleMsgSysGetState},
+		{"handleMsgSysSerialize", handleMsgSysSerialize},
+		{"handleMsgSysEnumlobby", handleMsgSysEnumlobby},
+		{"handleMsgSysEnumuser", handleMsgSysEnumuser},
+		{"handleMsgSysInfokyserver", handleMsgSysInfokyserver},
+		{"handleMsgMhfGetCaUniqueID", handleMsgMhfGetCaUniqueID},
+		{"handleMsgMhfEnumerateItem", handleMsgMhfEnumerateItem},
+		{"handleMsgMhfAcquireItem", handleMsgMhfAcquireItem},
+		{"handleMsgMhfGetExtraInfo", handleMsgMhfGetExtraInfo},
+		{"handleMsgMhfGetCogInfo", handleMsgMhfGetCogInfo},
+		{"handleMsgMhfStampcardPrize", handleMsgMhfStampcardPrize},
+		{"handleMsgMhfUnreserveSrg", handleMsgMhfUnreserveSrg},
+		{"handleMsgMhfKickExportForce", handleMsgMhfKickExportForce},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s panicked: %v", tt.name, r)
+				}
+			}()
+			tt.handler(session, nil)
+		})
+	}
+}
+

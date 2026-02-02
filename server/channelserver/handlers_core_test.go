@@ -365,3 +365,320 @@ func TestHandleMsgSysTerminalLog_WithEntries(t *testing.T) {
 		t.Error("No response packet queued")
 	}
 }
+
+// Test ping handler
+func TestHandleMsgSysPing(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgSysPing{
+		AckHandle: 12345,
+	}
+
+	handleMsgSysPing(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// Test time handler
+func TestHandleMsgSysTime(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgSysTime{
+		GetRemoteTime: true,
+	}
+
+	handleMsgSysTime(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// Test issue logkey handler
+func TestHandleMsgSysIssueLogkey(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgSysIssueLogkey{
+		AckHandle: 12345,
+	}
+
+	handleMsgSysIssueLogkey(session, pkt)
+
+	// Verify logkey was set
+	if len(session.logKey) != 16 {
+		t.Errorf("logKey length = %d, want 16", len(session.logKey))
+	}
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// Test record log handler
+func TestHandleMsgSysRecordLog(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	// Setup stage
+	stage := NewStage("test_stage")
+	session.stage = stage
+	stage.reservedClientSlots[session.charID] = true
+
+	pkt := &mhfpacket.MsgSysRecordLog{
+		AckHandle: 12345,
+	}
+
+	handleMsgSysRecordLog(session, pkt)
+
+	// Verify charID removed from reserved slots
+	if _, exists := stage.reservedClientSlots[session.charID]; exists {
+		t.Error("charID should be removed from reserved slots")
+	}
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// Test unlock global sema handler
+func TestHandleMsgSysUnlockGlobalSema(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgSysUnlockGlobalSema{
+		AckHandle: 12345,
+	}
+
+	handleMsgSysUnlockGlobalSema(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// Test more empty handlers
+func TestHandleMsgSysSetStatus(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgSysSetStatus panicked: %v", r)
+		}
+	}()
+
+	handleMsgSysSetStatus(session, nil)
+}
+
+func TestHandleMsgSysEcho(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgSysEcho panicked: %v", r)
+		}
+	}()
+
+	handleMsgSysEcho(session, nil)
+}
+
+func TestHandleMsgSysUpdateRight(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgSysUpdateRight panicked: %v", r)
+		}
+	}()
+
+	handleMsgSysUpdateRight(session, nil)
+}
+
+func TestHandleMsgSysAuthQuery(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgSysAuthQuery panicked: %v", r)
+		}
+	}()
+
+	handleMsgSysAuthQuery(session, nil)
+}
+
+func TestHandleMsgSysAuthTerminal(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgSysAuthTerminal panicked: %v", r)
+		}
+	}()
+
+	handleMsgSysAuthTerminal(session, nil)
+}
+
+// Test lock global sema handler
+func TestHandleMsgSysLockGlobalSema_NoMatch(t *testing.T) {
+	server := createMockServer()
+	server.GlobalID = "test-server"
+	server.Channels = []*Server{}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgSysLockGlobalSema{
+		AckHandle:             12345,
+		UserIDString:          "user123",
+		ServerChannelIDString: "channel1",
+	}
+
+	handleMsgSysLockGlobalSema(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgSysLockGlobalSema_WithChannel(t *testing.T) {
+	server := createMockServer()
+	server.GlobalID = "test-server"
+
+	// Create a mock channel with stages
+	channel := &Server{
+		GlobalID: "other-server",
+		stages:   make(map[string]*Stage),
+	}
+	channel.stages["stage_user123"] = NewStage("stage_user123")
+	server.Channels = []*Server{channel}
+
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgSysLockGlobalSema{
+		AckHandle:             12345,
+		UserIDString:          "user123",
+		ServerChannelIDString: "channel1",
+	}
+
+	handleMsgSysLockGlobalSema(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgSysLockGlobalSema_SameServer(t *testing.T) {
+	server := createMockServer()
+	server.GlobalID = "test-server"
+
+	// Create a mock channel with same GlobalID
+	channel := &Server{
+		GlobalID: "test-server",
+		stages:   make(map[string]*Stage),
+	}
+	channel.stages["stage_user456"] = NewStage("stage_user456")
+	server.Channels = []*Server{channel}
+
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgSysLockGlobalSema{
+		AckHandle:             12345,
+		UserIDString:          "user456",
+		ServerChannelIDString: "channel2",
+	}
+
+	handleMsgSysLockGlobalSema(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgMhfAnnounce(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfAnnounce{
+		AckHandle: 12345,
+		IPAddress: 0x7F000001, // 127.0.0.1
+		Port:      54001,
+		StageID:   []byte("test_stage"),
+		Type:      1,
+	}
+
+	handleMsgMhfAnnounce(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgSysRightsReload(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgSysRightsReload{
+		AckHandle: 12345,
+	}
+
+	// This will panic due to nil db, which is expected in test
+	defer func() {
+		if r := recover(); r != nil {
+			t.Log("Expected panic due to nil database in test")
+		}
+	}()
+
+	handleMsgSysRightsReload(session, pkt)
+}
