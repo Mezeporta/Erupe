@@ -184,6 +184,12 @@ func main() {
 		preventClose(fmt.Sprintf("Database: Failed to open, %s", err.Error()))
 	}
 
+	// Configure connection pool for concurrent players
+	db.SetMaxOpenConns(50)              // Support 50+ concurrent players
+	db.SetMaxIdleConns(10)              // Keep idle connections ready
+	db.SetConnMaxLifetime(5 * time.Minute) // Recycle stale connections
+	db.SetConnMaxIdleTime(2 * time.Minute) // Close idle connections
+
 	// Test the DB connection.
 	err = db.Ping()
 	if err != nil {
