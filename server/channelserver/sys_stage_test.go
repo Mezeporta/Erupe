@@ -190,11 +190,13 @@ func TestStageBroadcastMHF_RaceDetectorWithLock(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Goroutine 1: Continuously broadcast
-	wg.Go(func() {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		for i := 0; i < 1000; i++ {
 			stage.BroadcastMHF(pkt, nil)
 		}
-	})
+	}()
 
 	// Goroutine 2: Add and remove sessions WITH proper locking
 	// This simulates the fixed logoutPlayer behavior
@@ -243,5 +245,226 @@ func TestStageBroadcastMHF_NilClientContextSkipped(t *testing.T) {
 		}
 	default:
 		t.Error("session1 did not receive data")
+	}
+}
+
+// TestNewStageBasic verifies Stage creation
+func TestNewStageBasic(t *testing.T) {
+	stageID := "test_stage_001"
+	stage := NewStage(stageID)
+
+	if stage == nil {
+		t.Fatal("NewStage() returned nil")
+	}
+	if stage.id != stageID {
+		t.Errorf("stage.id = %s, want %s", stage.id, stageID)
+	}
+	if stage.clients == nil {
+		t.Error("stage.clients should not be nil")
+	}
+	if stage.reservedClientSlots == nil {
+		t.Error("stage.reservedClientSlots should not be nil")
+	}
+	if stage.objects == nil {
+		t.Error("stage.objects should not be nil")
+	}
+}
+
+// TestStageClientCount tests client counting
+func TestStageClientCount(t *testing.T) {
+	stage := NewStage("test_stage")
+	server := createMockServer()
+
+	if len(stage.clients) != 0 {
+		t.Errorf("initial client count = %d, want 0", len(stage.clients))
+	}
+
+	// Add clients
+	session1 := createMockSession(1, server)
+	session2 := createMockSession(2, server)
+
+	stage.clients[session1] = session1.charID
+	if len(stage.clients) != 1 {
+		t.Errorf("client count after 1 add = %d, want 1", len(stage.clients))
+	}
+
+	stage.clients[session2] = session2.charID
+	if len(stage.clients) != 2 {
+		t.Errorf("client count after 2 adds = %d, want 2", len(stage.clients))
+	}
+
+	// Remove a client
+	delete(stage.clients, session1)
+	if len(stage.clients) != 1 {
+		t.Errorf("client count after 1 remove = %d, want 1", len(stage.clients))
+	}
+}
+
+// TestStageReservation tests stage reservation
+func TestStageReservation(t *testing.T) {
+	stage := NewStage("test_stage")
+
+	if len(stage.reservedClientSlots) != 0 {
+		t.Errorf("initial reservations = %d, want 0", len(stage.reservedClientSlots))
+	}
+
+	// Reserve a slot using character ID
+	stage.reservedClientSlots[12345] = true
+	if len(stage.reservedClientSlots) != 1 {
+		t.Errorf("reservations after 1 add = %d, want 1", len(stage.reservedClientSlots))
+	}
+}
+
+// TestStageBinaryData tests setting and getting stage binary data
+func TestStageBinaryData(t *testing.T) {
+	stage := NewStage("test_stage")
+
+	// rawBinaryData is initialized by NewStage
+	if stage.rawBinaryData == nil {
+		t.Error("rawBinaryData should not be nil after NewStage")
+	}
+
+	// Set binary data
+	key := stageBinaryKey{id0: 1, id1: 2}
+	testData := []byte{0x01, 0x02, 0x03, 0x04}
+	stage.rawBinaryData[key] = testData
+
+	if len(stage.rawBinaryData) != 1 {
+		t.Errorf("rawBinaryData length = %d, want 1", len(stage.rawBinaryData))
+	}
+}
+
+// TestStageLockUnlock tests stage locking
+func TestStageLockUnlock(t *testing.T) {
+	stage := NewStage("test_stage")
+
+	// Test lock/unlock without deadlock
+	stage.Lock()
+	stage.password = "test"
+	stage.Unlock()
+
+	stage.RLock()
+	password := stage.password
+	stage.RUnlock()
+
+	if password != "test" {
+		t.Error("stage password should be 'test'")
+	}
+}
+
+// TestStageHostSession tests host session tracking
+func TestStageHostSession(t *testing.T) {
+	stage := NewStage("test_stage")
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	if stage.host != nil {
+		t.Error("initial host should be nil")
+	}
+
+	stage.host = session
+	if stage.host == nil {
+		t.Error("host should not be nil after setting")
+	}
+	if stage.host.charID != 1 {
+		t.Errorf("host.charID = %d, want 1", stage.host.charID)
+	}
+}
+
+// TestStageMultipleClients tests stage with multiple clients
+func TestStageMultipleClients(t *testing.T) {
+	stage := NewStage("test_stage")
+	server := createMockServer()
+
+	// Add many clients
+	sessions := make([]*Session, 10)
+	for i := range sessions {
+		sessions[i] = createMockSession(uint32(i+1), server)
+		stage.clients[sessions[i]] = sessions[i].charID
+	}
+
+	if len(stage.clients) != 10 {
+		t.Errorf("client count = %d, want 10", len(stage.clients))
+	}
+
+	// Verify each client is tracked
+	for _, s := range sessions {
+		if _, ok := stage.clients[s]; !ok {
+			t.Errorf("session with charID %d not found in stage", s.charID)
+		}
+	}
+}
+
+// TestStageNewMaxPlayers tests default max players
+func TestStageNewMaxPlayers(t *testing.T) {
+	stage := NewStage("test_stage")
+
+	// Default max players is 4
+	if stage.maxPlayers != 4 {
+		t.Errorf("initial maxPlayers = %d, want 4", stage.maxPlayers)
+	}
+}
+
+// TestNextObjectID tests object ID generation
+func TestNextObjectID(t *testing.T) {
+	stage := NewStage("test_stage")
+
+	// Generate several object IDs
+	ids := make(map[uint32]bool)
+	for i := 0; i < 10; i++ {
+		id := stage.NextObjectID()
+		if ids[id] {
+			t.Errorf("duplicate object ID generated: %d", id)
+		}
+		ids[id] = true
+	}
+}
+
+// TestNextObjectIDWrap tests that object ID wraps at 127
+func TestNextObjectIDWrap(t *testing.T) {
+	stage := NewStage("test_stage")
+	stage.objectIndex = 125
+
+	// Generate IDs to trigger wrap
+	stage.NextObjectID() // 126
+	stage.NextObjectID() // should wrap to 1
+
+	// After wrap, objectIndex should be 1
+	if stage.objectIndex != 1 {
+		t.Errorf("objectIndex after wrap = %d, want 1", stage.objectIndex)
+	}
+}
+
+// TestIsCharInQuestByID tests character quest membership check
+func TestIsCharInQuestByID(t *testing.T) {
+	stage := NewStage("test_stage")
+
+	// No reservations - should return false
+	if stage.isCharInQuestByID(12345) {
+		t.Error("should return false when no reservations exist")
+	}
+
+	// Add reservation
+	stage.reservedClientSlots[12345] = true
+
+	if !stage.isCharInQuestByID(12345) {
+		t.Error("should return true when character is reserved")
+	}
+}
+
+// TestIsQuest tests quest detection
+func TestIsQuest(t *testing.T) {
+	stage := NewStage("test_stage")
+
+	// No reservations - not a quest
+	if stage.isQuest() {
+		t.Error("should return false when no reservations exist")
+	}
+
+	// Add reservation - becomes a quest
+	stage.reservedClientSlots[12345] = true
+
+	if !stage.isQuest() {
+		t.Error("should return true when reservations exist")
 	}
 }
