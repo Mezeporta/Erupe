@@ -287,7 +287,9 @@ func handleMsgSysBackStage(s *Session, p mhfpacket.MHFPacket) {
 	s.stageMoveStack.Unlock()
 	backStage, err := s.stageMoveStack.Pop()
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to pop stage from move stack", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
 	}
 
 	if _, exists := s.stage.reservedClientSlots[s.charID]; exists {

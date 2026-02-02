@@ -4,26 +4,36 @@ This document outlines prioritized improvements identified through codebase anal
 
 ---
 
+## Progress Summary
+
+| Area | Status |
+|------|--------|
+| Tier 1: Critical Stability Fixes | ✅ Complete (7/7) |
+| Tier 2: Security Updates | Pending |
+| Tier 3: Important Bug Fixes | Partial (3/6) |
+| Tier 4: Version Compatibility | Partial (3/7) |
+| Tier 5: Warehouse & Save System | Pending |
+| Test Coverage (channelserver) | 25% (was 7.5%) |
+| CI: gofmt + golangci-lint | ✅ Added |
+| Panic Cleanup | ✅ Complete (51 removed, 3 remain in tests/lib) |
+
+---
+
 ## Cherry-Pick from Main Branch
 
 The `main` branch is 589 commits ahead of `9.2.0-clean` but is unstable for players. The following commits should be cherry-picked (and fixed if necessary) for 9.3.0.
 
-### Tier 1: Critical Stability Fixes (Cherry-pick immediately)
+### Tier 1: Critical Stability Fixes ✅ COMPLETE
 
-| Commit | Description | Files Changed | Risk |
-|--------|-------------|---------------|------|
-| `e1a461e` | fix(stage): fix deadlock preventing stage change | handlers_stage.go, sys_session.go | Low |
-| `060635e` | fix(stage): fix race condition with stages | handlers_stage.go | Low |
-| `1c32be9` | fix(session): race condition | sys_session.go | Low |
-| `73e874f` | fix: array bound crashes on clans | Multiple | Low |
-| `5028355` | prevent nil pointer in MhfGetGuildManageRight | handlers_guild.go | Low |
-| `ba1eea8` | prevent save error crashes | handlers.go, handlers_character.go | Low |
-| `60e86c7` | mitigate LoadDecoMyset crashing on older versions | handlers | Low |
-
-**Command:**
-```bash
-git cherry-pick e1a461e 060635e 1c32be9 73e874f 5028355 ba1eea8 60e86c7
-```
+| Commit | Description | Applied As | Status |
+|--------|-------------|------------|--------|
+| `e1a461e` | fix(stage): fix deadlock preventing stage change | 488e8fa | ✅ Done |
+| `060635e` | fix(stage): fix race condition with stages | e654bc4 | ✅ Done |
+| `1c32be9` | fix(session): race condition | 80c3634 | ✅ Done |
+| `73e874f` | fix: array bound crashes on clans | 4201862 | ✅ Done |
+| `5028355` | prevent nil pointer in MhfGetGuildManageRight | 94175e6 | ✅ Done |
+| `ba1eea8` | prevent save error crashes | 633061c | ✅ Done |
+| `60e86c7` | mitigate LoadDecoMyset crashing on older versions | 813cf16 | ✅ Done |
 
 ### Tier 2: Security Updates (Cherry-pick after Tier 1)
 
@@ -38,25 +48,26 @@ git cherry-pick e1a461e 060635e 1c32be9 73e874f 5028355 ba1eea8 60e86c7
 
 ### Tier 3: Important Bug Fixes (Review before cherry-pick)
 
-| Commit | Description | Files | Notes |
-|--------|-------------|-------|-------|
-| `d1dfc3f` | packet queue fix proposal | 6 files | Review carefully - touches core networking |
-| `76858bb` | bypass full Stage check if reserve slot | handlers_stage.go | Simple fix |
-| `c539905` | implement SysWaitStageBinary timeout | handlers_stage.go | Simple fix |
-| `7459ded` | fix guild poogie outfit unlock | handlers | Simple fix |
-| `8a55c5f` | fix inflated festa rewards | handlers | Review impact |
-| `7d760bd` | fix EntranceServer clan member list limits | entranceserver | Simple fix |
+| Commit | Description | Files | Status |
+|--------|-------------|-------|--------|
+| `d1dfc3f` | packet queue fix proposal | 6 files | Pending - Review carefully |
+| `76858bb` | bypass full Stage check if reserve slot | handlers_stage.go | Pending |
+| `c539905` | implement SysWaitStageBinary timeout | handlers_stage.go | ✅ Done (a66b15d) |
+| `7459ded` | fix guild poogie outfit unlock | handlers | ✅ Done (355c2c0) |
+| `8a55c5f` | fix inflated festa rewards | handlers | Pending |
+| `7d760bd` | fix EntranceServer clan member list limits | entranceserver | ✅ Done (fb14a78) |
 
 ### Tier 4: Version Compatibility Fixes
 
-| Commit | Description | Versions Affected |
-|--------|-------------|-------------------|
-| `8d1c6a7` | S6 compatibility fix | Season 6.0 |
-| `d26ae45` | fix G1 compatibility | G1 |
-| `3d0114c` | fix MhfAcquireCafeItem cost in G1-G5.2 | G1-G5.2 |
-| `8c219be` | fix InfoGuild response on <G10 | Pre-G10 |
-| `183f886` | fix InfoFesta response on S6.0 | S6.0 |
-| `1c4370b` | fix EnumerateFestaMember prior to Z2 | Pre-Z2 |
+| Commit | Description | Versions Affected | Status |
+|--------|-------------|-------------------|--------|
+| `8d1c6a7` | S6 compatibility fix | Season 6.0 | Pending |
+| `d26ae45` | fix G1 compatibility | G1 | Pending |
+| `3d0114c` | fix MhfAcquireCafeItem cost in G1-G5.2 | G1-G5.2 | ✅ Done (e095c5a) |
+| `8c219be` | fix InfoGuild response on <G10 | Pre-G10 | ✅ Done (c4036da) |
+| `183f886` | fix InfoFesta response on S6.0 | S6.0 | Pending |
+| `1c4370b` | fix EnumerateFestaMember prior to Z2 | Pre-Z2 | Pending |
+| - | S6 quest data backporting | Season 6.0 | ✅ Done (021705c) |
 
 ### Tier 5: Warehouse & Save System Fixes (Test thoroughly)
 
@@ -117,10 +128,10 @@ These commits caused or may cause instability:
 ### Verification Checklist
 
 After cherry-picking, verify:
-- [ ] Server starts without errors
+- [x] Server starts without errors
+- [x] No race conditions: `go test -race ./...`
 - [ ] Player can log in
 - [ ] Stage changes work (test quest entry/exit)
-- [ ] No race conditions: `go test -race ./...`
 - [ ] Guild operations work
 - [ ] Warehouse access works
 - [ ] Save/load works correctly
@@ -131,9 +142,15 @@ After cherry-picking, verify:
 
 ### 1. Test Coverage
 
-**Current state:** 7.5% coverage on core channelserver (12,351 lines of code)
+**Current state:** ~25% coverage on core channelserver (improved from 7.5%)
 
-**Recommendations:**
+**Progress:**
+- ✅ Expanded channelserver coverage: 7.5% → 12% → 16% → 20% → 25%
+- ✅ pascalstring coverage at 100%
+- ✅ Added PacketID and core packet tests
+- ✅ Added unit tests for cherry-pick impacted handlers
+
+**Remaining work:**
 - Add tests for packet handlers - 400+ handlers with minimal coverage
 - Focus on critical files:
   - `server/channelserver/handlers_quest.go`
@@ -213,7 +230,12 @@ Files exceeding maintainability guidelines:
 
 ### 6. Enhance CI/CD Pipeline
 
-**Current gaps:**
+**Progress:**
+- ✅ Added gofmt checks to test workflow
+- ✅ Added golangci-lint checks to test workflow
+- ✅ Added release automation workflow
+
+**Remaining gaps:**
 - No code coverage threshold enforcement
 - No security scanning
 - No database migration testing
@@ -307,9 +329,9 @@ go tool cover -html=coverage.out -o coverage.html
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test coverage (channelserver) | 7.5% | 40%+ |
-| Test coverage (overall) | 21.4% | 50%+ |
-| Panic/Fatal calls | 61 | 0 (in handlers) |
+| Test coverage (channelserver) | ~25% | 40%+ |
+| Test coverage (overall) | ~35% | 50%+ |
+| Panic/Fatal calls | 3 (tests/lib only) | 0 (in handlers) ✅ |
 | Ignored errors | ~20 | 0 |
 | TODO/FIXME comments | 14 | 0 |
 | Outdated dependencies | 4+ | 0 |
@@ -339,8 +361,9 @@ The following milestones are organized for the upcoming 9.3.0 release.
 - [ ] Document security implications of `DisableTokenCheck` option
 
 **Graceful Error Handling**
-- [ ] Replace 9 `panic()` calls in `handlers_guild_scout.go` with proper error returns
-- [ ] Replace `panic()` in `handlers_tower.go:43` (GetOwnTowerLevelV3) with stub response
+- [x] Replace 9 `panic()` calls in `handlers_guild_scout.go` with proper error returns
+- [x] Replace `panic()` in `handlers_tower.go:43` (GetOwnTowerLevelV3) with stub response
+- [x] Convert all handler panics to recoverable errors (51 panics removed)
 - [ ] Convert fatal errors to recoverable errors where possible
 
 **Database Connection Resilience**
@@ -463,6 +486,7 @@ The following milestones are organized for the upcoming 9.3.0 release.
 ### Milestone 6: Multi-Version Support
 
 **Client Version Handling**
+- [x] Add RealClientMode infrastructure for multi-version support (279d8b4)
 - [ ] Audit handlers for missing client version checks
 - [ ] Document version-specific packet format differences
 - [ ] Create version compatibility matrix
@@ -529,9 +553,9 @@ Before 9.3.0 release:
 
 | Metric | Current | 9.3.0 Target |
 |--------|---------|--------------|
-| Test coverage (channelserver) | 7.5% | 40%+ |
-| Test coverage (overall) | 21.4% | 50%+ |
-| Panic/Fatal calls | 61 | <10 (critical paths only) |
+| Test coverage (channelserver) | ~25% | 40%+ |
+| Test coverage (overall) | ~35% | 50%+ |
+| Panic/Fatal calls | 3 (tests/lib only) | <10 (critical paths only) ✅ |
 | Ignored errors | ~20 | 0 |
 | TODO/FIXME comments | 18 | <5 |
 | Outdated dependencies | 4+ | 0 |
@@ -542,4 +566,4 @@ Before 9.3.0 release:
 ---
 
 *Generated: 2026-02-01*
-*Updated: 2026-02-01 - Added release milestones*
+*Updated: 2026-02-02 - Marked completed cherry-picks, updated test coverage metrics, panic cleanup complete*

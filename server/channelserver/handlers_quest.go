@@ -112,7 +112,9 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 		if _, err := os.Stat(filepath.Join(s.server.erupeConfig.BinPath, "quest_override.bin")); err == nil {
 			data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, "quest_override.bin"))
 			if err != nil {
-				panic(err)
+				s.logger.Error("failed to read quest_override.bin", zap.Error(err))
+				doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0))
+				return
 			}
 			doAckBufSucceed(s, pkt.AckHandle, data)
 		} else {

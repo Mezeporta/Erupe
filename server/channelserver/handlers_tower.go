@@ -3,6 +3,7 @@ package channelserver
 import (
 	"encoding/hex"
 	"erupe-ce/network/mhfpacket"
+	"go.uber.org/zap"
 )
 
 func handleMsgMhfGetTowerInfo(s *Session, p mhfpacket.MHFPacket) {
@@ -40,7 +41,9 @@ func handleMsgMhfGetTowerInfo(s *Session, p mhfpacket.MHFPacket) {
 		//data, err = hex.DecodeString("0A218EAD000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 		data, err = hex.DecodeString("0A218EAD0000000000000000000000010000001C0000000500050000000000020000000000000000000000000000000000030003000000000003000500050000000300030003000300030003000200030001000300020002000300010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 	case mhfpacket.TowerInfoTypeGetOwnTowerLevelV3:
-		panic("No known response values for GetOwnTowerLevelV3")
+		// TODO: No known response values for GetOwnTowerLevelV3
+		stubGetNoResults(s, pkt.AckHandle)
+		return
 	case mhfpacket.TowerInfoTypeTowerTouhaHistory:
 		data, err = hex.DecodeString("0A218EAD0000000000000000000000010000000000000000000000000000000000000000")
 	case mhfpacket.TowerInfoTypeUnk5:
@@ -72,7 +75,9 @@ func handleMsgMhfGetTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Info("GET_TENROUIRAI request for unknown type")
 	}
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to decode tenrouirai hex data", zap.Error(err))
+		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		return
 	}
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }

@@ -77,7 +77,8 @@ func (s *Server) acceptClients() {
 			if shutdown {
 				break
 			} else {
-				panic(err)
+				s.logger.Error("failed to accept connection", zap.Error(err))
+				continue
 			}
 		}
 

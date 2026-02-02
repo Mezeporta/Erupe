@@ -453,10 +453,6 @@ func CreateGuild(s *Session, guildName string) (int32, error) {
 		return 0, err
 	}
 
-	if err != nil {
-		panic(err)
-	}
-
 	guildResult, err := transaction.Query(
 		"INSERT INTO guilds (name, leader_id) VALUES ($1, $2) RETURNING id",
 		guildName, s.charID,
@@ -745,7 +741,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		s.server.db.QueryRow(`UPDATE guilds SET event_rp=event_rp-$1 WHERE id=$2 RETURNING event_rp`, rp, guild.ID).Scan(&balance)
 		bf.WriteUint32(balance)
 	default:
-		panic(fmt.Sprintf("unhandled operate guild action '%d'", pkt.Action))
+		s.logger.Warn("unhandled operate guild action", zap.Uint8("action", uint8(pkt.Action)))
 	}
 
 	if len(bf.Data()) > 0 {
@@ -1418,28 +1414,31 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		if guild.ID != alliance.ParentGuildID {
 			mems, err := GetGuildMembers(s, alliance.ParentGuildID, false)
 			if err != nil {
-				panic(err)
-			}
-			for _, m := range mems {
-				bf.WriteUint32(m.CharID)
+				s.logger.Error("failed to get parent guild members", zap.Error(err), zap.Uint32("guildID", alliance.ParentGuildID))
+			} else {
+				for _, m := range mems {
+					bf.WriteUint32(m.CharID)
+				}
 			}
 		}
 		if guild.ID != alliance.SubGuild1ID {
 			mems, err := GetGuildMembers(s, alliance.SubGuild1ID, false)
 			if err != nil {
-				panic(err)
-			}
-			for _, m := range mems {
-				bf.WriteUint32(m.CharID)
+				s.logger.Error("failed to get sub guild 1 members", zap.Error(err), zap.Uint32("guildID", alliance.SubGuild1ID))
+			} else {
+				for _, m := range mems {
+					bf.WriteUint32(m.CharID)
+				}
 			}
 		}
 		if guild.ID != alliance.SubGuild2ID {
 			mems, err := GetGuildMembers(s, alliance.SubGuild2ID, false)
 			if err != nil {
-				panic(err)
-			}
-			for _, m := range mems {
-				bf.WriteUint32(m.CharID)
+				s.logger.Error("failed to get sub guild 2 members", zap.Error(err), zap.Uint32("guildID", alliance.SubGuild2ID))
+			} else {
+				for _, m := range mems {
+					bf.WriteUint32(m.CharID)
+				}
 			}
 		}
 	} else {
@@ -1627,13 +1626,17 @@ func handleMsgMhfUpdateGuildIcon(s *Session, p mhfpacket.MHFPacket) {
 	guild, err := GetGuildInfoByID(s, pkt.GuildID)
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to get guild info for icon update", zap.Error(err), zap.Uint32("guildID", pkt.GuildID))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	characterInfo, err := GetCharacterGuildData(s, s.charID)
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to get character guild data for icon update", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	if !characterInfo.IsSubLeader() && !characterInfo.IsLeader {
@@ -1699,7 +1702,9 @@ func handleMsgMhfGetGuildMissionList(s *Session, p mhfpacket.MHFPacket) {
 	decoded, err := hex.DecodeString("000694610000023E000112990023000100000200015DDD232100069462000002F30000005F000C000200000300025DDD232100069463000002EA0000005F0006000100000100015DDD23210006946400000245000000530010000200000400025DDD232100069465000002B60001129B0019000100000200015DDD232100069466000003DC0000001B0010000100000600015DDD232100069467000002DA000112A00019000100000400015DDD232100069468000002A800010DEF0032000200000200025DDD2321000694690000045500000022003C000200000600025DDD23210006946A00000080000122D90046000200000300025DDD23210006946B000001960000003B000A000100000100015DDD23210006946C0000049200000046005A000300000600035DDD23210006946D000000A4000000260018000200000600025DDD23210006946E0000017A00010DE40096000300000100035DDD23210006946F000001BE0000005E0014000200000400025DDD2355000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to decode guild mission list hex data", zap.Error(err))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	doAckBufSucceed(s, pkt.AckHandle, decoded)

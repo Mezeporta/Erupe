@@ -61,7 +61,9 @@ func handleMsgMhfListMember(s *Session, p mhfpacket.MHFPacket) {
 	resp.WriteUint32(0) // Blacklist count
 	err := s.server.db.QueryRow("SELECT blocked FROM characters WHERE id=$1", s.charID).Scan(&csv)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to get blocked list", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+		return
 	}
 	cids := stringsupport.CSVElems(csv)
 	for _, cid := range cids {
@@ -86,7 +88,9 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 	if pkt.Blacklist {
 		err := s.server.db.QueryRow("SELECT blocked FROM characters WHERE id=$1", s.charID).Scan(&csv)
 		if err != nil {
-			panic(err)
+			s.logger.Error("failed to get blocked list for operation", zap.Error(err), zap.Uint32("charID", s.charID))
+			doAckSimpleFail(s, pkt.AckHandle, nil)
+			return
 		}
 		if pkt.Operation {
 			csv = stringsupport.CSVRemove(csv, int(pkt.CharID))
@@ -97,7 +101,9 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 	} else { // Friendlist
 		err := s.server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.charID).Scan(&csv)
 		if err != nil {
-			panic(err)
+			s.logger.Error("failed to get friends list for operation", zap.Error(err), zap.Uint32("charID", s.charID))
+			doAckSimpleFail(s, pkt.AckHandle, nil)
+			return
 		}
 		if pkt.Operation {
 			csv = stringsupport.CSVRemove(csv, int(pkt.CharID))

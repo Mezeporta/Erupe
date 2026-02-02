@@ -15,8 +15,9 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	actorCharGuildData, err := GetCharacterGuildData(s, s.charID)
 
 	if err != nil {
+		s.logger.Error("failed to get character guild data", zap.Error(err), zap.Uint32("charID", s.charID))
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
-		panic(err)
+		return
 	}
 
 	if actorCharGuildData == nil || !actorCharGuildData.CanRecruit() {
@@ -27,15 +28,17 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	guildInfo, err := GetGuildInfoByID(s, actorCharGuildData.GuildID)
 
 	if err != nil {
+		s.logger.Error("failed to get guild info", zap.Error(err), zap.Uint32("guildID", actorCharGuildData.GuildID))
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
-		panic(err)
+		return
 	}
 
 	hasApplication, err := guildInfo.HasApplicationForCharID(s, pkt.CharID)
 
 	if err != nil {
+		s.logger.Error("failed to check application status", zap.Error(err), zap.Uint32("charID", pkt.CharID))
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
-		panic(err)
+		return
 	}
 
 	if hasApplication {
@@ -46,15 +49,18 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	transaction, err := s.server.db.Begin()
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to begin transaction", zap.Error(err))
+		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	err = guildInfo.CreateApplication(s, pkt.CharID, GuildApplicationTypeInvited, transaction)
 
 	if err != nil {
+		s.logger.Error("failed to create guild application", zap.Error(err), zap.Uint32("charID", pkt.CharID))
 		rollbackTransaction(s, transaction)
 		doAckBufFail(s, pkt.AckHandle, nil)
-		panic(err)
+		return
 	}
 
 	mail := &Mail{
@@ -79,8 +85,9 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	err = transaction.Commit()
 
 	if err != nil {
+		s.logger.Error("failed to commit transaction", zap.Error(err))
 		doAckBufFail(s, pkt.AckHandle, nil)
-		panic(err)
+		return
 	}
 
 	doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -92,7 +99,9 @@ func handleMsgMhfCancelGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	guildCharData, err := GetCharacterGuildData(s, s.charID)
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to get character guild data", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	if guildCharData == nil || !guildCharData.CanRecruit() {
@@ -123,7 +132,11 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	guild, err := GetGuildInfoByCharacterId(s, pkt.LeaderID)
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to get guild info by character", zap.Error(err), zap.Uint32("leaderID", pkt.LeaderID))
+		bf.WriteUint32(7) // Error code
+		bf.WriteUint32(0)
+		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+		return
 	}
 
 	app, err := guild.GetApplicationForCharID(s, s.charID, GuildApplicationTypeInvited)
@@ -255,7 +268,9 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 	_, err = bf.Seek(0, io.SeekStart)
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to seek in byte frame", zap.Error(err))
+		doAckBufFail(s, pkt.AckHandle, nil)
+		return
 	}
 
 	bf.WriteUint32(count)

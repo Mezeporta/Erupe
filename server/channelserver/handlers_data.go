@@ -345,7 +345,9 @@ func handleMsgMhfGetPaperData(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Info("GET_PAPER request for unknown type")
 	}
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to decode paper hex data", zap.Error(err))
+		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		return
 	}
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }

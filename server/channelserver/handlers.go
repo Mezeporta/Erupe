@@ -140,22 +140,22 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 
 	_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to update server player count", zap.Error(err))
 	}
 
 	_, err = s.server.db.Exec("UPDATE sign_sessions SET server_id=$1, char_id=$2 WHERE token=$3", s.server.ID, s.charID, s.token)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to update sign session", zap.Error(err), zap.Uint32("charID", s.charID))
 	}
 
 	_, err = s.server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", TimeAdjusted().Unix(), s.charID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to update character last login", zap.Error(err), zap.Uint32("charID", s.charID))
 	}
 
 	_, err = s.server.db.Exec("UPDATE users u SET last_character=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)", s.charID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to update user last character", zap.Error(err), zap.Uint32("charID", s.charID))
 	}
 
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
@@ -199,12 +199,12 @@ func logoutPlayer(s *Session) {
 
 	_, err := s.server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.token)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to clear sign session on logout", zap.Error(err))
 	}
 
 	_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to update server player count on logout", zap.Error(err))
 	}
 
 	var timePlayed int
@@ -282,7 +282,9 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 	logKey := make([]byte, 16)
 	_, err := rand.Read(logKey)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to generate log key", zap.Error(err))
+		doAckBufFail(s, pkt.AckHandle, nil)
+		return
 	}
 
 	// TODO(Andoryuuta): In the offical client, the log key index is off by one,
@@ -1770,7 +1772,9 @@ func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 	dumpSaveData(s, data, "skinhist")
 	_, err = s.server.db.Exec("UPDATE characters SET skin_hist=$1 WHERE id=$2", data, s.charID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to update skin history", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }

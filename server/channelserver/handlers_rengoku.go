@@ -94,7 +94,9 @@ func handleMsgMhfGetRengokuBinary(s *Session, p mhfpacket.MHFPacket) {
 	// a (massively out of date) version resides in the game's /dat/ folder or up to date can be pulled from packets
 	data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, "rengoku_data.bin"))
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to read rengoku_data.bin", zap.Error(err))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0))
+		return
 	}
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }

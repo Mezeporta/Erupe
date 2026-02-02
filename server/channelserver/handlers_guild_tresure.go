@@ -4,6 +4,7 @@ import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/stringsupport"
 	"erupe-ce/network/mhfpacket"
+	"go.uber.org/zap"
 )
 
 type TreasureHunt struct {
@@ -23,7 +24,9 @@ func handleMsgMhfEnumerateGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildTresure)
 	guild, err := GetGuildInfoByCharacterId(s, s.charID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to get guild info", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 	bf := byteframe.NewByteFrame()
 	hunts := 0
@@ -34,7 +37,8 @@ func handleMsgMhfEnumerateGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 		// Remove self from other hunter count
 		hunt.Hunters = stringsupport.CSVRemove(hunt.Hunters, int(s.charID))
 		if err != nil {
-			panic(err)
+			s.logger.Error("failed to scan treasure hunt row", zap.Error(err))
+			continue
 		}
 		if pkt.MaxHunts == 1 {
 			if hunt.HostID != s.charID || hunt.Acquired {
@@ -78,7 +82,9 @@ func handleMsgMhfRegistGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 	huntData := byteframe.NewByteFrame()
 	guild, err := GetGuildInfoByCharacterId(s, s.charID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to get guild info for treasure registration", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
 	}
 	guildCats := getGuildAirouList(s)
 	destination := bf.ReadUint32()
@@ -103,7 +109,9 @@ func handleMsgMhfRegistGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 	_, err = s.server.db.Exec("INSERT INTO guild_hunts (guild_id, host_id, destination, level, return, hunt_data, cats_used) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 		guild.ID, s.charID, destination, level, TimeAdjusted().Unix(), huntData.Data(), catsUsed)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to insert guild hunt", zap.Error(err), zap.Uint32("guildID", guild.ID))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -112,7 +120,9 @@ func handleMsgMhfAcquireGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireGuildTresure)
 	_, err := s.server.db.Exec("UPDATE guild_hunts SET acquired=true WHERE id=$1", pkt.HuntID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to acquire guild treasure", zap.Error(err), zap.Uint32("huntID", pkt.HuntID))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -145,12 +155,16 @@ func handleMsgMhfOperateGuildTresureReport(s *Session, p mhfpacket.MHFPacket) {
 			// Register to selected hunt
 			err := s.server.db.QueryRow("SELECT hunters FROM guild_hunts WHERE id=$1", pkt.HuntID).Scan(&csv)
 			if err != nil {
-				panic(err)
+				s.logger.Error("failed to get hunters for guild hunt", zap.Error(err), zap.Uint32("huntID", pkt.HuntID))
+				doAckSimpleFail(s, pkt.AckHandle, nil)
+				return
 			}
 			csv = stringsupport.CSVAdd(csv, int(s.charID))
 			_, err = s.server.db.Exec("UPDATE guild_hunts SET hunters=$1 WHERE id=$2", csv, pkt.HuntID)
 			if err != nil {
-				panic(err)
+				s.logger.Error("failed to update hunters for guild hunt", zap.Error(err), zap.Uint32("huntID", pkt.HuntID))
+				doAckSimpleFail(s, pkt.AckHandle, nil)
+				return
 			}
 		}
 	} else if pkt.State == 1 { // Collected by hunter
@@ -158,12 +172,16 @@ func handleMsgMhfOperateGuildTresureReport(s *Session, p mhfpacket.MHFPacket) {
 	} else if pkt.State == 2 { // Claim treasure
 		err := s.server.db.QueryRow("SELECT treasure FROM guild_hunts WHERE id=$1", pkt.HuntID).Scan(&csv)
 		if err != nil {
-			panic(err)
+			s.logger.Error("failed to get treasure for guild hunt", zap.Error(err), zap.Uint32("huntID", pkt.HuntID))
+			doAckSimpleFail(s, pkt.AckHandle, nil)
+			return
 		}
 		csv = stringsupport.CSVAdd(csv, int(s.charID))
 		_, err = s.server.db.Exec("UPDATE guild_hunts SET treasure=$1 WHERE id=$2", csv, pkt.HuntID)
 		if err != nil {
-			panic(err)
+			s.logger.Error("failed to update treasure for guild hunt", zap.Error(err), zap.Uint32("huntID", pkt.HuntID))
+			doAckSimpleFail(s, pkt.AckHandle, nil)
+			return
 		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

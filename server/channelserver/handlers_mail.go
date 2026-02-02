@@ -258,15 +258,17 @@ func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {
 	mailId := s.mailList[pkt.AccIndex]
 
 	if mailId == 0 {
+		s.logger.Warn("attempting to read mail that doesn't exist in session map", zap.Uint8("accIndex", pkt.AccIndex))
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
-		panic("attempting to read mail that doesn't exist in session map")
+		return
 	}
 
 	mail, err := GetMailByID(s, mailId)
 
 	if err != nil {
+		s.logger.Error("failed to get mail by ID", zap.Error(err), zap.Int("mailID", mailId))
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
-		panic(err)
+		return
 	}
 
 	_ = mail.MarkRead(s)
@@ -285,8 +287,9 @@ func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 	mail, err := GetMailListForCharacter(s, s.charID)
 
 	if err != nil {
+		s.logger.Error("failed to get mail list", zap.Error(err), zap.Uint32("charID", s.charID))
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
-		panic(err)
+		return
 	}
 
 	if s.mailList == nil {
@@ -354,7 +357,9 @@ func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 
 	mail, err := GetMailByID(s, s.mailList[pkt.AccIndex])
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to get mail for operation", zap.Error(err), zap.Uint8("accIndex", pkt.AccIndex))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
 	}
 
 	switch pkt.Operation {
@@ -369,7 +374,9 @@ func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("failed to perform mail operation", zap.Error(err), zap.Uint8("operation", uint8(pkt.Operation)))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
 	}
 
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
