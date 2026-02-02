@@ -475,6 +475,37 @@ func TestChannelStruct(t *testing.T) {
 	}
 }
 
+func TestModeString(t *testing.T) {
+	tests := []struct {
+		mode Mode
+		want string
+	}{
+		{S1, "S1.0"},
+		{S15, "S1.5"},
+		{S2, "S2.0"},
+		{S6, "S6.0"},
+		{F1, "FW.1"},
+		{F5, "FW.5"},
+		{G1, "G1"},
+		{G10, "G10"},
+		{Z1, "Z1"},
+		{Z2, "Z2"},
+		{ZZ, "ZZ"},
+		{Mode(0), "Unknown"},
+		{Mode(-1), "Unknown"},
+		{Mode(100), "Unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := tt.mode.String()
+			if got != tt.want {
+				t.Errorf("Mode(%d).String() = %s, want %s", tt.mode, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestConfigCompleteStructure(t *testing.T) {
 	// Test building a complete config structure
 	cfg := &Config{

@@ -399,3 +399,32 @@ func TestMsgBinChatAllTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestMsgBinMailNotifyParsePanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Parse() should panic with 'implement me'")
+		}
+	}()
+
+	m := MsgBinMailNotify{}
+	bf := byteframe.NewByteFrame()
+	_ = m.Parse(bf)
+}
+
+func TestMsgBinMailNotifyBuildLongName(t *testing.T) {
+	m := MsgBinMailNotify{
+		SenderName: "ThisIsAVeryLongPlayerNameThatExceeds21Characters",
+	}
+
+	bf := byteframe.NewByteFrame()
+	err := m.Build(bf)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+
+	// Data should still be 22 bytes (1 + 21)
+	if len(bf.Data()) != 22 {
+		t.Errorf("Data len = %d, want 22", len(bf.Data()))
+	}
+}

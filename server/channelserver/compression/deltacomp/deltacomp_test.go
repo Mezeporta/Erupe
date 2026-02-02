@@ -111,3 +111,87 @@ func TestDeltaPatch(t *testing.T) {
 		})
 	}
 }
+
+func TestApplyDataDiffEmptyDiff(t *testing.T) {
+	baseData := []byte{1, 2, 3, 4, 5}
+	diff := []byte{}
+
+	result := ApplyDataDiff(diff, baseData)
+	if !bytes.Equal(result, baseData) {
+		t.Errorf("ApplyDataDiff with empty diff should return base data")
+	}
+}
+
+func TestApplyDataDiffEmptyBase(t *testing.T) {
+	baseData := []byte{}
+	diff := []byte{}
+
+	result := ApplyDataDiff(diff, baseData)
+	if len(result) != 0 {
+		t.Errorf("ApplyDataDiff with empty base and diff should return empty")
+	}
+}
+
+func TestCheckReadUint8Error(t *testing.T) {
+	r := bytes.NewReader([]byte{})
+	_, err := checkReadUint8(r)
+	if err == nil {
+		t.Error("checkReadUint8 on empty reader should return error")
+	}
+}
+
+func TestCheckReadUint16Error(t *testing.T) {
+	r := bytes.NewReader([]byte{0x01}) // Only 1 byte, need 2
+	_, err := checkReadUint16(r)
+	if err == nil {
+		t.Error("checkReadUint16 with insufficient data should return error")
+	}
+}
+
+func TestCheckReadUint16Success(t *testing.T) {
+	r := bytes.NewReader([]byte{0x12, 0x34})
+	val, err := checkReadUint16(r)
+	if err != nil {
+		t.Errorf("checkReadUint16 error = %v", err)
+	}
+	if val != 0x1234 {
+		t.Errorf("checkReadUint16 = 0x%04X, want 0x1234", val)
+	}
+}
+
+func TestReadCountError(t *testing.T) {
+	r := bytes.NewReader([]byte{})
+	_, err := readCount(r)
+	if err == nil {
+		t.Error("readCount on empty reader should return error")
+	}
+}
+
+func TestReadCountExtended(t *testing.T) {
+	// When count8 is 0, read count16
+	r := bytes.NewReader([]byte{0x00, 0x01, 0x00}) // count8=0, count16=256
+	count, err := readCount(r)
+	if err != nil {
+		t.Errorf("readCount error = %v", err)
+	}
+	if count != 256 {
+		t.Errorf("readCount = %d, want 256", count)
+	}
+}
+
+func TestReadCountExtendedError(t *testing.T) {
+	// count8 is 0 but not enough bytes for count16
+	r := bytes.NewReader([]byte{0x00, 0x01})
+	_, err := readCount(r)
+	if err == nil {
+		t.Error("readCount with insufficient data for count16 should return error")
+	}
+}
+
+func TestCheckReadUint16EmptyReader(t *testing.T) {
+	r := bytes.NewReader([]byte{})
+	_, err := checkReadUint16(r)
+	if err == nil {
+		t.Error("checkReadUint16 on empty reader should return error")
+	}
+}

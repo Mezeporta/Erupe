@@ -210,3 +210,59 @@ func TestFailureRespIsMinimal(t *testing.T) {
 		}
 	}
 }
+
+func TestNewServer(t *testing.T) {
+	// Test that NewServer creates a valid server
+	cfg := &Config{
+		Logger:      nil,
+		DB:          nil,
+		ErupeConfig: nil,
+	}
+
+	s := NewServer(cfg)
+	if s == nil {
+		t.Fatal("NewServer() returned nil")
+	}
+	if s.isShuttingDown {
+		t.Error("New server should not be shutting down")
+	}
+}
+
+func TestNewServerWithNilConfig(t *testing.T) {
+	// Testing with nil fields in config
+	cfg := &Config{}
+	s := NewServer(cfg)
+	if s == nil {
+		t.Fatal("NewServer() returned nil for empty config")
+	}
+}
+
+func TestServerType(t *testing.T) {
+	// Test Server struct fields
+	s := &Server{}
+	if s.isShuttingDown {
+		t.Error("Zero value server should not be shutting down")
+	}
+	if s.sessions != nil {
+		t.Error("Zero value server should have nil sessions map")
+	}
+}
+
+func TestConfigFields(t *testing.T) {
+	// Test Config struct fields
+	cfg := &Config{
+		Logger:      nil,
+		DB:          nil,
+		ErupeConfig: nil,
+	}
+
+	if cfg.Logger != nil {
+		t.Error("Config Logger should be nil")
+	}
+	if cfg.DB != nil {
+		t.Error("Config DB should be nil")
+	}
+	if cfg.ErupeConfig != nil {
+		t.Error("Config ErupeConfig should be nil")
+	}
+}
