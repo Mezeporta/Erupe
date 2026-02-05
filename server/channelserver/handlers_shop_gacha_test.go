@@ -230,3 +230,192 @@ func TestGachaItemStruct(t *testing.T) {
 		t.Errorf("Quantity = %d, want 20", item.Quantity)
 	}
 }
+
+func TestGetRandomEntries_EmptyEntriesZeroRolls(t *testing.T) {
+	// Note: getRandomEntries with empty entries and rolls > 0 causes infinite loop.
+	// Only test the valid case of 0 rolls with empty entries.
+	entries := []GachaEntry{}
+	result, err := getRandomEntries(entries, 0, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 0 {
+		t.Errorf("expected empty result, got %d entries", len(result))
+	}
+}
+
+func TestGetRandomEntries_ZeroRolls(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 1.0},
+	}
+	result, err := getRandomEntries(entries, 0, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 0 {
+		t.Errorf("expected 0 results, got %d", len(result))
+	}
+}
+
+func TestGetRandomEntries_SingleEntryNonBox(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 1.0, ItemNumber: 100},
+	}
+	result, err := getRandomEntries(entries, 3, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 3 {
+		t.Errorf("expected 3 results, got %d", len(result))
+	}
+	for i, r := range result {
+		if r.ID != 1 {
+			t.Errorf("result[%d].ID = %d, expected 1", i, r.ID)
+		}
+	}
+}
+
+func TestGetRandomEntries_NonBoxAllowsDuplicates(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 1.0},
+	}
+	result, err := getRandomEntries(entries, 5, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 5 {
+		t.Errorf("expected 5 results, got %d", len(result))
+	}
+	// All should be the same since there's only one entry
+	for i, r := range result {
+		if r.ID != 1 {
+			t.Errorf("result[%d].ID = %d, expected 1", i, r.ID)
+		}
+	}
+}
+
+func TestGetRandomEntries_BoxModeRemovesSelected(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 1.0},
+		{ID: 2, Weight: 1.0},
+		{ID: 3, Weight: 1.0},
+	}
+	result, err := getRandomEntries(entries, 3, true)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 3 {
+		t.Errorf("expected 3 results, got %d", len(result))
+	}
+
+	// In box mode, all entries should be unique
+	seen := make(map[uint32]bool)
+	for _, r := range result {
+		if seen[r.ID] {
+			t.Errorf("duplicate entry in box mode: ID=%d", r.ID)
+		}
+		seen[r.ID] = true
+	}
+}
+
+func TestGetRandomEntries_BoxModeMatchingCount(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 1.0},
+		{ID: 2, Weight: 1.0},
+	}
+	result, err := getRandomEntries(entries, 2, true)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 2 {
+		t.Errorf("expected 2 results, got %d", len(result))
+	}
+
+	// Should contain both entries exactly once
+	seen := make(map[uint32]bool)
+	for _, r := range result {
+		seen[r.ID] = true
+	}
+	if !seen[1] || !seen[2] {
+		t.Errorf("box mode should return all entries when rolls == len(entries)")
+	}
+}
+
+func TestGetRandomEntries_WeightedSelectionBias(t *testing.T) {
+	// Test that weighted selection respects weights
+	entries := []GachaEntry{
+		{ID: 1, Weight: 100.0}, // Very high weight
+		{ID: 2, Weight: 0.001}, // Very low weight
+	}
+
+	// Run many iterations
+	counts := make(map[uint32]int)
+	for i := 0; i < 1000; i++ {
+		result, _ := getRandomEntries(entries, 1, false)
+		if len(result) > 0 {
+			counts[result[0].ID]++
+		}
+	}
+
+	// ID 1 should be selected much more often
+	if counts[1] <= counts[2] {
+		t.Errorf("weighted selection not working: high weight count=%d, low weight count=%d",
+			counts[1], counts[2])
+	}
+}
+
+func TestGetRandomEntries_MultipleEntriesMultipleRolls(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 1.0},
+		{ID: 2, Weight: 1.0},
+		{ID: 3, Weight: 1.0},
+	}
+	result, err := getRandomEntries(entries, 10, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 10 {
+		t.Errorf("expected 10 results, got %d", len(result))
+	}
+
+	// All results should have valid IDs
+	for i, r := range result {
+		if r.ID < 1 || r.ID > 3 {
+			t.Errorf("result[%d].ID = %d, expected 1, 2, or 3", i, r.ID)
+		}
+	}
+}
+
+func TestGetRandomEntries_PreservesEntryData(t *testing.T) {
+	entries := []GachaEntry{
+		{
+			ID:             1,
+			Weight:         1.0,
+			ItemNumber:     100,
+			ItemQuantity:   5,
+			Rarity:         3,
+			FrontierPoints: 500,
+		},
+	}
+	result, err := getRandomEntries(entries, 1, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(result))
+	}
+
+	r := result[0]
+	if r.ItemNumber != 100 {
+		t.Errorf("ItemNumber = %d, expected 100", r.ItemNumber)
+	}
+	if r.ItemQuantity != 5 {
+		t.Errorf("ItemQuantity = %d, expected 5", r.ItemQuantity)
+	}
+	if r.Rarity != 3 {
+		t.Errorf("Rarity = %d, expected 3", r.Rarity)
+	}
+	if r.FrontierPoints != 500 {
+		t.Errorf("FrontierPoints = %d, expected 500", r.FrontierPoints)
+	}
+}
