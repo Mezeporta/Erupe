@@ -27,7 +27,8 @@ Comprehensive configuration documentation for Erupe, the Monster Hunter Frontier
 
 - **[Gameplay Options](gameplay-options.md)** - NP/RP caps, boost times, quest allowances
 - **[Courses](courses.md)** - Subscription course configuration
-- **[In-Game Commands](commands.md)** - Chat commands for players and admins
+- **[In-Game Commands](commands.md)** - Command configuration for server operators
+- **[Player Commands Reference](player-commands.md)** - User-friendly command guide for players
 
 ### Optional Features
 

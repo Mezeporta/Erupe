@@ -2,42 +2,28 @@
 
 In-game chat commands for players and administrators.
 
+> **Looking for player documentation?** See [Player Commands Reference](player-commands.md) for a user-friendly guide to using commands in-game.
+
 ## Configuration
 
 ```json
 {
-  "Commands": [
-    {
-      "Name": "Rights",
-      "Enabled": false,
-      "Prefix": "!rights"
-    },
-    {
-      "Name": "Raviente",
-      "Enabled": true,
-      "Prefix": "!ravi"
-    },
-    {
-      "Name": "Teleport",
-      "Enabled": false,
-      "Prefix": "!tele"
-    },
-    {
-      "Name": "Reload",
-      "Enabled": true,
-      "Prefix": "!reload"
-    },
-    {
-      "Name": "KeyQuest",
-      "Enabled": false,
-      "Prefix": "!kqf"
-    },
-    {
-      "Name": "Course",
-      "Enabled": true,
-      "Prefix": "!course"
-    }
-  ]
+  "Commands": {
+    "Enabled": true,
+    "CommandPrefix": "!",
+    "Reload": { "Enabled": true, "Prefix": "reload" },
+    "Raviente": { "Enabled": true, "Prefix": "ravi" },
+    "Course": { "Enabled": true, "Prefix": "course" },
+    "Rights": { "Enabled": false, "Prefix": "rights" },
+    "Teleport": { "Enabled": false, "Prefix": "tele" },
+    "KeyQuest": { "Enabled": false, "Prefix": "kqf" },
+    "Ban": { "Enabled": false, "Prefix": "ban" },
+    "Help": { "Enabled": true, "Prefix": "help" },
+    "PSN": { "Enabled": true, "Prefix": "psn" },
+    "Discord": { "Enabled": true, "Prefix": "discord" },
+    "Timer": { "Enabled": true, "Prefix": "timer" },
+    "Playtime": { "Enabled": true, "Prefix": "playtime" }
+  }
 }
 ```
 
@@ -194,12 +180,148 @@ Server: "Usage: !rights <number>"
 ### Teleport
 
 **Prefix:** `!tele`
-**Recommended:** Disabled (not yet implemented)
-**Usage:** `!tele <location>`
+**Recommended:** Disabled
+**Usage:** `!tele <x> <y>`
 
-Teleport to specific locations.
+Teleport to specific stage coordinates.
 
-**Status:** Command structure exists but handler not fully implemented in the codebase.
+**Examples:**
+
+```text
+Player types: !tele 500 -200
+Server: "Teleporting to 500 -200"
+[Character moves to coordinates]
+```
+
+**⚠️ SECURITY WARNING:** Allows bypassing normal movement. Only enable for administrators.
+
+---
+
+### Help
+
+**Prefix:** `!help`
+**Recommended:** Enabled
+**Usage:** `!help`
+
+Display a list of all enabled commands on the server.
+
+**Example:**
+
+```text
+Player types: !help
+Server: "Available commands: !reload, !ravi, !course, !help..."
+```
+
+---
+
+### Timer
+
+**Prefix:** `!timer`
+**Recommended:** Enabled
+**Usage:** `!timer`
+
+Toggle the quest timer display on/off. Preference is saved to the player's account.
+
+**Example:**
+
+```text
+Player types: !timer
+Server: "Quest timer disabled"
+
+Player types: !timer
+Server: "Quest timer enabled"
+```
+
+---
+
+### Playtime
+
+**Prefix:** `!playtime`
+**Recommended:** Enabled
+**Usage:** `!playtime`
+
+Display total character playtime.
+
+**Example:**
+
+```text
+Player types: !playtime
+Server: "Playtime: 142h 35m 12s"
+```
+
+---
+
+### PSN
+
+**Prefix:** `!psn`
+**Recommended:** Enabled
+**Usage:** `!psn <psn_id>`
+
+Link a PlayStation Network ID to the player's account.
+
+**Example:**
+
+```text
+Player types: !psn MyPSNUsername
+Server: "PSN ID set to: MyPSNUsername"
+```
+
+**Use Cases:**
+- Cross-platform account linking
+- Server-specific PSN integrations
+
+---
+
+### Discord
+
+**Prefix:** `!discord`
+**Recommended:** Enabled
+**Usage:** `!discord`
+
+Generate a temporary token for Discord account linking.
+
+**Example:**
+
+```text
+Player types: !discord
+Server: "Discord token: abc123-xyz789"
+[Player uses token with Discord bot to link accounts]
+```
+
+**Note:** Requires [Discord Integration](discord-integration.md) to be configured.
+
+---
+
+### Ban
+
+**Prefix:** `!ban`
+**Recommended:** Disabled
+**Usage:** `!ban <character_id> [duration]`
+
+Ban a player from the server. Supports temporary and permanent bans.
+
+**Duration Format:** `<number><unit>` where unit is:
+- `s` - seconds
+- `m` - minutes
+- `h` - hours
+- `d` - days
+- `mo` - months
+- `y` - years
+
+**Examples:**
+
+```text
+Admin types: !ban ABC123
+Server: "User ABC123 permanently banned"
+
+Admin types: !ban ABC123 7d
+Server: "User ABC123 banned for 7 days"
+
+Admin types: !ban ABC123 2h
+Server: "User ABC123 banned for 2 hours"
+```
+
+**⚠️ SECURITY WARNING:** Only enable for trusted administrators. Requires operator permissions.
 
 ## Command Configuration
 
@@ -257,6 +379,8 @@ Server: "The Rights command is disabled on this server"
 
 - **Rights**: Grants admin privileges and all courses
 - **KeyQuest**: Unlocks restricted content
+- **Ban**: Can permanently remove players from server
+- **Teleport**: Bypasses normal movement restrictions
 
 ### Medium-Risk Commands (Use with Caution)
 
@@ -267,6 +391,11 @@ Server: "The Rights command is disabled on this server"
 
 - **Reload**: Only affects visual state, no persistent changes
 - **Raviente**: Only affects raid event, no account changes
+- **Help**: Read-only, shows available commands
+- **Timer**: User preference only, no gameplay impact
+- **Playtime**: Read-only display
+- **PSN**: Account linking, low risk
+- **Discord**: Token generation, requires Discord bot to be useful
 
 ## Implementation Details
 
@@ -294,10 +423,31 @@ Each command handler checks if the command is enabled before executing.
 
 ```json
 {
-  "Commands": [
-    {"Name": "Reload", "Enabled": true, "Prefix": "!reload"},
-    {"Name": "Raviente", "Enabled": true, "Prefix": "!ravi"}
-  ]
+  "Commands": {
+    "Enabled": true,
+    "CommandPrefix": "!",
+    "Reload": { "Enabled": true, "Prefix": "reload" },
+    "Raviente": { "Enabled": true, "Prefix": "ravi" },
+    "Help": { "Enabled": true, "Prefix": "help" }
+  }
+}
+```
+
+### Community Server Configuration
+
+```json
+{
+  "Commands": {
+    "Enabled": true,
+    "CommandPrefix": "!",
+    "Reload": { "Enabled": true, "Prefix": "reload" },
+    "Raviente": { "Enabled": true, "Prefix": "ravi" },
+    "Course": { "Enabled": true, "Prefix": "course" },
+    "Help": { "Enabled": true, "Prefix": "help" },
+    "Timer": { "Enabled": true, "Prefix": "timer" },
+    "Playtime": { "Enabled": true, "Prefix": "playtime" },
+    "Discord": { "Enabled": true, "Prefix": "discord" }
+  }
 }
 ```
 
@@ -305,31 +455,42 @@ Each command handler checks if the command is enabled before executing.
 
 ```json
 {
-  "Commands": [
-    {"Name": "Rights", "Enabled": true, "Prefix": "!rights"},
-    {"Name": "Raviente", "Enabled": true, "Prefix": "!ravi"},
-    {"Name": "Teleport", "Enabled": true, "Prefix": "!tele"},
-    {"Name": "Reload", "Enabled": true, "Prefix": "!reload"},
-    {"Name": "KeyQuest", "Enabled": true, "Prefix": "!kqf"},
-    {"Name": "Course", "Enabled": true, "Prefix": "!course"}
-  ]
+  "Commands": {
+    "Enabled": true,
+    "CommandPrefix": "!",
+    "Reload": { "Enabled": true, "Prefix": "reload" },
+    "Raviente": { "Enabled": true, "Prefix": "ravi" },
+    "Course": { "Enabled": true, "Prefix": "course" },
+    "Rights": { "Enabled": true, "Prefix": "rights" },
+    "Teleport": { "Enabled": true, "Prefix": "tele" },
+    "KeyQuest": { "Enabled": true, "Prefix": "kqf" },
+    "Ban": { "Enabled": true, "Prefix": "ban" },
+    "Help": { "Enabled": true, "Prefix": "help" },
+    "PSN": { "Enabled": true, "Prefix": "psn" },
+    "Discord": { "Enabled": true, "Prefix": "discord" },
+    "Timer": { "Enabled": true, "Prefix": "timer" },
+    "Playtime": { "Enabled": true, "Prefix": "playtime" }
+  }
 }
 ```
 
-### Custom Prefixes
+### Custom Prefixes (Slash Commands)
 
 ```json
 {
-  "Commands": [
-    {"Name": "Reload", "Enabled": true, "Prefix": "/refresh"},
-    {"Name": "Raviente", "Enabled": true, "Prefix": "/ravi"},
-    {"Name": "Course", "Enabled": true, "Prefix": "/sub"}
-  ]
+  "Commands": {
+    "Enabled": true,
+    "CommandPrefix": "/",
+    "Reload": { "Enabled": true, "Prefix": "refresh" },
+    "Raviente": { "Enabled": true, "Prefix": "ravi" },
+    "Course": { "Enabled": true, "Prefix": "sub" }
+  }
 }
 ```
 
 ## Related Documentation
 
+- [Player Commands Reference](player-commands.md) - User-friendly guide for players
 - [Courses](courses.md) - Course configuration for the `!course` command
 - [Discord Integration](discord-integration.md) - Commands may post to Discord
 - [Gameplay Options](gameplay-options.md) - Gameplay balance settings
