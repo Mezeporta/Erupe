@@ -353,9 +353,15 @@ func addGachaItem(s *Session, items []GachaItem) {
 
 func getRandomEntries(entries []GachaEntry, rolls int, isBox bool) ([]GachaEntry, error) {
 	var chosen []GachaEntry
+	if len(entries) == 0 || rolls <= 0 {
+		return chosen, nil
+	}
 	var totalWeight float64
 	for i := range entries {
 		totalWeight += entries[i].Weight
+	}
+	if !isBox && totalWeight <= 0 {
+		return chosen, nil
 	}
 	for {
 		if rolls == len(chosen) {
@@ -371,6 +377,9 @@ func getRandomEntries(entries []GachaEntry, rolls int, isBox bool) ([]GachaEntry
 				}
 			}
 		} else {
+			if len(entries) == 0 {
+				break
+			}
 			result := rand.Intn(len(entries))
 			chosen = append(chosen, entries[result])
 			entries[result] = entries[len(entries)-1]

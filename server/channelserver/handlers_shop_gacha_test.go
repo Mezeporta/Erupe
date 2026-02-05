@@ -231,16 +231,65 @@ func TestGachaItemStruct(t *testing.T) {
 	}
 }
 
-func TestGetRandomEntries_EmptyEntriesZeroRolls(t *testing.T) {
-	// Note: getRandomEntries with empty entries and rolls > 0 causes infinite loop.
-	// Only test the valid case of 0 rolls with empty entries.
+func TestGetRandomEntries_EmptyEntries(t *testing.T) {
 	entries := []GachaEntry{}
-	result, err := getRandomEntries(entries, 0, false)
+	result, err := getRandomEntries(entries, 5, false)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if len(result) != 0 {
 		t.Errorf("expected empty result, got %d entries", len(result))
+	}
+}
+
+func TestGetRandomEntries_EmptyEntriesBoxMode(t *testing.T) {
+	entries := []GachaEntry{}
+	result, err := getRandomEntries(entries, 5, true)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 0 {
+		t.Errorf("expected empty result, got %d entries", len(result))
+	}
+}
+
+func TestGetRandomEntries_NegativeRolls(t *testing.T) {
+	entries := []GachaEntry{{ID: 1, Weight: 1.0}}
+	result, err := getRandomEntries(entries, -5, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 0 {
+		t.Errorf("expected empty result, got %d entries", len(result))
+	}
+}
+
+func TestGetRandomEntries_ZeroTotalWeight(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 0},
+		{ID: 2, Weight: 0},
+	}
+	result, err := getRandomEntries(entries, 5, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 0 {
+		t.Errorf("expected empty result with zero weight, got %d entries", len(result))
+	}
+}
+
+func TestGetRandomEntries_BoxModeMoreRollsThanEntries(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 1.0},
+		{ID: 2, Weight: 1.0},
+	}
+	// Request 5 rolls but only 2 entries - should return only 2
+	result, err := getRandomEntries(entries, 5, true)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(result) != 2 {
+		t.Errorf("expected 2 results (all available), got %d", len(result))
 	}
 }
 
