@@ -53,3 +53,18 @@ jobs:
           ./savedata/
           ./bin/
           ./bundled-schema/
+
+    - name: Build Android-arm64
+      run: env GOOS=linux GOARCH=arm64 go build -v
+        
+    - name: Upload Android-arm64 artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Android-arm64
+        path: |
+          ./erupe-ce
+          ./config.json
+          ./www/
+          ./savedata/
+          ./bin/
+          ./bundled-schema/
