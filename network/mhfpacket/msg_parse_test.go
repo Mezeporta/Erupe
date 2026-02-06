@@ -36,9 +36,9 @@ func TestMsgMhfGetAchievementDetailedParse(t *testing.T) {
 // TestMsgMhfAddAchievementDetailedParse tests MsgMhfAddAchievement parsing
 func TestMsgMhfAddAchievementDetailedParse(t *testing.T) {
 	bf := byteframe.NewByteFrame()
-	bf.WriteUint8(42)       // AchievementID
-	bf.WriteUint16(12345)   // Unk1
-	bf.WriteUint16(0xFFFF)  // Unk2 - max value
+	bf.WriteUint8(42)      // AchievementID
+	bf.WriteUint16(12345)  // Unk1
+	bf.WriteUint16(0xFFFF) // Unk2 - max value
 	bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAddAchievement{}
@@ -61,12 +61,12 @@ func TestMsgMhfAddAchievementDetailedParse(t *testing.T) {
 // TestMsgSysCastBinaryDetailedParse tests MsgSysCastBinary parsing with various payloads
 func TestMsgSysCastBinaryDetailedParse(t *testing.T) {
 	tests := []struct {
-		name        string
-		unk0        uint16
-		unk1        uint16
+		name          string
+		unk0          uint16
+		unk1          uint16
 		broadcastType uint8
 		messageType   uint8
-		payload     []byte
+		payload       []byte
 	}{
 		{"empty payload", 0, 0, 1, 2, []byte{}},
 		{"typical payload", 100, 200, 0x10, 0x20, []byte{0x01, 0x02, 0x03}},

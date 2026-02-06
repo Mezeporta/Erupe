@@ -139,8 +139,8 @@ func TestGetAchData_ValueAccumulation(t *testing.T) {
 
 func TestGetAchData_NextValueByLevel(t *testing.T) {
 	tests := []struct {
-		level     uint8
-		wantNext  uint16
+		level       uint8
+		wantNext    uint16
 		approxScore int32
 	}{
 		{0, 5, 0},

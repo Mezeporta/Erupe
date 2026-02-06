@@ -311,4 +311,3 @@ func TestEmptyHandlers_NoDb(t *testing.T) {
 		})
 	}
 }
-

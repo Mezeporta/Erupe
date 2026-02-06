@@ -14,16 +14,16 @@ import (
 // A session is identified by the combination of channel and IP:port, tracking
 // all activities from when a player connects until they disconnect.
 type PlayerSession struct {
-	Name       string      // Player name
-	IPPort     string      // Client IP address and port (e.g., "192.168.1.1:12345")
-	Channel    string      // Server channel (e.g., "channel-4")
-	FirstSeen  time.Time   // Timestamp of first activity
-	LastSeen   time.Time   // Timestamp of last activity
-	Activities []string    // List of player activities
-	Stages     []string    // List of stage changes
-	Objects    []string    // List of objects broadcast by this player
-	Errors     int         // Number of errors encountered during session
-	SaveCount  int         // Number of save operations performed
+	Name       string    // Player name
+	IPPort     string    // Client IP address and port (e.g., "192.168.1.1:12345")
+	Channel    string    // Server channel (e.g., "channel-4")
+	FirstSeen  time.Time // Timestamp of first activity
+	LastSeen   time.Time // Timestamp of last activity
+	Activities []string  // List of player activities
+	Stages     []string  // List of stage changes
+	Objects    []string  // List of objects broadcast by this player
+	Errors     int       // Number of errors encountered during session
+	SaveCount  int       // Number of save operations performed
 }
 
 // ConnectionStats aggregates statistics about player connections across all sessions.
@@ -31,12 +31,12 @@ type PlayerSession struct {
 // This structure tracks high-level metrics useful for understanding server usage
 // patterns, peak times, and common connection issues.
 type ConnectionStats struct {
-	TotalConnections    int            // Total number of player sessions
-	UniqueIPs           map[string]int // IP addresses to connection count
+	TotalConnections    int             // Total number of player sessions
+	UniqueIPs           map[string]int  // IP addresses to connection count
 	UniquePlayers       map[string]bool // Set of unique player names
-	ConnectionsPerDay   map[string]int // Date to connection count
-	ChannelDistribution map[string]int // Channel to connection count
-	DisconnectReasons   map[string]int // Disconnect reason to count
+	ConnectionsPerDay   map[string]int  // Date to connection count
+	ChannelDistribution map[string]int  // Channel to connection count
+	DisconnectReasons   map[string]int  // Disconnect reason to count
 }
 
 // runConnections implements the connections command for analyzing player connection patterns.
@@ -61,9 +61,10 @@ type ConnectionStats struct {
 //   - v: Verbose output including objects and stage changes
 //
 // Examples:
-//   runConnections([]string{"-stats"})
-//   runConnections([]string{"-sessions", "-v"})
-//   runConnections([]string{"-player", "Sarah", "-sessions"})
+//
+//	runConnections([]string{"-stats"})
+//	runConnections([]string{"-sessions", "-v"})
+//	runConnections([]string{"-player", "Sarah", "-sessions"})
 func runConnections(args []string) {
 	fs := flag.NewFlagSet("connections", flag.ExitOnError)
 
@@ -160,7 +161,7 @@ func runConnections(args []string) {
 
 		// Track disconnections
 		if strings.Contains(entry.Message, "Error on ReadPacket, exiting recv loop") ||
-		   strings.Contains(entry.Message, "Error reading packet") {
+			strings.Contains(entry.Message, "Error reading packet") {
 			sessionKey := extractSessionKey(entry.Logger)
 			if session, exists := sessions[sessionKey]; exists {
 				session.Errors++

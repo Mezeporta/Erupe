@@ -514,9 +514,9 @@ func TestMsgMhfUpdateEtcPointOpcode(t *testing.T) {
 // TestAchievementPacketParse tests simple achievement packet parsing
 func TestAchievementPacketParse(t *testing.T) {
 	bf := byteframe.NewByteFrame()
-	bf.WriteUint8(5)     // AchievementID
-	bf.WriteUint16(100)  // Unk1
-	bf.WriteUint16(200)  // Unk2
+	bf.WriteUint8(5)    // AchievementID
+	bf.WriteUint16(100) // Unk1
+	bf.WriteUint16(200) // Unk2
 	bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAddAchievement{}

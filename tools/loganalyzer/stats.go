@@ -15,19 +15,19 @@ import (
 // message types, and server operations to provide insights into server behavior
 // and activity patterns.
 type LogStats struct {
-	TotalEntries      int            // Total number of log entries
-	EntriesByLevel    map[string]int // Log level to count
-	EntriesByLogger   map[string]int // Logger name to count
-	EntriesByDay      map[string]int // Date string to count
-	EntriesByHour     map[int]int    // Hour (0-23) to count
-	TopMessages       map[string]int // Message text to count
-	FirstEntry        time.Time      // Timestamp of first entry
-	LastEntry         time.Time      // Timestamp of last entry
-	SaveOperations    int            // Count of save operations
-	ObjectBroadcasts  int            // Count of object broadcasts
-	StageChanges      int            // Count of stage changes
-	TerminalLogs      int            // Count of terminal log entries
-	UniqueCallers     map[string]bool // Set of unique caller locations
+	TotalEntries     int             // Total number of log entries
+	EntriesByLevel   map[string]int  // Log level to count
+	EntriesByLogger  map[string]int  // Logger name to count
+	EntriesByDay     map[string]int  // Date string to count
+	EntriesByHour    map[int]int     // Hour (0-23) to count
+	TopMessages      map[string]int  // Message text to count
+	FirstEntry       time.Time       // Timestamp of first entry
+	LastEntry        time.Time       // Timestamp of last entry
+	SaveOperations   int             // Count of save operations
+	ObjectBroadcasts int             // Count of object broadcasts
+	StageChanges     int             // Count of stage changes
+	TerminalLogs     int             // Count of terminal log entries
+	UniqueCallers    map[string]bool // Set of unique caller locations
 }
 
 // runStats implements the stats command for generating comprehensive log statistics.
@@ -49,9 +49,10 @@ type LogStats struct {
 //   - detailed: Show detailed statistics including temporal patterns and top messages
 //
 // Examples:
-//   runStats([]string{})  // Basic statistics
-//   runStats([]string{"-detailed"})  // Full statistics with temporal analysis
-//   runStats([]string{"-detailed", "-top", "20"})  // Show top 20 items
+//
+//	runStats([]string{})  // Basic statistics
+//	runStats([]string{"-detailed"})  // Full statistics with temporal analysis
+//	runStats([]string{"-detailed", "-top", "20"})  // Show top 20 items
 func runStats(args []string) {
 	fs := flag.NewFlagSet("stats", flag.ExitOnError)
 

@@ -15,8 +15,8 @@ import (
 // useful for real-time monitoring of server activity.
 //
 // The command operates in two phases:
-//   1. Initial display: Shows the last N matching entries from the file
-//   2. Follow mode: Continuously monitors for new lines and displays them as they appear
+//  1. Initial display: Shows the last N matching entries from the file
+//  2. Follow mode: Continuously monitors for new lines and displays them as they appear
 //
 // Both phases support filtering by log level and colorized output.
 //
@@ -30,10 +30,11 @@ import (
 // The follow mode polls the file every 100ms for new content. Use Ctrl+C to stop.
 //
 // Examples:
-//   runTail([]string{})  // Show last 10 lines and follow
-//   runTail([]string{"-n", "50"})  // Show last 50 lines and follow
-//   runTail([]string{"-level", "error"})  // Only show errors
-//   runTail([]string{"-follow=false", "-n", "20"})  // Just show last 20 lines, don't follow
+//
+//	runTail([]string{})  // Show last 10 lines and follow
+//	runTail([]string{"-n", "50"})  // Show last 50 lines and follow
+//	runTail([]string{"-level", "error"})  // Only show errors
+//	runTail([]string{"-follow=false", "-n", "20"})  // Just show last 20 lines, don't follow
 func runTail(args []string) {
 	fs := flag.NewFlagSet("tail", flag.ExitOnError)
 

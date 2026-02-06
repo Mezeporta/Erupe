@@ -13,12 +13,12 @@ import (
 // Errors can be grouped by message, caller, or logger to identify patterns
 // and recurring issues in the logs.
 type ErrorGroup struct {
-	Message   string          // Primary message for this error group
-	Count     int             // Total number of occurrences
-	FirstSeen string          // Timestamp of first occurrence
-	LastSeen  string          // Timestamp of last occurrence
-	Examples  []*LogEntry     // Sample log entries (limited by the limit flag)
-	Callers   map[string]int  // Map of caller locations to occurrence counts
+	Message   string         // Primary message for this error group
+	Count     int            // Total number of occurrences
+	FirstSeen string         // Timestamp of first occurrence
+	LastSeen  string         // Timestamp of last occurrence
+	Examples  []*LogEntry    // Sample log entries (limited by the limit flag)
+	Callers   map[string]int // Map of caller locations to occurrence counts
 }
 
 // runErrors implements the errors command for extracting and analyzing errors.
@@ -44,9 +44,10 @@ type ErrorGroup struct {
 //   - detailed: Show detailed information including examples and extra data
 //
 // Examples:
-//   runErrors([]string{"-summary"})
-//   runErrors([]string{"-detailed", "-stack"})
-//   runErrors([]string{"-group", "caller", "-limit", "20"})
+//
+//	runErrors([]string{"-summary"})
+//	runErrors([]string{"-detailed", "-stack"})
+//	runErrors([]string{"-group", "caller", "-limit", "20"})
 func runErrors(args []string) {
 	fs := flag.NewFlagSet("errors", flag.ExitOnError)
 

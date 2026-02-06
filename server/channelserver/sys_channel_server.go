@@ -44,13 +44,13 @@ import (
 
 // Config holds configuration parameters for creating a new channel server.
 type Config struct {
-	ID          uint16                // Channel server ID (unique identifier)
-	Logger      *zap.Logger           // Logger instance for this channel server
-	DB          *sqlx.DB              // Database connection pool
+	ID          uint16                 // Channel server ID (unique identifier)
+	Logger      *zap.Logger            // Logger instance for this channel server
+	DB          *sqlx.DB               // Database connection pool
 	DiscordBot  *discordbot.DiscordBot // Optional Discord bot for chat integration
-	ErupeConfig *config.Config        // Global Erupe configuration
-	Name        string                // Display name for the server (shown in broadcasts)
-	Enable      bool                  // Whether this server is enabled
+	ErupeConfig *config.Config         // Global Erupe configuration
+	Name        string                 // Display name for the server (shown in broadcasts)
+	Enable      bool                   // Whether this server is enabled
 }
 
 // userBinaryPartID is a composite key for identifying a specific part of a user's binary data.
@@ -86,15 +86,15 @@ type Server struct {
 	erupeConfig *config.Config // Global configuration
 
 	// Connection management
-	acceptConns    chan net.Conn            // Channel for new accepted connections
-	deleteConns    chan net.Conn            // Channel for connections to be cleaned up
-	sessions       map[net.Conn]*Session    // Active sessions keyed by connection
-	listener       net.Listener             // TCP listener (created when Server.Start is called)
-	isShuttingDown bool                     // Shutdown flag to stop goroutines gracefully
+	acceptConns    chan net.Conn         // Channel for new accepted connections
+	deleteConns    chan net.Conn         // Channel for connections to be cleaned up
+	sessions       map[net.Conn]*Session // Active sessions keyed by connection
+	listener       net.Listener          // TCP listener (created when Server.Start is called)
+	isShuttingDown bool                  // Shutdown flag to stop goroutines gracefully
 
 	// Stage (game room) management
-	stagesLock sync.RWMutex         // Protects stages map (RWMutex for concurrent reads)
-	stages     map[string]*Stage    // Active stages keyed by stage ID string
+	stagesLock sync.RWMutex      // Protects stages map (RWMutex for concurrent reads)
+	stages     map[string]*Stage // Active stages keyed by stage ID string
 
 	// Localization
 	dict map[string]string // Language string mappings for server messages
@@ -105,9 +105,9 @@ type Server struct {
 	userBinaryParts     map[userBinaryPartID][]byte // Chunked binary data by character
 
 	// Semaphore (multiplayer coordination) management
-	semaphoreLock  sync.RWMutex           // Protects semaphore map and semaphoreIndex
-	semaphore      map[string]*Semaphore  // Active semaphores keyed by semaphore ID
-	semaphoreIndex uint32                 // Auto-incrementing ID for new semaphores (starts at 7)
+	semaphoreLock  sync.RWMutex          // Protects semaphore map and semaphoreIndex
+	semaphore      map[string]*Semaphore // Active semaphores keyed by semaphore ID
+	semaphoreIndex uint32                // Auto-incrementing ID for new semaphores (starts at 7)
 
 	// Optional integrations
 	discordBot *discordbot.DiscordBot // Discord bot for chat relay (nil if disabled)

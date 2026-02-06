@@ -127,17 +127,17 @@ type SaveDumpOptions struct {
 
 // GameplayOptions has various gameplay modifiers
 type GameplayOptions struct {
-	FeaturedWeapons     int         // Number of Active Feature weapons to generate daily
-	MaximumNP           int         // Maximum number of NP held by a player
-	MaximumRP           uint16      // Maximum number of RP held by a player
-	MaximumFP           uint32      // Maximum number of Festa Points held by a player
-	DisableLoginBoost   bool        // Disables the Login Boost system
-	DisableBoostTime    bool        // Disables the daily NetCafe Boost Time
-	BoostTimeDuration   int         // The number of minutes NetCafe Boost Time lasts for
-	ClanMealDuration    int         // Seconds that a Clan Meal can be activated for after cooking
-	ClanMemberLimits    [][]uint8   // Array of maximum Clan Members -> [[Rank, Members], ...]
-	BonusQuestAllowance uint32      // Number of Bonus Point Quests to allow daily
-	DailyQuestAllowance uint32      // Number of Daily Quests to allow daily
+	FeaturedWeapons     int       // Number of Active Feature weapons to generate daily
+	MaximumNP           int       // Maximum number of NP held by a player
+	MaximumRP           uint16    // Maximum number of RP held by a player
+	MaximumFP           uint32    // Maximum number of Festa Points held by a player
+	DisableLoginBoost   bool      // Disables the Login Boost system
+	DisableBoostTime    bool      // Disables the daily NetCafe Boost Time
+	BoostTimeDuration   int       // The number of minutes NetCafe Boost Time lasts for
+	ClanMealDuration    int       // Seconds that a Clan Meal can be activated for after cooking
+	ClanMemberLimits    [][]uint8 // Array of maximum Clan Members -> [[Rank, Members], ...]
+	BonusQuestAllowance uint32    // Number of Bonus Point Quests to allow daily
+	DailyQuestAllowance uint32    // Number of Daily Quests to allow daily
 }
 
 // Logging holds the logging configuration.

@@ -48,32 +48,32 @@ type Session struct {
 	sync.Mutex // Protects session state during concurrent handler execution
 
 	// Core connection and logging
-	logger        *zap.Logger                // Logger with connection address
-	server        *Server                    // Parent server reference
-	rawConn       net.Conn                   // Underlying TCP connection
-	cryptConn     *network.CryptConn         // Encrypted connection wrapper
-	sendPackets   chan packet                // Outbound packet queue (buffered, size 20)
-	clientContext *clientctx.ClientContext   // Client version and capabilities
-	lastPacket    time.Time                  // Timestamp of last received packet (for timeout detection)
+	logger        *zap.Logger              // Logger with connection address
+	server        *Server                  // Parent server reference
+	rawConn       net.Conn                 // Underlying TCP connection
+	cryptConn     *network.CryptConn       // Encrypted connection wrapper
+	sendPackets   chan packet              // Outbound packet queue (buffered, size 20)
+	clientContext *clientctx.ClientContext // Client version and capabilities
+	lastPacket    time.Time                // Timestamp of last received packet (for timeout detection)
 
 	// Stage (game area) state
-	userEnteredStage bool    // Whether player has entered any stage during this session
-	stageID          string  // Current stage ID string (e.g., "sl1Ns200p0a0u0")
-	stage            *Stage  // Pointer to current stage object
-	reservationStage *Stage  // Stage reserved for quest (used by unreserve packet)
-	stagePass        string  // Temporary password storage for password-protected stages
+	userEnteredStage bool                     // Whether player has entered any stage during this session
+	stageID          string                   // Current stage ID string (e.g., "sl1Ns200p0a0u0")
+	stage            *Stage                   // Pointer to current stage object
+	reservationStage *Stage                   // Stage reserved for quest (used by unreserve packet)
+	stagePass        string                   // Temporary password storage for password-protected stages
 	stageMoveStack   *stringstack.StringStack // Navigation history for "back" functionality
 
 	// Player identity and state
-	charID       uint32               // Character ID for this session
-	Name         string               // Character name (for debugging/logging)
-	prevGuildID  uint32               // Last guild ID queried (cached for InfoGuild)
-	token        string               // Authentication token from sign server
-	logKey       []byte               // Logging encryption key
-	sessionStart int64                // Session start timestamp (Unix time)
-	courses      []mhfcourse.Course   // Active Monster Hunter courses (buffs/subscriptions)
-	kqf          []byte               // Key Quest Flags (quest progress tracking)
-	kqfOverride  bool                 // Whether KQF is being overridden
+	charID       uint32             // Character ID for this session
+	Name         string             // Character name (for debugging/logging)
+	prevGuildID  uint32             // Last guild ID queried (cached for InfoGuild)
+	token        string             // Authentication token from sign server
+	logKey       []byte             // Logging encryption key
+	sessionStart int64              // Session start timestamp (Unix time)
+	courses      []mhfcourse.Course // Active Monster Hunter courses (buffs/subscriptions)
+	kqf          []byte             // Key Quest Flags (quest progress tracking)
+	kqfOverride  bool               // Whether KQF is being overridden
 
 	// Quest/event coordination
 	semaphore *Semaphore // Semaphore for quest/event participation (if in a coordinated activity)

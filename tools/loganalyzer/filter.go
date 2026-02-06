@@ -23,9 +23,10 @@ import (
 // All filters are combined with AND logic.
 //
 // Examples:
-//   runFilter([]string{"-level", "error"})
-//   runFilter([]string{"-since", "1h", "-logger", "channel-4*"})
-//   runFilter([]string{"-msg", "connection reset", "-count"})
+//
+//	runFilter([]string{"-level", "error"})
+//	runFilter([]string{"-since", "1h", "-logger", "channel-4*"})
+//	runFilter([]string{"-msg", "connection reset", "-count"})
 func runFilter(args []string) {
 	fs := flag.NewFlagSet("filter", flag.ExitOnError)
 
@@ -137,9 +138,10 @@ func runFilter(args []string) {
 //   - true if the string matches the pattern, false otherwise
 //
 // Examples:
-//   matchWildcard("channel-4", "channel-*") // returns true
-//   matchWildcard("main.channel-4.error", "*channel-4*") // returns true
-//   matchWildcard("test", "foo*") // returns false
+//
+//	matchWildcard("channel-4", "channel-*") // returns true
+//	matchWildcard("main.channel-4.error", "*channel-4*") // returns true
+//	matchWildcard("test", "foo*") // returns false
 func matchWildcard(s, pattern string) bool {
 	if pattern == "*" {
 		return true

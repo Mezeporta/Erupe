@@ -16,10 +16,11 @@ import (
 //   - tail: Follow logs in real-time (like tail -f)
 //
 // Usage:
-//   loganalyzer <command> [options]
-//   loganalyzer filter -level error -since 1h
-//   loganalyzer errors -summary
-//   loganalyzer stats -detailed
+//
+//	loganalyzer <command> [options]
+//	loganalyzer filter -level error -since 1h
+//	loganalyzer errors -summary
+//	loganalyzer stats -detailed
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Erupe Log Analyzer - Suite of tools to analyze erupe.log files\n\n")

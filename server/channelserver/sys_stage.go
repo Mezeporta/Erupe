@@ -13,10 +13,10 @@ import (
 // other players in the same stage. Each object has an owner, position, and
 // unique ID for client-server synchronization.
 type Object struct {
-	sync.RWMutex              // Protects object state during updates
-	id          uint32        // Unique object ID (see NextObjectID for ID generation)
-	ownerCharID uint32        // Character ID of the player who placed this object
-	x, y, z     float32       // 3D position coordinates
+	sync.RWMutex         // Protects object state during updates
+	id           uint32  // Unique object ID (see NextObjectID for ID generation)
+	ownerCharID  uint32  // Character ID of the player who placed this object
+	x, y, z      float32 // 3D position coordinates
 }
 
 // stageBinaryKey is a composite key for identifying a specific piece of stage binary data.

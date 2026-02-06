@@ -17,8 +17,8 @@ import (
 // LogEntry represents a parsed log entry from either JSON or timestamp-based format.
 //
 // The parser supports two log formats:
-//   1. JSON format: {"level":"info","ts":1762989571.547817,"logger":"main","msg":"Starting"}
-//   2. Timestamp format: 2025-11-12T23:19:31.546Z	INFO	commands	Command Help: Enabled
+//  1. JSON format: {"level":"info","ts":1762989571.547817,"logger":"main","msg":"Starting"}
+//  2. Timestamp format: 2025-11-12T23:19:31.546Z	INFO	commands	Command Help: Enabled
 type LogEntry struct {
 	Raw        string                 // Original log line
 	Level      string                 // Log level: info, warn, error, fatal
@@ -50,11 +50,12 @@ type LogEntry struct {
 //   - An error if the file cannot be opened or read
 //
 // Example:
-//   entries, err := ParseLogFile("erupe.log")
-//   if err != nil {
-//       log.Fatal(err)
-//   }
-//   fmt.Printf("Parsed %d entries\n", len(entries))
+//
+//	entries, err := ParseLogFile("erupe.log")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Printf("Parsed %d entries\n", len(entries))
 func ParseLogFile(filename string) ([]*LogEntry, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -92,9 +93,9 @@ func ParseLogFile(filename string) ([]*LogEntry, error) {
 // ParseLogLine parses a single log line into a LogEntry.
 //
 // This function attempts to parse the line in the following order:
-//   1. JSON format: Lines starting with '{' are parsed as JSON objects
-//   2. Timestamp format: Tab-delimited lines with RFC3339 timestamps
-//   3. Unknown format: Lines that don't match either format are marked as "unknown" level
+//  1. JSON format: Lines starting with '{' are parsed as JSON objects
+//  2. Timestamp format: Tab-delimited lines with RFC3339 timestamps
+//  3. Unknown format: Lines that don't match either format are marked as "unknown" level
 //
 // For JSON logs, all standard fields (level, ts, logger, caller, msg, error, stacktrace)
 // are extracted, and any additional fields are stored in ExtraData.
@@ -106,8 +107,9 @@ func ParseLogFile(filename string) ([]*LogEntry, error) {
 //   - A LogEntry pointer containing the parsed data, or nil if the line is invalid
 //
 // Example:
-//   entry := ParseLogLine(`{"level":"info","ts":1762989571.547817,"msg":"Starting"}`)
-//   fmt.Println(entry.Level, entry.Message)
+//
+//	entry := ParseLogLine(`{"level":"info","ts":1762989571.547817,"msg":"Starting"}`)
+//	fmt.Println(entry.Level, entry.Message)
 func ParseLogLine(line string) *LogEntry {
 	entry := &LogEntry{
 		Raw:       line,
@@ -152,7 +154,7 @@ func ParseLogLine(line string) *LogEntry {
 			// Store any extra fields
 			for k, v := range jsonData {
 				if k != "level" && k != "ts" && k != "logger" && k != "caller" &&
-				   k != "msg" && k != "error" && k != "stacktrace" {
+					k != "msg" && k != "error" && k != "stacktrace" {
 					entry.ExtraData[k] = v
 				}
 			}
@@ -201,12 +203,13 @@ func ParseLogLine(line string) *LogEntry {
 //   - An error if the file cannot be opened, read, or if the callback returns an error
 //
 // Example:
-//   err := StreamLogFile("erupe.log", func(entry *LogEntry) error {
-//       if entry.Level == "error" {
-//           fmt.Println(entry.Message)
-//       }
-//       return nil
-//   })
+//
+//	err := StreamLogFile("erupe.log", func(entry *LogEntry) error {
+//	    if entry.Level == "error" {
+//	        fmt.Println(entry.Message)
+//	    }
+//	    return nil
+//	})
 func StreamLogFile(filename string, callback func(*LogEntry) error) error {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -259,9 +262,10 @@ func StreamLogFile(filename string, callback func(*LogEntry) error) error {
 //   - A formatted string representation of the log entry
 //
 // Example:
-//   formatted := FormatLogEntry(entry, true)
-//   fmt.Println(formatted)
-//   // Output: 2025-11-12 23:19:31.546 INFO [main] Starting Erupe
+//
+//	formatted := FormatLogEntry(entry, true)
+//	fmt.Println(formatted)
+//	// Output: 2025-11-12 23:19:31.546 INFO [main] Starting Erupe
 func FormatLogEntry(entry *LogEntry, colorize bool) string {
 	var sb strings.Builder
 

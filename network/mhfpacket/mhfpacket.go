@@ -9,7 +9,8 @@
 // Packet Structure:
 //
 // MHF packets follow this wire format:
-//   [2 bytes: Opcode][N bytes: Packet-specific data][2 bytes: Footer 0x00 0x10]
+//
+//	[2 bytes: Opcode][N bytes: Packet-specific data][2 bytes: Footer 0x00 0x10]
 //
 // Each packet type defines its own structure matching the binary format expected
 // by the Monster Hunter Frontier client.
