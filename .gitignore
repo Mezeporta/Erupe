@@ -19,6 +19,7 @@ config.json
 logs/
 
 .env
+deploy.sh
 
 # Docker
 docker/db-data/
