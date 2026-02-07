@@ -213,10 +213,12 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteBytes(houseFurniture)
 	case 10: // Garden
 		bf.WriteBytes(garden)
-		c, d := getGookData(s, pkt.CharID)
-		bf.WriteUint16(c)
+		goocoos := getGoocooData(s, pkt.CharID)
+		bf.WriteUint16(uint16(len(goocoos)))
 		bf.WriteUint16(0)
-		bf.WriteBytes(d)
+		for _, goocoo := range goocoos {
+			bf.WriteBytes(goocoo)
+		}
 	}
 	if len(bf.Data()) == 0 {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))

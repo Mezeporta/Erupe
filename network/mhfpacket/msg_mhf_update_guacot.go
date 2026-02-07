@@ -8,21 +8,18 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
-type Gook struct {
-	Exists  bool
-	Index   uint32
-	Type    uint16
-	Data    []byte
-	NameLen uint8
-	Name    []byte
+type Goocoo struct {
+	Index uint32
+	Data1 []int16
+	Data2 []uint32
+	Name  []byte
 }
 
 // MsgMhfUpdateGuacot represents the MSG_MHF_UPDATE_GUACOT
 type MsgMhfUpdateGuacot struct {
 	AckHandle  uint32
 	EntryCount uint16
-	Unk0       uint16 // Hardcoded 0 in binary
-	Gooks      []Gook
+	Goocoos    []Goocoo
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -34,20 +31,18 @@ func (m *MsgMhfUpdateGuacot) Opcode() network.PacketID {
 func (m *MsgMhfUpdateGuacot) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
 	m.EntryCount = bf.ReadUint16()
-	m.Unk0 = bf.ReadUint16()
+	bf.ReadUint16() // Zeroed
 	for i := 0; i < int(m.EntryCount); i++ {
-		e := Gook{}
-		e.Index = bf.ReadUint32()
-		e.Type = bf.ReadUint16()
-		e.Data = bf.ReadBytes(50)
-		e.NameLen = bf.ReadUint8()
-		e.Name = bf.ReadBytes(uint(e.NameLen))
-		if e.Type > 0 {
-			e.Exists = true
-		} else {
-			e.Exists = false
+		var temp Goocoo
+		temp.Index = bf.ReadUint32()
+		for j := 0; j < 22; j++ {
+			temp.Data1 = append(temp.Data1, bf.ReadInt16())
 		}
-		m.Gooks = append(m.Gooks, e)
+		for j := 0; j < 2; j++ {
+			temp.Data2 = append(temp.Data2, bf.ReadUint32())
+		}
+		temp.Name = bf.ReadBytes(uint(bf.ReadUint8()))
+		m.Goocoos = append(m.Goocoos, temp)
 	}
 	return nil
 }
