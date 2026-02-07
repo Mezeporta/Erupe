@@ -16,7 +16,11 @@ func TimeMidnight() time.Time {
 
 func TimeWeekStart() time.Time {
 	midnight := TimeMidnight()
-	offset := (int(midnight.Weekday()) - 1) * -24
+	weekday := int(midnight.Weekday())
+	if weekday == 0 {
+		weekday = 7 // Treat Sunday as day 7
+	}
+	offset := (weekday - 1) * -24
 	return midnight.Add(time.Hour * time.Duration(offset))
 }
 
