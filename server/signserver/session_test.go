@@ -2,6 +2,7 @@ package signserver
 
 import (
 	"bytes"
+	"database/sql"
 	"io"
 	"net"
 	"sync"
@@ -12,7 +13,10 @@ import (
 	"erupe-ce/config"
 	"erupe-ce/network"
 
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // mockConn implements net.Conn for testing
@@ -446,7 +450,781 @@ func TestSessionWorkWithEmptyRead(t *testing.T) {
 	session.work()
 }
 
-// Note: Tests for handleDSGNRequest require a database connection.
-// The function immediately queries the database for user authentication.
-// These tests should be implemented as integration tests with a test database
-// or using sqlmock for database mocking.
+// TestHandlePacketDSGNRequest tests the DSGN:100 path with a mocked database.
+func TestHandlePacketDSGNRequest(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	server := &Server{
+		logger:      logger,
+		erupeConfig: erupeConfig,
+		db:          sqlxDB,
+	}
+
+	// Use net.Pipe for bidirectional communication
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	session := &Session{
+		logger:    logger,
+		server:    server,
+		rawConn:   serverConn,
+		cryptConn: network.NewCryptConn(serverConn),
+	}
+
+	// Create a DSGN:100 packet with username "testuser" and password "testpass"
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DSGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("testuser"))
+	bf.WriteNullTerminatedBytes([]byte("testpass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	// Mock DB: user not found, auto-create off
+	mock.ExpectQuery("SELECT id, password FROM users WHERE username = \\$1").
+		WithArgs("testuser").
+		WillReturnError(sql.ErrNoRows)
+
+	// Read the response in a goroutine
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		buf := make([]byte, 4096)
+		for {
+			_, err := clientConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	err = session.handlePacket(bf.Data())
+	if err != nil {
+		t.Errorf("handlePacket() returned error: %v", err)
+	}
+
+	// Allow response to be sent
+	time.Sleep(50 * time.Millisecond)
+	clientConn.Close()
+	<-done
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestHandlePacketDLTSKEYSIGN tests the DLTSKEYSIGN:100 path (falls through to DSGN:100)
+func TestHandlePacketDLTSKEYSIGN(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	server := &Server{
+		logger:      logger,
+		erupeConfig: erupeConfig,
+		db:          sqlxDB,
+	}
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	session := &Session{
+		logger:    logger,
+		server:    server,
+		rawConn:   serverConn,
+		cryptConn: network.NewCryptConn(serverConn),
+	}
+
+	// Create a DLTSKEYSIGN:100 packet
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DLTSKEYSIGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("testuser"))
+	bf.WriteNullTerminatedBytes([]byte("testpass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	// Mock DB: user not found
+	mock.ExpectQuery("SELECT id, password FROM users WHERE username = \\$1").
+		WithArgs("testuser").
+		WillReturnError(sql.ErrNoRows)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		buf := make([]byte, 4096)
+		for {
+			_, err := clientConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	err = session.handlePacket(bf.Data())
+	if err != nil {
+		t.Errorf("handlePacket() returned error: %v", err)
+	}
+
+	time.Sleep(50 * time.Millisecond)
+	clientConn.Close()
+	<-done
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestHandlePacketDELETE tests the DELETE:100 path
+func TestHandlePacketDELETE(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	server := &Server{
+		logger:      logger,
+		erupeConfig: erupeConfig,
+		db:          sqlxDB,
+	}
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	session := &Session{
+		logger:    logger,
+		server:    server,
+		rawConn:   serverConn,
+		cryptConn: network.NewCryptConn(serverConn),
+	}
+
+	// Create a DELETE:100 packet
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DELETE:100"))
+	bf.WriteNullTerminatedBytes([]byte("login-token-abc"))
+	bf.WriteUint32(123) // characterID
+	bf.WriteUint32(456) // login_token_number
+
+	// Mock DB: Token verification
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM sign_sessions WHERE token = \\$1").
+		WithArgs("login-token-abc").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	// Check if new character
+	mock.ExpectQuery("SELECT is_new_character FROM characters WHERE id = \\$1").
+		WithArgs(123).
+		WillReturnRows(sqlmock.NewRows([]string{"is_new_character"}).AddRow(false))
+
+	// Soft delete
+	mock.ExpectExec("UPDATE characters SET deleted = true WHERE id = \\$1").
+		WithArgs(123).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Read all response data in a goroutine (SendPacket writes header + encrypted data)
+	done := make(chan []byte, 1)
+	go func() {
+		var all []byte
+		buf := make([]byte, 4096)
+		for {
+			n, readErr := clientConn.Read(buf)
+			if n > 0 {
+				all = append(all, buf[:n]...)
+			}
+			if readErr != nil {
+				break
+			}
+		}
+		done <- all
+	}()
+
+	err = session.handlePacket(bf.Data())
+	if err != nil {
+		t.Errorf("handlePacket() returned error: %v", err)
+	}
+
+	// Close server side so the reader goroutine finishes
+	serverConn.Close()
+
+	select {
+	case <-done:
+		// Response received successfully
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for response")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestHandlePacketDSGNWithAutoCreate tests DSGN:100 with auto-create account enabled
+func TestHandlePacketDSGNWithAutoCreate(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: true,
+		DevModeOptions: config.DevModeOptions{
+			AutoCreateAccount: true,
+		},
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	server := &Server{
+		logger:      logger,
+		erupeConfig: erupeConfig,
+		db:          sqlxDB,
+	}
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	session := &Session{
+		logger:    logger,
+		server:    server,
+		rawConn:   serverConn,
+		cryptConn: network.NewCryptConn(serverConn),
+	}
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DSGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("newuser"))
+	bf.WriteNullTerminatedBytes([]byte("newpass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	// Mock DB: user not found
+	mock.ExpectQuery("SELECT id, password FROM users WHERE username = \\$1").
+		WithArgs("newuser").
+		WillReturnError(sql.ErrNoRows)
+
+	// Auto-create: insert user
+	mock.ExpectExec("INSERT INTO users \\(username, password, return_expires\\) VALUES \\(\\$1, \\$2, \\$3\\)").
+		WithArgs("newuser", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// Auto-create: get user ID
+	mock.ExpectQuery("SELECT id FROM users WHERE username = \\$1").
+		WithArgs("newuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	// Auto-create: insert character
+	mock.ExpectExec("INSERT INTO characters").
+		WithArgs(1, sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// Now get new user ID for makeSignInResp
+	mock.ExpectQuery("SELECT id FROM users WHERE username = \\$1").
+		WithArgs("newuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	// makeSignInResp calls getReturnExpiry
+	mock.ExpectQuery("SELECT COALESCE\\(last_login, now\\(\\)\\) FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"last_login"}).AddRow(time.Now()))
+
+	// getReturnExpiry: get return_expires
+	mock.ExpectQuery("SELECT return_expires FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"return_expires"}).AddRow(time.Now().Add(time.Hour * 24 * 30)))
+
+	// getReturnExpiry: update last_login
+	mock.ExpectExec("UPDATE users SET last_login=\\$1 WHERE id=\\$2").
+		WithArgs(sqlmock.AnyArg(), 1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// getCharactersForUser
+	mock.ExpectQuery("SELECT id, is_female, is_new_character, name, unk_desc_string, hrp, gr, weapon_type, last_login FROM characters WHERE user_id = \\$1 AND deleted = false ORDER BY id ASC").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "is_female", "is_new_character", "name", "unk_desc_string", "hrp", "gr", "weapon_type", "last_login"}))
+
+	// registerToken
+	mock.ExpectExec("INSERT INTO sign_sessions \\(user_id, token\\) VALUES \\(\\$1, \\$2\\)").
+		WithArgs(1, sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// getLastCID
+	mock.ExpectQuery("SELECT last_character FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"last_character"}).AddRow(0))
+
+	// getUserRights
+	mock.ExpectQuery("SELECT rights FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"rights"}).AddRow(2))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		buf := make([]byte, 4096)
+		for {
+			_, err := clientConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	err = session.handlePacket(bf.Data())
+	if err != nil {
+		t.Errorf("handlePacket() returned error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	clientConn.Close()
+	<-done
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestHandlePacketDSGNWithValidPassword tests DSGN:100 with correct password
+func TestHandlePacketDSGNWithValidPassword(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	server := &Server{
+		logger:      logger,
+		erupeConfig: erupeConfig,
+		db:          sqlxDB,
+	}
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	session := &Session{
+		logger:    logger,
+		server:    server,
+		rawConn:   serverConn,
+		cryptConn: network.NewCryptConn(serverConn),
+	}
+
+	// Generate a bcrypt hash for "testpass"
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("testpass"), bcrypt.MinCost)
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DSGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("existinguser"))
+	bf.WriteNullTerminatedBytes([]byte("testpass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	// Mock DB: user found with correct password
+	mock.ExpectQuery("SELECT id, password FROM users WHERE username = \\$1").
+		WithArgs("existinguser").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "password"}).AddRow(1, string(hashedPassword)))
+
+	// makeSignInResp calls getReturnExpiry
+	mock.ExpectQuery("SELECT COALESCE\\(last_login, now\\(\\)\\) FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"last_login"}).AddRow(time.Now()))
+
+	// getReturnExpiry: get return_expires
+	mock.ExpectQuery("SELECT return_expires FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"return_expires"}).AddRow(time.Now().Add(time.Hour * 24 * 30)))
+
+	// getReturnExpiry: update last_login
+	mock.ExpectExec("UPDATE users SET last_login=\\$1 WHERE id=\\$2").
+		WithArgs(sqlmock.AnyArg(), 1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// getCharactersForUser
+	mock.ExpectQuery("SELECT id, is_female, is_new_character, name, unk_desc_string, hrp, gr, weapon_type, last_login FROM characters WHERE user_id = \\$1 AND deleted = false ORDER BY id ASC").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "is_female", "is_new_character", "name", "unk_desc_string", "hrp", "gr", "weapon_type", "last_login"}))
+
+	// registerToken
+	mock.ExpectExec("INSERT INTO sign_sessions \\(user_id, token\\) VALUES \\(\\$1, \\$2\\)").
+		WithArgs(1, sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// getLastCID
+	mock.ExpectQuery("SELECT last_character FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"last_character"}).AddRow(0))
+
+	// getUserRights
+	mock.ExpectQuery("SELECT rights FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"rights"}).AddRow(2))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		buf := make([]byte, 4096)
+		for {
+			_, err := clientConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	err = session.handlePacket(bf.Data())
+	if err != nil {
+		t.Errorf("handlePacket() returned error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	clientConn.Close()
+	<-done
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestHandlePacketDSGNWrongPassword tests DSGN:100 with wrong password
+func TestHandlePacketDSGNWrongPassword(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	server := &Server{
+		logger:      logger,
+		erupeConfig: erupeConfig,
+		db:          sqlxDB,
+	}
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	session := &Session{
+		logger:    logger,
+		server:    server,
+		rawConn:   serverConn,
+		cryptConn: network.NewCryptConn(serverConn),
+	}
+
+	// Generate a bcrypt hash for "correctpass"
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("correctpass"), bcrypt.MinCost)
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DSGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("testuser"))
+	bf.WriteNullTerminatedBytes([]byte("wrongpass")) // Wrong password
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	// Mock DB: user found but password will not match
+	mock.ExpectQuery("SELECT id, password FROM users WHERE username = \\$1").
+		WithArgs("testuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "password"}).AddRow(1, string(hashedPassword)))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		buf := make([]byte, 4096)
+		for {
+			_, err := clientConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	err = session.handlePacket(bf.Data())
+	if err != nil {
+		t.Errorf("handlePacket() returned error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	clientConn.Close()
+	<-done
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestHandlePacketDSGNWithDBError tests DSGN:100 with a database error
+func TestHandlePacketDSGNWithDBError(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	server := &Server{
+		logger:      logger,
+		erupeConfig: erupeConfig,
+		db:          sqlxDB,
+	}
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	session := &Session{
+		logger:    logger,
+		server:    server,
+		rawConn:   serverConn,
+		cryptConn: network.NewCryptConn(serverConn),
+	}
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DSGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("testuser"))
+	bf.WriteNullTerminatedBytes([]byte("testpass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	// Mock DB: generic error
+	mock.ExpectQuery("SELECT id, password FROM users WHERE username = \\$1").
+		WithArgs("testuser").
+		WillReturnError(sql.ErrConnDone)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		buf := make([]byte, 4096)
+		for {
+			_, err := clientConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	err = session.handlePacket(bf.Data())
+	if err != nil {
+		t.Errorf("handlePacket() returned error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	clientConn.Close()
+	<-done
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestHandlePacketDSGNNewCharaRequest tests DSGN:100 with the '+' suffix for new character
+func TestHandlePacketDSGNNewCharaRequest(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	server := &Server{
+		logger:      logger,
+		erupeConfig: erupeConfig,
+		db:          sqlxDB,
+	}
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	session := &Session{
+		logger:    logger,
+		server:    server,
+		rawConn:   serverConn,
+		cryptConn: network.NewCryptConn(serverConn),
+	}
+
+	// Generate a bcrypt hash for "testpass"
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("testpass"), bcrypt.MinCost)
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DSGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("testuser+")) // '+' suffix means new character request
+	bf.WriteNullTerminatedBytes([]byte("testpass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	// Mock DB: user found
+	mock.ExpectQuery("SELECT id, password FROM users WHERE username = \\$1").
+		WithArgs("testuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "password"}).AddRow(1, string(hashedPassword)))
+
+	// newUserChara: get user ID
+	mock.ExpectQuery("SELECT id FROM users WHERE username = \\$1").
+		WithArgs("testuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	// newUserChara: check existing new chars
+	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM characters WHERE user_id = \\$1 AND is_new_character = true").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
+	// newUserChara: insert character
+	mock.ExpectExec("INSERT INTO characters").
+		WithArgs(1, sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// makeSignInResp calls
+	mock.ExpectQuery("SELECT COALESCE\\(last_login, now\\(\\)\\) FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"last_login"}).AddRow(time.Now()))
+
+	mock.ExpectQuery("SELECT return_expires FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"return_expires"}).AddRow(time.Now().Add(time.Hour * 24 * 30)))
+
+	mock.ExpectExec("UPDATE users SET last_login=\\$1 WHERE id=\\$2").
+		WithArgs(sqlmock.AnyArg(), 1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectQuery("SELECT id, is_female, is_new_character, name, unk_desc_string, hrp, gr, weapon_type, last_login FROM characters WHERE user_id = \\$1 AND deleted = false ORDER BY id ASC").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "is_female", "is_new_character", "name", "unk_desc_string", "hrp", "gr", "weapon_type", "last_login"}))
+
+	mock.ExpectExec("INSERT INTO sign_sessions \\(user_id, token\\) VALUES \\(\\$1, \\$2\\)").
+		WithArgs(1, sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectQuery("SELECT last_character FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"last_character"}).AddRow(0))
+
+	mock.ExpectQuery("SELECT rights FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"rights"}).AddRow(2))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		buf := make([]byte, 4096)
+		for {
+			_, err := clientConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	err = session.handlePacket(bf.Data())
+	if err != nil {
+		t.Errorf("handlePacket() returned error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	clientConn.Close()
+	<-done
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestHandlePacketDSGNWithDevModeOutboundLogging tests dev mode outbound logging
+func TestHandlePacketDSGNWithDevModeOutboundLogging(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: true,
+		DevModeOptions: config.DevModeOptions{
+			LogOutboundMessages: true,
+		},
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	server := &Server{
+		logger:      logger,
+		erupeConfig: erupeConfig,
+		db:          sqlxDB,
+	}
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	session := &Session{
+		logger:    logger,
+		server:    server,
+		rawConn:   serverConn,
+		cryptConn: network.NewCryptConn(serverConn),
+	}
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DSGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("testuser"))
+	bf.WriteNullTerminatedBytes([]byte("testpass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	// Mock DB: user not found, dev mode but no auto create
+	mock.ExpectQuery("SELECT id, password FROM users WHERE username = \\$1").
+		WithArgs("testuser").
+		WillReturnError(sql.ErrNoRows)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		buf := make([]byte, 4096)
+		for {
+			_, err := clientConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	err = session.handlePacket(bf.Data())
+	if err != nil {
+		t.Errorf("handlePacket() returned error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	clientConn.Close()
+	<-done
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}

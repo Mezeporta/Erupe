@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"math/bits"
 	"testing"
 
 	"erupe-ce/network/mhfpacket"
@@ -157,5 +158,101 @@ func TestGenerateFeatureWeapons_ZeroCount(t *testing.T) {
 	// Should return 0 for no weapons
 	if result.ActiveFeatures != 0 {
 		t.Errorf("Expected 0 for zero count, got %d", result.ActiveFeatures)
+	}
+}
+
+// --- NEW TESTS ---
+
+// TestGenerateFeatureWeapons_BitCount verifies that the number of set bits
+// in ActiveFeatures matches the requested count (capped at 14).
+func TestGenerateFeatureWeapons_BitCount(t *testing.T) {
+	tests := []struct {
+		name     string
+		count    int
+		wantBits int
+	}{
+		{"1 weapon", 1, 1},
+		{"5 weapons", 5, 5},
+		{"10 weapons", 10, 10},
+		{"14 weapons", 14, 14},
+		{"20 capped to 14", 20, 14},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := generateFeatureWeapons(tt.count)
+			setBits := bits.OnesCount32(result.ActiveFeatures)
+			if setBits != tt.wantBits {
+				t.Errorf("Set bits = %d, want %d (ActiveFeatures=0b%032b)",
+					setBits, tt.wantBits, result.ActiveFeatures)
+			}
+		})
+	}
+}
+
+// TestGenerateFeatureWeapons_BitsInRange verifies that all set bits are within
+// bits 0-13 (no bits above bit 13 should be set).
+func TestGenerateFeatureWeapons_BitsInRange(t *testing.T) {
+	for i := 0; i < 50; i++ {
+		result := generateFeatureWeapons(7)
+		// Bits 14+ should never be set
+		if result.ActiveFeatures&^uint32(0x3FFF) != 0 {
+			t.Errorf("Bits above 13 are set: 0x%08X", result.ActiveFeatures)
+		}
+	}
+}
+
+// TestGenerateFeatureWeapons_MaxYieldsAllBits verifies that requesting 14
+// weapons sets exactly bits 0-13 (the value 16383 = 0x3FFF).
+func TestGenerateFeatureWeapons_MaxYieldsAllBits(t *testing.T) {
+	result := generateFeatureWeapons(14)
+	if result.ActiveFeatures != 0x3FFF {
+		t.Errorf("ActiveFeatures = 0x%04X, want 0x3FFF (all 14 bits set)", result.ActiveFeatures)
+	}
+}
+
+// TestGenerateFeatureWeapons_StartTimeZero verifies that the returned
+// activeFeature has a zero StartTime (not set by generateFeatureWeapons).
+func TestGenerateFeatureWeapons_StartTimeZero(t *testing.T) {
+	result := generateFeatureWeapons(5)
+	if !result.StartTime.IsZero() {
+		t.Errorf("StartTime should be zero, got %v", result.StartTime)
+	}
+}
+
+// TestHandleMsgMhfRegisterEvent_DifferentValues tests with various Unk2/Unk4 values.
+func TestHandleMsgMhfRegisterEvent_DifferentValues(t *testing.T) {
+	server := createMockServer()
+
+	tests := []struct {
+		name string
+		unk2 uint8
+		unk4 uint8
+	}{
+		{"zeros", 0, 0},
+		{"max values", 255, 255},
+		{"typical", 5, 10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			session := createMockSession(1, server)
+			pkt := &mhfpacket.MsgMhfRegisterEvent{
+				AckHandle: 99999,
+				Unk2:      tt.unk2,
+				Unk4:      tt.unk4,
+			}
+
+			handleMsgMhfRegisterEvent(session, pkt)
+
+			select {
+			case p := <-session.sendPackets:
+				if len(p.data) == 0 {
+					t.Error("Response packet should have data")
+				}
+			default:
+				t.Error("No response packet queued")
+			}
+		})
 	}
 }

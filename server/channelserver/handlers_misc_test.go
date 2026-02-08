@@ -568,30 +568,3 @@ func TestDistributionItemStruct(t *testing.T) {
 		t.Errorf("ItemID = %d, want 1234", item.ItemID)
 	}
 }
-
-// Login boost struct test
-func TestLoginBoostStruct(t *testing.T) {
-	boost := loginBoost{
-		WeekReq:   1,
-		WeekCount: 2,
-		Active:    true,
-	}
-
-	if boost.WeekReq != 1 {
-		t.Errorf("WeekReq = %d, want 1", boost.WeekReq)
-	}
-	if !boost.Active {
-		t.Error("Active should be true")
-	}
-}
-
-// ActiveFeature struct test
-func TestActiveFeatureStruct(t *testing.T) {
-	feature := activeFeature{
-		ActiveFeatures: 0x0FFF,
-	}
-
-	if feature.ActiveFeatures != 0x0FFF {
-		t.Errorf("ActiveFeatures = %x, want 0x0FFF", feature.ActiveFeatures)
-	}
-}

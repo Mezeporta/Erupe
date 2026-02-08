@@ -916,3 +916,352 @@ func TestGetGuildmatesNotInGuild(t *testing.T) {
 		t.Errorf("unfulfilled expectations: %v", err)
 	}
 }
+
+// TestGetFriendsForCharactersDBError tests getFriendsForCharacters when DB query fails
+func TestGetFriendsForCharactersDBError(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	chars := []character{
+		{ID: 1, Name: "Hunter1"},
+	}
+
+	// Get friends CSV for character - DB error
+	mock.ExpectQuery("SELECT friends FROM characters WHERE id=\\$1").
+		WithArgs(uint32(1)).
+		WillReturnError(sql.ErrNoRows)
+
+	// Even on error, still produces the friend query (with empty/error friendsCSV)
+	// The function calls Scan which fails, then continues to build a query
+	// with the empty string. The query then fails as well.
+	mock.ExpectQuery("SELECT id, name FROM characters").
+		WillReturnError(sql.ErrConnDone)
+
+	friends := server.getFriendsForCharacters(chars)
+	// Should return 0 friends on error
+	if len(friends) != 0 {
+		t.Errorf("getFriendsForCharacters() with DB error = %d, want 0", len(friends))
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetGuildmatesForCharactersGuildQueryError tests guild ID query failure
+func TestGetGuildmatesForCharactersGuildQueryError(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	chars := []character{
+		{ID: 1, Name: "Hunter1"},
+	}
+
+	// Check if in guild - yes
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM guild_characters WHERE character_id=\\$1").
+		WithArgs(uint32(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	// Get guild ID - error
+	mock.ExpectQuery("SELECT guild_id FROM guild_characters WHERE character_id=\\$1").
+		WithArgs(uint32(1)).
+		WillReturnError(sql.ErrConnDone)
+
+	guildmates := server.getGuildmatesForCharacters(chars)
+	if len(guildmates) != 0 {
+		t.Errorf("getGuildmatesForCharacters() with guild query error = %d, want 0", len(guildmates))
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetGuildmatesForCharactersGuildmatesQueryError tests guildmates query failure
+func TestGetGuildmatesForCharactersGuildmatesQueryError(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	chars := []character{
+		{ID: 1, Name: "Hunter1"},
+	}
+
+	// Check if in guild - yes
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM guild_characters WHERE character_id=\\$1").
+		WithArgs(uint32(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	// Get guild ID
+	mock.ExpectQuery("SELECT guild_id FROM guild_characters WHERE character_id=\\$1").
+		WithArgs(uint32(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"guild_id"}).AddRow(100))
+
+	// Get guildmates - error
+	mock.ExpectQuery("SELECT character_id AS id, c.name FROM guild_characters gc JOIN characters c ON c.id = gc.character_id WHERE guild_id=\\$1 AND character_id!=\\$2").
+		WithArgs(100, uint32(1)).
+		WillReturnError(sql.ErrConnDone)
+
+	guildmates := server.getGuildmatesForCharacters(chars)
+	if len(guildmates) != 0 {
+		t.Errorf("getGuildmatesForCharacters() with guildmates query error = %d, want 0", len(guildmates))
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestDeleteCharacterDeleteError tests deleteCharacter when the delete/update query fails
+func TestDeleteCharacterDeleteError(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	// Token verification
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM sign_sessions WHERE token = \\$1").
+		WithArgs("validtoken").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	// Check if new character
+	mock.ExpectQuery("SELECT is_new_character FROM characters WHERE id = \\$1").
+		WithArgs(123).
+		WillReturnRows(sqlmock.NewRows([]string{"is_new_character"}).AddRow(false))
+
+	// Soft delete fails
+	mock.ExpectExec("UPDATE characters SET deleted = true WHERE id = \\$1").
+		WithArgs(123).
+		WillReturnError(sql.ErrConnDone)
+
+	err := server.deleteCharacter(123, "validtoken")
+	if err == nil {
+		t.Error("deleteCharacter() should return error when update fails")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestNewUserCharaInsertError tests newUserChara when the INSERT fails
+func TestNewUserCharaInsertError(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	// Get user ID
+	mock.ExpectQuery("SELECT id FROM users WHERE username = \\$1").
+		WithArgs("testuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	// Check for existing new characters
+	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM characters WHERE user_id = \\$1 AND is_new_character = true").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
+	// Insert new character - error
+	mock.ExpectExec("INSERT INTO characters").
+		WithArgs(1, sqlmock.AnyArg()).
+		WillReturnError(sql.ErrConnDone)
+
+	err := server.newUserChara("testuser")
+	if err == nil {
+		t.Error("newUserChara() should return error when insert fails")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestNewUserCharaCountError tests newUserChara when the COUNT query fails
+func TestNewUserCharaCountError(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	// Get user ID
+	mock.ExpectQuery("SELECT id FROM users WHERE username = \\$1").
+		WithArgs("testuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	// Check for existing new characters - error
+	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM characters WHERE user_id = \\$1 AND is_new_character = true").
+		WithArgs(1).
+		WillReturnError(sql.ErrConnDone)
+
+	err := server.newUserChara("testuser")
+	if err == nil {
+		t.Error("newUserChara() should return error when count query fails")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestRegisterDBAccountGetIDError tests registerDBAccount when getting the new user ID fails
+func TestRegisterDBAccountGetIDError(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	// Insert user succeeds
+	mock.ExpectExec("INSERT INTO users \\(username, password, return_expires\\) VALUES \\(\\$1, \\$2, \\$3\\)").
+		WithArgs("newuser", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// Get user ID - error
+	mock.ExpectQuery("SELECT id FROM users WHERE username = \\$1").
+		WithArgs("newuser").
+		WillReturnError(sql.ErrConnDone)
+
+	err := server.registerDBAccount("newuser", "password123")
+	if err == nil {
+		t.Error("registerDBAccount() should return error when getting ID fails")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestRegisterDBAccountCharacterInsertError tests registerDBAccount when character insert fails
+func TestRegisterDBAccountCharacterInsertError(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	// Insert user
+	mock.ExpectExec("INSERT INTO users \\(username, password, return_expires\\) VALUES \\(\\$1, \\$2, \\$3\\)").
+		WithArgs("newuser", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// Get user ID
+	mock.ExpectQuery("SELECT id FROM users WHERE username = \\$1").
+		WithArgs("newuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	// Insert character - error
+	mock.ExpectExec("INSERT INTO characters").
+		WithArgs(1, sqlmock.AnyArg()).
+		WillReturnError(sql.ErrConnDone)
+
+	err := server.registerDBAccount("newuser", "password123")
+	if err == nil {
+		t.Error("registerDBAccount() should return error when character insert fails")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetReturnExpiryDBError tests getReturnExpiry when the return_expires query fails
+func TestGetReturnExpiryDBError(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	// Get last login - recent
+	recentLogin := time.Now().Add(-time.Hour * 24)
+	mock.ExpectQuery("SELECT COALESCE\\(last_login, now\\(\\)\\) FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"last_login"}).AddRow(recentLogin))
+
+	// Get return expiry - error
+	mock.ExpectQuery("SELECT return_expires FROM users WHERE id=\\$1").
+		WithArgs(1).
+		WillReturnError(sql.ErrNoRows)
+
+	// Should set return_expires to now
+	mock.ExpectExec("UPDATE users SET return_expires=\\$1 WHERE id=\\$2").
+		WithArgs(sqlmock.AnyArg(), 1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Update last login
+	mock.ExpectExec("UPDATE users SET last_login=\\$1 WHERE id=\\$2").
+		WithArgs(sqlmock.AnyArg(), 1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	expiry := server.getReturnExpiry(1)
+
+	// Should still return a valid time (approximately now)
+	if expiry.IsZero() {
+		t.Error("getReturnExpiry() should return non-zero time even on error")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetFriendsForCharactersMultipleChars tests with multiple characters
+func TestGetFriendsForCharactersMultipleChars(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	chars := []character{
+		{ID: 1, Name: "Hunter1"},
+		{ID: 2, Name: "Hunter2"},
+	}
+
+	// First character friends
+	mock.ExpectQuery("SELECT friends FROM characters WHERE id=\\$1").
+		WithArgs(uint32(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"friends"}).AddRow("10"))
+
+	mock.ExpectQuery("SELECT id, name FROM characters WHERE id=10").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(10, "Friend1"))
+
+	// Second character friends
+	mock.ExpectQuery("SELECT friends FROM characters WHERE id=\\$1").
+		WithArgs(uint32(2)).
+		WillReturnRows(sqlmock.NewRows([]string{"friends"}).AddRow("20"))
+
+	mock.ExpectQuery("SELECT id, name FROM characters WHERE id=20").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(20, "Friend2"))
+
+	friends := server.getFriendsForCharacters(chars)
+	if len(friends) != 2 {
+		t.Errorf("getFriendsForCharacters() = %d, want 2", len(friends))
+	}
+
+	// Verify CID assignment
+	if len(friends) >= 2 {
+		if friends[0].CID != 1 {
+			t.Errorf("friends[0].CID = %d, want 1", friends[0].CID)
+		}
+		if friends[1].CID != 2 {
+			t.Errorf("friends[1].CID = %d, want 2", friends[1].CID)
+		}
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}
+
+// TestGetGuildmatesForCharactersMultipleChars tests with multiple characters in guilds
+func TestGetGuildmatesForCharactersMultipleChars(t *testing.T) {
+	server, mock := newTestServerWithMock(t)
+
+	chars := []character{
+		{ID: 1, Name: "Hunter1"},
+		{ID: 2, Name: "Hunter2"},
+	}
+
+	// First character in guild
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM guild_characters WHERE character_id=\\$1").
+		WithArgs(uint32(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	mock.ExpectQuery("SELECT guild_id FROM guild_characters WHERE character_id=\\$1").
+		WithArgs(uint32(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"guild_id"}).AddRow(100))
+
+	mock.ExpectQuery("SELECT character_id AS id, c.name FROM guild_characters gc JOIN characters c ON c.id = gc.character_id WHERE guild_id=\\$1 AND character_id!=\\$2").
+		WithArgs(100, uint32(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(10, "Guildmate1"))
+
+	// Second character not in guild
+	mock.ExpectQuery("SELECT count\\(\\*\\) FROM guild_characters WHERE character_id=\\$1").
+		WithArgs(uint32(2)).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
+	guildmates := server.getGuildmatesForCharacters(chars)
+	if len(guildmates) != 1 {
+		t.Errorf("getGuildmatesForCharacters() = %d, want 1", len(guildmates))
+	}
+
+	if len(guildmates) >= 1 && guildmates[0].CID != 1 {
+		t.Errorf("guildmates[0].CID = %d, want 1", guildmates[0].CID)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %v", err)
+	}
+}

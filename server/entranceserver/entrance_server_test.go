@@ -1,9 +1,13 @@
 package entranceserver
 
 import (
+	"net"
 	"testing"
+	"time"
 
 	"erupe-ce/config"
+
+	"go.uber.org/zap"
 )
 
 func TestNewServer(t *testing.T) {
@@ -290,5 +294,250 @@ func TestServerMutexLocking(t *testing.T) {
 
 	if !result {
 		t.Error("Mutex should protect isShuttingDown flag")
+	}
+}
+
+func TestServerStartAndShutdown(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		Entrance: config.Entrance{
+			Enabled: true,
+			Port:    0, // Use port 0 to get a random available port
+		},
+	}
+
+	cfg := &Config{
+		Logger:      logger,
+		ErupeConfig: erupeConfig,
+	}
+
+	s := NewServer(cfg)
+	err := s.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+
+	// Verify listener is set
+	if s.listener == nil {
+		t.Error("Server listener should not be nil after Start()")
+	}
+
+	// Verify not shutting down initially
+	s.Lock()
+	if s.isShuttingDown {
+		t.Error("Server should not be shutting down after Start()")
+	}
+	s.Unlock()
+
+	// Shutdown
+	s.Shutdown()
+
+	// Verify shutdown flag is set
+	s.Lock()
+	if !s.isShuttingDown {
+		t.Error("Server should be shutting down after Shutdown()")
+	}
+	s.Unlock()
+}
+
+func TestServerStartWithInvalidPort(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		Entrance: config.Entrance{
+			Port: 1, // Privileged port, should fail to bind
+		},
+	}
+
+	cfg := &Config{
+		Logger:      logger,
+		ErupeConfig: erupeConfig,
+	}
+
+	s := NewServer(cfg)
+	err := s.Start()
+	if err == nil {
+		s.Shutdown()
+		t.Error("Start() should fail with invalid port")
+	}
+}
+
+func TestServerListenerAddress(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		Entrance: config.Entrance{
+			Enabled: true,
+			Port:    0,
+		},
+	}
+
+	cfg := &Config{
+		Logger:      logger,
+		ErupeConfig: erupeConfig,
+	}
+
+	s := NewServer(cfg)
+	err := s.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+	defer s.Shutdown()
+
+	addr := s.listener.Addr()
+	if addr == nil {
+		t.Error("Listener address should not be nil")
+	}
+
+	tcpAddr, ok := addr.(*net.TCPAddr)
+	if !ok {
+		t.Error("Listener address should be a TCP address")
+	}
+
+	if tcpAddr.Port == 0 {
+		t.Error("Listener port should be assigned")
+	}
+}
+
+func TestServerAcceptClientsExitsOnShutdown(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		Entrance: config.Entrance{
+			Enabled: true,
+			Port:    0,
+		},
+	}
+
+	cfg := &Config{
+		Logger:      logger,
+		ErupeConfig: erupeConfig,
+	}
+
+	s := NewServer(cfg)
+	err := s.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+
+	// Give acceptClients goroutine time to start
+	time.Sleep(10 * time.Millisecond)
+
+	// Shutdown should cause acceptClients to exit
+	s.Shutdown()
+
+	// Give time for graceful exit
+	time.Sleep(10 * time.Millisecond)
+
+	s.Lock()
+	if !s.isShuttingDown {
+		t.Error("Server should be marked as shutting down")
+	}
+	s.Unlock()
+}
+
+func TestServerHandleConnectionImmediateClose(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+		Entrance: config.Entrance{
+			Enabled: true,
+			Port:    0,
+		},
+	}
+
+	cfg := &Config{
+		Logger:      logger,
+		ErupeConfig: erupeConfig,
+	}
+
+	s := NewServer(cfg)
+	err := s.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+	defer s.Shutdown()
+
+	// Connect and immediately close - handleEntranceServerConnection should handle gracefully
+	addr := s.listener.Addr().String()
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatalf("Dial() error: %v", err)
+	}
+	conn.Close()
+
+	// Give time for handleEntranceServerConnection to process the error
+	time.Sleep(50 * time.Millisecond)
+}
+
+func TestServerHandleConnectionShortInit(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+		Entrance: config.Entrance{
+			Enabled: true,
+			Port:    0,
+		},
+	}
+
+	cfg := &Config{
+		Logger:      logger,
+		ErupeConfig: erupeConfig,
+	}
+
+	s := NewServer(cfg)
+	err := s.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+	defer s.Shutdown()
+
+	// Send only 4 bytes instead of 8, then close
+	addr := s.listener.Addr().String()
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatalf("Dial() error: %v", err)
+	}
+	_, _ = conn.Write([]byte{0, 0, 0, 0})
+	conn.Close()
+
+	time.Sleep(50 * time.Millisecond)
+}
+
+func TestServerMultipleConnections(t *testing.T) {
+	logger := zap.NewNop()
+	erupeConfig := &config.Config{
+		DevMode: false,
+		Entrance: config.Entrance{
+			Enabled: true,
+			Port:    0,
+		},
+	}
+
+	cfg := &Config{
+		Logger:      logger,
+		ErupeConfig: erupeConfig,
+	}
+
+	s := NewServer(cfg)
+	err := s.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+	defer s.Shutdown()
+
+	addr := s.listener.Addr().String()
+
+	// Create multiple connections and close them
+	conns := make([]net.Conn, 3)
+	for i := range conns {
+		conn, err := net.Dial("tcp", addr)
+		if err != nil {
+			t.Fatalf("Dial() %d error: %v", i, err)
+		}
+		conns[i] = conn
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	for _, conn := range conns {
+		conn.Close()
 	}
 }
