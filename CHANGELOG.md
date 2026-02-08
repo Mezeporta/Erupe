@@ -7,35 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.2.1] - 2026-02-08
+
 ### Added
 
-- New `usercheck` CLI tool in `tools/usercheck/` for querying connected users and server status
-  - `list` command: List all currently connected users with character details
-  - `count` command: Show count of connected users per server/channel
-  - `search` command: Search for specific connected users by name
-  - `servers` command: Display server/channel status and player counts
-  - `history` command: Show recent login history for a player
+- Log analyzer tool suite (`tools/loganalyzer/`) for filtering, error analysis, connection tracking, and real-time monitoring of server logs
+- User check CLI tool (`tools/usercheck/`) for querying connected users and server status
+- File-based server logging enabled by default with log rotation
+- Docker configuration backported from main for local testing and deployment
+- Release automation CI/CD workflow
+- CI pipeline with gofmt and golangci-lint checks
+- Database connection pool configuration options
+- `RealClientMode` infrastructure for multi-version client support
+- Database schemas directory from upstream
 
 ### Changed
 
 - Upgraded Go version requirement from 1.19 to 1.25
 - Renamed `config.json` to `config.example.json` as template file
+- Distribution system refactored to use `distribution_items` table instead of data blob
+- Docker setup improved with smaller image size and more robust init script
+- Renamed `GuildMealDuration` to `ClanMealDuration` to match upstream naming
+- Replaced panic calls with proper error handling throughout the codebase
 
 ### Fixed
 
-- Race condition in stage broadcast causing nil pointer panics during player logout
-- Client crash when loading decoration presets (decomyset) with more than 40 entries
-- Config file handling and validation
-- Fixes 3 critical race conditions in handlers_stage.go
-- Fix an issue causing a crash on clans with 0 members
-- Fixed deadlock in zone change causing 60-second timeout when players change zones
-- Fixed crash when sending empty packets in QueueSend/QueueSendNonBlocking
-- Fixed missing stage transfer packet for empty zones
+- Personal poogie (goocoo) system completely broken due to database table/column name mismatch; backported correct implementation from main
+- `TimeWeekStart` returning next Monday instead of last Monday on Sundays, breaking all weekly reset logic
+- Infinite loop in gacha `getRandomEntries` when no valid entries available
+- Guild poogie outfit unlock using incorrect math.Pow calculation instead of bitmask
+- Guild `GetGuildManageRight` nil pointer condition (wrong `&&` vs `||`)
+- Guild `InfoGuild` writing GR field unconditionally, crashing pre-G10 clients
+- Cafe `PointCost` read as wrong type for G1-G5.2 clients
+- Entrance server clan member limit hardcoded instead of reading from config
+- Quest data compatibility for Season 6.0 clients
+- Stage deadlock causing 60-second timeout when players change zones
+- Three race conditions in stage handlers causing nil pointer panics
+- Session race condition during player logout
+- Array out-of-bounds crash on clans with 0 members
+- Save error crashes on disconnect
+- `LoadDecoMyset` crash when players have more than 40 decoration presets
+- `WaitStageBinary` handler missing timeout, could hang indefinitely
+- Race condition in server broadcast causing panics
 
 ### Security
 
 - Bumped golang.org/x/net from 0.33.0 to 0.38.0
 - Bumped golang.org/x/crypto from 0.31.0 to 0.35.0
+
+### Testing
+
+- Expanded overall test coverage significantly across all packages
+- Sign server coverage increased from 1.5% to 45.2%
+- Channel server coverage increased from ~7% to 25%
+- Pascal string coverage at 100%
+- Added comprehensive tests for guild, gacha, cafe, goocoo packet parsing, and core network layer
 
 ## [9.2.0] - 2023-04-01
 
