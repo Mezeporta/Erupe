@@ -1,6 +1,8 @@
 package network
 
 import (
+	"bytes"
+	"net"
 	"testing"
 )
 
@@ -176,4 +178,132 @@ func TestMultipleCryptConnInstances(t *testing.T) {
 	if cc1.sendKeyRot == cc2.sendKeyRot {
 		t.Error("CryptConn instances should be independent")
 	}
+}
+
+func TestCryptConnSendAndReadPacket(t *testing.T) {
+	// Use net.Pipe to create an in-memory bidirectional connection
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	sender := NewCryptConn(clientConn)
+	receiver := NewCryptConn(serverConn)
+
+	testData := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07}
+
+	// Send in a goroutine since Pipe is synchronous
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- sender.SendPacket(testData)
+	}()
+
+	// Read on the other end
+	received, err := receiver.ReadPacket()
+	if err != nil {
+		t.Fatalf("ReadPacket() error = %v", err)
+	}
+
+	if sendErr := <-errCh; sendErr != nil {
+		t.Fatalf("SendPacket() error = %v", sendErr)
+	}
+
+	if !bytes.Equal(received, testData) {
+		t.Errorf("ReadPacket() = %v, want %v", received, testData)
+	}
+}
+
+func TestCryptConnMultiplePackets(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	sender := NewCryptConn(clientConn)
+	receiver := NewCryptConn(serverConn)
+
+	packets := [][]byte{
+		{0x01, 0x02, 0x03, 0x04},
+		{0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE},
+		{0xFF},
+		make([]byte, 64),
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		for _, pkt := range packets {
+			if err := sender.SendPacket(pkt); err != nil {
+				errCh <- err
+				return
+			}
+		}
+		errCh <- nil
+	}()
+
+	for i, expected := range packets {
+		received, err := receiver.ReadPacket()
+		if err != nil {
+			t.Fatalf("ReadPacket() packet %d error = %v", i, err)
+		}
+		if !bytes.Equal(received, expected) {
+			t.Errorf("Packet %d: got %v, want %v", i, received, expected)
+		}
+	}
+
+	if sendErr := <-errCh; sendErr != nil {
+		t.Fatalf("SendPacket() error = %v", sendErr)
+	}
+}
+
+func TestCryptConnSendPacketStateUpdate(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	sender := NewCryptConn(clientConn)
+
+	// Consume the data on the other side
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			_, err := serverConn.Read(buf)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	if sender.sentPackets != 0 {
+		t.Errorf("initial sentPackets = %d, want 0", sender.sentPackets)
+	}
+
+	err := sender.SendPacket([]byte{0x01, 0x02, 0x03, 0x04})
+	if err != nil {
+		t.Fatalf("SendPacket() error = %v", err)
+	}
+
+	if sender.sentPackets != 1 {
+		t.Errorf("sentPackets after 1 send = %d, want 1", sender.sentPackets)
+	}
+
+	// Key rotation should have changed from default
+	if sender.sendKeyRot == 995117 {
+		t.Error("sendKeyRot should have changed after SendPacket")
+	}
+
+	if sender.prevSendPacketCombinedCheck == 0 {
+		t.Error("prevSendPacketCombinedCheck should be set after SendPacket")
+	}
+}
+
+func TestCryptConnReadPacketClosedConn(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	receiver := NewCryptConn(serverConn)
+
+	// Close the writing end
+	clientConn.Close()
+
+	_, err := receiver.ReadPacket()
+	if err == nil {
+		t.Error("ReadPacket() on closed connection should return error")
+	}
+	serverConn.Close()
 }

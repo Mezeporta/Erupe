@@ -465,3 +465,160 @@ func TestReadNullTerminatedBytesNoTerminator(t *testing.T) {
 		t.Errorf("ReadNullTerminatedBytes with no terminator should return empty, got %v", result)
 	}
 }
+
+func TestReadUint8PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadUint8 past end should panic")
+		}
+	}()
+	bf := NewByteFrameFromBytes([]byte{0x01})
+	bf.ReadUint8() // consume the one byte
+	bf.ReadUint8() // should panic - no more data
+}
+
+func TestReadUint16PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadUint16 on empty buffer should panic")
+		}
+	}()
+	bf := NewByteFrame()
+	bf.ReadUint16()
+}
+
+func TestReadUint64PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadUint64 on empty buffer should panic")
+		}
+	}()
+	bf := NewByteFrame()
+	bf.ReadUint64()
+}
+
+func TestReadInt8PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadInt8 past end should panic")
+		}
+	}()
+	bf := NewByteFrameFromBytes([]byte{0x01})
+	bf.ReadInt8() // consume the one byte
+	bf.ReadInt8() // should panic - no more data
+}
+
+func TestReadInt16PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadInt16 on empty buffer should panic")
+		}
+	}()
+	bf := NewByteFrame()
+	bf.ReadInt16()
+}
+
+func TestReadInt32PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadInt32 on empty buffer should panic")
+		}
+	}()
+	bf := NewByteFrame()
+	bf.ReadInt32()
+}
+
+func TestReadInt64PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadInt64 on empty buffer should panic")
+		}
+	}()
+	bf := NewByteFrame()
+	bf.ReadInt64()
+}
+
+func TestReadFloat32PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadFloat32 on empty buffer should panic")
+		}
+	}()
+	bf := NewByteFrame()
+	bf.ReadFloat32()
+}
+
+func TestReadFloat64PanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadFloat64 on empty buffer should panic")
+		}
+	}()
+	bf := NewByteFrame()
+	bf.ReadFloat64()
+}
+
+func TestReadBytesPanicsOnOverflow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ReadBytes on empty buffer should panic")
+		}
+	}()
+	bf := NewByteFrame()
+	bf.ReadBytes(10)
+}
+
+func TestSeekInvalidWhence(t *testing.T) {
+	bf := NewByteFrame()
+	bf.WriteUint32(0x12345678)
+
+	// Invalid whence value should not crash, just not change position
+	pos, _ := bf.Seek(0, 99)
+	if pos != 4 {
+		t.Errorf("Seek with invalid whence pos = %d, want 4", pos)
+	}
+}
+
+func TestLittleEndianReadWrite(t *testing.T) {
+	bf := NewByteFrame()
+	bf.SetLE()
+	bf.WriteUint32(0x12345678)
+	bf.WriteInt16(-1234)
+	bf.WriteFloat32(3.14)
+
+	bf.Seek(0, io.SeekStart)
+	bf.SetLE()
+
+	if val := bf.ReadUint32(); val != 0x12345678 {
+		t.Errorf("LE ReadUint32 = 0x%X, want 0x12345678", val)
+	}
+	if val := bf.ReadInt16(); val != -1234 {
+		t.Errorf("LE ReadInt16 = %d, want -1234", val)
+	}
+	if val := bf.ReadFloat32(); val < 3.13 || val > 3.15 {
+		t.Errorf("LE ReadFloat32 = %f, want ~3.14", val)
+	}
+}
+
+func TestGrowWithLargeWrite(t *testing.T) {
+	bf := NewByteFrame()
+	// Initial buffer is 4 bytes. Write 1000 bytes to trigger grow with size > buf
+	largeData := make([]byte, 1000)
+	for i := range largeData {
+		largeData[i] = byte(i % 256)
+	}
+	bf.WriteBytes(largeData)
+
+	if len(bf.Data()) != 1000 {
+		t.Errorf("Data() len after large write = %d, want 1000", len(bf.Data()))
+	}
+
+	bf.Seek(0, io.SeekStart)
+	readBack := bf.ReadBytes(1000)
+	for i := range readBack {
+		if readBack[i] != byte(i%256) {
+			t.Errorf("Data mismatch at position %d: got %d, want %d", i, readBack[i], byte(i%256))
+			break
+		}
+	}
+}

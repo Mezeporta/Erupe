@@ -298,6 +298,10 @@ func TestEmptyHandlers_NoDb(t *testing.T) {
 		{"handleMsgMhfStampcardPrize", handleMsgMhfStampcardPrize},
 		{"handleMsgMhfUnreserveSrg", handleMsgMhfUnreserveSrg},
 		{"handleMsgMhfKickExportForce", handleMsgMhfKickExportForce},
+		{"handleMsgSysSetStatus", handleMsgSysSetStatus},
+		{"handleMsgSysEcho", handleMsgSysEcho},
+		{"handleMsgMhfUseUdShopCoin", handleMsgMhfUseUdShopCoin},
+		{"handleMsgMhfEnterTournamentQuest", handleMsgMhfEnterTournamentQuest},
 	}
 
 	for _, tt := range tests {
