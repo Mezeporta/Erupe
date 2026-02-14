@@ -8,6 +8,7 @@ import (
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/network/mhfpacket"
+
 	"go.uber.org/zap"
 )
 
@@ -65,19 +66,18 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	// Confirm the stage entry.
 	doAckSimpleSucceed(s, ackHandle, []byte{0x00, 0x00, 0x00, 0x00})
 
-	var temp mhfpacket.MHFPacket
 	newNotif := byteframe.NewByteFrame()
 
 	// Cast existing user data to new user
-	if !s.userEnteredStage {
-		s.userEnteredStage = true
+	if !s.loaded {
+		s.loaded = true
 
 		// Lock server to safely iterate over sessions map
 		// We need to copy the session list first to avoid holding the lock during packet building
 		s.server.Lock()
 		var sessionList []*Session
 		for _, session := range s.server.sessions {
-			if s == session {
+			if s == session || !session.loaded {
 				continue
 			}
 			sessionList = append(sessionList, session)
@@ -85,6 +85,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 		s.server.Unlock()
 
 		// Build packets for each session without holding the lock
+		var temp mhfpacket.MHFPacket
 		for _, session := range sessionList {
 			temp = &mhfpacket.MsgSysInsertUser{CharID: session.charID}
 			newNotif.WriteUint16(uint16(temp.Opcode()))

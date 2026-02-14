@@ -56,7 +56,6 @@ func createTestServer() *Server {
 		ID:             1,
 		logger:         logger,
 		sessions:       make(map[net.Conn]*Session),
-		objectIDs:      make(map[*Session]uint16),
 		stages:         make(map[string]*Stage),
 		semaphore:      make(map[string]*Semaphore),
 		questCacheData: make(map[int][]byte),

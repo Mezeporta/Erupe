@@ -49,7 +49,6 @@ type Server struct {
 	acceptConns    chan net.Conn
 	deleteConns    chan net.Conn
 	sessions       map[net.Conn]*Session
-	objectIDs      map[*Session]uint16
 	listener       net.Listener // Listener that is created when Server.Start is called.
 	isShuttingDown bool
 
@@ -155,7 +154,6 @@ func NewServer(config *Config) *Server {
 		acceptConns:     make(chan net.Conn),
 		deleteConns:     make(chan net.Conn),
 		sessions:        make(map[net.Conn]*Session),
-		objectIDs:       make(map[*Session]uint16),
 		stages:          make(map[string]*Stage),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		semaphore:       make(map[string]*Semaphore),
@@ -278,6 +276,20 @@ func (s *Server) manageSessions() {
 			s.Unlock()
 		}
 	}
+}
+
+func (s *Server) getObjectId() uint16 {
+	ids := make(map[uint16]struct{})
+	for _, sess := range s.sessions {
+		ids[sess.objectID] = struct{}{}
+	}
+	for i := uint16(1); i < 100; i++ {
+		if _, ok := ids[i]; !ok {
+			return i
+		}
+	}
+	s.logger.Warn("object ids overflowed", zap.Int("sessions", len(s.sessions)))
+	return 0
 }
 
 func (s *Server) invalidateSessions() {

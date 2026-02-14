@@ -582,7 +582,6 @@ func createTestServerWithDB(t *testing.T, db *sqlx.DB) *Server {
 		db:              db,
 		sessions:        make(map[net.Conn]*Session),
 		stages:          make(map[string]*Stage),
-		objectIDs:       make(map[*Session]uint16),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		semaphore:       make(map[string]*Semaphore),
 		erupeConfig:     _config.ErupeConfig,

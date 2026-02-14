@@ -337,7 +337,6 @@ func logoutPlayer(s *Session) {
 	s.server.Lock()
 	delete(s.server.sessions, s.rawConn)
 	s.rawConn.Close()
-	delete(s.server.objectIDs, s)
 	s.server.Unlock()
 
 	// Stage cleanup
