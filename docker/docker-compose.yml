@@ -38,9 +38,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # If using prebuilt container change paths and config
-    build:
-      context: ../
+    image: ghcr.io/mezeporta/erupe:main
+    # To build locally instead of using the prebuilt image, comment out
+    # the 'image' line above and uncomment the 'build' section below:
+    # build:
+    #   context: ../
     volumes:
       - ../config.json:/app/erupe/config.json
       - ../bin:/app/erupe/bin
