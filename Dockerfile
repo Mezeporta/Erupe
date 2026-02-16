@@ -16,10 +16,9 @@ RUN adduser -D -h /app erupe
 WORKDIR /app
 
 COPY --from=builder /build/erupe-ce .
-COPY --from=builder /build/www/ ./www/
 COPY --from=builder /build/schemas/ ./schemas/
-# bundled-schema/ is optional demo data, copy if present
-RUN mkdir -p bundled-schema
+
+# www/ and bin/ are mounted at runtime if needed
 
 # bin/ and savedata/ are mounted at runtime via docker-compose
 # config.json is also mounted at runtime
