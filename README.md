@@ -2,6 +2,7 @@
 
 [![Build and Test](https://github.com/Mezeporta/Erupe/actions/workflows/go-improved.yml/badge.svg)](https://github.com/Mezeporta/Erupe/actions/workflows/go-improved.yml)
 [![CodeQL](https://github.com/Mezeporta/Erupe/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Mezeporta/Erupe/actions/workflows/github-code-scanning/codeql)
+[![Codecov](https://codecov.io/gh/Mezeporta/Erupe/branch/main/graph/badge.svg)](https://codecov.io/gh/Mezeporta/Erupe)
 [![Latest Release](https://img.shields.io/github/v/release/Mezeporta/Erupe)](https://github.com/Mezeporta/Erupe/releases/latest)
 
 Erupe is a community-maintained server emulator for Monster Hunter Frontier written in Go. It is a complete reverse-engineered solution to self-host a Monster Hunter Frontier server, using no code from Capcom.
