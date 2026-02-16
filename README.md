@@ -2,16 +2,10 @@
 
 Erupe is a community-maintained server emulator for Monster Hunter Frontier written in Go. It is a complete reverse-engineered solution to self-host a Monster Hunter Frontier server, using no code from Capcom.
 
-## About This Fork
-
-This fork is maintained by the Mogapedia community, focusing on stability, documentation, and quality improvements to Erupe. Our goal is to provide a reliable, well-documented server platform for Monster Hunter Frontier enthusiasts.
-
-### Branch Strategy
+## Branch Strategy
 
 - **main**: Active development branch with the latest features and improvements
-- **9.2.0-clean**: Stable release branch providing a clean, functional 9.2.0 baseline for those seeking stability over cutting-edge features
-
-The 9.2.0-clean branch was created to address stability concerns after the 9.2.0 release, providing a solid foundation for future development while the main branch continues to evolve.
+- **stable/v9.2.x**: Stable release branch for those seeking stability over cutting-edge features
 
 ## Features
 
@@ -70,7 +64,7 @@ If you have an **installed** copy of Monster Hunter Frontier on an old hard driv
 
 ### Quick Start (Pre-compiled Binary)
 
-If you only want to run Erupe, download a [pre-compiled binary](https://github.com/ZeruLight/Erupe/releases/latest):
+If you only want to run Erupe, download a [pre-compiled binary](https://github.com/Mezeporta/Erupe/releases/latest):
 
 - `erupe-ce` for Linux
 - `erupe.exe` for Windows
@@ -84,7 +78,7 @@ Then proceed to [Configuration](#configuration).
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/ZeruLight/Erupe.git
+   git clone https://github.com/Mezeporta/Erupe.git
    cd Erupe
    ```
 
@@ -92,7 +86,7 @@ Then proceed to [Configuration](#configuration).
 
    ```bash
    # Download and apply the base schema
-   wget https://github.com/ZeruLight/Erupe/releases/latest/download/SCHEMA.sql
+   wget https://github.com/Mezeporta/Erupe/releases/latest/download/SCHEMA.sql
    psql -U your_user -d your_database -f SCHEMA.sql
    ```
 
