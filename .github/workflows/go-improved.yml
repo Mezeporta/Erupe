@@ -14,7 +14,8 @@ on:
       - 'server/**'
       - 'go.mod'
       - 'go.sum'
-      - '.github/workflows/go.yml'
+      - 'main.go'
+      - '.github/workflows/go-improved.yml'
   pull_request:
     branches:
       - main
