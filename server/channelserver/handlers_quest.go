@@ -110,8 +110,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("scenarios/%s.bin", filename)))
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("Failed to open file: %s/scenarios/%s.bin", s.server.erupeConfig.BinPath, filename))
-			// This will crash the game.
-			doAckBufSucceed(s, pkt.AckHandle, data)
+			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
 		doAckBufSucceed(s, pkt.AckHandle, data)
@@ -130,8 +129,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("Failed to open file: %s/quests/%s.bin", s.server.erupeConfig.BinPath, pkt.Filename))
-			// This will crash the game.
-			doAckBufSucceed(s, pkt.AckHandle, data)
+			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
 		if _config.ErupeConfig.RealClientMode <= _config.Z1 && s.server.erupeConfig.DebugOptions.AutoQuestBackport {

@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -684,5 +686,98 @@ func BenchmarkBackportQuest(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_ = BackportQuest(data)
+	}
+}
+
+// parseAckFromChannel reads a queued packet from the session's sendPackets channel
+// and parses the ErrorCode from the MsgSysAck wire format.
+func parseAckFromChannel(t *testing.T, s *Session) (errorCode uint8) {
+	t.Helper()
+	select {
+	case pkt := <-s.sendPackets:
+		// Wire format: 2 bytes opcode + 4 bytes AckHandle + 1 byte IsBufferResponse + 1 byte ErrorCode + ...
+		data := pkt.data
+		if len(data) < 8 {
+			t.Fatalf("ack packet too short: %d bytes", len(data))
+		}
+		return data[7] // ErrorCode is at offset 7
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for ack packet")
+		return
+	}
+}
+
+// TestHandleMsgSysGetFile_MissingQuestFile tests that a missing quest file
+// sends a failure ack instead of crashing the client with nil data.
+func TestHandleMsgSysGetFile_MissingQuestFile(t *testing.T) {
+	mockConn := &MockCryptConn{sentPackets: make([][]byte, 0)}
+	s := createTestSession(mockConn)
+	s.server.erupeConfig.BinPath = t.TempDir()
+
+	pkt := &mhfpacket.MsgSysGetFile{
+		AckHandle:  42,
+		IsScenario: false,
+		Filename:   "d00100d0",
+	}
+
+	handleMsgSysGetFile(s, pkt)
+
+	errorCode := parseAckFromChannel(t, s)
+	if errorCode != 1 {
+		t.Errorf("expected failure ack (ErrorCode=1) for missing quest file, got ErrorCode=%d", errorCode)
+	}
+}
+
+// TestHandleMsgSysGetFile_MissingScenarioFile tests that a missing scenario file
+// sends a failure ack instead of crashing the client with nil data.
+func TestHandleMsgSysGetFile_MissingScenarioFile(t *testing.T) {
+	mockConn := &MockCryptConn{sentPackets: make([][]byte, 0)}
+	s := createTestSession(mockConn)
+	s.server.erupeConfig.BinPath = t.TempDir()
+
+	pkt := &mhfpacket.MsgSysGetFile{
+		AckHandle:  42,
+		IsScenario: true,
+		// ScenarioIdentifer fields default to zero values, producing filename "0_0_0_0_S0_T0_C0"
+	}
+
+	handleMsgSysGetFile(s, pkt)
+
+	errorCode := parseAckFromChannel(t, s)
+	if errorCode != 1 {
+		t.Errorf("expected failure ack (ErrorCode=1) for missing scenario file, got ErrorCode=%d", errorCode)
+	}
+}
+
+// TestHandleMsgSysGetFile_ExistingQuestFile tests that an existing quest file
+// sends a success ack with the file data.
+func TestHandleMsgSysGetFile_ExistingQuestFile(t *testing.T) {
+	mockConn := &MockCryptConn{sentPackets: make([][]byte, 0)}
+	s := createTestSession(mockConn)
+
+	tmpDir := t.TempDir()
+	s.server.erupeConfig.BinPath = tmpDir
+
+	// Create the quests directory and a test quest file
+	questDir := filepath.Join(tmpDir, "quests")
+	if err := os.MkdirAll(questDir, 0o755); err != nil {
+		t.Fatalf("failed to create quest dir: %v", err)
+	}
+	questData := []byte{0xDE, 0xAD, 0xBE, 0xEF}
+	if err := os.WriteFile(filepath.Join(questDir, "d00100d0.bin"), questData, 0o644); err != nil {
+		t.Fatalf("failed to write quest file: %v", err)
+	}
+
+	pkt := &mhfpacket.MsgSysGetFile{
+		AckHandle:  42,
+		IsScenario: false,
+		Filename:   "d00100d0",
+	}
+
+	handleMsgSysGetFile(s, pkt)
+
+	errorCode := parseAckFromChannel(t, s)
+	if errorCode != 0 {
+		t.Errorf("expected success ack (ErrorCode=0) for existing quest file, got ErrorCode=%d", errorCode)
 	}
 }
