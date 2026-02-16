@@ -1,7 +1,6 @@
 package token
 
 import (
-	"math/rand"
 	"testing"
 	"time"
 )
@@ -134,10 +133,10 @@ func TestGenerate_Distribution(t *testing.T) {
 	}
 }
 
-func TestNewRNG(t *testing.T) {
-	rng := NewRNG()
+func TestNewSafeRand(t *testing.T) {
+	rng := NewSafeRand()
 	if rng == nil {
-		t.Fatal("NewRNG() returned nil")
+		t.Fatal("NewSafeRand() returned nil")
 	}
 
 	// Test that it produces different values on subsequent calls
@@ -154,7 +153,7 @@ func TestNewRNG(t *testing.T) {
 			}
 		}
 		if same {
-			t.Error("NewRNG() produced same value 12 times in a row")
+			t.Error("NewSafeRand() produced same value 12 times in a row")
 		}
 	}
 }
@@ -237,11 +236,11 @@ func TestGenerate_OnlyAlphanumeric(t *testing.T) {
 	}
 }
 
-func TestNewRNG_DifferentSeeds(t *testing.T) {
+func TestNewSafeRand_DifferentSeeds(t *testing.T) {
 	// Create two RNGs at different times and verify they produce different sequences
-	rng1 := NewRNG()
+	rng1 := NewSafeRand()
 	time.Sleep(1 * time.Millisecond) // Ensure different seed
-	rng2 := NewRNG()
+	rng2 := NewSafeRand()
 
 	val1 := rng1.Intn(1000000)
 	val2 := rng2.Intn(1000000)
@@ -278,15 +277,15 @@ func BenchmarkGenerate_Long(b *testing.B) {
 	}
 }
 
-func BenchmarkNewRNG(b *testing.B) {
+func BenchmarkNewSafeRand(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = NewRNG()
+		_ = NewSafeRand()
 	}
 }
 
 func BenchmarkRNG_Intn(b *testing.B) {
-	rng := NewRNG()
+	rng := NewSafeRand()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = rng.Intn(62)
@@ -294,7 +293,7 @@ func BenchmarkRNG_Intn(b *testing.B) {
 }
 
 func BenchmarkRNG_Uint32(b *testing.B) {
-	rng := NewRNG()
+	rng := NewSafeRand()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = rng.Uint32()
@@ -334,7 +333,7 @@ func TestGenerate_ConsistentCharacterSet(t *testing.T) {
 }
 
 func TestRNG_Type(t *testing.T) {
-	// Verify RNG is of type *rand.Rand
-	var _ *rand.Rand = RNG
-	var _ *rand.Rand = NewRNG()
+	// Verify RNG is of type *SafeRand
+	var _ *SafeRand = RNG
+	var _ *SafeRand = NewSafeRand()
 }

@@ -539,7 +539,7 @@ func TestDiffItemStacks_GeneratesNewWarehouseID(t *testing.T) {
 	}
 
 	// Reset RNG for consistent test
-	token.RNG = token.NewRNG()
+	token.RNG = token.NewSafeRand()
 
 	result := DiffItemStacks(old, update)
 	if len(result) != 1 {
