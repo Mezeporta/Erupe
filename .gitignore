@@ -10,8 +10,17 @@ savedata/*/
 /docker/db-data
 screenshots/*
 
-# We don't need the built file
+# We don't need built files
 erupe-ce
+erupe
+tools/loganalyzer/loganalyzer
 
 # config is install dependent
 config.json
+.env
+
+# Logs
+logs/
+
+# Deployment scripts
+deploy.sh
