@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed double-save bug in logout flow that caused unnecessary database operations
 - Fixed save operation ordering - now saves data before session cleanup instead of after
 - Fixed stale transmog/armor appearance shown to other players - user binary cache now invalidated when plate data is saved
+- Fixed server crash when Discord relay receives messages with unsupported Shift-JIS characters (emoji, Lenny faces, cuneiform, etc.)
 
 ### Security
 

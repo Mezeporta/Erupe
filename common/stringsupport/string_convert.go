@@ -15,7 +15,15 @@ func UTF8ToSJIS(x string) []byte {
 	e := japanese.ShiftJIS.NewEncoder()
 	xt, _, err := transform.String(e, x)
 	if err != nil {
-		panic(err)
+		// Filter out runes that can't be encoded to Shift-JIS instead of
+		// crashing the server (see PR #116).
+		var filtered []rune
+		for _, r := range x {
+			if _, _, err := transform.String(japanese.ShiftJIS.NewEncoder(), string(r)); err == nil {
+				filtered = append(filtered, r)
+			}
+		}
+		xt, _, _ = transform.String(japanese.ShiftJIS.NewEncoder(), string(filtered))
 	}
 	return []byte(xt)
 }
@@ -36,9 +44,10 @@ func ToNGWord(x string) []uint16 {
 			t := UTF8ToSJIS(string(r))
 			if len(t) > 1 {
 				w = append(w, uint16(t[1])<<8|uint16(t[0]))
-			} else {
+			} else if len(t) == 1 {
 				w = append(w, uint16(t[0]))
 			}
+			// Skip runes that produced no SJIS output (unsupported characters)
 		} else {
 			w = append(w, uint16(r))
 		}

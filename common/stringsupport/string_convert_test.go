@@ -458,6 +458,80 @@ func BenchmarkCSVElems(b *testing.B) {
 	}
 }
 
+func TestUTF8ToSJIS_UnsupportedCharacters(t *testing.T) {
+	// Regression test for PR #116: Characters outside the Shift-JIS range
+	// (e.g. Lenny face, cuneiform) previously caused a panic in UTF8ToSJIS,
+	// crashing the server when relayed from Discord.
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"lenny_face", "( ͡° ͜ʖ ͡°)"},
+		{"cuneiform", "𒀜"},
+		{"emoji", "Hello 🎮 World"},
+		{"mixed_unsupported", "Test ͡° message 𒀜 here"},
+		{"zalgo_text", "H̷e̸l̵l̶o̷"},
+		{"only_unsupported", "🎮🎲🎯"},
+		{"cyrillic", "Привет"},
+		{"arabic", "مرحبا"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Must not panic - the old code would panic here
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("UTF8ToSJIS panicked on input %q: %v", tt.input, r)
+				}
+			}()
+			result := UTF8ToSJIS(tt.input)
+			if result == nil {
+				t.Error("UTF8ToSJIS returned nil")
+			}
+		})
+	}
+}
+
+func TestUTF8ToSJIS_PreservesValidContent(t *testing.T) {
+	// Verify that valid Shift-JIS content is preserved when mixed with
+	// unsupported characters.
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"ascii_with_emoji", "Hello 🎮 World", "Hello  World"},
+		{"japanese_with_emoji", "テスト🎮データ", "テストデータ"},
+		{"only_valid", "Hello World", "Hello World"},
+		{"only_invalid", "🎮🎲🎯", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sjis := UTF8ToSJIS(tt.input)
+			roundTripped := SJISToUTF8(sjis)
+			if roundTripped != tt.expected {
+				t.Errorf("UTF8ToSJIS(%q) round-tripped to %q, want %q", tt.input, roundTripped, tt.expected)
+			}
+		})
+	}
+}
+
+func TestToNGWord_UnsupportedCharacters(t *testing.T) {
+	// ToNGWord also calls UTF8ToSJIS internally, so it must not panic either.
+	inputs := []string{"( ͡° ͜ʖ ͡°)", "🎮", "Hello 🎮 World"}
+	for _, input := range inputs {
+		t.Run(input, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("ToNGWord panicked on input %q: %v", input, r)
+				}
+			}()
+			_ = ToNGWord(input)
+		})
+	}
+}
+
 func BenchmarkUTF8ToSJIS(b *testing.B) {
 	text := "Hello World テスト"
 	b.ResetTimer()
