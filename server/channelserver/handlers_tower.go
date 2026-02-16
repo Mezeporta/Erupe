@@ -3,9 +3,11 @@ package channelserver
 import (
 	_config "erupe-ce/config"
 	"fmt"
-	"go.uber.org/zap"
+	"math"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/stringsupport"
@@ -71,6 +73,9 @@ func handleMsgMhfGetTowerInfo(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	for i, skill := range stringsupport.CSVElems(tempSkills) {
+		if skill < math.MinInt16 || skill > math.MaxInt16 {
+			continue
+		}
 		towerInfo.Skill[0].Skills[i] = int16(skill)
 	}
 
@@ -428,6 +433,9 @@ func handleMsgMhfGetGemInfo(s *Session, p mhfpacket.MHFPacket) {
 	var tempGems string
 	s.server.db.QueryRow(`SELECT COALESCE(gems, $1) FROM tower WHERE char_id=$2`, EmptyTowerCSV(30), s.charID).Scan(&tempGems)
 	for i, v := range stringsupport.CSVElems(tempGems) {
+		if v < 0 || v > math.MaxUint16 {
+			continue
+		}
 		gemInfo = append(gemInfo, GemInfo{uint16((i / 5 << 8) + (i%5 + 1)), uint16(v)})
 	}
 
