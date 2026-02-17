@@ -40,6 +40,8 @@ Docker handles the database automatically. You only need to provide quest files 
 
    pgAdmin is available at `http://localhost:5050` for database management.
 
+   See [docker/README.md](./docker/README.md) for more details (local builds, troubleshooting).
+
 ### Option B: Pre-compiled Binary
 
 1. Download the latest release for your platform from [GitHub Releases](https://github.com/Mezeporta/Erupe/releases/latest):

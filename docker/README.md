@@ -1,86 +1,62 @@
-# Docker for erupe
+# Docker for Erupe
 
-## Building the container
+## Quick Start
 
-Run the following from the route of the source folder. In this example we give it the tag of dev to seperate it from any other container verions.
+1. From the repository root, copy and edit the config:
 
-```bash
-docker build . -t erupe:dev
-```
+   ```bash
+   cp config.example.json docker/config.json
+   ```
 
-## Running the container in isolation
+   Edit `docker/config.json` — set `Database.Host` to `"db"` and match the password to `docker-compose.yml` (default: `password`).
 
-This is just running the container. You can do volume mounts into the container for the `config.json` to tell it to communicate to a database. You will need to do this also for other folders such as `bin` and `savedata`
+2. Place your [quest/scenario files](https://files.catbox.moe/xf0l7w.7z) in `docker/bin/`.
 
-```bash
-docker run erupe:dev
-```
+3. Start everything:
 
-## Docker compose
+   ```bash
+   cd docker
+   docker compose up
+   ```
 
-Docker compose allows you to run multiple containers at once. The docker compose in this folder has 3 things set up.
+The database is automatically initialized and patched on first start via `init/setup.sh`.
 
-- postgres
-- pg admin (Admin interface to make db changes)
-- erupe
+pgAdmin is available at `http://localhost:5050` (default login: `user@pgadmin.com` / `password`).
 
-We automatically populate the database to the latest version on start. If you you are updating you will need to apply the new schemas manually.
+## Building Locally
 
-Before we get started you should make sure the database info matches whats in the docker compose file for the environment variables `POSTGRES_PASSWORD`,`POSTGRES_USER` and `POSTGRES_DB`. You can set the host to be the service name `db`.
-
-Here is a example of what you would put in the config.json if you was to leave the defaults. It is strongly recommended to change the password.
-
-```txt
-"Database": {
-    "Host": "db",
-    "Port": 5432,
-    "User": "postgres",
-    "Password": "password",
-    "Database": "erupe"
-  },
-```
-
-Place this file within ./docker/config.json
-
-You will need to do the same for your bins place these in ./docker/bin
-
-## Setting up the web hosted materials
-
-Clone the Severs repo into ./docker/Severs
-
-Make sure your hosts are pointing to where this is hosted
-
-## Turning off the server safely
+By default the server service pulls the prebuilt image from GHCR. To build from source instead, edit `docker-compose.yml`: comment out the `image` line and uncomment the `build` section, then:
 
 ```bash
-docker-compose stop
+docker compose up --build
 ```
 
-## Turning off the server destructive
+## Stopping the Server
 
 ```bash
-docker-compose down
+docker compose stop     # Stop containers (preserves data)
+docker compose down     # Stop and remove containers (preserves data volumes)
 ```
 
-Make sure if you want to delete your data you delete the folders that persisted
+To delete all persistent data, remove these directories after stopping:
 
-- ./docker/savedata
-- ./docker/db-data
+- `docker/db-data/`
+- `docker/savedata/`
 
-## Turning on the server again
+## Updating
 
-This boots the db pgadmin and the server in a detached state
+After pulling new changes:
 
-```bash
-docker-compose up -d
-```
+1. Check for new patch schemas in `schemas/patch-schema/` — apply them via pgAdmin or `psql` into the running database container.
 
-if you want all the logs and you want it to be in an attached state
+2. Rebuild and restart:
 
-```bash
-docker-compose up
-```
+   ```bash
+   docker compose down
+   docker compose build
+   docker compose up
+   ```
 
 ## Troubleshooting
 
-Q: My Postgres will not populate. A: You're setup.sh is maybe saved as CRLF it needs to be saved as LF.
+**Postgres won't populate on Windows**: `init/setup.sh` must use LF line endings, not CRLF. Open it in your editor and convert.

@@ -8,6 +8,9 @@ savedata/*/
 *.lnk
 *.bat
 /docker/db-data
+/docker/savedata
+/docker/bin
+/docker/config.json
 screenshots/*
 
 # We don't need built files
