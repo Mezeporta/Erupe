@@ -55,7 +55,7 @@ func TestMsgSysCreateStageFields(t *testing.T) {
 			stageIDBytes := []byte(tt.stageID)
 			bf.WriteUint8(uint8(len(stageIDBytes)))
 			bf.WriteBytes(append(stageIDBytes, 0x00))
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysCreateStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -99,7 +99,7 @@ func TestMsgSysEnterStageFields(t *testing.T) {
 			stageIDBytes := []byte(tt.stageID)
 			bf.WriteUint8(uint8(len(stageIDBytes)))
 			bf.WriteBytes(append(stageIDBytes, 0x00))
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysEnterStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -139,7 +139,7 @@ func TestMsgSysMoveStageFields(t *testing.T) {
 			stageIDBytes := []byte(tt.stageID)
 			bf.WriteUint8(uint8(len(stageIDBytes)))
 			bf.WriteBytes(stageIDBytes)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysMoveStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -181,7 +181,7 @@ func TestMsgSysLockStageFields(t *testing.T) {
 			stageIDBytes := []byte(tt.stageID)
 			bf.WriteUint8(uint8(len(stageIDBytes)))
 			bf.WriteBytes(append(stageIDBytes, 0x00))
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysLockStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -215,7 +215,7 @@ func TestMsgSysUnlockStageFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint16(tt.unk0)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysUnlockStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -242,7 +242,7 @@ func TestMsgSysBackStageFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint32(tt.handle)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysBackStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -271,7 +271,7 @@ func TestStageIDEdgeCases(t *testing.T) {
 		bf.WriteUint8(4)
 		bf.WriteUint8(uint8(len(longID)))
 		bf.WriteBytes(append(longID, 0x00))
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgSysCreateStage{}
 		err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -293,7 +293,7 @@ func TestStageIDEdgeCases(t *testing.T) {
 		bf.WriteUint8(0)
 		bf.WriteUint8(uint8(len(stageID)))
 		bf.WriteBytes([]byte(stageID))
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgSysEnterStage{}
 		err := pkt.Parse(bf, &clientctx.ClientContext{})

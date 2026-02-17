@@ -24,18 +24,18 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
-	bf.Seek(71, 0)
+	_, _ = bf.Seek(71, 0)
 	maxStageMp := bf.ReadUint32()
 	maxScoreMp := bf.ReadUint32()
-	bf.Seek(4, 1)
+	_, _ = bf.Seek(4, 1)
 	maxStageSp := bf.ReadUint32()
 	maxScoreSp := bf.ReadUint32()
 	var t int
 	err = s.server.db.QueryRow("SELECT character_id FROM rengoku_score WHERE character_id=$1", s.charID).Scan(&t)
 	if err != nil {
-		s.server.db.Exec("INSERT INTO rengoku_score (character_id) VALUES ($1)", s.charID)
+		_, _ = s.server.db.Exec("INSERT INTO rengoku_score (character_id) VALUES ($1)", s.charID)
 	}
-	s.server.db.Exec("UPDATE rengoku_score SET max_stages_mp=$1, max_points_mp=$2, max_stages_sp=$3, max_points_sp=$4 WHERE character_id=$5", maxStageMp, maxScoreMp, maxStageSp, maxScoreSp, s.charID)
+	_, _ = s.server.db.Exec("UPDATE rengoku_score SET max_stages_mp=$1, max_points_mp=$2, max_stages_sp=$3, max_points_sp=$4 WHERE character_id=$5", maxStageMp, maxScoreMp, maxStageSp, maxScoreSp, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 

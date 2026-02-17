@@ -216,7 +216,7 @@ func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	s.server.db.Exec(`UPDATE mail SET read = true WHERE id = $1`, mail.ID)
+	_, _ = s.server.db.Exec(`UPDATE mail SET read = true WHERE id = $1`, mail.ID)
 	bf := byteframe.NewByteFrame()
 	body := stringsupport.UTF8ToSJIS(mail.Body)
 	bf.WriteNullTerminatedBytes(body)
@@ -303,13 +303,13 @@ func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 
 	switch pkt.Operation {
 	case mhfpacket.OperateMailDelete:
-		s.server.db.Exec(`UPDATE mail SET deleted = true WHERE id = $1`, mail.ID)
+		_, _ = s.server.db.Exec(`UPDATE mail SET deleted = true WHERE id = $1`, mail.ID)
 	case mhfpacket.OperateMailLock:
-		s.server.db.Exec(`UPDATE mail SET locked = TRUE WHERE id = $1`, mail.ID)
+		_, _ = s.server.db.Exec(`UPDATE mail SET locked = TRUE WHERE id = $1`, mail.ID)
 	case mhfpacket.OperateMailUnlock:
-		s.server.db.Exec(`UPDATE mail SET locked = FALSE WHERE id = $1`, mail.ID)
+		_, _ = s.server.db.Exec(`UPDATE mail SET locked = FALSE WHERE id = $1`, mail.ID)
 	case mhfpacket.OperateMailAcquireItem:
-		s.server.db.Exec(`UPDATE mail SET attached_item_received = TRUE WHERE id = $1`, mail.ID)
+		_, _ = s.server.db.Exec(`UPDATE mail SET attached_item_received = TRUE WHERE id = $1`, mail.ID)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

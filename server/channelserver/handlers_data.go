@@ -78,7 +78,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		s.rawConn.Close()
 		s.logger.Warn("Save cancelled due to corruption.")
 		if s.server.erupeConfig.DeleteOnSaveCorruption {
-			s.server.db.Exec("UPDATE characters SET deleted=true WHERE id=$1", s.charID)
+			_, _ = s.server.db.Exec("UPDATE characters SET deleted=true WHERE id=$1", s.charID)
 		}
 		return
 	}
@@ -172,7 +172,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error("Failed to decompress savedata", zap.Error(err))
 	}
 	bf := byteframe.NewByteFrameFromBytes(decompSaveData)
-	bf.Seek(88, io.SeekStart)
+	_, _ = bf.Seek(88, io.SeekStart)
 	name := bf.ReadNullTerminatedBytes()
 	s.server.userBinaryPartsLock.Lock()
 	s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: 1}] = append(name, []byte{0x00}...)

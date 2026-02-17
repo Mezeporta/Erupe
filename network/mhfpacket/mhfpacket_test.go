@@ -73,7 +73,7 @@ func TestMsgSysPingRoundTrip(t *testing.T) {
 	}
 
 	// Parse
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgSysPing{}
 	err = parsed.Parse(bf, ctx)
 	if err != nil {
@@ -115,7 +115,7 @@ func TestMsgSysTimeRoundTrip(t *testing.T) {
 			}
 
 			// Parse
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysTime{}
 			err = parsed.Parse(bf, ctx)
 			if err != nil {
@@ -237,7 +237,7 @@ func TestParserInterface(t *testing.T) {
 	var p Parser = &MsgSysPing{}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(123)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	err := p.Parse(bf, &clientctx.ClientContext{})
 	if err != nil {
@@ -501,7 +501,7 @@ func TestMsgSysCreateStageParse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteBytes(tt.data)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysCreateStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -553,7 +553,7 @@ func TestMsgSysEnterStageParse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteBytes(tt.data)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysEnterStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -602,7 +602,7 @@ func TestMsgSysMoveStageParse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteBytes(tt.data)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysMoveStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -648,7 +648,7 @@ func TestMsgSysLockStageParse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteBytes(tt.data)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysLockStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -691,7 +691,7 @@ func TestMsgSysUnlockStageRoundTrip(t *testing.T) {
 			// Parse should consume a uint16 without error
 			bf = byteframe.NewByteFrame()
 			bf.WriteUint16(tt.unk0)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysUnlockStage{}
 			err = parsed.Parse(bf, ctx)
 			if err != nil {
@@ -716,7 +716,7 @@ func TestMsgSysBackStageParse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteBytes(tt.data)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysBackStage{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -746,7 +746,7 @@ func TestMsgSysLogoutParse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteBytes(tt.data)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysLogout{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -800,7 +800,7 @@ func TestMsgSysLoginParse(t *testing.T) {
 			bf.WriteUint16(tt.hardcodedZero1)
 			bf.WriteUint16(tt.tokenStrLen)
 			bf.WriteBytes(append([]byte(tt.tokenString), 0x00)) // null terminated
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysLogin{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})

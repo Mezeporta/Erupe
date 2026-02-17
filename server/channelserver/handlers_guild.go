@@ -715,9 +715,9 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OperateGuildDonateRank:
 		bf.WriteBytes(handleDonateRP(s, uint16(pkt.Data1.ReadUint32()), guild, 0))
 	case mhfpacket.OperateGuildSetApplicationDeny:
-		s.server.db.Exec("UPDATE guilds SET recruiting=false WHERE id=$1", guild.ID)
+		_, _ = s.server.db.Exec("UPDATE guilds SET recruiting=false WHERE id=$1", guild.ID)
 	case mhfpacket.OperateGuildSetApplicationAllow:
-		s.server.db.Exec("UPDATE guilds SET recruiting=true WHERE id=$1", guild.ID)
+		_, _ = s.server.db.Exec("UPDATE guilds SET recruiting=true WHERE id=$1", guild.ID)
 	case mhfpacket.OperateGuildSetAvoidLeadershipTrue:
 		handleAvoidLeadershipUpdate(s, pkt, true)
 	case mhfpacket.OperateGuildSetAvoidLeadershipFalse:
@@ -751,7 +751,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OperateGuildChangePugi3:
 		handleChangePugi(s, uint8(pkt.Data1.ReadUint32()), guild, 3)
 	case mhfpacket.OperateGuildUnlockOutfit:
-		s.server.db.Exec(`UPDATE guilds SET pugi_outfits=$1 WHERE id=$2`, pkt.Data1.ReadUint32(), guild.ID)
+		_, _ = s.server.db.Exec(`UPDATE guilds SET pugi_outfits=$1 WHERE id=$2`, pkt.Data1.ReadUint32(), guild.ID)
 	case mhfpacket.OperateGuildDonateRoom:
 		quantity := uint16(pkt.Data1.ReadUint32())
 		bf.WriteBytes(handleDonateRP(s, quantity, guild, 2))
@@ -759,7 +759,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		quantity := uint16(pkt.Data1.ReadUint32())
 		bf.WriteBytes(handleDonateRP(s, quantity, guild, 1))
 		// TODO: Move this value onto rp_yesterday and reset to 0... daily?
-		s.server.db.Exec(`UPDATE guild_characters SET rp_today=rp_today+$1 WHERE character_id=$2`, quantity, s.charID)
+		_, _ = s.server.db.Exec(`UPDATE guild_characters SET rp_today=rp_today+$1 WHERE character_id=$2`, quantity, s.charID)
 	case mhfpacket.OperateGuildEventExchange:
 		rp := uint16(pkt.Data1.ReadUint32())
 		var balance uint32
@@ -825,18 +825,18 @@ func handleDonateRP(s *Session, amount uint16, guild *Guild, _type int) []byte {
 	saveData.Save(s)
 	switch _type {
 	case 0:
-		s.server.db.Exec(`UPDATE guilds SET rank_rp = rank_rp + $1 WHERE id = $2`, amount, guild.ID)
+		_, _ = s.server.db.Exec(`UPDATE guilds SET rank_rp = rank_rp + $1 WHERE id = $2`, amount, guild.ID)
 	case 1:
-		s.server.db.Exec(`UPDATE guilds SET event_rp = event_rp + $1 WHERE id = $2`, amount, guild.ID)
+		_, _ = s.server.db.Exec(`UPDATE guilds SET event_rp = event_rp + $1 WHERE id = $2`, amount, guild.ID)
 	case 2:
 		if resetRoom {
-			s.server.db.Exec(`UPDATE guilds SET room_rp = 0 WHERE id = $1`, guild.ID)
-			s.server.db.Exec(`UPDATE guilds SET room_expiry = $1 WHERE id = $2`, TimeAdjusted().Add(time.Hour*24*7), guild.ID)
+			_, _ = s.server.db.Exec(`UPDATE guilds SET room_rp = 0 WHERE id = $1`, guild.ID)
+			_, _ = s.server.db.Exec(`UPDATE guilds SET room_expiry = $1 WHERE id = $2`, TimeAdjusted().Add(time.Hour*24*7), guild.ID)
 		} else {
-			s.server.db.Exec(`UPDATE guilds SET room_rp = room_rp + $1 WHERE id = $2`, amount, guild.ID)
+			_, _ = s.server.db.Exec(`UPDATE guilds SET room_rp = room_rp + $1 WHERE id = $2`, amount, guild.ID)
 		}
 	}
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	bf.WriteUint32(uint32(saveData.RP))
 	return bf.Data()
 }
@@ -1622,7 +1622,7 @@ func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuildItem)
 	newStacks := mhfitem.DiffItemStacks(guildGetItems(s, pkt.GuildID), pkt.UpdatedItems)
-	s.server.db.Exec(`UPDATE guilds SET item_box=$1 WHERE id=$2`, mhfitem.SerializeWarehouseItems(newStacks), pkt.GuildID)
+	_, _ = s.server.db.Exec(`UPDATE guilds SET item_box=$1 WHERE id=$2`, mhfitem.SerializeWarehouseItems(newStacks), pkt.GuildID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -1810,9 +1810,9 @@ func handleMsgMhfRegistGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
 	startTime := TimeAdjusted().Add(time.Duration(s.server.erupeConfig.GameplayOptions.ClanMealDuration-3600) * time.Second)
 	if pkt.OverwriteID != 0 {
-		s.server.db.Exec("UPDATE guild_meals SET meal_id = $1, level = $2, created_at = $3 WHERE id = $4", pkt.MealID, pkt.Success, startTime, pkt.OverwriteID)
+		_, _ = s.server.db.Exec("UPDATE guild_meals SET meal_id = $1, level = $2, created_at = $3 WHERE id = $4", pkt.MealID, pkt.Success, startTime, pkt.OverwriteID)
 	} else {
-		s.server.db.QueryRow("INSERT INTO guild_meals (guild_id, meal_id, level, created_at) VALUES ($1, $2, $3, $4) RETURNING id", guild.ID, pkt.MealID, pkt.Success, startTime).Scan(&pkt.OverwriteID)
+		_ = s.server.db.QueryRow("INSERT INTO guild_meals (guild_id, meal_id, level, created_at) VALUES ($1, $2, $3, $4) RETURNING id", guild.ID, pkt.MealID, pkt.Success, startTime).Scan(&pkt.OverwriteID)
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(1)
@@ -1843,7 +1843,7 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	switch pkt.Operation {
 	case 0: // Acquire
-		s.server.db.Exec(`UPDATE guild_characters SET box_claimed=$1 WHERE character_id=$2`, TimeAdjusted(), s.charID)
+		_, _ = s.server.db.Exec(`UPDATE guild_characters SET box_claimed=$1 WHERE character_id=$2`, TimeAdjusted(), s.charID)
 	case 1: // Enumerate
 		bf.WriteUint8(0) // Entries
 		rows, err := s.server.db.Query(`SELECT kl.id, kl.monster FROM kill_logs kl
@@ -1867,7 +1867,7 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteUint32(huntID)
 				bf.WriteUint32(monID)
 			}
-			bf.Seek(0, 0)
+			_, _ = bf.Seek(0, 0)
 			bf.WriteUint8(count)
 		}
 	case 2: // Check
@@ -1913,7 +1913,7 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	s.server.db.Exec("UPDATE characters SET guild_post_checked = now() WHERE id = $1", s.charID)
+	_, _ = s.server.db.Exec("UPDATE characters SET guild_post_checked = now() WHERE id = $1", s.charID)
 	bf := byteframe.NewByteFrame()
 	var postCount uint32
 	for msgs.Next() {
@@ -1952,14 +1952,14 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	}
 	switch pkt.MessageOp {
 	case 0: // Create message
-		s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, s.charID, pkt.StampID, pkt.PostType, pkt.Title, pkt.Body)
+		_, _ = s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, s.charID, pkt.StampID, pkt.PostType, pkt.Title, pkt.Body)
 		// TODO: if there are too many messages, purge excess
 	case 1: // Delete message
-		s.server.db.Exec("DELETE FROM guild_posts WHERE id = $1", pkt.PostID)
+		_, _ = s.server.db.Exec("DELETE FROM guild_posts WHERE id = $1", pkt.PostID)
 	case 2: // Update message
-		s.server.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE id = $3", pkt.Title, pkt.Body, pkt.PostID)
+		_, _ = s.server.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE id = $3", pkt.Title, pkt.Body, pkt.PostID)
 	case 3: // Update stamp
-		s.server.db.Exec("UPDATE guild_posts SET stamp_id = $1 WHERE id = $2", pkt.StampID, pkt.PostID)
+		_, _ = s.server.db.Exec("UPDATE guild_posts SET stamp_id = $1 WHERE id = $2", pkt.StampID, pkt.PostID)
 	case 4: // Like message
 		var likedBy string
 		err := s.server.db.QueryRow("SELECT liked_by FROM guild_posts WHERE id = $1", pkt.PostID).Scan(&likedBy)
@@ -1968,10 +1968,10 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		} else {
 			if pkt.LikeState {
 				likedBy = stringsupport.CSVAdd(likedBy, int(s.charID))
-				s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID)
+				_, _ = s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID)
 			} else {
 				likedBy = stringsupport.CSVRemove(likedBy, int(s.charID))
-				s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID)
+				_, _ = s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID)
 			}
 		}
 	case 5: // Check for new messages
@@ -1979,7 +1979,7 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		var newPosts int
 		err := s.server.db.QueryRow("SELECT guild_post_checked FROM characters WHERE id = $1", s.charID).Scan(&timeChecked)
 		if err == nil {
-			s.server.db.QueryRow("SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND (EXTRACT(epoch FROM created_at)::int) > $2", guild.ID, timeChecked.Unix()).Scan(&newPosts)
+			_ = s.server.db.QueryRow("SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND (EXTRACT(epoch FROM created_at)::int) > $2", guild.ID, timeChecked.Unix()).Scan(&newPosts)
 			if newPosts > 0 {
 				doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
 				return
@@ -2012,7 +2012,7 @@ func handleMsgMhfUpdateGuild(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfSetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetGuildManageRight)
-	s.server.db.Exec("UPDATE guild_characters SET recruiter=$1 WHERE character_id=$2", pkt.Allowed, pkt.CharID)
+	_, _ = s.server.db.Exec("UPDATE guild_characters SET recruiter=$1 WHERE character_id=$2", pkt.Allowed, pkt.CharID)
 	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 

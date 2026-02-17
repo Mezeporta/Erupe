@@ -145,11 +145,11 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OPERATE_JOINT_LEAVE:
 		if guild.LeaderCharID == s.charID {
 			if guild.ID == alliance.SubGuild1ID && alliance.SubGuild2ID > 0 {
-				s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = sub2_id, sub2_id = NULL WHERE id = $1`, alliance.ID)
+				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = sub2_id, sub2_id = NULL WHERE id = $1`, alliance.ID)
 			} else if guild.ID == alliance.SubGuild1ID && alliance.SubGuild2ID == 0 {
-				s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = NULL WHERE id = $1`, alliance.ID)
+				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = NULL WHERE id = $1`, alliance.ID)
 			} else {
-				s.server.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, alliance.ID)
+				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, alliance.ID)
 			}
 			// TODO: Handle deleting Alliance applications
 			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -164,11 +164,11 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 		if alliance.ParentGuild.LeaderCharID == s.charID {
 			kickedGuildID := pkt.Data1.ReadUint32()
 			if kickedGuildID == alliance.SubGuild1ID && alliance.SubGuild2ID > 0 {
-				s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = sub2_id, sub2_id = NULL WHERE id = $1`, alliance.ID)
+				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = sub2_id, sub2_id = NULL WHERE id = $1`, alliance.ID)
 			} else if kickedGuildID == alliance.SubGuild1ID && alliance.SubGuild2ID == 0 {
-				s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = NULL WHERE id = $1`, alliance.ID)
+				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = NULL WHERE id = $1`, alliance.ID)
 			} else {
-				s.server.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, alliance.ID)
+				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, alliance.ID)
 			}
 			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		} else {

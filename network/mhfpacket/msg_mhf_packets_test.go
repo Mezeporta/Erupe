@@ -517,7 +517,7 @@ func TestAchievementPacketParse(t *testing.T) {
 	bf.WriteUint8(5)    // AchievementID
 	bf.WriteUint16(100) // Unk1
 	bf.WriteUint16(200) // Unk2
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAddAchievement{}
 	err := pkt.Parse(bf, &clientctx.ClientContext{})

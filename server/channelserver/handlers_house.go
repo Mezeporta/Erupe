@@ -41,7 +41,7 @@ FROM warehouse
 
 func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateInterior)
-	s.server.db.Exec(`UPDATE user_binary SET house_furniture=$1 WHERE id=$2`, pkt.InteriorData, s.charID)
+	_, _ = s.server.db.Exec(`UPDATE user_binary SET house_furniture=$1 WHERE id=$2`, pkt.InteriorData, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -64,7 +64,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	switch pkt.Method {
 	case 1:
 		var friendsList string
-		s.server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.charID).Scan(&friendsList)
+		_ = s.server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.charID).Scan(&friendsList)
 		cids := stringsupport.CSVElems(friendsList)
 		for _, cid := range cids {
 			house := HouseData{}
@@ -130,7 +130,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 		}
 		ps.Uint8(bf, house.Name, true)
 	}
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	bf.WriteUint16(uint16(len(houses)))
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
@@ -142,7 +142,7 @@ func handleMsgMhfUpdateHouse(s *Session, p mhfpacket.MHFPacket) {
 	// 03 = open friends
 	// 04 = open guild
 	// 05 = open friends+guild
-	s.server.db.Exec(`UPDATE user_binary SET house_state=$1, house_password=$2 WHERE id=$3`, pkt.State, pkt.Password, s.charID)
+	_, _ = s.server.db.Exec(`UPDATE user_binary SET house_state=$1, house_password=$2 WHERE id=$3`, pkt.State, pkt.Password, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -152,7 +152,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 
 	var state uint8
 	var password string
-	s.server.db.QueryRow(`SELECT COALESCE(house_state, 2) as house_state, COALESCE(house_password, '') as house_password FROM user_binary WHERE id=$1
+	_ = s.server.db.QueryRow(`SELECT COALESCE(house_state, 2) as house_state, COALESCE(house_password, '') as house_password FROM user_binary WHERE id=$1
 	`, pkt.CharID).Scan(&state, &password)
 
 	if pkt.Destination != 9 && len(pkt.Password) > 0 && pkt.CheckPass {
@@ -168,7 +168,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 		// Friends list verification
 		if state == 3 || state == 5 {
 			var friendsList string
-			s.server.db.QueryRow(`SELECT friends FROM characters WHERE id=$1`, pkt.CharID).Scan(&friendsList)
+			_ = s.server.db.QueryRow(`SELECT friends FROM characters WHERE id=$1`, pkt.CharID).Scan(&friendsList)
 			cids := stringsupport.CSVElems(friendsList)
 			for _, cid := range cids {
 				if uint32(cid) == s.charID {
@@ -199,7 +199,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	var houseTier, houseData, houseFurniture, bookshelf, gallery, tore, garden []byte
-	s.server.db.QueryRow(`SELECT house_tier, house_data, house_furniture, bookshelf, gallery, tore, garden FROM user_binary WHERE id=$1
+	_ = s.server.db.QueryRow(`SELECT house_tier, house_data, house_furniture, bookshelf, gallery, tore, garden FROM user_binary WHERE id=$1
 	`, pkt.CharID).Scan(&houseTier, &houseData, &houseFurniture, &bookshelf, &gallery, &tore, &garden)
 	if houseFurniture == nil {
 		houseFurniture = make([]byte, 20)
@@ -238,7 +238,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetMyhouseInfo)
 	var data []byte
-	s.server.db.QueryRow(`SELECT mission FROM user_binary WHERE id=$1`, s.charID).Scan(&data)
+	_ = s.server.db.QueryRow(`SELECT mission FROM user_binary WHERE id=$1`, s.charID).Scan(&data)
 	if len(data) > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	} else {
@@ -248,7 +248,7 @@ func handleMsgMhfGetMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateMyhouseInfo)
-	s.server.db.Exec("UPDATE user_binary SET mission=$1 WHERE id=$2", pkt.Data, s.charID)
+	_, _ = s.server.db.Exec("UPDATE user_binary SET mission=$1 WHERE id=$2", pkt.Data, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -317,7 +317,7 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	dumpSaveData(s, bf.Data(), "decomyset")
-	s.server.db.Exec("UPDATE characters SET decomyset=$1 WHERE id=$2", bf.Data(), s.charID)
+	_, _ = s.server.db.Exec("UPDATE characters SET decomyset=$1 WHERE id=$2", bf.Data(), s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -350,7 +350,7 @@ func handleMsgMhfEnumerateTitle(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(uint32(title.Acquired.Unix()))
 		bf.WriteUint32(uint32(title.Updated.Unix()))
 	}
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	bf.WriteUint16(count)
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
@@ -361,9 +361,9 @@ func handleMsgMhfAcquireTitle(s *Session, p mhfpacket.MHFPacket) {
 		var exists int
 		err := s.server.db.QueryRow(`SELECT count(*) FROM titles WHERE id=$1 AND char_id=$2`, title, s.charID).Scan(&exists)
 		if err != nil || exists == 0 {
-			s.server.db.Exec(`INSERT INTO titles VALUES ($1, $2, now(), now())`, title, s.charID)
+			_, _ = s.server.db.Exec(`INSERT INTO titles VALUES ($1, $2, now(), now())`, title, s.charID)
 		} else {
-			s.server.db.Exec(`UPDATE titles SET updated_at=now() WHERE id=$1 AND char_id=$2`, title, s.charID)
+			_, _ = s.server.db.Exec(`UPDATE titles SET updated_at=now() WHERE id=$1 AND char_id=$2`, title, s.charID)
 		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -375,7 +375,7 @@ func initializeWarehouse(s *Session) {
 	var t int
 	err := s.server.db.QueryRow("SELECT character_id FROM warehouse WHERE character_id=$1", s.charID).Scan(&t)
 	if err != nil {
-		s.server.db.Exec("INSERT INTO warehouse (character_id) VALUES ($1)", s.charID)
+		_, _ = s.server.db.Exec("INSERT INTO warehouse (character_id) VALUES ($1)", s.charID)
 	}
 }
 
@@ -389,7 +389,7 @@ func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 		var count uint8
 		itemNames := make([]string, 10)
 		equipNames := make([]string, 10)
-		s.server.db.QueryRow(fmt.Sprintf("%s WHERE character_id=$1", warehouseNamesQuery), s.charID).Scan(&itemNames[0],
+		_ = s.server.db.QueryRow(fmt.Sprintf("%s WHERE character_id=$1", warehouseNamesQuery), s.charID).Scan(&itemNames[0],
 			&itemNames[1], &itemNames[2], &itemNames[3], &itemNames[4], &itemNames[5], &itemNames[6], &itemNames[7], &itemNames[8], &itemNames[9], &equipNames[0],
 			&equipNames[1], &equipNames[2], &equipNames[3], &equipNames[4], &equipNames[5], &equipNames[6], &equipNames[7], &equipNames[8], &equipNames[9])
 		bf.WriteUint32(0)
@@ -418,9 +418,9 @@ func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 	case 2:
 		switch pkt.BoxType {
 		case 0:
-			s.server.db.Exec(fmt.Sprintf("UPDATE warehouse SET item%dname=$1 WHERE character_id=$2", pkt.BoxIndex), pkt.Name, s.charID)
+			_, _ = s.server.db.Exec(fmt.Sprintf("UPDATE warehouse SET item%dname=$1 WHERE character_id=$2", pkt.BoxIndex), pkt.Name, s.charID)
 		case 1:
-			s.server.db.Exec(fmt.Sprintf("UPDATE warehouse SET equip%dname=$1 WHERE character_id=$2", pkt.BoxIndex), pkt.Name, s.charID)
+			_, _ = s.server.db.Exec(fmt.Sprintf("UPDATE warehouse SET equip%dname=$1 WHERE character_id=$2", pkt.BoxIndex), pkt.Name, s.charID)
 		}
 	case 3:
 		bf.WriteUint32(0)     // Usage renewal time, >1 = disabled
@@ -443,14 +443,14 @@ func addWarehouseItem(s *Session, item mhfitem.MHFItemStack) {
 	giftBox := warehouseGetItems(s, 10)
 	item.WarehouseID = token.RNG.Uint32()
 	giftBox = append(giftBox, item)
-	s.server.db.Exec("UPDATE warehouse SET item10=$1 WHERE character_id=$2", mhfitem.SerializeWarehouseItems(giftBox), s.charID)
+	_, _ = s.server.db.Exec("UPDATE warehouse SET item10=$1 WHERE character_id=$2", mhfitem.SerializeWarehouseItems(giftBox), s.charID)
 }
 
 func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
 	initializeWarehouse(s)
 	var data []byte
 	var items []mhfitem.MHFItemStack
-	s.server.db.QueryRow(fmt.Sprintf(`SELECT item%d FROM warehouse WHERE character_id=$1`, index), s.charID).Scan(&data)
+	_ = s.server.db.QueryRow(fmt.Sprintf(`SELECT item%d FROM warehouse WHERE character_id=$1`, index), s.charID).Scan(&data)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()
@@ -465,7 +465,7 @@ func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
 func warehouseGetEquipment(s *Session, index uint8) []mhfitem.MHFEquipment {
 	var data []byte
 	var equipment []mhfitem.MHFEquipment
-	s.server.db.QueryRow(fmt.Sprintf(`SELECT equip%d FROM warehouse WHERE character_id=$1`, index), s.charID).Scan(&data)
+	_ = s.server.db.QueryRow(fmt.Sprintf(`SELECT equip%d FROM warehouse WHERE character_id=$1`, index), s.charID).Scan(&data)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()

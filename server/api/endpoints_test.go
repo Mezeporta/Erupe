@@ -142,7 +142,7 @@ func TestLoginEndpointInvalidJSON(t *testing.T) {
 // TestLoginEndpointEmptyCredentials tests login with empty credentials
 func TestLoginEndpointEmptyCredentials(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{
@@ -194,7 +194,7 @@ func TestLoginEndpointEmptyCredentials(t *testing.T) {
 // TestRegisterEndpointInvalidJSON tests register with invalid JSON
 func TestRegisterEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{
@@ -217,7 +217,7 @@ func TestRegisterEndpointInvalidJSON(t *testing.T) {
 // TestRegisterEndpointEmptyCredentials tests register with empty fields
 func TestRegisterEndpointEmptyCredentials(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{
@@ -265,7 +265,7 @@ func TestRegisterEndpointEmptyCredentials(t *testing.T) {
 // TestCreateCharacterEndpointInvalidJSON tests create character with invalid JSON
 func TestCreateCharacterEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{
@@ -288,7 +288,7 @@ func TestCreateCharacterEndpointInvalidJSON(t *testing.T) {
 // TestDeleteCharacterEndpointInvalidJSON tests delete character with invalid JSON
 func TestDeleteCharacterEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{
@@ -311,7 +311,7 @@ func TestDeleteCharacterEndpointInvalidJSON(t *testing.T) {
 // TestExportSaveEndpointInvalidJSON tests export save with invalid JSON
 func TestExportSaveEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{
@@ -334,7 +334,7 @@ func TestExportSaveEndpointInvalidJSON(t *testing.T) {
 // TestScreenShotEndpointDisabled tests screenshot endpoint when disabled
 func TestScreenShotEndpointDisabled(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	cfg.Screenshots.Enabled = false
@@ -373,7 +373,7 @@ func TestScreenShotEndpointInvalidMethod(t *testing.T) {
 // TestScreenShotGetInvalidToken tests screenshot get with invalid token
 func TestScreenShotGetInvalidToken(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{
@@ -413,7 +413,7 @@ func TestNewAuthDataStructure(t *testing.T) {
 	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
 
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	cfg.DebugOptions.MaxLauncherHR = false
@@ -469,7 +469,7 @@ func TestNewAuthDataDebugMode(t *testing.T) {
 	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
 
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	cfg.DebugOptions.MaxLauncherHR = true
@@ -503,7 +503,7 @@ func TestNewAuthDataMezFesConfiguration(t *testing.T) {
 	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
 
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	cfg.GameplayOptions.MezFesSoloTickets = 150
@@ -537,7 +537,7 @@ func TestNewAuthDataHideNotices(t *testing.T) {
 	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
 
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	cfg.HideLoginNotice = true
@@ -561,7 +561,7 @@ func TestNewAuthDataTimestamps(t *testing.T) {
 	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
 
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{
@@ -586,7 +586,7 @@ func TestNewAuthDataTimestamps(t *testing.T) {
 // BenchmarkLauncherEndpoint benchmarks the launcher endpoint
 func BenchmarkLauncherEndpoint(b *testing.B) {
 	logger, _ := zap.NewDevelopment()
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{
@@ -605,7 +605,7 @@ func BenchmarkLauncherEndpoint(b *testing.B) {
 // BenchmarkNewAuthData benchmarks the newAuthData function
 func BenchmarkNewAuthData(b *testing.B) {
 	logger, _ := zap.NewDevelopment()
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{

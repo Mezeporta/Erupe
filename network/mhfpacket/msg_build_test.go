@@ -42,7 +42,7 @@ func TestBuildParseDuplicateObject(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysDuplicateObject{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -98,7 +98,7 @@ func TestBuildParsePositionObject(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysPositionObject{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -151,7 +151,7 @@ func TestBuildParseCastedBinary(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysCastedBinary{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -197,7 +197,7 @@ func TestBuildParseLoadRegister(t *testing.T) {
 			bf.WriteUint8(0)  // Zeroed
 			bf.WriteUint16(0) // Zeroed
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysLoadRegister{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -240,7 +240,7 @@ func TestBuildParseOperateRegister(t *testing.T) {
 			bf.WriteUint16(uint16(len(tt.payload)))
 			bf.WriteBytes(tt.payload)
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysOperateRegister{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -284,7 +284,7 @@ func TestBuildParseNotifyUserBinary(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysNotifyUserBinary{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -327,7 +327,7 @@ func TestBuildParseTime(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysTime{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -368,7 +368,7 @@ func TestBuildParseUpdateObjectBinary(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysUpdateObjectBinary{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -412,7 +412,7 @@ func TestBuildParseArrangeGuildMember(t *testing.T) {
 				bf.WriteUint32(id)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfArrangeGuildMember{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -461,7 +461,7 @@ func TestBuildParseEnumerateGuildMember(t *testing.T) {
 			bf.WriteUint32(tt.allianceID)
 			bf.WriteUint32(tt.guildID)
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfEnumerateGuildMember{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -502,7 +502,7 @@ func TestBuildParseStateCampaign(t *testing.T) {
 			bf.WriteUint32(tt.campaignID)
 			bf.WriteUint16(tt.unk1)
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfStateCampaign{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -545,7 +545,7 @@ func TestBuildParseApplyCampaign(t *testing.T) {
 			bf.WriteUint16(tt.unk1)
 			bf.WriteBytes(tt.unk2)
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfApplyCampaign{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -593,7 +593,7 @@ func TestBuildParseEnumerateCampaign(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfEnumerateCampaign{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -635,7 +635,7 @@ func TestBuildParseEnumerateEvent(t *testing.T) {
 			bf.WriteUint16(0) // Zeroed (discarded by Parse)
 			bf.WriteUint16(0) // Zeroed (discarded by Parse)
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfEnumerateEvent{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -675,7 +675,7 @@ func TestBuildParseAddUdTacticsPoint(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfAddUdTacticsPoint{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -722,7 +722,7 @@ func TestBuildParseApplyDistItem(t *testing.T) {
 			bf.WriteUint32(tt.unk2) // Read when RealClientMode >= G8
 			bf.WriteUint32(tt.unk3) // Read when RealClientMode >= G10
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfApplyDistItem{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -778,7 +778,7 @@ func TestBuildParseEnumerateDistItem(t *testing.T) {
 			bf.WriteUint16(original.Unk2)
 			bf.WriteUint8(0) // Unk3 length (for Z1+ client mode)
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfEnumerateDistItem{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -827,7 +827,7 @@ func TestBuildParseAcquireExchangeShop(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfAcquireExchangeShop{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -852,7 +852,7 @@ func TestBuildParseDisplayedAchievement(t *testing.T) {
 	ctx := &clientctx.ClientContext{}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint8(0) // Zeroed (discarded by Parse)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	parsed := &MsgMhfDisplayedAchievement{}
 	if err := parsed.Parse(bf, ctx); err != nil {
@@ -885,7 +885,7 @@ func TestBuildParseAddKouryouPoint(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfAddKouryouPoint{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -920,7 +920,7 @@ func TestBuildParseCheckDailyCafepoint(t *testing.T) {
 			bf.WriteUint32(tt.ackHandle)
 			bf.WriteUint32(tt.unk)
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfCheckDailyCafepoint{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -959,7 +959,7 @@ func TestBuildParsePing(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysPing{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -995,7 +995,7 @@ func TestBuildParseDeleteObject(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysDeleteObject{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -1031,7 +1031,7 @@ func TestBuildParseNotifyRegister(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysNotifyRegister{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -1050,7 +1050,7 @@ func TestBuildParseUnlockStage(t *testing.T) {
 	ctx := &clientctx.ClientContext{}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(0) // Zeroed (discarded by Parse)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	parsed := &MsgSysUnlockStage{}
 	if err := parsed.Parse(bf, ctx); err != nil {
@@ -1080,7 +1080,7 @@ func TestBuildParseUnlockGlobalSema(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysUnlockGlobalSema{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -1137,7 +1137,7 @@ func TestBuildParseCastedBinaryPayloadIntegrity(t *testing.T) {
 		t.Fatalf("Build() error = %v", err)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgSysCastedBinary{}
 	if err := parsed.Parse(bf, ctx); err != nil {
 		t.Fatalf("Parse() error = %v", err)
@@ -1173,7 +1173,7 @@ func TestBuildParseOperateRegisterPayloadIntegrity(t *testing.T) {
 	bf.WriteUint16(uint16(len(payload))) // dataSize
 	bf.WriteBytes(payload)
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgSysOperateRegister{}
 	if err := parsed.Parse(bf, ctx); err != nil {
 		t.Fatalf("Parse() error = %v", err)
@@ -1202,7 +1202,7 @@ func TestBuildParseArrangeGuildMemberEmptySlice(t *testing.T) {
 		t.Errorf("wrote %d bytes, want 10 for empty CharIDs", len(bf.Data()))
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgMhfArrangeGuildMember{}
 	if err := parsed.Parse(bf, ctx); err != nil {
 		t.Fatalf("Parse() error = %v", err)
@@ -1279,7 +1279,7 @@ func TestBuildParseTimeBooleanEncoding(t *testing.T) {
 				t.Errorf("Boolean false encoded as %d, want 0", data[0])
 			}
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysTime{}
 			if err := parsed.Parse(bf, ctx); err != nil {
 				t.Fatalf("Parse() error = %v", err)
@@ -1317,7 +1317,7 @@ func TestBuildParseSysAckBufferSmall(t *testing.T) {
 		t.Fatalf("Build() error = %v", err)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgSysAck{}
 	if err := parsed.Parse(bf, ctx); err != nil {
 		t.Fatalf("Parse() error = %v", err)
@@ -1358,7 +1358,7 @@ func TestBuildParseSysAckExtendedSize(t *testing.T) {
 		t.Fatalf("Build() error = %v", err)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgSysAck{}
 	if err := parsed.Parse(bf, ctx); err != nil {
 		t.Fatalf("Parse() error = %v", err)
@@ -1388,7 +1388,7 @@ func TestBuildParseSysAckNonBuffer(t *testing.T) {
 		t.Fatalf("Build() error = %v", err)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgSysAck{}
 	if err := parsed.Parse(bf, ctx); err != nil {
 		t.Fatalf("Parse() error = %v", err)

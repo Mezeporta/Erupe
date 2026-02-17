@@ -35,7 +35,7 @@ func TestMsgMhfAcquireCafeItemParse(t *testing.T) {
 	bf.WriteUint32(1000)       // PointCost (uint32)
 	bf.WriteUint16(0)          // Unk0
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAcquireCafeItem{}
 	ctx := &clientctx.ClientContext{}
@@ -94,7 +94,7 @@ func TestMsgMhfAcquireCafeItemParseUint32PointCost(t *testing.T) {
 			bf.WriteUint32(tt.pointCost)
 			bf.WriteUint16(0) // Unk0
 
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireCafeItem{}
 			ctx := &clientctx.ClientContext{}
@@ -123,7 +123,7 @@ func TestMsgMhfAcquireCafeItemParseFieldOrder(t *testing.T) {
 	bf.WriteUint32(0xBBCCDDEE) // PointCost (offset 10-13)
 	bf.WriteUint16(0xFF00)     // Unk0 (offset 14-15)
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAcquireCafeItem{}
 	err := pkt.Parse(bf, &clientctx.ClientContext{})

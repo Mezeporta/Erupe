@@ -31,7 +31,7 @@ func TestParseLargeMsgSysUpdateRightBuild(t *testing.T) {
 		t.Fatalf("Build() wrote %d bytes, want at least 12", len(data))
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	if bf.ReadUint32() != 0x12345678 {
 		t.Error("ClientRespAckHandle mismatch")
 	}
@@ -54,7 +54,7 @@ func TestParseLargeMsgMhfOperateWarehouse(t *testing.T) {
 	bf.WriteUint16(0)          // Unk
 	bf.WriteBytes([]byte("TestBox"))
 	bf.WriteUint8(0) // null terminator
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperateWarehouse{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -89,7 +89,7 @@ func TestParseLargeMsgMhfOperateWarehouseEquip(t *testing.T) {
 	bf.WriteUint16(0)   // Unk
 	bf.WriteBytes([]byte("Arms"))
 	bf.WriteUint8(0) // null terminator
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperateWarehouse{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -129,7 +129,7 @@ func TestParseLargeMsgMhfLoadHouse(t *testing.T) {
 			bf.WriteUint8(uint8(len(tt.password) + 1)) // Password length
 			bf.WriteBytes([]byte(tt.password))
 			bf.WriteUint8(0) // null terminator
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfLoadHouse{}
 			if err := pkt.Parse(bf, nil); err != nil {
@@ -168,7 +168,7 @@ func TestParseLargeMsgMhfSendMail(t *testing.T) {
 	bf.WriteUint8(0) // null terminator for Subject
 	bf.WriteBytes([]byte("Hello World"))
 	bf.WriteUint8(0) // null terminator for Body
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfSendMail{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -229,7 +229,7 @@ func TestParseLargeMsgMhfApplyBbsArticle(t *testing.T) {
 	copy(descBytes, "This is a description")
 	bf.WriteBytes(descBytes)
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfApplyBbsArticle{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -267,7 +267,7 @@ func TestParseLargeMsgMhfChargeFesta(t *testing.T) {
 	bf.WriteUint16(20)         // soul value 2
 	bf.WriteUint16(30)         // soul value 3
 	bf.WriteUint8(0)           // Unk
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfChargeFesta{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -302,7 +302,7 @@ func TestParseLargeMsgMhfChargeFestaZeroSouls(t *testing.T) {
 	bf.WriteUint32(0)   // GuildID
 	bf.WriteUint16(0)   // soul count = 0
 	bf.WriteUint8(0)    // Unk
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfChargeFesta{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -325,7 +325,7 @@ func TestParseLargeMsgMhfOperateJoint(t *testing.T) {
 	bf.WriteUint8(3)                        // dataLen = 3
 	bf.WriteBytes([]byte{0xAA, 0xBB, 0xCC, 0xDD}) // Data1 (always 4 bytes)
 	bf.WriteBytes([]byte{0x01, 0x02, 0x03})        // Data2 (dataLen bytes)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperateJoint{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -361,7 +361,7 @@ func TestParseLargeMsgMhfOperationInvGuild(t *testing.T) {
 	bf.WriteUint8(7)           // DaysActive
 	bf.WriteUint8(3)           // PlayStyle
 	bf.WriteUint8(2)           // GuildRequest
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperationInvGuild{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -400,7 +400,7 @@ func TestParseLargeMsgMhfSaveMercenary(t *testing.T) {
 	bf.WriteUint32(uint32(len(mercData))) // dataSize
 	bf.WriteUint32(0)          // Merc index (skipped)
 	bf.WriteBytes(mercData)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfSaveMercenary{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -442,7 +442,7 @@ func TestParseLargeMsgMhfUpdateHouse(t *testing.T) {
 			bf.WriteUint8(uint8(len(tt.password) + 1)) // Password length
 			bf.WriteBytes([]byte(tt.password))
 			bf.WriteUint8(0) // null terminator
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfUpdateHouse{}
 			if err := pkt.Parse(bf, nil); err != nil {
@@ -477,7 +477,7 @@ func TestParseLargeMsgSysCreateAcquireSemaphore(t *testing.T) {
 	bf.WriteUint8(4)           // PlayerCount
 	bf.WriteUint8(uint8(len(semBytes))) // SemaphoreIDLength
 	bf.WriteBytes(semBytes)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysCreateAcquireSemaphore{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -509,7 +509,7 @@ func TestParseLargeMsgMhfOperateGuild(t *testing.T) {
 	bf.WriteUint8(uint8(len(dataPayload))) // dataLen
 	bf.WriteBytes([]byte{0x01, 0x02, 0x03, 0x04}) // Data1 (always 4 bytes)
 	bf.WriteBytes(dataPayload) // Data2 (dataLen bytes)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperateGuild{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -549,7 +549,7 @@ func TestParseLargeMsgMhfReadBeatLevel(t *testing.T) {
 	for _, id := range ids {
 		bf.WriteUint32(id)
 	}
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfReadBeatLevel{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -593,7 +593,7 @@ func TestParseLargeMsgSysCreateObject(t *testing.T) {
 			bf.WriteFloat32(tt.y)
 			bf.WriteFloat32(tt.z)
 			bf.WriteUint32(tt.unk0)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysCreateObject{}
 			if err := pkt.Parse(bf, nil); err != nil {
@@ -629,7 +629,7 @@ func TestParseLargeMsgSysLockGlobalSema(t *testing.T) {
 	bf.WriteUint8(0) // null terminator
 	bf.WriteBytes([]byte("channel_01"))
 	bf.WriteUint8(0) // null terminator
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysLockGlobalSema{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -661,7 +661,7 @@ func TestParseLargeMsgMhfCreateJoint(t *testing.T) {
 	bf.WriteUint32(15)             // len (unused)
 	bf.WriteBytes([]byte("Alliance01"))
 	bf.WriteUint8(0) // null terminator
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfCreateJoint{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -686,7 +686,7 @@ func TestParseLargeMsgMhfGetUdTacticsRemainingPoint(t *testing.T) {
 	bf.WriteUint32(100)        // Unk0
 	bf.WriteUint32(200)        // Unk1
 	bf.WriteUint32(300)        // Unk2
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfGetUdTacticsRemainingPoint{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -715,7 +715,7 @@ func TestParseLargeMsgMhfPostCafeDurationBonusReceived(t *testing.T) {
 	bf.WriteUint32(1001)       // CafeBonusID[0]
 	bf.WriteUint32(1002)       // CafeBonusID[1]
 	bf.WriteUint32(1003)       // CafeBonusID[2]
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfPostCafeDurationBonusReceived{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -741,7 +741,7 @@ func TestParseLargeMsgMhfPostCafeDurationBonusReceivedEmpty(t *testing.T) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(1) // AckHandle
 	bf.WriteUint32(0) // count = 0
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfPostCafeDurationBonusReceived{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -759,7 +759,7 @@ func TestParseLargeMsgMhfRegistGuildAdventureDiva(t *testing.T) {
 	bf.WriteUint32(5)          // Destination
 	bf.WriteUint32(1000)       // Charge
 	bf.WriteUint32(42)         // CharID (skipped)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfRegistGuildAdventureDiva{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -784,7 +784,7 @@ func TestParseLargeMsgMhfStateFestaG(t *testing.T) {
 	bf.WriteUint32(100)        // FestaID
 	bf.WriteUint32(200)        // GuildID
 	bf.WriteUint16(0)          // Hardcoded 0
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfStateFestaG{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -809,7 +809,7 @@ func TestParseLargeMsgMhfStateFestaU(t *testing.T) {
 	bf.WriteUint32(300)        // FestaID
 	bf.WriteUint32(400)        // GuildID
 	bf.WriteUint16(0)          // Hardcoded 0
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfStateFestaU{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -835,7 +835,7 @@ func TestParseLargeMsgSysEnumerateStage(t *testing.T) {
 	bf.WriteUint8(0)           // skipped byte
 	bf.WriteBytes([]byte("quest_"))
 	bf.WriteUint8(0) // null terminator
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysEnumerateStage{}
 	if err := pkt.Parse(bf, nil); err != nil {
@@ -861,7 +861,7 @@ func TestParseLargeMsgSysReserveStage(t *testing.T) {
 	bf.WriteUint8(0x11)        // Ready
 	bf.WriteUint8(uint8(len(stageBytes))) // stageIDLength
 	bf.WriteBytes(stageBytes)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysReserveStage{}
 	if err := pkt.Parse(bf, nil); err != nil {

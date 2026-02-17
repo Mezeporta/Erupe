@@ -303,7 +303,7 @@ func TestReadWarehouseEquipment_ZeroWarehouseID(t *testing.T) {
 	}
 	bf.WriteUint16(0)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	equipment := ReadWarehouseEquipment(bf)
 
 	if equipment.WarehouseID == 0 {

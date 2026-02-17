@@ -517,7 +517,7 @@ func TestSaveLoad_CompleteSaveLoadCycle(t *testing.T) {
 
 	// Verify Road Points persisted
 	var loadedRdP uint32
-	db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&loadedRdP)
+	_ = db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&loadedRdP)
 	if loadedRdP != rdpPoints {
 		t.Errorf("RdP not persisted: got %d, want %d (BUG CONFIRMED)", loadedRdP, rdpPoints)
 	} else {
@@ -526,7 +526,7 @@ func TestSaveLoad_CompleteSaveLoadCycle(t *testing.T) {
 
 	// Verify Koryo Points persisted
 	var loadedKoryo uint32
-	db.QueryRow("SELECT kouryou_point FROM characters WHERE id = $1", charID).Scan(&loadedKoryo)
+	_ = db.QueryRow("SELECT kouryou_point FROM characters WHERE id = $1", charID).Scan(&loadedKoryo)
 	if loadedKoryo != koryoPoints {
 		t.Errorf("Koryo points not persisted: got %d, want %d (BUG CONFIRMED)", loadedKoryo, koryoPoints)
 	} else {

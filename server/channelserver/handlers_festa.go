@@ -13,7 +13,7 @@ import (
 
 func handleMsgMhfSaveMezfesData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveMezfesData)
-	s.server.db.Exec(`UPDATE characters SET mezfes=$1 WHERE id=$2`, pkt.RawDataPayload, s.charID)
+	_, _ = s.server.db.Exec(`UPDATE characters SET mezfes=$1 WHERE id=$2`, pkt.RawDataPayload, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
@@ -96,11 +96,11 @@ func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func cleanupFesta(s *Session) {
-	s.server.db.Exec("DELETE FROM events WHERE event_type='festa'")
-	s.server.db.Exec("DELETE FROM festa_registrations")
-	s.server.db.Exec("DELETE FROM festa_submissions")
-	s.server.db.Exec("DELETE FROM festa_prizes_accepted")
-	s.server.db.Exec("UPDATE guild_characters SET trial_vote=NULL")
+	_, _ = s.server.db.Exec("DELETE FROM events WHERE event_type='festa'")
+	_, _ = s.server.db.Exec("DELETE FROM festa_registrations")
+	_, _ = s.server.db.Exec("DELETE FROM festa_submissions")
+	_, _ = s.server.db.Exec("DELETE FROM festa_prizes_accepted")
+	_, _ = s.server.db.Exec("UPDATE guild_characters SET trial_vote=NULL")
 }
 
 func generateFestaTimestamps(s *Session, start uint32, debug bool) []uint32 {
@@ -134,7 +134,7 @@ func generateFestaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		cleanupFesta(s)
 		// Generate a new festa, starting midnight tomorrow
 		start = uint32(midnight.Add(24 * time.Hour).Unix())
-		s.server.db.Exec("INSERT INTO events (event_type, start_time) VALUES ('festa', to_timestamp($1)::timestamp without time zone)", start)
+		_, _ = s.server.db.Exec("INSERT INTO events (event_type, start_time) VALUES ('festa', to_timestamp($1)::timestamp without time zone)", start)
 	}
 	timestamps[0] = start
 	timestamps[1] = timestamps[0] + 604800
@@ -466,7 +466,7 @@ func handleMsgMhfEnumerateFestaMember(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfVoteFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfVoteFesta)
-	s.server.db.Exec(`UPDATE guild_characters SET trial_vote=$1 WHERE character_id=$2`, pkt.TrialID, s.charID)
+	_, _ = s.server.db.Exec(`UPDATE guild_characters SET trial_vote=$1 WHERE character_id=$2`, pkt.TrialID, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -480,9 +480,9 @@ func handleMsgMhfEntryFesta(s *Session, p mhfpacket.MHFPacket) {
 	team := uint32(token.RNG.Intn(2))
 	switch team {
 	case 0:
-		s.server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'blue')", guild.ID)
+		_, _ = s.server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'blue')", guild.ID)
 	case 1:
-		s.server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'red')", guild.ID)
+		_, _ = s.server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'red')", guild.ID)
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(team)
@@ -512,19 +512,19 @@ func handleMsgMhfChargeFesta(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAcquireFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFesta)
-	s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES (0, $1)", s.charID)
+	_, _ = s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES (0, $1)", s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfAcquireFestaPersonalPrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFestaPersonalPrize)
-	s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.charID)
+	_, _ = s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfAcquireFestaIntermediatePrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFestaIntermediatePrize)
-	s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.charID)
+	_, _ = s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 

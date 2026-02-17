@@ -94,7 +94,7 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 				} else {
 					csv = stringsupport.CSVAdd(csv, int(cid))
 				}
-				s.server.db.Exec("UPDATE characters SET blocked=$1 WHERE id=$2", csv, s.charID)
+				_, _ = s.server.db.Exec("UPDATE characters SET blocked=$1 WHERE id=$2", csv, s.charID)
 			}
 		} else { // Friendlist
 			err := s.server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.charID).Scan(&csv)
@@ -104,7 +104,7 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 				} else {
 					csv = stringsupport.CSVAdd(csv, int(cid))
 				}
-				s.server.db.Exec("UPDATE characters SET friends=$1 WHERE id=$2", csv, s.charID)
+				_, _ = s.server.db.Exec("UPDATE characters SET friends=$1 WHERE id=$2", csv, s.charID)
 			}
 		}
 	}

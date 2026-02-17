@@ -48,7 +48,7 @@ func TestMsgMhfAcquireGuildTresureParse(t *testing.T) {
 			bf.WriteUint32(tt.ackHandle)
 			bf.WriteUint32(tt.huntID)
 			bf.WriteBool(tt.unk)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireGuildTresure{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -89,7 +89,7 @@ func TestMsgMhfAcquireTitleParse(t *testing.T) {
 			for _, id := range tt.titleIDs {
 				bf.WriteUint16(id)
 			}
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireTitle{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -130,7 +130,7 @@ func TestMsgMhfAcquireDistItemParse(t *testing.T) {
 			bf.WriteUint32(tt.ackHandle)
 			bf.WriteUint8(tt.distributionType)
 			bf.WriteUint32(tt.distributionID)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireDistItem{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -174,7 +174,7 @@ func TestMsgMhfAcquireMonthlyItemParse(t *testing.T) {
 			bf.WriteUint16(tt.unk2)
 			bf.WriteUint32(tt.unk3)
 			bf.WriteUint32(0) // Zeroed (consumed by Parse)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireMonthlyItem{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -228,7 +228,7 @@ func TestAcquirePacketEdgeCases(t *testing.T) {
 		bf.WriteUint32(1)
 		bf.WriteUint32(0xFFFFFFFF)
 		bf.WriteBool(true)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgMhfAcquireGuildTresure{}
 		err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -247,7 +247,7 @@ func TestAcquirePacketEdgeCases(t *testing.T) {
 			bf.WriteUint32(1)
 			bf.WriteUint8(i)
 			bf.WriteUint32(12345)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireDistItem{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})

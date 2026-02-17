@@ -58,7 +58,7 @@ func handleMsgMhfCheckDailyCafepoint(s *Session, p mhfpacket.MHFPacket) {
 		bondBonus = 5 // Bond point bonus quests
 		bonusQuests = s.server.erupeConfig.GameplayOptions.BonusQuestAllowance
 		dailyQuests = s.server.erupeConfig.GameplayOptions.DailyQuestAllowance
-		s.server.db.Exec("UPDATE characters SET daily_time=$1, bonus_quests = $2, daily_quests = $3 WHERE id=$4", midday, bonusQuests, dailyQuests, s.charID)
+		_, _ = s.server.db.Exec("UPDATE characters SET daily_time=$1, bonus_quests = $2, daily_quests = $3 WHERE id=$4", midday, bonusQuests, dailyQuests, s.charID)
 		bf.WriteBool(true) // Success?
 	} else {
 		bf.WriteBool(false)
@@ -77,12 +77,12 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 	err := s.server.db.QueryRow(`SELECT cafe_reset FROM characters WHERE id=$1`, s.charID).Scan(&cafeReset)
 	if err != nil {
 		cafeReset = TimeWeekNext()
-		s.server.db.Exec(`UPDATE characters SET cafe_reset=$1 WHERE id=$2`, cafeReset, s.charID)
+		_, _ = s.server.db.Exec(`UPDATE characters SET cafe_reset=$1 WHERE id=$2`, cafeReset, s.charID)
 	}
 	if TimeAdjusted().After(cafeReset) {
 		cafeReset = TimeWeekNext()
-		s.server.db.Exec(`UPDATE characters SET cafe_time=0, cafe_reset=$1 WHERE id=$2`, cafeReset, s.charID)
-		s.server.db.Exec(`DELETE FROM cafe_accepted WHERE character_id=$1`, s.charID)
+		_, _ = s.server.db.Exec(`UPDATE characters SET cafe_time=0, cafe_reset=$1 WHERE id=$2`, cafeReset, s.charID)
+		_, _ = s.server.db.Exec(`DELETE FROM cafe_accepted WHERE character_id=$1`, s.charID)
 	}
 
 	var cafeTime uint32
@@ -181,7 +181,7 @@ func handleMsgMhfReceiveCafeDurationBonus(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint32(cafeBonus.ItemID)
 			bf.WriteUint32(cafeBonus.Quantity)
 		}
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		bf.WriteUint32(count)
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 	}
@@ -199,7 +199,7 @@ func handleMsgMhfPostCafeDurationBonusReceived(s *Session, p mhfpacket.MHFPacket
 				_ = addPointNetcafe(s, int(cafeBonus.Quantity))
 			}
 		}
-		s.server.db.Exec("INSERT INTO public.cafe_accepted VALUES ($1, $2)", cbID, s.charID)
+		_, _ = s.server.db.Exec("INSERT INTO public.cafe_accepted VALUES ($1, $2)", cbID, s.charID)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -215,7 +215,7 @@ func addPointNetcafe(s *Session, p int) error {
 	} else {
 		points += p
 	}
-	s.server.db.Exec("UPDATE characters SET netcafe_points=$1 WHERE id=$2", points, s.charID)
+	_, _ = s.server.db.Exec("UPDATE characters SET netcafe_points=$1 WHERE id=$2", points, s.charID)
 	return nil
 }
 
@@ -228,7 +228,7 @@ func handleMsgMhfStartBoostTime(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 		return
 	}
-	s.server.db.Exec("UPDATE characters SET boost_time=$1 WHERE id=$2", boostLimit, s.charID)
+	_, _ = s.server.db.Exec("UPDATE characters SET boost_time=$1 WHERE id=$2", boostLimit, s.charID)
 	bf.WriteUint32(uint32(boostLimit.Unix()))
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }

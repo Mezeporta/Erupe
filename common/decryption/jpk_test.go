@@ -73,7 +73,7 @@ func TestUnpackSimple_JPKHeader(t *testing.T) {
 	}
 
 	// Verify the header bytes are correct
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	header := bf.ReadUint32()
 	if header != 0x1A524B4A {
 		t.Errorf("Header = 0x%X, want 0x1A524B4A", header)
@@ -104,7 +104,7 @@ func TestReadByte(t *testing.T) {
 	bf.WriteUint8(0x42)
 	bf.WriteUint8(0xAB)
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	b1 := ReadByte(bf)
 	b2 := ReadByte(bf)
 
@@ -228,7 +228,7 @@ func BenchmarkReadByte(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		_ = ReadByte(bf)
 	}
 }

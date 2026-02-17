@@ -90,7 +90,7 @@ func handleMsgMhfGetAchievement(s *Session, p mhfpacket.MHFPacket) {
 	var exists int
 	err := s.server.db.QueryRow("SELECT id FROM achievements WHERE id=$1", pkt.CharID).Scan(&exists)
 	if err != nil {
-		s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", pkt.CharID)
+		_, _ = s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", pkt.CharID)
 	}
 
 	var scores [33]int32
@@ -152,10 +152,10 @@ func handleMsgMhfAddAchievement(s *Session, p mhfpacket.MHFPacket) {
 	var exists int
 	err := s.server.db.QueryRow("SELECT id FROM achievements WHERE id=$1", s.charID).Scan(&exists)
 	if err != nil {
-		s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", s.charID)
+		_, _ = s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", s.charID)
 	}
 
-	s.server.db.Exec(fmt.Sprintf("UPDATE achievements SET ach%d=ach%d+1 WHERE id=$1", pkt.AchievementID, pkt.AchievementID), s.charID)
+	_, _ = s.server.db.Exec(fmt.Sprintf("UPDATE achievements SET ach%d=ach%d+1 WHERE id=$1", pkt.AchievementID, pkt.AchievementID), s.charID)
 }
 
 func handleMsgMhfPaymentAchievement(s *Session, p mhfpacket.MHFPacket) {}

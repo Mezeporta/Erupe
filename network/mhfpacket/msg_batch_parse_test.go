@@ -57,7 +57,7 @@ func TestBatchParseAckHandleOnly(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint32(0x12345678) // AckHandle
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			err := tc.pkt.Parse(bf, ctx)
 			if err != nil {
@@ -104,7 +104,7 @@ func TestBatchParseTwoUint32(t *testing.T) {
 			bf.WriteUint32(0x12345678) // AckHandle
 			bf.WriteUint32(0xDEADBEEF) // Second uint32
 			bf.WriteUint32(0xCAFEBABE) // Padding for 3-field packets
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			err := tc.pkt.Parse(bf, ctx)
 			if err != nil {
@@ -122,7 +122,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(0)  // Unk0
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetRengokuBinary{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -136,7 +136,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint8(3)  // Unk1
 		bf.WriteUint16(4) // Unk2
 		bf.WriteUint8(0)  // Unk3 length (Z1+ mode)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateDistItem{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -153,7 +153,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(3) // DistributionID
 		bf.WriteUint32(4) // Unk2
 		bf.WriteUint32(5) // Unk3
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfApplyDistItem{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -168,7 +168,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(2)  // DistributionType
 		bf.WriteUint32(3) // DistributionID
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAcquireDistItem{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -183,7 +183,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(2)  // Unk0
 		bf.WriteUint32(3) // DistributionID
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetDistDescription{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -201,7 +201,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint16(4) // LandID
 		bf.WriteBool(true) // Unk1
 		bf.WriteUint8(0)  // Zeroed (discarded)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfRegisterEvent{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -216,7 +216,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(2) // Zeroed (discarded)
 		bf.WriteUint16(3) // Zeroed (discarded)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfUpdateCafepoint{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -231,7 +231,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(2)  // PointType
 		bf.WriteInt16(-5) // Delta
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfUpdateEtcPoint{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -248,7 +248,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint16(0) // Zeroed
 		bf.WriteUint16(4) // TitleIDs[0]
 		bf.WriteUint16(5) // TitleIDs[1]
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAcquireTitle{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -264,7 +264,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint8(0)   // Zeroed (discarded)
 		bf.WriteUint8(0)   // Zeroed (discarded)
 		bf.WriteUint8(0)   // Zeroed (discarded)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysHideClient{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -279,7 +279,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(2) // Unk0
 		bf.WriteUint16(0) // Zeroed (discarded)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysIssueLogkey{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -295,7 +295,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint8(2)  // Unk0
 		bf.WriteUint8(3)  // Unk1
 		bf.WriteUint8(4)  // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetTinyBin{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -311,7 +311,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(2) // Unk0
 		bf.WriteUint32(3) // Unk1
 		bf.WriteUint32(4) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetPaperData{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -326,7 +326,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		for i := 0; i < 8; i++ {
 			bf.WriteUint32(uint32(i + 1))
 		}
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetEarthValue{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -348,7 +348,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(8) // Unk6
 		bf.WriteUint32(9) // Unk7[0]
 		bf.WriteUint32(10) // Unk7[1]
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfPresentBox{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -364,7 +364,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint8(2)  // AccIndex
 		bf.WriteUint8(3)  // Index
 		bf.WriteUint16(4) // Unk0
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfReadMail{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -382,7 +382,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint8(0)    // Padding
 		bf.WriteUint8(1)    // CharID count
 		bf.WriteUint32(99)  // CharIDs[0]
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfOprMember{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -397,7 +397,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(2)  // Unk0
 		bf.WriteUint8(0)  // Zeroed
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfListMember{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -414,7 +414,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint8(3)  // Unk1
 		bf.WriteUint8(0)  // Zeroed
 		bf.WriteUint16(4) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfTransferItem{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -428,7 +428,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(2)  // Unk0
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfMercenaryHuntdata{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -443,7 +443,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(0) // Unk0
 		bf.WriteUint16(0) // Unk1
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumeratePrice{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -454,7 +454,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(2) // Unk0
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateUnionItem{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -469,7 +469,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // GuildId
 		bf.WriteUint16(3) // Unk0
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateGuildItem{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -485,7 +485,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint16(2)  // Unk0
 		bf.WriteUint32(3)  // Unk1
 		bf.WriteUint32(99) // GuildID
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateGuildMember{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -502,7 +502,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(99)             // CharID
 		bf.WriteUint8(1)               // Action
 		bf.WriteBytes([]byte{0, 0, 0}) // Unk
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfOperateGuildMember{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -517,7 +517,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(2)  // MogType
 		bf.WriteUint16(3) // ArmourID
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfUpdateEquipSkinHist{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -531,7 +531,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1)  // AckHandle
 		bf.WriteBool(true) // Reject
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSetRejectGuildScout{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -545,7 +545,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(3)  // BoostWeekUsed
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfUseKeepLoginBoost{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -560,7 +560,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // Unk0
 		bf.WriteUint32(3) // Unk1
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSetCaAchievementHist{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -571,7 +571,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(2)  // NumUsers
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAddGuildWeeklyBonusExceptionalUser{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -583,7 +583,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // Server
 		bf.WriteUint32(3) // Room
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetLobbyCrowd{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -597,7 +597,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint8(0)  // Unk0
 		bf.WriteUint8(0)  // Unk1
 		bf.WriteUint8(0)  // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSexChanger{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -611,7 +611,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(5) // Unk1
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSetKiju{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -623,7 +623,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // Unk1
 		bf.WriteUint32(3) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAddUdPoint{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -637,7 +637,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(3)
 		bf.WriteUint32(4)
 		bf.WriteUint32(5)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetWeeklySeibatuRankingReward{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -649,7 +649,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // Unk0
 		bf.WriteUint32(3) // Unk1
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetEarthStatus{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -661,7 +661,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // MissionID
 		bf.WriteUint32(3) // Count
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAddGuildMissionCount{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -673,7 +673,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(2) // Unk0
 		bf.WriteUint16(3) // Unk1
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateAiroulist{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -685,7 +685,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1)  // AckHandle
 		bf.WriteUint32(10) // HuntID
 		bf.WriteUint16(2)  // State
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfOperateGuildTresureReport{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -697,7 +697,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1)  // AckHandle
 		bf.WriteUint32(10) // HuntID
 		bf.WriteUint8(1)   // Unk
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAcquireGuildTresure{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -709,7 +709,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(5) // MaxHunts
 		bf.WriteUint32(0) // Unk
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateGuildTresure{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -722,7 +722,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint16(2) // Unk0
 		bf.WriteUint32(3) // Unk1
 		bf.WriteUint16(4) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetTenrouirai{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -738,7 +738,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(5) // Unk3
 		bf.WriteUint32(6) // Unk4
 		bf.WriteUint8(7)  // Unk5
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfPostTenrouirai{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -753,7 +753,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(4) // Unk2
 		bf.WriteUint8(5)  // Unk3
 		bf.WriteUint16(6) // Unk4
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetSeibattle{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -767,7 +767,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint8(3)   // Unk1
 		bf.WriteUint32(99) // GuildID
 		bf.WriteUint8(4)   // Unk3
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetRyoudama{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -780,7 +780,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(2) // Leaderboard
 		bf.WriteUint16(3) // Unk1
 		bf.WriteUint16(4) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateRengokuRanking{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -794,7 +794,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(3)
 		bf.WriteUint32(4)
 		bf.WriteUint32(5)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetAdditionalBeatReward{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -808,7 +808,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(3) // Unk1
 		bf.WriteUint32(4) // Unk2
 		bf.WriteUint8(5)  // Unk3
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSetRestrictionEvent{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -820,7 +820,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(2)  // Unk0
 		bf.WriteUint16(3) // Unk1
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfUpdateUseTrendWeaponLog{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -830,7 +830,7 @@ func TestBatchParseMultiField(t *testing.T) {
 	t.Run("MsgMhfDisplayedAchievement", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint8(42) // AchievementID
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfDisplayedAchievement{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -843,7 +843,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(2) // OverwriteID
 		bf.WriteUint16(3) // MealID
 		bf.WriteUint8(4)  // Success
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfRegistGuildCooking{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -855,7 +855,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // ID
 		bf.WriteUint32(3) // Amount
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfChargeGuildAdventure{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -867,7 +867,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // Destination
 		bf.WriteUint32(0) // discard CharID
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfRegistGuildAdventure{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -880,7 +880,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint8(2)  // Op
 		bf.WriteUint8(3)  // Unk1
 		bf.WriteUint16(4) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfReadMercenaryW{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -892,7 +892,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // CharID
 		bf.WriteUint32(3) // MercID
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfReadMercenaryM{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -905,7 +905,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(2) // PactMercID
 		bf.WriteUint32(3) // CID
 		bf.WriteUint8(4)  // Op
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfContractMercenary{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -917,7 +917,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // GuildID
 		bf.WriteUint8(3)  // Unk
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetGuildTargetMemberNum{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -930,7 +930,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(2)              // CharID
 		bf.WriteBool(true)             // Allowed
 		bf.WriteBytes([]byte{0, 0, 0}) // Unk
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSetGuildManageRight{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -942,7 +942,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1)  // AckHandle
 		bf.WriteUint32(2)  // LeaderID
 		bf.WriteBool(true) // Answer
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAnswerGuildScout{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -955,7 +955,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(2) // GachaID
 		bf.WriteUint8(3)  // RollType
 		bf.WriteUint8(4)  // GachaType
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfPlayStepupGacha{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -968,7 +968,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(2) // GachaID
 		bf.WriteUint8(3)  // RollType
 		bf.WriteUint8(4)  // GachaType
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfPlayBoxGacha{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -981,7 +981,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(2) // GachaID
 		bf.WriteUint8(3)  // RollType
 		bf.WriteUint8(4)  // GachaType
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfPlayNormalGacha{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -993,7 +993,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1)   // AckHandle
 		bf.WriteUint8(5)    // Max
 		bf.WriteBool(false) // Freeze
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfReceiveGachaItem{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1005,7 +1005,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // GachaID
 		bf.WriteUint8(3)  // Unk
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetStepupStatus{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1018,7 +1018,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint16(2) // Unk0
 		bf.WriteUint32(3) // TrialCoins
 		bf.WriteUint32(4) // PremiumCoins
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfUseGachaPoint{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1031,7 +1031,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		bf.WriteUint32(2) // Unk0
 		bf.WriteUint32(3) // MaxPosts
 		bf.WriteUint32(4) // BoardType
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateGuildMessageBoard{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1048,7 +1048,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1)                             // AckHandle
 		bf.WriteUint16(4)                             // DataSize
 		bf.WriteBytes([]byte{0x01, 0x02, 0x03, 0x04}) // Data
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSaveFavoriteQuest{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1066,7 +1066,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(0) // Unk1
 		bf.WriteUint32(3) // DataSize (non-zero)
 		bf.WriteBytes([]byte{0xAA, 0xBB, 0xCC})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSavedata{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1084,7 +1084,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(0) // Unk1
 		bf.WriteUint32(0) // DataSize (zero -> use AllocMemSize)
 		bf.WriteBytes([]byte{0xAA, 0xBB})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSavedata{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1102,7 +1102,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint16(4) // SearchType
 		bf.WriteUint16(3) // inline data length
 		bf.WriteBytes([]byte{0xAA, 0xBB, 0xCC})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfTransitMessage{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1120,7 +1120,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint8(4)  // Unk2
 		bf.WriteUint16(2) // inline data length
 		bf.WriteBytes([]byte{0xAA, 0xBB})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfPostTinyBin{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1138,7 +1138,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint16(4) // HardcodedDataSize
 		bf.WriteUint32(5) // Unk3
 		bf.WriteBytes([]byte{0x01, 0x02, 0x03, 0x04})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysRecordLog{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1152,7 +1152,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1)               // AckHandle
 		bf.WriteBytes(make([]byte, 20)) // InteriorData
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfUpdateInterior{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1167,7 +1167,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(3) // DataSize
 		bf.WriteBytes([]byte{0xAA, 0xBB, 0xCC})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSavePartner{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1179,7 +1179,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(2) // DataSize
 		bf.WriteBytes([]byte{0xAA, 0xBB})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSaveOtomoAirou{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1192,7 +1192,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(2)  // DataSize
 		bf.WriteBool(true) // IsDataDiff
 		bf.WriteBytes([]byte{0xAA, 0xBB})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSaveHunterNavi{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1205,7 +1205,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(3)   // DataSize
 		bf.WriteBool(false) // IsDataDiff
 		bf.WriteBytes([]byte{0x01, 0x02, 0x03})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSavePlateData{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1218,7 +1218,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(2)  // DataSize
 		bf.WriteBool(true) // IsDataDiff
 		bf.WriteBytes([]byte{0xAA, 0xBB})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSavePlateBox{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1230,7 +1230,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // DataSize
 		bf.WriteBytes([]byte{0xAA, 0xBB})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSavePlateMyset{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1242,7 +1242,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // DataSize
 		bf.WriteBytes([]byte{0xAA, 0xBB})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSaveDecoMyset{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1254,7 +1254,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // DataSize
 		bf.WriteBytes([]byte{0xAA, 0xBB})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSaveRengokuData{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1266,7 +1266,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(2) // DataSize
 		bf.WriteBytes([]byte{0xAA, 0xBB})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSaveMezfesData{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1278,7 +1278,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint32(3) // DataSize
 		bf.WriteBytes([]byte{0x01, 0x02, 0x03})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSaveScenarioData{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1290,7 +1290,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint16(3) // DataSize
 		bf.WriteBytes([]byte{0xAA, 0xBB, 0xCC})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAcquireExchangeShop{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1302,7 +1302,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf.WriteUint32(1)                  // AckHandle
 		bf.WriteUint16(0)                  // Unk0
 		bf.WriteBytes(make([]byte, 0x400)) // RawDataPayload
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfSetEnhancedMinidata{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1313,7 +1313,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1)               // AckHandle
 		bf.WriteBytes(make([]byte, 12)) // Unk
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetBbsUserStatus{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1324,7 +1324,7 @@ func TestBatchParseVariableLength(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1)               // AckHandle
 		bf.WriteBytes(make([]byte, 12)) // Unk
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetBbsSnsStatus{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1341,7 +1341,7 @@ func TestBatchParseArrangeGuildMember(t *testing.T) {
 	bf.WriteUint32(10) // CharIDs[0]
 	bf.WriteUint32(20) // CharIDs[1]
 	bf.WriteUint32(30) // CharIDs[2]
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfArrangeGuildMember{}
 	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
@@ -1370,7 +1370,7 @@ func TestBatchParseUpdateGuildIcon(t *testing.T) {
 	bf.WriteUint8(0x80) // Blue
 	bf.WriteUint16(100) // PosX
 	bf.WriteUint16(200) // PosY
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfUpdateGuildIcon{}
 	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
@@ -1389,7 +1389,7 @@ func TestBatchParseSysLoadRegister(t *testing.T) {
 	bf.WriteUint8(3)  // Unk1
 	bf.WriteUint16(0) // fixedZero0
 	bf.WriteUint8(0)  // fixedZero1
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysLoadRegister{}
 	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
@@ -1409,7 +1409,7 @@ func TestBatchParseSysLoadRegisterNonZeroPadding(t *testing.T) {
 	bf.WriteUint8(3)  // Values
 	bf.WriteUint8(1)  // Zeroed (discarded, non-zero is OK)
 	bf.WriteUint16(1) // Zeroed (discarded, non-zero is OK)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysLoadRegister{}
 	err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -1435,7 +1435,7 @@ func TestBatchParseSysOperateRegister(t *testing.T) {
 	bf.WriteUint16(0) // fixedZero
 	bf.WriteUint16(3) // dataSize
 	bf.WriteBytes([]byte{0xAA, 0xBB, 0xCC})
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysOperateRegister{}
 	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
@@ -1454,7 +1454,7 @@ func TestBatchParseSysOperateRegisterNonZeroPadding(t *testing.T) {
 	bf.WriteUint32(2) // SemaphoreID
 	bf.WriteUint16(1) // Zeroed (discarded, non-zero is OK)
 	bf.WriteUint16(0) // dataSize
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysOperateRegister{}
 	err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -1482,7 +1482,7 @@ func TestBatchParseSysGetFile(t *testing.T) {
 		bf.WriteBool(false) // IsScenario
 		bf.WriteUint8(5)    // filenameLength
 		bf.WriteBytes([]byte("test\x00"))
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysGetFile{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1501,7 +1501,7 @@ func TestBatchParseSysGetFile(t *testing.T) {
 		bf.WriteUint32(100) // MainID
 		bf.WriteUint8(5)    // ChapterID
 		bf.WriteUint8(0)    // Flags
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysGetFile{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1526,7 +1526,7 @@ func TestBatchParseSysTerminalLog(t *testing.T) {
 	for i := 0; i < 15; i++ {
 		bf.WriteInt16(int16(i))
 	}
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysTerminalLog{}
 	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
@@ -1732,7 +1732,7 @@ func TestBatchParseReserve188and18B(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint32(0x12345678)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			if err := tc.pkt.Parse(bf, ctx); err != nil {
 				t.Fatal(err)
 			}
@@ -1752,7 +1752,7 @@ func TestBatchParseStageStringPackets(t *testing.T) {
 		bf.WriteUint32(0) // Unk0
 		bf.WriteUint8(6)  // stageIDLength
 		bf.WriteBytes(append([]byte("room1"), 0x00))
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysGetStageBinary{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1770,7 +1770,7 @@ func TestBatchParseStageStringPackets(t *testing.T) {
 		bf.WriteUint32(0) // Unk0
 		bf.WriteUint8(6)  // stageIDLength
 		bf.WriteBytes(append([]byte("room2"), 0x00))
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysWaitStageBinary{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1788,7 +1788,7 @@ func TestBatchParseStageStringPackets(t *testing.T) {
 		bf.WriteUint16(3) // dataSize
 		bf.WriteBytes(append([]byte("room3"), 0x00))
 		bf.WriteBytes([]byte{0xAA, 0xBB, 0xCC})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysSetStageBinary{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1805,7 +1805,7 @@ func TestBatchParseStageStringPackets(t *testing.T) {
 		bf.WriteUint8(3)  // Get
 		bf.WriteUint8(6)  // stageIDLength
 		bf.WriteBytes(append([]byte("room4"), 0x00))
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysEnumerateClient{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1820,7 +1820,7 @@ func TestBatchParseStageStringPackets(t *testing.T) {
 		bf.WriteUint8(1) // Unk0
 		bf.WriteUint8(5) // Password length
 		bf.WriteBytes(append([]byte("pass"), 0x00))
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgSysSetStagePass{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1845,7 +1845,7 @@ func TestBatchParseStampcardStamp(t *testing.T) {
 	bf.WriteUint32(8)  // Item2
 	bf.WriteUint32(9)  // Quantity1
 	bf.WriteUint32(10) // Quantity2
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfStampcardStamp{}
 	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
@@ -1866,7 +1866,7 @@ func TestBatchParseAnnounce(t *testing.T) {
 	bf.WriteUint16(0)               // discard
 	bf.WriteBytes(make([]byte, 32)) // StageID
 	bf.WriteUint32(0)               // Data length (0 bytes)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAnnounce{}
 	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
@@ -1888,7 +1888,7 @@ func TestBatchParseOprtMail(t *testing.T) {
 		bf.WriteUint8(1)    // Index
 		bf.WriteUint8(0x01) // Operation = DELETE
 		bf.WriteUint8(0)    // Unk0
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfOprtMail{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1904,7 +1904,7 @@ func TestBatchParseOprtMail(t *testing.T) {
 		bf.WriteUint8(0)    // Unk0
 		bf.WriteUint16(5)   // Amount
 		bf.WriteUint16(100) // ItemID
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfOprtMail{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1922,7 +1922,7 @@ func TestBatchParsePostTowerInfo(t *testing.T) {
 	for i := 0; i < 11; i++ {
 		bf.WriteUint32(uint32(i + 10))
 	}
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfPostTowerInfo{}
 	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
@@ -1941,7 +1941,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint32(100) // FestaID
 		bf.WriteUint32(200) // GuildID
 		bf.WriteUint16(0)   // Unk
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAcquireFesta{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1953,7 +1953,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint32(1)   // AckHandle
 		bf.WriteUint16(10)  // Unk0
 		bf.WriteUint32(500) // Unk1
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAddUdTacticsPoint{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1966,7 +1966,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint32(1)              // Unk0
 		bf.WriteUint16(2)              // Unk1
 		bf.WriteBytes(make([]byte, 16)) // Unk2 (16 bytes)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfApplyCampaign{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1978,7 +1978,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(1)  // Type
 		bf.WriteBytes(make([]byte, 3))
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfCheckMonthlyItem{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -1991,7 +1991,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint8(1)   // StampType = 1 ("hl")
 		bf.WriteUint8(0)   // Unk1 (bool)
 		bf.WriteUint16(10) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfCheckWeeklyStamp{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2004,7 +2004,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint8(2)   // StampType = 2 ("ex")
 		bf.WriteUint8(1)   // Unk1 (bool)
 		bf.WriteUint16(20) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfCheckWeeklyStamp{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2017,7 +2017,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint32(100) // FestaID
 		bf.WriteUint32(200) // GuildID
 		bf.WriteUint16(0)   // padding
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEntryFesta{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2030,7 +2030,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint32(100) // FestaID
 		bf.WriteUint32(200) // GuildID
 		bf.WriteUint16(0)   // padding
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateFestaMember{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2041,7 +2041,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteBytes(make([]byte, 9))
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateInvGuild{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2054,7 +2054,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint8(0)  // boxType = 0 ("item")
 		bf.WriteUint8(1)  // BoxIndex
 		bf.WriteUint16(0) // padding
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateWarehouse{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2067,7 +2067,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint8(1)  // boxType = 1 ("equip")
 		bf.WriteUint8(2)  // BoxIndex
 		bf.WriteUint16(0) // padding
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateWarehouse{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2081,7 +2081,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint16(1)   // ItemType
 		bf.WriteUint16(50)  // ItemId
 		bf.WriteUint8(5)    // Quantity
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfExchangeFpoint2Item{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2095,7 +2095,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint16(1)   // ItemType
 		bf.WriteUint16(50)  // ItemId
 		bf.WriteUint8(5)    // Quantity
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfExchangeItem2Fpoint{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2108,7 +2108,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint8(1)  // StampType = 1 ("hl")
 		bf.WriteUint8(0)  // Unk1
 		bf.WriteUint16(0) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfExchangeWeeklyStamp{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2121,7 +2121,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint8(2)  // StampType = 2 ("ex")
 		bf.WriteUint8(1)  // Unk1
 		bf.WriteUint16(5) // Unk2
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfExchangeWeeklyStamp{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2131,7 +2131,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 	t.Run("MsgMhfGenerateUdGuildMap", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGenerateUdGuildMap{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2141,7 +2141,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 	t.Run("MsgMhfGetBoostTimeLimit", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetBoostTimeLimit{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2151,7 +2151,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 	t.Run("MsgMhfGetCafeDurationBonusInfo", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetCafeDurationBonusInfo{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2164,7 +2164,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint32(100) // Unk0
 		bf.WriteUint8(4)    // DataSize
 		bf.WriteBytes([]byte{0x01, 0x02, 0x03, 0x04})
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGetMyhouseInfo{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2179,7 +2179,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint8(2)  // Unk2 (count)
 		bf.WriteUint32(10)
 		bf.WriteUint32(20)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfAcquireUdItem{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2193,7 +2193,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 		bf.WriteUint8(1)    // Method
 		bf.WriteUint16(0)   // Unk
 		bf.WriteUint8(0)    // lenName = 0 (no name)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfEnumerateHouse{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2208,7 +2208,7 @@ func TestBatchParseGuildHuntdata(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(1) // AckHandle
 		bf.WriteUint8(0)  // Operation = 0
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGuildHuntdata{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
@@ -2220,7 +2220,7 @@ func TestBatchParseGuildHuntdata(t *testing.T) {
 		bf.WriteUint32(1)  // AckHandle
 		bf.WriteUint8(1)   // Operation = 1 (reads GuildID)
 		bf.WriteUint32(99) // GuildID
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfGuildHuntdata{}
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)

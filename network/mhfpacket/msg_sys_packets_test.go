@@ -31,7 +31,7 @@ func TestMsgSysCastBinaryParse(t *testing.T) {
 			bf.WriteUint8(tt.messageType)
 			bf.WriteUint16(uint16(len(tt.payload)))
 			bf.WriteBytes(tt.payload)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysCastBinary{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})

@@ -384,7 +384,7 @@ func TestSequential_RepeatedLogoutLoginCycles(t *testing.T) {
 
 		// Verify data after each cycle
 		var savedCompressed []byte
-		db.QueryRow("SELECT savedata FROM characters WHERE id = $1", charID).Scan(&savedCompressed)
+		_ = db.QueryRow("SELECT savedata FROM characters WHERE id = $1", charID).Scan(&savedCompressed)
 		
 		if len(savedCompressed) > 0 {
 			decompressed, err := nullcomp.Decompress(savedCompressed)

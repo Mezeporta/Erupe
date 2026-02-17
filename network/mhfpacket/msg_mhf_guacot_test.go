@@ -38,7 +38,7 @@ func TestMsgMhfUpdateGuacotParse_SingleEntry(t *testing.T) {
 	bf.WriteBytes([]byte("Porky"))
 
 	pkt := &MsgMhfUpdateGuacot{}
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	err := pkt.Parse(bf, nil)
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
@@ -99,7 +99,7 @@ func TestMsgMhfUpdateGuacotParse_MultipleEntries(t *testing.T) {
 	}
 
 	pkt := &MsgMhfUpdateGuacot{}
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	err := pkt.Parse(bf, nil)
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
@@ -129,7 +129,7 @@ func TestMsgMhfUpdateGuacotParse_ZeroEntries(t *testing.T) {
 	bf.WriteUint16(0)  // Zeroed
 
 	pkt := &MsgMhfUpdateGuacot{}
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	err := pkt.Parse(bf, nil)
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
@@ -160,7 +160,7 @@ func TestMsgMhfUpdateGuacotParse_DeletionEntry(t *testing.T) {
 	bf.WriteUint8(0)  // Empty name
 
 	pkt := &MsgMhfUpdateGuacot{}
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	err := pkt.Parse(bf, nil)
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
@@ -187,7 +187,7 @@ func TestMsgMhfUpdateGuacotParse_EmptyName(t *testing.T) {
 	bf.WriteUint8(0)  // Empty name
 
 	pkt := &MsgMhfUpdateGuacot{}
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	err := pkt.Parse(bf, nil)
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
@@ -205,7 +205,7 @@ func TestMsgMhfEnumerateGuacotParse(t *testing.T) {
 	bf.WriteUint16(0)          // Zeroed
 
 	pkt := &MsgMhfEnumerateGuacot{}
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	err := pkt.Parse(bf, nil)
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
@@ -251,7 +251,7 @@ func TestGoocooStruct_Data1Size(t *testing.T) {
 	bf.WriteUint8(0)       // No name
 
 	pkt := &MsgMhfUpdateGuacot{}
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	_ = pkt.Parse(bf, nil)
 
 	g := pkt.Goocoos[0]

@@ -185,14 +185,14 @@ func TestGetAirouDetails_ExtraTrailingBytes(t *testing.T) {
 	_ = binary.Write(catBuf, binary.BigEndian, uint32(500)) // experience
 	catBuf.WriteByte(0)                                 // weapon equipped bool
 	catBuf.WriteByte(6)                                 // weaponType
-	binary.Write(catBuf, binary.BigEndian, uint16(50))  // weaponID
+	_ = binary.Write(catBuf, binary.BigEndian, uint16(50))  // weaponID
 
 	catData := catBuf.Bytes()
 	// Add 10 extra trailing bytes
 	extra := make([]byte, 10)
 	catDataWithExtra := append(catData, extra...)
 
-	binary.Write(buf, binary.BigEndian, uint32(len(catDataWithExtra)))
+	_ = binary.Write(buf, binary.BigEndian, uint32(len(catDataWithExtra)))
 	buf.Write(catDataWithExtra)
 
 	bf := byteframe.NewByteFrameFromBytes(buf.Bytes())

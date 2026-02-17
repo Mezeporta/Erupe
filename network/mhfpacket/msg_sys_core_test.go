@@ -65,7 +65,7 @@ func TestMsgSysAckRoundTrip(t *testing.T) {
 			}
 
 			// Parse
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgSysAck{}
 			err = parsed.Parse(bf, ctx)
 			if err != nil {
@@ -109,7 +109,7 @@ func TestMsgSysAckLargePayload(t *testing.T) {
 	}
 
 	// Parse
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgSysAck{}
 	err = parsed.Parse(bf, ctx)
 	if err != nil {
@@ -206,7 +206,7 @@ func TestMsgSysAckNonBufferResponse(t *testing.T) {
 		t.Fatalf("Build() error = %v", err)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgSysAck{}
 	err = parsed.Parse(bf, ctx)
 	if err != nil {
@@ -235,7 +235,7 @@ func TestMsgSysAckNonBufferShortData(t *testing.T) {
 		t.Fatalf("Build() error = %v", err)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	parsed := &MsgSysAck{}
 	err = parsed.Parse(bf, ctx)
 	if err != nil {

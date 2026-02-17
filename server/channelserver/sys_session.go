@@ -144,7 +144,7 @@ func (s *Session) QueueSendMHFNonBlocking(pkt mhfpacket.MHFPacket) {
 	bf.WriteUint16(uint16(pkt.Opcode()))
 
 	// Build the packet onto the byteframe.
-	pkt.Build(bf, s.clientContext)
+	_ = pkt.Build(bf, s.clientContext)
 
 	// Queue it.
 	s.QueueSendNonBlocking(bf.Data())
@@ -225,7 +225,7 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	opcodeUint16 := bf.ReadUint16()
 	if len(bf.Data()) >= 6 {
 		s.ackStart[bf.ReadUint32()] = time.Now()
-		bf.Seek(2, io.SeekStart)
+		_, _ = bf.Seek(2, io.SeekStart)
 	}
 	opcode := network.PacketID(opcodeUint16)
 

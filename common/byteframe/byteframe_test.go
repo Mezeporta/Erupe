@@ -150,7 +150,7 @@ func TestByteFrame_WriteAndReadInt8(t *testing.T) {
 		bf.WriteInt8(v)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	for i, expected := range values {
 		got := bf.ReadInt8()
 		if got != expected {
@@ -167,7 +167,7 @@ func TestByteFrame_WriteAndReadInt16(t *testing.T) {
 		bf.WriteInt16(v)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	for i, expected := range values {
 		got := bf.ReadInt16()
 		if got != expected {
@@ -184,7 +184,7 @@ func TestByteFrame_WriteAndReadInt32(t *testing.T) {
 		bf.WriteInt32(v)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	for i, expected := range values {
 		got := bf.ReadInt32()
 		if got != expected {
@@ -201,7 +201,7 @@ func TestByteFrame_WriteAndReadInt64(t *testing.T) {
 		bf.WriteInt64(v)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	for i, expected := range values {
 		got := bf.ReadInt64()
 		if got != expected {
@@ -218,7 +218,7 @@ func TestByteFrame_WriteAndReadFloat32(t *testing.T) {
 		bf.WriteFloat32(v)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	for i, expected := range values {
 		got := bf.ReadFloat32()
 		if got != expected {
@@ -235,7 +235,7 @@ func TestByteFrame_WriteAndReadFloat64(t *testing.T) {
 		bf.WriteFloat64(v)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	for i, expected := range values {
 		got := bf.ReadFloat64()
 		if got != expected {
@@ -250,7 +250,7 @@ func TestByteFrame_WriteAndReadBool(t *testing.T) {
 	bf.WriteBool(false)
 	bf.WriteBool(true)
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	if got := bf.ReadBool(); got != true {
 		t.Errorf("ReadBool()[0] = %v, want true", got)
 	}
@@ -267,7 +267,7 @@ func TestByteFrame_WriteAndReadBytes(t *testing.T) {
 	input := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
 	bf.WriteBytes(input)
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	got := bf.ReadBytes(uint(len(input)))
 	if !bytes.Equal(got, input) {
 		t.Errorf("ReadBytes() = %v, want %v", got, input)
@@ -279,7 +279,7 @@ func TestByteFrame_WriteAndReadNullTerminatedBytes(t *testing.T) {
 	input := []byte("Hello, World!")
 	bf.WriteNullTerminatedBytes(input)
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	got := bf.ReadNullTerminatedBytes()
 	if !bytes.Equal(got, input) {
 		t.Errorf("ReadNullTerminatedBytes() = %v, want %v", got, input)
@@ -291,7 +291,7 @@ func TestByteFrame_ReadNullTerminatedBytes_NoNull(t *testing.T) {
 	input := []byte("Hello")
 	bf.WriteBytes(input)
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	got := bf.ReadNullTerminatedBytes()
 	// When there's no null terminator, it should return empty slice
 	if len(got) != 0 {
@@ -344,7 +344,7 @@ func TestByteFrame_Seek(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset to known position for each test
-			bf.Seek(5, io.SeekStart)
+			_, _ = bf.Seek(5, io.SeekStart)
 
 			pos, err := bf.Seek(tt.offset, tt.whence)
 			if tt.wantErr {
@@ -380,7 +380,7 @@ func TestByteFrame_Data(t *testing.T) {
 func TestByteFrame_DataFromCurrent(t *testing.T) {
 	bf := NewByteFrame()
 	bf.WriteBytes([]byte{0x01, 0x02, 0x03, 0x04, 0x05})
-	bf.Seek(2, io.SeekStart)
+	_, _ = bf.Seek(2, io.SeekStart)
 
 	data := bf.DataFromCurrent()
 	expected := []byte{0x03, 0x04, 0x05}
@@ -420,7 +420,7 @@ func TestByteFrame_BufferGrowth(t *testing.T) {
 	}
 
 	// Verify all data is still accessible
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	for i := 0; i < 100; i++ {
 		got := bf.ReadUint32()
 		if got != uint32(i) {
@@ -439,7 +439,7 @@ func TestByteFrame_ReadPanic(t *testing.T) {
 
 	bf := NewByteFrame()
 	bf.WriteUint8(0x01)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	bf.ReadUint8()
 	bf.ReadUint16() // Should panic - trying to read 2 bytes when only 1 was written
 }
@@ -487,7 +487,7 @@ func BenchmarkByteFrame_ReadUint32(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 		bf.ReadUint32()
 	}
 }

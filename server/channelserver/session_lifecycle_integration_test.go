@@ -367,7 +367,7 @@ func TestSessionLifecycle_MultipleDataTypesPersistence(t *testing.T) {
 
 	// Verify 1: Road Points
 	var loadedRdP uint32
-	db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&loadedRdP)
+	_ = db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&loadedRdP)
 	if loadedRdP != rdpPoints {
 		t.Errorf("❌ RdP not persisted: got %d, want %d", loadedRdP, rdpPoints)
 		allPassed = false
@@ -377,7 +377,7 @@ func TestSessionLifecycle_MultipleDataTypesPersistence(t *testing.T) {
 
 	// Verify 2: Koryo Points
 	var loadedKoryo uint32
-	db.QueryRow("SELECT COALESCE(kouryou_point, 0) FROM characters WHERE id = $1", charID).Scan(&loadedKoryo)
+	_ = db.QueryRow("SELECT COALESCE(kouryou_point, 0) FROM characters WHERE id = $1", charID).Scan(&loadedKoryo)
 	if loadedKoryo != koryoPoints {
 		t.Errorf("❌ Koryo points not persisted: got %d, want %d", loadedKoryo, koryoPoints)
 		allPassed = false
@@ -387,7 +387,7 @@ func TestSessionLifecycle_MultipleDataTypesPersistence(t *testing.T) {
 
 	// Verify 3: Hunter Navi
 	var loadedNavi []byte
-	db.QueryRow("SELECT hunternavi FROM characters WHERE id = $1", charID).Scan(&loadedNavi)
+	_ = db.QueryRow("SELECT hunternavi FROM characters WHERE id = $1", charID).Scan(&loadedNavi)
 	if len(loadedNavi) == 0 {
 		t.Error("❌ Hunter Navi not saved")
 		allPassed = false
@@ -400,7 +400,7 @@ func TestSessionLifecycle_MultipleDataTypesPersistence(t *testing.T) {
 
 	// Verify 4: Savedata
 	var savedCompressed []byte
-	db.QueryRow("SELECT savedata FROM characters WHERE id = $1", charID).Scan(&savedCompressed)
+	_ = db.QueryRow("SELECT savedata FROM characters WHERE id = $1", charID).Scan(&savedCompressed)
 	if len(savedCompressed) == 0 {
 		t.Error("❌ Savedata not saved")
 		allPassed = false
@@ -551,7 +551,7 @@ func TestSessionLifecycle_RapidReconnect(t *testing.T) {
 
 		// Verify points persisted
 		var loadedPoints uint32
-		db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&loadedPoints)
+		_ = db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&loadedPoints)
 		if loadedPoints != points {
 			t.Errorf("❌ Cycle %d: Points not persisted: got %d, want %d", cycle, loadedPoints, points)
 		} else {

@@ -206,7 +206,7 @@ func handleMsgMhfLoadFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSaveFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveFavoriteQuest)
 	dumpSaveData(s, pkt.Data, "favquest")
-	s.server.db.Exec("UPDATE characters SET savefavoritequest=$1 WHERE id=$2", pkt.Data, s.charID)
+	_, _ = s.server.db.Exec("UPDATE characters SET savefavoritequest=$1 WHERE id=$2", pkt.Data, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
@@ -320,9 +320,9 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 	// Time Flag Replacement
 	// Bitset Structure: b8 UNK, b7 Required Objective, b6 UNK, b5 Night, b4 Day, b3 Cold, b2 Warm, b1 Spring
 	// if the byte is set to 0 the game choses the quest file corresponding to whatever season the game is on
-	bf.Seek(25, 0)
+	_, _ = bf.Seek(25, 0)
 	flagByte := bf.ReadUint8()
-	bf.Seek(25, 0)
+	_, _ = bf.Seek(25, 0)
 	if s.server.erupeConfig.GameplayOptions.SeasonOverride {
 		bf.WriteUint8(flagByte & 0b11100000)
 	} else {
@@ -338,13 +338,13 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 	// Bitset Structure Quest Variant 2: b8 Road, b7 High Conquest, b6 Fixed Difficulty, b5 No Active Feature, b4 Timer, b3 No Cuff, b2 No Halk Pots, b1 Low Conquest
 	// Bitset Structure Quest Variant 3: b8 No Sigils, b7 UNK, b6 Interception, b5 Zenith, b4 No GP Skills, b3 No Simple Mode?, b2 GSR to GR, b1 No Reward Skills
 
-	bf.Seek(175, 0)
+	_, _ = bf.Seek(175, 0)
 	questVariant3 := bf.ReadUint8()
 	questVariant3 &= 0b11011111 // disable Interception flag
-	bf.Seek(175, 0)
+	_, _ = bf.Seek(175, 0)
 	bf.WriteUint8(questVariant3)
 
-	bf.Seek(0, 2)
+	_, _ = bf.Seek(0, 2)
 	ps.Uint8(bf, "", true) // Debug/Notes string for quest
 	return bf.Data(), nil
 }
@@ -669,7 +669,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 
 	bf.WriteUint16(totalCount)
 	bf.WriteUint16(pkt.Offset)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	bf.WriteUint16(returnedCount)
 
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())

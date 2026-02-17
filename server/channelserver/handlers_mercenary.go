@@ -178,7 +178,7 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	var nextID uint32
 	_ = s.server.db.QueryRow("SELECT nextval('rasta_id_seq')").Scan(&nextID)
-	s.server.db.Exec("UPDATE characters SET rasta_id=$1 WHERE id=$2", nextID, s.charID)
+	_, _ = s.server.db.Exec("UPDATE characters SET rasta_id=$1 WHERE id=$2", nextID, s.charID)
 	bf.WriteUint32(nextID)
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 }
@@ -188,9 +188,9 @@ func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	dumpSaveData(s, pkt.MercData, "mercenary")
 	if len(pkt.MercData) > 0 {
 		temp := byteframe.NewByteFrameFromBytes(pkt.MercData)
-		s.server.db.Exec("UPDATE characters SET savemercenary=$1, rasta_id=$2 WHERE id=$3", pkt.MercData, temp.ReadUint32(), s.charID)
+		_, _ = s.server.db.Exec("UPDATE characters SET savemercenary=$1, rasta_id=$2 WHERE id=$3", pkt.MercData, temp.ReadUint32(), s.charID)
 	}
-	s.server.db.Exec("UPDATE characters SET gcp=$1, pact_id=$2 WHERE id=$3", pkt.GCP, pkt.PactMercID, s.charID)
+	_, _ = s.server.db.Exec("UPDATE characters SET gcp=$1, pact_id=$2 WHERE id=$3", pkt.GCP, pkt.PactMercID, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
@@ -200,9 +200,9 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 
 	var pactID, cid uint32
 	var name string
-	s.server.db.QueryRow("SELECT pact_id FROM characters WHERE id=$1", s.charID).Scan(&pactID)
+	_ = s.server.db.QueryRow("SELECT pact_id FROM characters WHERE id=$1", s.charID).Scan(&pactID)
 	if pactID > 0 {
-		s.server.db.QueryRow("SELECT name, id FROM characters WHERE rasta_id = $1", pactID).Scan(&name, &cid)
+		_ = s.server.db.QueryRow("SELECT name, id FROM characters WHERE rasta_id = $1", pactID).Scan(&name, &cid)
 		bf.WriteUint8(1) // numLends
 		bf.WriteUint32(pactID)
 		bf.WriteUint32(cid)
@@ -240,8 +240,8 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 		if pkt.Op != 1 && pkt.Op != 4 {
 			var data []byte
 			var gcp uint32
-			s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id=$1", s.charID).Scan(&data)
-			s.server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id=$1", s.charID).Scan(&gcp)
+			_ = s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id=$1", s.charID).Scan(&data)
+			_ = s.server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id=$1", s.charID).Scan(&gcp)
 
 			if len(data) == 0 {
 				bf.WriteBool(false)
@@ -259,7 +259,7 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfReadMercenaryM(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryM)
 	var data []byte
-	s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", pkt.CharID).Scan(&data)
+	_ = s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", pkt.CharID).Scan(&data)
 	resp := byteframe.NewByteFrame()
 	if len(data) == 0 {
 		resp.WriteBool(false)
@@ -273,11 +273,11 @@ func handleMsgMhfContractMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfContractMercenary)
 	switch pkt.Op {
 	case 0: // Form loan
-		s.server.db.Exec("UPDATE characters SET pact_id=$1 WHERE id=$2", pkt.PactMercID, pkt.CID)
+		_, _ = s.server.db.Exec("UPDATE characters SET pact_id=$1 WHERE id=$2", pkt.PactMercID, pkt.CID)
 	case 1: // Cancel lend
-		s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", s.charID)
+		_, _ = s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", s.charID)
 	case 2: // Cancel loan
-		s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", pkt.CID)
+		_, _ = s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", pkt.CID)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -332,7 +332,7 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error("Failed to compress airou", zap.Error(err))
 	} else {
 		comp = append([]byte{0x01}, comp...)
-		s.server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", comp, s.charID)
+		_, _ = s.server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", comp, s.charID)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -442,18 +442,18 @@ func GetAirouDetails(bf *byteframe.ByteFrame) []Airou {
 		catStart, _ := bf.Seek(0, io.SeekCurrent)
 
 		catDef.ID = bf.ReadUint32()
-		bf.Seek(1, io.SeekCurrent)     // unknown value, probably a bool
+		_, _ = bf.Seek(1, io.SeekCurrent)     // unknown value, probably a bool
 		catDef.Name = bf.ReadBytes(18) // always 18 len, reads first null terminated string out of section and discards rest
 		catDef.Task = bf.ReadUint8()
-		bf.Seek(16, io.SeekCurrent) // appearance data and what is seemingly null bytes
+		_, _ = bf.Seek(16, io.SeekCurrent) // appearance data and what is seemingly null bytes
 		catDef.Personality = bf.ReadUint8()
 		catDef.Class = bf.ReadUint8()
-		bf.Seek(5, io.SeekCurrent)          // affection and colour sliders
+		_, _ = bf.Seek(5, io.SeekCurrent)          // affection and colour sliders
 		catDef.Experience = bf.ReadUint32() // raw cat rank points, doesn't have a rank
-		bf.Seek(1, io.SeekCurrent)          // bool for weapon being equipped
+		_, _ = bf.Seek(1, io.SeekCurrent)          // bool for weapon being equipped
 		catDef.WeaponType = bf.ReadUint8()  // weapon type, presumably always 6 for melee?
 		catDef.WeaponID = bf.ReadUint16()   // weapon id
-		bf.Seek(catStart+int64(catDefLen), io.SeekStart)
+		_, _ = bf.Seek(catStart+int64(catDefLen), io.SeekStart)
 		cats[x] = catDef
 	}
 	return cats

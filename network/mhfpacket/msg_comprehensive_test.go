@@ -513,7 +513,7 @@ func TestAckHandlePacketsParse(t *testing.T) {
 			for i := 0; i < 32; i++ {
 				bf.WriteUint32(uint32(i))
 			}
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			// Parse should not panic
 			err := pkt.Parse(bf, ctx)
@@ -543,7 +543,7 @@ func TestAddAchievementParse(t *testing.T) {
 			bf.WriteUint8(tt.achievementID)
 			bf.WriteUint16(tt.unk1)
 			bf.WriteUint16(tt.unk2)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAddAchievement{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})
@@ -583,7 +583,7 @@ func TestGetAchievementParse(t *testing.T) {
 			bf.WriteUint32(tt.ackHandle)
 			bf.WriteUint32(tt.charID)
 			bf.WriteUint32(tt.unk1)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfGetAchievement{}
 			err := pkt.Parse(bf, &clientctx.ClientContext{})

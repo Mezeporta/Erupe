@@ -22,7 +22,7 @@ func UnpackSimple(data []byte) []byte {
 	header := bf.ReadUint32()
 
 	if header == 0x1A524B4A {
-		bf.Seek(0x2, io.SeekCurrent)
+		_, _ = bf.Seek(0x2, io.SeekCurrent)
 		jpkType := bf.ReadUint16()
 
 		switch jpkType {
@@ -30,7 +30,7 @@ func UnpackSimple(data []byte) []byte {
 			startOffset := bf.ReadInt32()
 			outSize := bf.ReadInt32()
 			outBuffer := make([]byte, outSize)
-			bf.Seek(int64(startOffset), io.SeekStart)
+			_, _ = bf.Seek(int64(startOffset), io.SeekStart)
 			ProcessDecode(bf, outBuffer)
 
 			return outBuffer

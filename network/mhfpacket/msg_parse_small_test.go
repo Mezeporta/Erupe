@@ -65,7 +65,7 @@ func TestParseSmallNotImplemented(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			// Write some padding bytes so Parse has data available if it tries to read.
 			bf.WriteUint32(0)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			err := tc.pkt.Parse(bf, ctx)
 			if err == nil {
@@ -116,7 +116,7 @@ func TestParseSmallLogout(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint8(tt.unk0)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysLogout{}
 			err := pkt.Parse(bf, ctx)
@@ -142,7 +142,7 @@ func TestParseSmallEnumerateHouse(t *testing.T) {
 		bf.WriteUint8(2)           // Method
 		bf.WriteUint16(100)        // Unk
 		bf.WriteUint8(0)           // lenName = 0 (no name)
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgMhfEnumerateHouse{}
 		err := pkt.Parse(bf, ctx)
@@ -173,7 +173,7 @@ func TestParseSmallEnumerateHouse(t *testing.T) {
 		nameBytes := []byte("Test\x00")
 		bf.WriteUint8(uint8(len(nameBytes))) // lenName > 0
 		bf.WriteBytes(nameBytes)             // null-terminated name
-		bf.Seek(0, io.SeekStart)
+		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgMhfEnumerateHouse{}
 		err := pkt.Parse(bf, ctx)
