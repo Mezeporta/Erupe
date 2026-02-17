@@ -120,4 +120,4 @@ jobs:
       uses: golangci/golangci-lint-action@v7
       with:
         version: latest
-        args: --timeout=5m --out-format=github-actions
+        args: --timeout=5m
