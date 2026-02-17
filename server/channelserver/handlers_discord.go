@@ -15,7 +15,7 @@ func (s *Server) onInteraction(ds *discordgo.Session, i *discordgo.InteractionCr
 		var temp string
 		err := s.db.QueryRow(`UPDATE users SET discord_id = $1 WHERE discord_token = $2 RETURNING discord_id`, i.Member.User.ID, i.ApplicationCommandData().Options[0].StringValue()).Scan(&temp)
 		if err == nil {
-			ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			_ = ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Your Erupe account was linked successfully.",
@@ -23,7 +23,7 @@ func (s *Server) onInteraction(ds *discordgo.Session, i *discordgo.InteractionCr
 				},
 			})
 		} else {
-			ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			_ = ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Failed to link Erupe account.",
@@ -35,7 +35,7 @@ func (s *Server) onInteraction(ds *discordgo.Session, i *discordgo.InteractionCr
 		password, _ := bcrypt.GenerateFromPassword([]byte(i.ApplicationCommandData().Options[0].StringValue()), 10)
 		_, err := s.db.Exec(`UPDATE users SET password = $1 WHERE discord_id = $2`, password, i.Member.User.ID)
 		if err == nil {
-			ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			_ = ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Your Erupe account password has been updated.",
@@ -43,7 +43,7 @@ func (s *Server) onInteraction(ds *discordgo.Session, i *discordgo.InteractionCr
 				},
 			})
 		} else {
-			ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			_ = ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Failed to update Erupe account password.",

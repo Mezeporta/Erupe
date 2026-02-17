@@ -60,7 +60,7 @@ func TestMakeSignResponse_EmptyCapLinkValues(t *testing.T) {
 
 	// This should NOT panic on array bounds anymore
 	result := session.makeSignResponse(0)
-	if result != nil && len(result) > 0 {
+	if len(result) > 0 {
 		t.Log("✅ makeSignResponse handled empty CapLink.Values without array bounds panic")
 	}
 }
@@ -109,7 +109,7 @@ func TestMakeSignResponse_InsufficientCapLinkValues(t *testing.T) {
 
 	// This should NOT panic on array bounds anymore
 	result := session.makeSignResponse(0)
-	if result != nil && len(result) > 0 {
+	if len(result) > 0 {
 		t.Log("✅ makeSignResponse handled insufficient CapLink.Values without array bounds panic")
 	}
 }
@@ -158,7 +158,7 @@ func TestMakeSignResponse_MissingCapLinkValues234(t *testing.T) {
 
 	// This should NOT panic on array bounds anymore
 	result := session.makeSignResponse(0)
-	if result != nil && len(result) > 0 {
+	if len(result) > 0 {
 		t.Log("✅ makeSignResponse handled missing CapLink.Values[2/3/4] without array bounds panic")
 	}
 }

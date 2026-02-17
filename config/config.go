@@ -397,7 +397,7 @@ func preventClose(text string) {
 	fmt.Println("\nFailed to start Erupe:\n" + text)
 	go wait()
 	fmt.Println("\nPress Enter/Return to exit...")
-	fmt.Scanln()
+	_, _ = fmt.Scanln()
 	os.Exit(0)
 }
 

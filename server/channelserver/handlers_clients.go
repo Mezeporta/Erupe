@@ -77,7 +77,7 @@ func handleMsgMhfListMember(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteBytes(stringsupport.PaddedString(name, 16, true))
 		}
 	}
-	resp.Seek(0, 0)
+	_, _ = resp.Seek(0, 0)
 	resp.WriteUint32(count)
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }

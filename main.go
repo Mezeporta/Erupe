@@ -73,7 +73,7 @@ func main() {
 	config := _config.ErupeConfig
 	zapLogger, _ = zap.NewDevelopment()
 
-	defer zapLogger.Sync()
+	defer func() { _ = zapLogger.Sync() }()
 	logger := zapLogger.Named("main")
 
 	logger.Info(fmt.Sprintf("Starting Erupe (9.3b-%s)", Commit()))
@@ -305,6 +305,6 @@ func preventClose(text string) {
 	fmt.Println("\nFailed to start Erupe:\n" + text)
 	go wait()
 	fmt.Println("\nPress Enter/Return to exit...")
-	fmt.Scanln()
+	_, _ = fmt.Scanln()
 	os.Exit(0)
 }

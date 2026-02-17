@@ -354,7 +354,7 @@ func getGuaranteedItems(s *Session, gachaID uint32, rollID uint8) []GachaItem {
 	items, err := s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = (SELECT id FROM gacha_entries WHERE entry_type = $1 AND gacha_id = $2)`, rollID, gachaID)
 	if err == nil {
 		for items.Next() {
-			items.StructScan(&reward)
+			_ = items.StructScan(&reward)
 			rewards = append(rewards, reward)
 		}
 	}
@@ -586,7 +586,7 @@ func handleMsgMhfGetBoxGachaInfo(s *Session, p mhfpacket.MHFPacket) {
 	var entryIDs []uint32
 	for entries.Next() {
 		var entryID uint32
-		entries.Scan(&entryID)
+		_ = entries.Scan(&entryID)
 		entryIDs = append(entryIDs, entryID)
 	}
 	bf := byteframe.NewByteFrame()

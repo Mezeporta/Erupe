@@ -678,13 +678,13 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 					guild.LeaderCharID = guildMembers[i].CharID
 					guildMembers[0].OrderIndex = guildMembers[i].OrderIndex
 					guildMembers[i].OrderIndex = 1
-					guildMembers[0].Save(s)
-					guildMembers[i].Save(s)
+					_ = guildMembers[0].Save(s)
+					_ = guildMembers[i].Save(s)
 					bf.WriteUint32(guildMembers[i].CharID)
 					break
 				}
 			}
-			guild.Save(s)
+			_ = guild.Save(s)
 		}
 	case mhfpacket.OperateGuildApply:
 		err = guild.CreateApplication(s, s.charID, GuildApplicationTypeApplied, nil)
@@ -709,7 +709,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 				Body:            fmt.Sprintf("You have withdrawn from 「%s」.", guild.Name),
 				IsSystemMessage: true,
 			}
-			mail.Send(s, nil)
+			_ = mail.Send(s, nil)
 		}
 		bf.WriteUint32(uint32(response))
 	case mhfpacket.OperateGuildDonateRank:
@@ -728,7 +728,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 			return
 		}
 		guild.Comment = stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
-		guild.Save(s)
+		_ = guild.Save(s)
 	case mhfpacket.OperateGuildUpdateMotto:
 		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -737,7 +737,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		_ = pkt.Data1.ReadUint16()
 		guild.SubMotto = pkt.Data1.ReadUint8()
 		guild.MainMotto = pkt.Data1.ReadUint8()
-		guild.Save(s)
+		_ = guild.Save(s)
 	case mhfpacket.OperateGuildRenamePugi1:
 		handleRenamePugi(s, pkt.Data2, guild, 1)
 	case mhfpacket.OperateGuildRenamePugi2:
@@ -788,7 +788,7 @@ func handleRenamePugi(s *Session, bf *byteframe.ByteFrame, guild *Guild, num int
 	default:
 		guild.PugiName3 = name
 	}
-	guild.Save(s)
+	_ = guild.Save(s)
 }
 
 func handleChangePugi(s *Session, outfit uint8, guild *Guild, num int) {
@@ -800,7 +800,7 @@ func handleChangePugi(s *Session, outfit uint8, guild *Guild, num int) {
 	case 3:
 		guild.PugiOutfit3 = outfit
 	}
-	guild.Save(s)
+	_ = guild.Save(s)
 }
 
 func handleDonateRP(s *Session, amount uint16, guild *Guild, _type int) []byte {
@@ -912,7 +912,7 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 	} else {
-		mail.Send(s, nil)
+		_ = mail.Send(s, nil)
 		for _, channel := range s.server.Channels {
 			for _, session := range channel.sessions {
 				if session.charID == pkt.CharID {

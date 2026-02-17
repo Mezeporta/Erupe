@@ -46,7 +46,7 @@ func init() {
 	zapConfig := zap.NewDevelopmentConfig()
 	zapConfig.DisableCaller = true
 	zapLogger, _ := zapConfig.Build()
-	defer zapLogger.Sync()
+	defer func() { _ = zapLogger.Sync() }()
 	logger := zapLogger.Named("commands")
 	cmds := _config.ErupeConfig.Commands
 	for _, cmd := range cmds {
@@ -74,7 +74,7 @@ func sendServerChatMessage(s *Session, message string) {
 		Message:    message,
 		SenderName: "Erupe",
 	}
-	msgBinChat.Build(bf)
+	_ = msgBinChat.Build(bf)
 
 	castedBin := &mhfpacket.MsgSysCastedBinary{
 		CharID:         0,
@@ -191,7 +191,7 @@ func parseChatCommand(s *Session, command string) {
 				}
 				temp = &mhfpacket.MsgSysDeleteObject{ObjID: object.id}
 				deleteNotif.WriteUint16(uint16(temp.Opcode()))
-				temp.Build(deleteNotif, s.clientContext)
+				_ = temp.Build(deleteNotif, s.clientContext)
 			}
 			for _, session := range s.server.sessions {
 				if s == session {
@@ -199,7 +199,7 @@ func parseChatCommand(s *Session, command string) {
 				}
 				temp = &mhfpacket.MsgSysDeleteUser{CharID: session.charID}
 				deleteNotif.WriteUint16(uint16(temp.Opcode()))
-				temp.Build(deleteNotif, s.clientContext)
+				_ = temp.Build(deleteNotif, s.clientContext)
 			}
 			deleteNotif.WriteUint16(uint16(network.MSG_SYS_END))
 			s.QueueSendNonBlocking(deleteNotif.Data())
@@ -211,14 +211,14 @@ func parseChatCommand(s *Session, command string) {
 				}
 				temp = &mhfpacket.MsgSysInsertUser{CharID: session.charID}
 				reloadNotif.WriteUint16(uint16(temp.Opcode()))
-				temp.Build(reloadNotif, s.clientContext)
+				_ = temp.Build(reloadNotif, s.clientContext)
 				for i := 0; i < 3; i++ {
 					temp = &mhfpacket.MsgSysNotifyUserBinary{
 						CharID:     session.charID,
 						BinaryType: uint8(i + 1),
 					}
 					reloadNotif.WriteUint16(uint16(temp.Opcode()))
-					temp.Build(reloadNotif, s.clientContext)
+					_ = temp.Build(reloadNotif, s.clientContext)
 				}
 			}
 			for _, obj := range s.stage.objects {
@@ -234,7 +234,7 @@ func parseChatCommand(s *Session, command string) {
 					OwnerCharID: obj.ownerCharID,
 				}
 				reloadNotif.WriteUint16(uint16(temp.Opcode()))
-				temp.Build(reloadNotif, s.clientContext)
+				_ = temp.Build(reloadNotif, s.clientContext)
 			}
 			reloadNotif.WriteUint16(uint16(network.MSG_SYS_END))
 			s.QueueSendNonBlocking(reloadNotif.Data())
@@ -404,7 +404,7 @@ func parseChatCommand(s *Session, command string) {
 			err := s.server.db.QueryRow(`SELECT discord_token FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&_token)
 			if err != nil {
 				randToken := make([]byte, 4)
-				rand.Read(randToken)
+				_, _ = rand.Read(randToken)
 				_token = fmt.Sprintf("%x-%x", randToken[:2], randToken[2:])
 				s.server.db.Exec(`UPDATE users u SET discord_token = $1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, _token, s.charID)
 			}
@@ -469,7 +469,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	var returnToSender bool
 	if pkt.MessageType == BinaryMessageTypeChat {
 		tmp.SetLE()
-		tmp.Seek(8, 0)
+		_, _ = tmp.Seek(8, 0)
 		message = string(tmp.ReadNullTerminatedBytes())
 		author = string(tmp.ReadNullTerminatedBytes())
 	}
@@ -478,7 +478,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	realPayload := pkt.RawDataPayload
 	if pkt.BroadcastType == BroadcastTypeTargeted {
 		tmp.SetBE()
-		tmp.Seek(0, 0)
+		_, _ = tmp.Seek(0, 0)
 		msgBinTargeted = &binpacket.MsgBinTargeted{}
 		err := msgBinTargeted.Parse(tmp)
 		if err != nil {
@@ -497,13 +497,13 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 			}
 			bf := byteframe.NewByteFrame()
 			bf.SetLE()
-			m.Build(bf)
+			_ = m.Build(bf)
 			realPayload = bf.Data()
 		} else {
 			bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
 			bf.SetLE()
 			chatMessage := &binpacket.MsgBinChat{}
-			chatMessage.Parse(bf)
+			_ = chatMessage.Parse(bf)
 			if strings.HasPrefix(chatMessage.Message, s.server.erupeConfig.CommandPrefix) {
 				parseChatCommand(s, chatMessage.Message)
 				return

@@ -179,10 +179,10 @@ func TestAckPacketStructure(t *testing.T) {
 			var buf bytes.Buffer
 
 			// Write opcode (2 bytes, big endian)
-			binary.Write(&buf, binary.BigEndian, uint16(network.MSG_SYS_ACK))
+			_ = binary.Write(&buf, binary.BigEndian, uint16(network.MSG_SYS_ACK))
 
 			// Write ack handle (4 bytes, big endian)
-			binary.Write(&buf, binary.BigEndian, tt.ackHandle)
+			_ = binary.Write(&buf, binary.BigEndian, tt.ackHandle)
 
 			// Write data
 			buf.Write(tt.data)
@@ -590,7 +590,7 @@ func TestSaveDataCorruptionDetection_Integration(t *testing.T) {
 
 	// Check that database wasn't updated with corrupted data
 	var savedName string
-	db.QueryRow("SELECT name FROM characters WHERE id = $1", charID).Scan(&savedName)
+	_ = db.QueryRow("SELECT name FROM characters WHERE id = $1", charID).Scan(&savedName)
 	if savedName == "HackedName" {
 		t.Error("corrupted save data was incorrectly written to database")
 	}

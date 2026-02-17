@@ -131,7 +131,7 @@ func (s *Session) QueueSendMHF(pkt mhfpacket.MHFPacket) {
 	bf.WriteUint16(uint16(pkt.Opcode()))
 
 	// Build the packet onto the byteframe.
-	pkt.Build(bf, s.clientContext)
+	_ = pkt.Build(bf, s.clientContext)
 
 	// Queue it.
 	s.QueueSend(bf.Data())

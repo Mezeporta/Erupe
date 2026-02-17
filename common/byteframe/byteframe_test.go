@@ -57,7 +57,7 @@ func TestByteFrame_WriteAndReadUint8(t *testing.T) {
 		bf.WriteUint8(v)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	for i, expected := range values {
 		got := bf.ReadUint8()
 		if got != expected {
@@ -83,7 +83,7 @@ func TestByteFrame_WriteAndReadUint16(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := NewByteFrame()
 			bf.WriteUint16(tt.value)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			got := bf.ReadUint16()
 			if got != tt.value {
 				t.Errorf("ReadUint16() = %d, want %d", got, tt.value)
@@ -108,7 +108,7 @@ func TestByteFrame_WriteAndReadUint32(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := NewByteFrame()
 			bf.WriteUint32(tt.value)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			got := bf.ReadUint32()
 			if got != tt.value {
 				t.Errorf("ReadUint32() = %d, want %d", got, tt.value)
@@ -133,7 +133,7 @@ func TestByteFrame_WriteAndReadUint64(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := NewByteFrame()
 			bf.WriteUint64(tt.value)
-			bf.Seek(0, io.SeekStart)
+			_, _ = bf.Seek(0, io.SeekStart)
 			got := bf.ReadUint64()
 			if got != tt.value {
 				t.Errorf("ReadUint64() = %d, want %d", got, tt.value)

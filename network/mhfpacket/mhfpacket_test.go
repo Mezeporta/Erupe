@@ -286,7 +286,7 @@ func TestClientContextNilSafe(t *testing.T) {
 func TestMsgSysPingBuildFormat(t *testing.T) {
 	pkt := &MsgSysPing{AckHandle: 0x12345678}
 	bf := byteframe.NewByteFrame()
-	pkt.Build(bf, &clientctx.ClientContext{})
+	_ = pkt.Build(bf, &clientctx.ClientContext{})
 
 	data := bf.Data()
 	if len(data) != 4 {
@@ -305,7 +305,7 @@ func TestMsgSysTimeBuildFormat(t *testing.T) {
 		Timestamp:     0xDEADBEEF,
 	}
 	bf := byteframe.NewByteFrame()
-	pkt.Build(bf, &clientctx.ClientContext{})
+	_ = pkt.Build(bf, &clientctx.ClientContext{})
 
 	data := bf.Data()
 	if len(data) != 5 {

@@ -51,7 +51,7 @@ func (s *Semaphore) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Sessio
 		bf.WriteUint16(uint16(pkt.Opcode()))
 
 		// Build the packet onto the byteframe.
-		pkt.Build(bf, session.clientContext)
+		_ = pkt.Build(bf, session.clientContext)
 
 		// Enqueue in a non-blocking way that drops the packet if the connections send buffer channel is full.
 		session.QueueSendNonBlocking(bf.Data())

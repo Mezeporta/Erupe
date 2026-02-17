@@ -170,11 +170,11 @@ func applyPatchSchemas(t *testing.T, db *sqlx.DB, projectRoot string) {
 
 		_, err = tx.Exec(string(patchSQL))
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			t.Logf("Warning: Failed to apply patch %s: %v", filename, err)
 			// Continue with other patches even if one fails
 		} else {
-			tx.Commit()
+			_ = tx.Commit()
 		}
 	}
 }

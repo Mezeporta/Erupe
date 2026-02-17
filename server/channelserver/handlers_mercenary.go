@@ -325,7 +325,7 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 	save.WriteBytes(bf.DataFromCurrent())
-	save.Seek(0, 0)
+	_, _ = save.Seek(0, 0)
 	save.WriteUint8(catsExist)
 	comp, err := nullcomp.Compress(save.Data())
 	if err != nil {

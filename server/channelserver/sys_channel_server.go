@@ -320,7 +320,7 @@ func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) 
 		bf.WriteUint16(uint16(pkt.Opcode()))
 
 		// Build the packet onto the byteframe.
-		pkt.Build(bf, session.clientContext)
+		_ = pkt.Build(bf, session.clientContext)
 
 		// Enqueue in a non-blocking way that drops the packet if the connections send buffer channel is full.
 		session.QueueSendNonBlocking(bf.Data())
@@ -347,7 +347,7 @@ func (s *Server) BroadcastChatMessage(message string) {
 		Message:    message,
 		SenderName: s.name,
 	}
-	msgBinChat.Build(bf)
+	_ = msgBinChat.Build(bf)
 
 	s.BroadcastMHF(&mhfpacket.MsgSysCastedBinary{
 		MessageType:    BinaryMessageTypeChat,
@@ -390,7 +390,7 @@ func (s *Server) BroadcastRaviente(ip uint32, port uint16, stage []byte, _type u
 func (s *Server) DiscordChannelSend(charName string, content string) {
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
 		message := fmt.Sprintf("**%s**: %s", charName, content)
-		s.discordBot.RealtimeChannelSend(message)
+		_ = s.discordBot.RealtimeChannelSend(message)
 	}
 }
 
@@ -398,7 +398,7 @@ func (s *Server) DiscordScreenShotSend(charName string, title string, descriptio
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
 		imageUrl := fmt.Sprintf("%s:%d/api/ss/bbs/%s", s.erupeConfig.Screenshots.Host, s.erupeConfig.Screenshots.Port, articleToken)
 		message := fmt.Sprintf("**%s**: %s - %s %s", charName, title, description, imageUrl)
-		s.discordBot.RealtimeChannelSend(message)
+		_ = s.discordBot.RealtimeChannelSend(message)
 	}
 }
 
@@ -422,7 +422,7 @@ func (s *Server) DisconnectUser(uid uint32) {
 	} else {
 		defer rows.Close()
 		for rows.Next() {
-			rows.Scan(&cid)
+			_ = rows.Scan(&cid)
 			cids = append(cids, cid)
 		}
 	}

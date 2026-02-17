@@ -54,7 +54,7 @@ func handleMsgMhfCheckDailyCafepoint(s *Session, p mhfpacket.MHFPacket) {
 	var bondBonus, bonusQuests, dailyQuests uint32
 	bf := byteframe.NewByteFrame()
 	if midday.After(dailyTime) {
-		addPointNetcafe(s, 5)
+		_ = addPointNetcafe(s, 5)
 		bondBonus = 5 // Bond point bonus quests
 		bonusQuests = s.server.erupeConfig.GameplayOptions.BonusQuestAllowance
 		dailyQuests = s.server.erupeConfig.GameplayOptions.DailyQuestAllowance
@@ -196,7 +196,7 @@ func handleMsgMhfPostCafeDurationBonusReceived(s *Session, p mhfpacket.MHFPacket
 		`, cbID).Scan(&cafeBonus.ID, &cafeBonus.ItemType, &cafeBonus.Quantity)
 		if err == nil {
 			if cafeBonus.ItemType == 17 {
-				addPointNetcafe(s, int(cafeBonus.Quantity))
+				_ = addPointNetcafe(s, int(cafeBonus.Quantity))
 			}
 		}
 		s.server.db.Exec("INSERT INTO public.cafe_accepted VALUES ($1, $2)", cbID, s.charID)

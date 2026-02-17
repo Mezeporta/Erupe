@@ -572,7 +572,7 @@ func BenchmarkCompress(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		save.Compress()
+		_ = save.Compress()
 	}
 }
 
@@ -587,6 +587,6 @@ func BenchmarkDecompress(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		save.Decompress()
+		_ = save.Decompress()
 	}
 }

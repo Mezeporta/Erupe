@@ -14,7 +14,7 @@ func TestLoadConfigNoFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get working directory: %v", err)
 	}
-	defer os.Chdir(oldWd)
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("Failed to change directory: %v", err)
@@ -202,9 +202,6 @@ func TestConfigNilSafety(t *testing.T) {
 	}
 
 	cfg = &Config{}
-	if cfg == nil {
-		t.Error("Config should be allocated")
-	}
 
 	cfg.Host = "test"
 	if cfg.Host != "test" {

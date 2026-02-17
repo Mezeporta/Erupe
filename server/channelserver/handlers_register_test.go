@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	"erupe-ce/network/mhfpacket"
 )
 
 // createMockServerWithRaviente creates a mock server with raviente and semaphore
@@ -25,9 +24,6 @@ func TestRavienteInitialization(t *testing.T) {
 		register: make([]uint32, 30),
 		state:    make([]uint32, 30),
 		support:  make([]uint32, 30),
-	}
-	if r == nil {
-		t.Fatal("Raviente is nil")
 	}
 	if len(r.register) != 30 {
 		t.Errorf("register length = %d, want 30", len(r.register))
@@ -221,9 +217,4 @@ func TestMockServerPacketHandling(t *testing.T) {
 		t.Errorf("ByteFrame length = %d, want 4", len(bf.Data()))
 	}
 
-	// Verify packet types can be instantiated
-	pkt := &mhfpacket.MsgSysAck{}
-	if pkt == nil {
-		t.Error("Failed to create MsgSysAck")
-	}
 }

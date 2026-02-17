@@ -79,7 +79,7 @@ func (s *Session) handlePacket(pkt []byte) error {
 		err := s.server.deleteCharacter(characterID, token, tokenID)
 		if err == nil {
 			s.logger.Info("Deleted character", zap.Int("CharacterID", characterID))
-			s.cryptConn.SendPacket([]byte{0x01}) // DEL_SUCCESS
+			_ = s.cryptConn.SendPacket([]byte{0x01}) // DEL_SUCCESS
 		}
 	default:
 		s.logger.Warn("Unknown request", zap.String("reqType", reqType))
@@ -127,7 +127,7 @@ func (s *Session) handleWIIUSGN(bf *byteframe.ByteFrame) {
 		s.sendCode(SIGN_EABORT)
 		return
 	}
-	s.cryptConn.SendPacket(s.makeSignResponse(uid))
+	_ = s.cryptConn.SendPacket(s.makeSignResponse(uid))
 }
 
 func (s *Session) handlePSSGN(bf *byteframe.ByteFrame) {
@@ -147,13 +147,13 @@ func (s *Session) handlePSSGN(bf *byteframe.ByteFrame) {
 	err := s.server.db.QueryRow(`SELECT id FROM users WHERE psn_id = $1`, s.psn).Scan(&uid)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			s.cryptConn.SendPacket(s.makeSignResponse(0))
+			_ = s.cryptConn.SendPacket(s.makeSignResponse(0))
 			return
 		}
 		s.sendCode(SIGN_EABORT)
 		return
 	}
-	s.cryptConn.SendPacket(s.makeSignResponse(uid))
+	_ = s.cryptConn.SendPacket(s.makeSignResponse(uid))
 }
 
 func (s *Session) handlePSNLink(bf *byteframe.ByteFrame) {
@@ -207,5 +207,5 @@ func (s *Session) handleDSGN(bf *byteframe.ByteFrame) {
 }
 
 func (s *Session) sendCode(id RespID) {
-	s.cryptConn.SendPacket([]byte{byte(id)})
+	_ = s.cryptConn.SendPacket([]byte{byte(id)})
 }

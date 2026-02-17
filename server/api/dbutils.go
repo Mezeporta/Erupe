@@ -61,7 +61,7 @@ func (s *APIServer) createCharacter(ctx context.Context, userID uint32) (Charact
 	)
 	if err == sql.ErrNoRows {
 		var count int
-		s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM characters WHERE user_id = $1", userID).Scan(&count)
+		_ = s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM characters WHERE user_id = $1", userID).Scan(&count)
 		if count >= 16 {
 			return character, fmt.Errorf("cannot have more than 16 characters")
 		}
@@ -109,18 +109,18 @@ func (s *APIServer) getCharactersForUser(ctx context.Context, uid uint32) ([]Cha
 
 func (s *APIServer) getReturnExpiry(uid uint32) time.Time {
 	var returnExpiry, lastLogin time.Time
-	s.db.Get(&lastLogin, "SELECT COALESCE(last_login, now()) FROM users WHERE id=$1", uid)
+	_ = s.db.Get(&lastLogin, "SELECT COALESCE(last_login, now()) FROM users WHERE id=$1", uid)
 	if time.Now().Add((time.Hour * 24) * -90).After(lastLogin) {
 		returnExpiry = time.Now().Add(time.Hour * 24 * 30)
-		s.db.Exec("UPDATE users SET return_expires=$1 WHERE id=$2", returnExpiry, uid)
+		_, _ = s.db.Exec("UPDATE users SET return_expires=$1 WHERE id=$2", returnExpiry, uid)
 	} else {
 		err := s.db.Get(&returnExpiry, "SELECT return_expires FROM users WHERE id=$1", uid)
 		if err != nil {
 			returnExpiry = time.Now()
-			s.db.Exec("UPDATE users SET return_expires=$1 WHERE id=$2", returnExpiry, uid)
+			_, _ = s.db.Exec("UPDATE users SET return_expires=$1 WHERE id=$2", returnExpiry, uid)
 		}
 	}
-	s.db.Exec("UPDATE users SET last_login=$1 WHERE id=$2", time.Now(), uid)
+	_, _ = s.db.Exec("UPDATE users SET last_login=$1 WHERE id=$2", time.Now(), uid)
 	return returnExpiry
 }
 

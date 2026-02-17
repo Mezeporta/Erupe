@@ -80,7 +80,7 @@ func doAckSimpleFail(s *Session, ackHandle uint32, data []byte) {
 
 func updateRights(s *Session) {
 	rightsInt := uint32(2)
-	s.server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", s.charID).Scan(&rightsInt)
+	_ = s.server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", s.charID).Scan(&rightsInt)
 	s.courses, rightsInt = mhfcourse.GetCourseStruct(rightsInt)
 	update := &mhfpacket.MsgSysUpdateRight{
 		ClientRespAckHandle: 0,
@@ -303,7 +303,7 @@ func logoutPlayer(s *Session) {
 		if mhfcourse.CourseExists(30, s.courses) {
 			rpGained = timePlayed / 900
 			timePlayed = timePlayed % 900
-			s.server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.charID)
+			_, _ = s.server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.charID)
 		} else {
 			rpGained = timePlayed / 1800
 			timePlayed = timePlayed % 1800
@@ -329,8 +329,8 @@ func logoutPlayer(s *Session) {
 		}
 
 		// Update time_played and guild treasure hunt
-		s.server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.charID)
-		s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE character_id=$1`, s.charID)
+		_, _ = s.server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.charID)
+		_, _ = s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE character_id=$1`, s.charID)
 	}
 
 	// NOW do cleanup (after save is complete)
@@ -449,7 +449,7 @@ func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 		for i := 0; i < 176; i++ {
 			val = bf.ReadUint8()
 			if val > 0 && mhfmon.Monsters[i].Large {
-				s.server.db.Exec(`INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, $2, $3, $4)`, s.charID, i, val, TimeAdjusted())
+				_, _ = s.server.db.Exec(`INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, $2, $3, $4)`, s.charID, i, val, TimeAdjusted())
 			}
 		}
 	}
@@ -665,7 +665,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 				}
 				if strings.HasPrefix(stage.id, findPartyParams.StagePrefix) {
 					sb3 := byteframe.NewByteFrameFromBytes(stage.rawBinaryData[stageBinaryKey{1, 3}])
-					sb3.Seek(4, 0)
+					_, _ = sb3.Seek(4, 0)
 
 					stageDataParams := 7
 					if _config.ErupeConfig.RealClientMode <= _config.G10 {
@@ -741,7 +741,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	}
-	resp.Seek(0, io.SeekStart)
+	_, _ = resp.Seek(0, io.SeekStart)
 	resp.WriteUint16(count)
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
@@ -954,7 +954,7 @@ func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {}
 func userGetItems(s *Session) []mhfitem.MHFItemStack {
 	var data []byte
 	var items []mhfitem.MHFItemStack
-	s.server.db.QueryRow(`SELECT item_box FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&data)
+	_ = s.server.db.QueryRow(`SELECT item_box FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&data)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()
@@ -977,7 +977,7 @@ func handleMsgMhfEnumerateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateUnionItem)
 	newStacks := mhfitem.DiffItemStacks(userGetItems(s), pkt.UpdatedItems)
-	s.server.db.Exec(`UPDATE users u SET item_box=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, mhfitem.SerializeWarehouseItems(newStacks), s.charID)
+	_, _ = s.server.db.Exec(`UPDATE users u SET item_box=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, mhfitem.SerializeWarehouseItems(newStacks), s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -990,17 +990,17 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	err := s.server.db.QueryRow(fmt.Sprintf("SELECT %s_checked FROM stamps WHERE character_id=$1", pkt.StampType), s.charID).Scan(&lastCheck)
 	if err != nil {
 		lastCheck = TimeAdjusted()
-		s.server.db.Exec("INSERT INTO stamps (character_id, hl_checked, ex_checked) VALUES ($1, $2, $2)", s.charID, TimeAdjusted())
+		_, _ = s.server.db.Exec("INSERT INTO stamps (character_id, hl_checked, ex_checked) VALUES ($1, $2, $2)", s.charID, TimeAdjusted())
 	} else {
-		s.server.db.Exec(fmt.Sprintf(`UPDATE stamps SET %s_checked=$1 WHERE character_id=$2`, pkt.StampType), TimeAdjusted(), s.charID)
+		_, _ = s.server.db.Exec(fmt.Sprintf(`UPDATE stamps SET %s_checked=$1 WHERE character_id=$2`, pkt.StampType), TimeAdjusted(), s.charID)
 	}
 
 	if lastCheck.Before(TimeWeekStart()) {
-		s.server.db.Exec(fmt.Sprintf("UPDATE stamps SET %s_total=%s_total+1 WHERE character_id=$1", pkt.StampType, pkt.StampType), s.charID)
+		_, _ = s.server.db.Exec(fmt.Sprintf("UPDATE stamps SET %s_total=%s_total+1 WHERE character_id=$1", pkt.StampType, pkt.StampType), s.charID)
 		updated = 1
 	}
 
-	s.server.db.QueryRow(fmt.Sprintf("SELECT %s_total, %s_redeemed FROM stamps WHERE character_id=$1", pkt.StampType, pkt.StampType), s.charID).Scan(&total, &redeemed)
+	_ = s.server.db.QueryRow(fmt.Sprintf("SELECT %s_total, %s_redeemed FROM stamps WHERE character_id=$1", pkt.StampType, pkt.StampType), s.charID).Scan(&total, &redeemed)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(total)
 	bf.WriteUint16(redeemed)
@@ -1016,10 +1016,10 @@ func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	var total, redeemed uint16
 	var tktStack mhfitem.MHFItemStack
 	if pkt.Unk1 == 10 { // Yearly Sub Ex
-		s.server.db.QueryRow("UPDATE stamps SET hl_total=hl_total-48, hl_redeemed=hl_redeemed-48 WHERE character_id=$1 RETURNING hl_total, hl_redeemed", s.charID).Scan(&total, &redeemed)
+		_ = s.server.db.QueryRow("UPDATE stamps SET hl_total=hl_total-48, hl_redeemed=hl_redeemed-48 WHERE character_id=$1 RETURNING hl_total, hl_redeemed", s.charID).Scan(&total, &redeemed)
 		tktStack = mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: 2210}, Quantity: 1}
 	} else {
-		s.server.db.QueryRow(fmt.Sprintf("UPDATE stamps SET %s_redeemed=%s_redeemed+8 WHERE character_id=$1 RETURNING %s_total, %s_redeemed", pkt.StampType, pkt.StampType, pkt.StampType, pkt.StampType), s.charID).Scan(&total, &redeemed)
+		_ = s.server.db.QueryRow(fmt.Sprintf("UPDATE stamps SET %s_redeemed=%s_redeemed+8 WHERE character_id=$1 RETURNING %s_total, %s_redeemed", pkt.StampType, pkt.StampType, pkt.StampType, pkt.StampType), s.charID).Scan(&total, &redeemed)
 		if pkt.StampType == "hl" {
 			tktStack = mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: 1630}, Quantity: 5}
 		} else {
@@ -1043,7 +1043,7 @@ func getGoocooData(s *Session, cid uint32) [][]byte {
 	for i := 0; i < 5; i++ {
 		err := s.server.db.QueryRow(fmt.Sprintf("SELECT goocoo%d FROM goocoo WHERE id=$1", i), cid).Scan(&goocoo)
 		if err != nil {
-			s.server.db.Exec("INSERT INTO goocoo (id) VALUES ($1)", s.charID)
+			_, _ = s.server.db.Exec("INSERT INTO goocoo (id) VALUES ($1)", s.charID)
 			return goocoos
 		}
 		if err == nil && goocoo != nil {
@@ -1216,7 +1216,7 @@ func handleMsgMhfStampcardStamp(s *Session, p mhfpacket.MHFPacket) {
 	}
 	var stamps, rewardTier, rewardUnk uint16
 	reward := mhfitem.MHFItemStack{Item: mhfitem.MHFItem{}}
-	s.server.db.QueryRow(`UPDATE characters SET stampcard = stampcard + $1 WHERE id = $2 RETURNING stampcard`, pkt.Stamps, s.charID).Scan(&stamps)
+	_ = s.server.db.QueryRow(`UPDATE characters SET stampcard = stampcard + $1 WHERE id = $2 RETURNING stampcard`, pkt.Stamps, s.charID).Scan(&stamps)
 	bf.WriteUint16(stamps - pkt.Stamps)
 	bf.WriteUint16(stamps)
 
@@ -1578,7 +1578,7 @@ func handleMsgMhfGetTrendWeapon(s *Session, p mhfpacket.MHFPacket) {
 		j := 0
 		for rows.Next() {
 			trendWeapons[i][j].WeaponType = i
-			rows.Scan(&trendWeapons[i][j].WeaponID)
+			_ = rows.Scan(&trendWeapons[i][j].WeaponID)
 			j++
 		}
 	}

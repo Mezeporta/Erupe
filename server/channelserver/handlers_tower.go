@@ -324,7 +324,7 @@ func handleMsgMhfGetTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 			defer rows.Close()
 			for rows.Next() {
 				temp := TenrouiraiCharScore{}
-				rows.Scan(&temp.Name, &temp.Score)
+				_ = rows.Scan(&temp.Name, &temp.Score)
 				tenrouirai.CharScore = append(tenrouirai.CharScore, temp)
 			}
 		}

@@ -22,7 +22,7 @@ func TestByteFrame_SetBE(t *testing.T) {
 
 	// Verify write/read works correctly in BE mode after switching
 	bf.WriteUint16(0x1234)
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	got := bf.ReadUint16()
 	if got != 0x1234 {
 		t.Errorf("ReadUint16() = 0x%04X, want 0x1234", got)
@@ -50,7 +50,7 @@ func TestByteFrame_LEReadWrite(t *testing.T) {
 		t.Errorf("LE WriteUint32 bytes: got %X, want 78563412", data)
 	}
 
-	bf.Seek(0, io.SeekStart)
+	_, _ = bf.Seek(0, io.SeekStart)
 	got := bf.ReadUint32()
 	if got != 0x12345678 {
 		t.Errorf("LE ReadUint32() = 0x%08X, want 0x12345678", got)

@@ -142,7 +142,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 	}
 	for rows.Next() {
 		var temp loginBoost
-		rows.StructScan(&temp)
+		_ = rows.StructScan(&temp)
 		loginBoosts = append(loginBoosts, temp)
 	}
 	if len(loginBoosts) == 0 {

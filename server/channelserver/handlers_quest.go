@@ -227,7 +227,7 @@ func loadQuestFile(s *Session, questId int) []byte {
 	}
 	fileBytes := byteframe.NewByteFrameFromBytes(decrypted)
 	fileBytes.SetLE()
-	fileBytes.Seek(int64(fileBytes.ReadUint32()), 0)
+	_, _ = fileBytes.Seek(int64(fileBytes.ReadUint32()), 0)
 
 	bodyLength := 320
 	if _config.ErupeConfig.RealClientMode <= _config.S6 {
@@ -244,12 +244,12 @@ func loadQuestFile(s *Session, questId int) []byte {
 	questBody := byteframe.NewByteFrameFromBytes(fileBytes.ReadBytes(uint(bodyLength)))
 	questBody.SetLE()
 	// Find the master quest string pointer
-	questBody.Seek(40, 0)
-	fileBytes.Seek(int64(questBody.ReadUint32()), 0)
-	questBody.Seek(40, 0)
+	_, _ = questBody.Seek(40, 0)
+	_, _ = fileBytes.Seek(int64(questBody.ReadUint32()), 0)
+	_, _ = questBody.Seek(40, 0)
 	// Overwrite it
 	questBody.WriteUint32(uint32(bodyLength))
-	questBody.Seek(0, 2)
+	_, _ = questBody.Seek(0, 2)
 
 	// Rewrite the quest strings and their pointers
 	var tempString []byte
@@ -258,9 +258,9 @@ func loadQuestFile(s *Session, questId int) []byte {
 	for i := 0; i < 8; i++ {
 		questBody.WriteUint32(uint32(tempPointer))
 		temp := int64(fileBytes.Index())
-		fileBytes.Seek(int64(fileBytes.ReadUint32()), 0)
+		_, _ = fileBytes.Seek(int64(fileBytes.ReadUint32()), 0)
 		tempString = fileBytes.ReadNullTerminatedBytes()
-		fileBytes.Seek(temp+4, 0)
+		_, _ = fileBytes.Seek(temp+4, 0)
 		tempPointer += len(tempString) + 1
 		newStrings.WriteNullTerminatedBytes(tempString)
 	}
@@ -278,7 +278,7 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 	var questId, activeDuration, inactiveDuration, flags int
 	var maxPlayers, questType uint8
 	var startTime time.Time
-	rows.Scan(&id, &maxPlayers, &questType, &questId, &mark, &flags, &startTime, &activeDuration, &inactiveDuration)
+	_ = rows.Scan(&id, &maxPlayers, &questType, &questId, &mark, &flags, &startTime, &activeDuration, &inactiveDuration)
 
 	data := loadQuestFile(s, questId)
 	if data == nil {
@@ -388,7 +388,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 
 						_, err = tx.Exec("UPDATE event_quests SET start_time = $1 WHERE id = $2", newRotationTime, id)
 						if err != nil {
-							tx.Rollback() // Rollback if an error occurs
+							_ = tx.Rollback()
 							break
 						}
 						startTime = newRotationTime // Set the new start time so the quest can be used/removed immediately.
@@ -421,7 +421,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 		}
 
 		rows.Close()
-		tx.Commit()
+		_ = tx.Commit()
 	}
 
 	tuneValues := []tuneValue{

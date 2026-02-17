@@ -11,7 +11,7 @@ import (
 
 func TestNewAPIServer(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	config := &Config{
@@ -45,7 +45,7 @@ func TestNewAPIServer(t *testing.T) {
 
 func TestNewAPIServerConfig(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := &_config.Config{
 		API: _config.API{
@@ -94,7 +94,7 @@ func TestAPIServerStart(t *testing.T) {
 	// It attempts to start an actual HTTP server
 
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	cfg.API.Port = 18888 // Use a high port less likely to be in use
@@ -148,7 +148,7 @@ func TestAPIServerStart(t *testing.T) {
 
 func TestAPIServerShutdown(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	cfg.API.Port = 18889
@@ -174,7 +174,7 @@ func TestAPIServerShutdown(t *testing.T) {
 
 func TestAPIServerShutdownSetsFlag(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	config := &Config{
@@ -202,7 +202,7 @@ func TestAPIServerShutdownSetsFlag(t *testing.T) {
 
 func TestAPIServerConcurrentShutdown(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	config := &Config{
@@ -241,7 +241,7 @@ func TestAPIServerConcurrentShutdown(t *testing.T) {
 
 func TestAPIServerMutex(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	config := &Config{
@@ -264,7 +264,7 @@ func TestAPIServerMutex(t *testing.T) {
 
 func TestAPIServerHTTPServerInitialization(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	config := &Config{
@@ -286,7 +286,7 @@ func TestAPIServerHTTPServerInitialization(t *testing.T) {
 
 func BenchmarkNewAPIServer(b *testing.B) {
 	logger, _ := zap.NewDevelopment()
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	config := &Config{

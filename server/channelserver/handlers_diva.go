@@ -71,7 +71,7 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 	} else {
 		defer rows.Close()
 		for rows.Next() {
-			rows.Scan(&id, &start)
+			_ = rows.Scan(&id, &start)
 		}
 	}
 

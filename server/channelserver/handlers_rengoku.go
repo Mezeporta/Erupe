@@ -158,7 +158,7 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	defer rows.Close()
 
 	for rows.Next() {
-		rows.StructScan(&score)
+		_ = rows.StructScan(&score)
 		if score.Name == s.Name {
 			bf.WriteUint32(i)
 			bf.WriteUint32(score.Score)

@@ -17,7 +17,7 @@ import (
 // TestLauncherEndpoint tests the /launcher endpoint
 func TestLauncherEndpoint(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	cfg.API.Banners = []_config.APISignBanner{
@@ -81,7 +81,7 @@ func TestLauncherEndpoint(t *testing.T) {
 // TestLauncherEndpointEmptyConfig tests launcher with empty config
 func TestLauncherEndpointEmptyConfig(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	cfg.API.Banners = []_config.APISignBanner{}
@@ -117,7 +117,7 @@ func TestLauncherEndpointEmptyConfig(t *testing.T) {
 // TestLoginEndpointInvalidJSON tests login with invalid JSON
 func TestLoginEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	cfg := NewTestConfig()
 	server := &APIServer{

@@ -19,7 +19,7 @@ func TestMsgBinTargetedParseEmpty(t *testing.T) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(0) // TargetCount = 0
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 
 	m := &MsgBinTargeted{}
 	err := m.Parse(bf)
@@ -41,7 +41,7 @@ func TestMsgBinTargetedParseSingleTarget(t *testing.T) {
 	bf.WriteUint32(0x12345678) // TargetCharID
 	bf.WriteBytes([]byte{0xDE, 0xAD, 0xBE, 0xEF})
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 
 	m := &MsgBinTargeted{}
 	err := m.Parse(bf)
@@ -71,7 +71,7 @@ func TestMsgBinTargetedParseMultipleTargets(t *testing.T) {
 	bf.WriteUint32(300)
 	bf.WriteBytes([]byte{0x01, 0x02, 0x03})
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 
 	m := &MsgBinTargeted{}
 	err := m.Parse(bf)
@@ -130,7 +130,7 @@ func TestMsgBinTargetedRoundTrip(t *testing.T) {
 	}
 
 	// Parse
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	parsed := &MsgBinTargeted{}
 	err = parsed.Parse(bf)
 	if err != nil {
@@ -244,7 +244,7 @@ func TestMsgBinChatBuildParse(t *testing.T) {
 	}
 
 	// Parse
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	parsed := &MsgBinChat{}
 	err = parsed.Parse(bf)
 	if err != nil {
@@ -286,7 +286,7 @@ func TestMsgBinChatBuildParseJapanese(t *testing.T) {
 	}
 
 	// Parse
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	parsed := &MsgBinChat{}
 	err = parsed.Parse(bf)
 	if err != nil {
@@ -318,7 +318,7 @@ func TestMsgBinChatBuildParseEmpty(t *testing.T) {
 	}
 
 	// Parse
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	parsed := &MsgBinChat{}
 	err = parsed.Parse(bf)
 	if err != nil {
@@ -386,7 +386,7 @@ func TestMsgBinChatAllTypes(t *testing.T) {
 				t.Fatalf("Build() error = %v", err)
 			}
 
-			bf.Seek(0, 0)
+			_, _ = bf.Seek(0, 0)
 			parsed := &MsgBinChat{}
 			err = parsed.Parse(bf)
 			if err != nil {

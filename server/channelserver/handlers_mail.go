@@ -174,7 +174,7 @@ func SendMailNotification(s *Session, m *Mail, recipient *Session) {
 		SenderName: getCharacterName(s, m.SenderID),
 	}
 
-	notification.Build(bf)
+	_ = notification.Build(bf)
 
 	castedBinary := &mhfpacket.MsgSysCastedBinary{
 		CharID:         m.SenderID,
@@ -183,7 +183,7 @@ func SendMailNotification(s *Session, m *Mail, recipient *Session) {
 		RawDataPayload: bf.Data(),
 	}
 
-	castedBinary.Build(bf, s.clientContext)
+	_ = castedBinary.Build(bf, s.clientContext)
 
 	recipient.QueueSendMHFNonBlocking(castedBinary)
 }

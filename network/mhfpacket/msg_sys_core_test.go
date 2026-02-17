@@ -258,7 +258,7 @@ func TestMsgSysAckBuildFormat(t *testing.T) {
 	ctx := &clientctx.ClientContext{}
 
 	bf := byteframe.NewByteFrame()
-	pkt.Build(bf, ctx)
+	_ = pkt.Build(bf, ctx)
 
 	data := bf.Data()
 

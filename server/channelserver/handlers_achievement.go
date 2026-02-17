@@ -131,7 +131,7 @@ func handleMsgMhfGetAchievement(s *Session, p mhfpacket.MHFPacket) {
 		resp.WriteUint16(0) // Unk
 		resp.WriteUint32(achData.Progress)
 	}
-	resp.Seek(0, io.SeekStart)
+	_, _ = resp.Seek(0, io.SeekStart)
 	resp.WriteUint32(points)
 	resp.WriteUint32(points)
 	resp.WriteUint32(points)

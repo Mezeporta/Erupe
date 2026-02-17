@@ -613,8 +613,8 @@ func TestSaveDataSerialization(t *testing.T) {
 
 			// Simulate binary serialization
 			buf := new(bytes.Buffer)
-			binary.Write(buf, binary.LittleEndian, savedata.CharID)
-			binary.Write(buf, binary.LittleEndian, savedata.Playtime)
+			_ = binary.Write(buf, binary.LittleEndian, savedata.CharID)
+			_ = binary.Write(buf, binary.LittleEndian, savedata.Playtime)
 
 			// Should have 8 bytes (4 + 4)
 			if buf.Len() != 8 {
@@ -625,8 +625,8 @@ func TestSaveDataSerialization(t *testing.T) {
 			data := buf.Bytes()
 			var charID uint32
 			var playtime uint32
-			binary.Read(bytes.NewReader(data), binary.LittleEndian, &charID)
-			binary.Read(bytes.NewReader(data[4:]), binary.LittleEndian, &playtime)
+			_ = binary.Read(bytes.NewReader(data), binary.LittleEndian, &charID)
+			_ = binary.Read(bytes.NewReader(data[4:]), binary.LittleEndian, &playtime)
 
 			if charID != tt.charID || playtime != tt.playtime {
 				t.Error("serialization round-trip failed")

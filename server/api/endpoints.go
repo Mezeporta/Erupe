@@ -408,5 +408,5 @@ func (s *APIServer) ScreenShot(w http.ResponseWriter, r *http.Request) {
 	}
 	// Write the XML response with a 200 status code
 	w.WriteHeader(http.StatusOK)
-	w.Write(xmlData)
+	_, _ = w.Write(xmlData)
 }

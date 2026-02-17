@@ -356,14 +356,10 @@ func TestCommands_PasswordCommand(t *testing.T) {
 
 func TestDiscordBotStruct(t *testing.T) {
 	// Test that the DiscordBot struct can be initialized
-	bot := &DiscordBot{
+	_ = &DiscordBot{
 		Session:      nil, // Can't create real session in tests
 		MainGuild:    nil,
 		RelayChannel: nil,
-	}
-
-	if bot == nil {
-		t.Error("Failed to create DiscordBot struct")
 	}
 }
 

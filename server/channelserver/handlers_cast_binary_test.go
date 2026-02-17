@@ -122,7 +122,7 @@ func TestHandleMsgSysCastBinary_DiceCommand(t *testing.T) {
 		Message:    "@dice",
 		SenderName: "TestPlayer",
 	}
-	msg.Build(bf)
+	_ = msg.Build(bf)
 
 	pkt := &mhfpacket.MsgSysCastBinary{
 		Unk:            0,
@@ -157,7 +157,7 @@ func TestBroadcastTypes(t *testing.T) {
 					TargetCharIDs: []uint32{1, 2, 3},
 					RawDataPayload: []byte{0xDE, 0xAD, 0xBE, 0xEF},
 				}
-				msg.Build(bf)
+				_ = msg.Build(bf)
 				return bf.Data()
 			},
 		},
@@ -245,7 +245,7 @@ func TestBinaryMessageTypes(t *testing.T) {
 					Message:    "test",
 					SenderName: "Player",
 				}
-				msg.Build(bf)
+				_ = msg.Build(bf)
 				return bf.Data()
 			},
 		},
@@ -429,12 +429,12 @@ func TestChatMessageParsing(t *testing.T) {
 				Message:    tt.messageContent,
 				SenderName: tt.authorName,
 			}
-			msg.Build(bf)
+			_ = msg.Build(bf)
 
 			// Parse it back
 			parseBf := byteframe.NewByteFrameFromBytes(bf.Data())
 			parseBf.SetLE()
-			parseBf.Seek(8, 0) // Skip initial bytes
+			_, _ = parseBf.Seek(8, 0) // Skip initial bytes
 
 			message := string(parseBf.ReadNullTerminatedBytes())
 			author := string(parseBf.ReadNullTerminatedBytes())

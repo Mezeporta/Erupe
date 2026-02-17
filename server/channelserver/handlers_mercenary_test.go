@@ -39,7 +39,7 @@ func buildCatBytes(cats []Airou) []byte {
 	for _, cat := range cats {
 		catBuf := new(bytes.Buffer)
 		// ID (uint32)
-		binary.Write(catBuf, binary.BigEndian, cat.ID)
+		_ = binary.Write(catBuf, binary.BigEndian, cat.ID)
 		// 1 byte skip (unknown bool)
 		catBuf.WriteByte(0)
 		// Name (18 bytes)
@@ -57,17 +57,17 @@ func buildCatBytes(cats []Airou) []byte {
 		// 5 bytes skip (affection and colour sliders)
 		catBuf.Write(make([]byte, 5))
 		// Experience (uint32)
-		binary.Write(catBuf, binary.BigEndian, cat.Experience)
+		_ = binary.Write(catBuf, binary.BigEndian, cat.Experience)
 		// 1 byte skip (bool for weapon equipped)
 		catBuf.WriteByte(0)
 		// WeaponType (uint8)
 		catBuf.WriteByte(cat.WeaponType)
 		// WeaponID (uint16)
-		binary.Write(catBuf, binary.BigEndian, cat.WeaponID)
+		_ = binary.Write(catBuf, binary.BigEndian, cat.WeaponID)
 
 		catData := catBuf.Bytes()
 		// catDefLen (uint32) - total length of the cat data after this field
-		binary.Write(buf, binary.BigEndian, uint32(len(catData)))
+		_ = binary.Write(buf, binary.BigEndian, uint32(len(catData)))
 		buf.Write(catData)
 	}
 	return buf.Bytes()
@@ -174,7 +174,7 @@ func TestGetAirouDetails_ExtraTrailingBytes(t *testing.T) {
 	buf.WriteByte(1) // catCount = 1
 
 	catBuf := new(bytes.Buffer)
-	binary.Write(catBuf, binary.BigEndian, uint32(99))  // catID
+	_ = binary.Write(catBuf, binary.BigEndian, uint32(99))  // catID
 	catBuf.WriteByte(0)                                 // skip
 	catBuf.Write(make([]byte, 18))                      // name
 	catBuf.WriteByte(3)                                 // currentTask
@@ -182,7 +182,7 @@ func TestGetAirouDetails_ExtraTrailingBytes(t *testing.T) {
 	catBuf.WriteByte(1)                                 // personality
 	catBuf.WriteByte(2)                                 // class
 	catBuf.Write(make([]byte, 5))                       // affection skip
-	binary.Write(catBuf, binary.BigEndian, uint32(500)) // experience
+	_ = binary.Write(catBuf, binary.BigEndian, uint32(500)) // experience
 	catBuf.WriteByte(0)                                 // weapon equipped bool
 	catBuf.WriteByte(6)                                 // weaponType
 	binary.Write(catBuf, binary.BigEndian, uint16(50))  // weaponID

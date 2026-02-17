@@ -249,7 +249,7 @@ func TestStringStack_SetAfterOperations(t *testing.T) {
 	s.Push("a")
 	s.Push("b")
 	s.Push("c")
-	s.Pop()
+	_, _ = s.Pop()
 	s.Push("d")
 
 	// Set should clear everything

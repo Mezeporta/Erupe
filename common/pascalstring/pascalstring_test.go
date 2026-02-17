@@ -12,7 +12,7 @@ func TestUint8_NoTransform(t *testing.T) {
 
 	Uint8(bf, testString, false)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint8()
 	expectedLength := uint8(len(testString) + 1) // +1 for null terminator
 
@@ -35,7 +35,7 @@ func TestUint8_WithTransform(t *testing.T) {
 
 	Uint8(bf, testString, true)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint8()
 
 	if length == 0 {
@@ -55,7 +55,7 @@ func TestUint8_EmptyString(t *testing.T) {
 
 	Uint8(bf, testString, false)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint8()
 
 	if length != 1 { // Just null terminator
@@ -74,7 +74,7 @@ func TestUint16_NoTransform(t *testing.T) {
 
 	Uint16(bf, testString, false)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint16()
 	expectedLength := uint16(len(testString) + 1)
 
@@ -95,7 +95,7 @@ func TestUint16_WithTransform(t *testing.T) {
 
 	Uint16(bf, testString, true)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint16()
 
 	if length == 0 {
@@ -114,7 +114,7 @@ func TestUint16_EmptyString(t *testing.T) {
 
 	Uint16(bf, testString, false)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint16()
 
 	if length != 1 {
@@ -128,7 +128,7 @@ func TestUint32_NoTransform(t *testing.T) {
 
 	Uint32(bf, testString, false)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint32()
 	expectedLength := uint32(len(testString) + 1)
 
@@ -149,7 +149,7 @@ func TestUint32_WithTransform(t *testing.T) {
 
 	Uint32(bf, testString, true)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint32()
 
 	if length == 0 {
@@ -168,7 +168,7 @@ func TestUint32_EmptyString(t *testing.T) {
 
 	Uint32(bf, testString, false)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint32()
 
 	if length != 1 {
@@ -182,7 +182,7 @@ func TestUint8_LongString(t *testing.T) {
 
 	Uint8(bf, testString, false)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint8()
 	expectedLength := uint8(len(testString) + 1)
 
@@ -209,7 +209,7 @@ func TestUint16_LongString(t *testing.T) {
 
 	Uint16(bf, testString, false)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint16()
 	expectedLength := uint16(len(testString) + 1)
 
@@ -265,7 +265,7 @@ func TestAllFunctions_NullTermination(t *testing.T) {
 
 			tt.writeFn(bf, testString, false)
 
-			bf.Seek(0, 0)
+			_, _ = bf.Seek(0, 0)
 			size := tt.readSize(bf)
 			data := bf.ReadBytes(size)
 
@@ -289,7 +289,7 @@ func TestTransform_JapaneseCharacters(t *testing.T) {
 
 	Uint16(bf, testString, true)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint16()
 
 	if length == 0 {
@@ -316,7 +316,7 @@ func TestTransform_InvalidUTF8(t *testing.T) {
 	Uint8(bf, testString, true)
 	// Should succeed for ASCII characters
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	length := bf.ReadUint8()
 	if length == 0 {
 		t.Error("ASCII string should transform successfully")

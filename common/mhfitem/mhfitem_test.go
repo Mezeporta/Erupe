@@ -15,7 +15,7 @@ func TestReadWarehouseItem(t *testing.T) {
 	bf.WriteUint16(5)      // Quantity
 	bf.WriteUint32(999999) // Unk0
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	item := ReadWarehouseItem(bf)
 
 	if item.WarehouseID != 12345 {
@@ -40,7 +40,7 @@ func TestReadWarehouseItem_ZeroWarehouseID(t *testing.T) {
 	bf.WriteUint16(5)   // Quantity
 	bf.WriteUint32(0)   // Unk0
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	item := ReadWarehouseItem(bf)
 
 	if item.WarehouseID == 0 {
@@ -247,7 +247,7 @@ func TestReadWarehouseEquipment(t *testing.T) {
 	// Unk1 (Z1+)
 	bf.WriteUint16(9999)
 
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 	equipment := ReadWarehouseEquipment(bf)
 
 	if equipment.WarehouseID != 12345 {

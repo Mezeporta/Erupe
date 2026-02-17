@@ -329,6 +329,7 @@ func TestServerMutex(t *testing.T) {
 	s := &Server{}
 
 	s.Lock()
+	//nolint:staticcheck // SA2001: testing that Lock/Unlock doesn't panic
 	s.Unlock()
 
 	done := make(chan bool)
@@ -342,6 +343,7 @@ func TestServerMutex(t *testing.T) {
 	time.Sleep(5 * time.Millisecond)
 
 	s.Lock()
+	//nolint:staticcheck // SA2001: testing that Lock/Unlock doesn't panic
 	s.Unlock()
 
 	<-done
