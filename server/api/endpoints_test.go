@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	_config "erupe-ce/config"
-	"erupe-ce/server/channelserver"
+	"erupe-ce/common/gametime"
 	"go.uber.org/zap"
 )
 
@@ -99,7 +99,7 @@ func TestLauncherEndpointEmptyConfig(t *testing.T) {
 	server.Launcher(recorder, req)
 
 	var respData LauncherResponse
-	json.NewDecoder(recorder.Body).Decode(&respData)
+	_ = json.NewDecoder(recorder.Body).Decode(&respData)
 
 	if respData.Banners == nil {
 		t.Error("Banners should not be nil, should be empty slice")
@@ -355,7 +355,7 @@ func TestScreenShotEndpointDisabled(t *testing.T) {
 		XMLName xml.Name `xml:"result"`
 		Code    string   `xml:"code"`
 	}
-	xml.NewDecoder(recorder.Body).Decode(&result)
+	_ = xml.NewDecoder(recorder.Body).Decode(&result)
 
 	if result.Code != "400" {
 		t.Errorf("Expected code 400, got %s", result.Code)
@@ -573,7 +573,7 @@ func TestNewAuthDataTimestamps(t *testing.T) {
 	authData := server.newAuthData(1, 0, 1, "token", []Character{})
 
 	// Timestamps should be reasonable (within last minute and next 30 days)
-	now := uint32(channelserver.TimeAdjusted().Unix())
+	now := uint32(gametime.Adjusted().Unix())
 	if authData.CurrentTS < now-60 || authData.CurrentTS > now+60 {
 		t.Errorf("CurrentTS not within reasonable range: %d vs %d", authData.CurrentTS, now)
 	}

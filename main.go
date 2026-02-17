@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"erupe-ce/common/gametime"
 	"erupe-ce/server/api"
 	"erupe-ce/server/channelserver"
 	"erupe-ce/server/discordbot"
@@ -142,7 +143,7 @@ func main() {
 		logger.Info("Database: Finished clearing")
 	}
 
-	logger.Info(fmt.Sprintf("Server Time: %s", channelserver.TimeAdjusted().String()))
+	logger.Info(fmt.Sprintf("Server Time: %s", gametime.Adjusted().String()))
 
 	// Now start our server(s).
 

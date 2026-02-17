@@ -6,7 +6,7 @@ import (
 	"encoding/xml"
 	"errors"
 	_config "erupe-ce/config"
-	"erupe-ce/server/channelserver"
+	"erupe-ce/common/gametime"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -77,7 +77,7 @@ type ExportData struct {
 
 func (s *APIServer) newAuthData(userID uint32, userRights uint32, userTokenID uint32, userToken string, characters []Character) AuthData {
 	resp := AuthData{
-		CurrentTS:     uint32(channelserver.TimeAdjusted().Unix()),
+		CurrentTS:     uint32(gametime.Adjusted().Unix()),
 		ExpiryTS:      uint32(s.getReturnExpiry(userID).Unix()),
 		EntranceCount: 1,
 		User: User{
@@ -99,9 +99,9 @@ func (s *APIServer) newAuthData(userID uint32, userRights uint32, userTokenID ui
 		stalls[4] = 2
 	}
 	resp.MezFes = &MezFes{
-		ID:           uint32(channelserver.TimeWeekStart().Unix()),
-		Start:        uint32(channelserver.TimeWeekStart().Add(-time.Duration(s.erupeConfig.GameplayOptions.MezFesDuration) * time.Second).Unix()),
-		End:          uint32(channelserver.TimeWeekNext().Unix()),
+		ID:           uint32(gametime.WeekStart().Unix()),
+		Start:        uint32(gametime.WeekStart().Add(-time.Duration(s.erupeConfig.GameplayOptions.MezFesDuration) * time.Second).Unix()),
+		End:          uint32(gametime.WeekNext().Unix()),
 		SoloTickets:  s.erupeConfig.GameplayOptions.MezFesSoloTickets,
 		GroupTickets: s.erupeConfig.GameplayOptions.MezFesGroupTickets,
 		Stalls:       stalls,
@@ -118,7 +118,7 @@ func (s *APIServer) Launcher(w http.ResponseWriter, r *http.Request) {
 	respData.Messages = s.erupeConfig.API.Messages
 	respData.Links = s.erupeConfig.API.Links
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(respData)
+	_ = json.NewEncoder(w).Encode(respData)
 }
 
 func (s *APIServer) Login(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +140,7 @@ func (s *APIServer) Login(w http.ResponseWriter, r *http.Request) {
 	err := s.db.QueryRow("SELECT id, password, rights FROM users WHERE username = $1", reqData.Username).Scan(&userID, &password, &userRights)
 	if err == sql.ErrNoRows {
 		w.WriteHeader(400)
-		w.Write([]byte("username-error"))
+		_, _ = w.Write([]byte("username-error"))
 		return
 	} else if err != nil {
 		s.logger.Warn("SQL query error", zap.Error(err))
@@ -149,7 +149,7 @@ func (s *APIServer) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if bcrypt.CompareHashAndPassword([]byte(password), []byte(reqData.Password)) != nil {
 		w.WriteHeader(400)
-		w.Write([]byte("password-error"))
+		_, _ = w.Write([]byte("password-error"))
 		return
 	}
 
@@ -170,7 +170,7 @@ func (s *APIServer) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	respData := s.newAuthData(userID, userRights, userTokenID, userToken, characters)
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(respData)
+	_ = json.NewEncoder(w).Encode(respData)
 }
 
 func (s *APIServer) Register(w http.ResponseWriter, r *http.Request) {
@@ -194,7 +194,7 @@ func (s *APIServer) Register(w http.ResponseWriter, r *http.Request) {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Constraint == "users_username_key" {
 			w.WriteHeader(400)
-			w.Write([]byte("username-exists-error"))
+			_, _ = w.Write([]byte("username-exists-error"))
 			return
 		}
 		s.logger.Error("Error checking user", zap.Error(err), zap.String("username", reqData.Username))
@@ -210,7 +210,7 @@ func (s *APIServer) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	respData := s.newAuthData(userID, userRights, userTokenID, userToken, []Character{})
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(respData)
+	_ = json.NewEncoder(w).Encode(respData)
 }
 
 func (s *APIServer) CreateCharacter(w http.ResponseWriter, r *http.Request) {
@@ -239,7 +239,7 @@ func (s *APIServer) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 		character.HR = 7
 	}
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(character)
+	_ = json.NewEncoder(w).Encode(character)
 }
 
 func (s *APIServer) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
@@ -264,7 +264,7 @@ func (s *APIServer) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(struct{}{})
+	_ = json.NewEncoder(w).Encode(struct{}{})
 }
 
 func (s *APIServer) ExportSave(w http.ResponseWriter, r *http.Request) {
@@ -293,7 +293,7 @@ func (s *APIServer) ExportSave(w http.ResponseWriter, r *http.Request) {
 		Character: character,
 	}
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(save)
+	_ = json.NewEncoder(w).Encode(save)
 }
 func (s *APIServer) ScreenShotGet(w http.ResponseWriter, r *http.Request) {
 	// Get the 'id' parameter from the URL

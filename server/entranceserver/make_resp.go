@@ -9,7 +9,7 @@ import (
 	"net"
 
 	"erupe-ce/common/byteframe"
-	"erupe-ce/server/channelserver"
+	"erupe-ce/common/gametime"
 )
 
 func encodeServerInfo(config *_config.Config, s *Server, local bool) []byte {
@@ -41,7 +41,7 @@ func encodeServerInfo(config *_config.Config, s *Server, local bool) []byte {
 		bf.WriteUint16(0)
 		bf.WriteUint16(uint16(len(si.Channels)))
 		bf.WriteUint8(si.Type)
-		bf.WriteUint8(uint8(((channelserver.TimeAdjusted().Unix() / 86400) + int64(serverIdx)) % 3))
+		bf.WriteUint8(uint8(((gametime.Adjusted().Unix() / 86400) + int64(serverIdx)) % 3))
 		if s.erupeConfig.RealClientMode >= _config.G1 {
 			bf.WriteUint8(si.Recommended)
 		}
@@ -71,7 +71,7 @@ func encodeServerInfo(config *_config.Config, s *Server, local bool) []byte {
 			bf.WriteUint16(uint16(channelIdx | 16))
 			bf.WriteUint16(ci.MaxPlayers)
 			var currentPlayers uint16
-			s.db.QueryRow("SELECT current_players FROM servers WHERE server_id=$1", sid).Scan(&currentPlayers)
+			_ = s.db.QueryRow("SELECT current_players FROM servers WHERE server_id=$1", sid).Scan(&currentPlayers)
 			bf.WriteUint16(currentPlayers)
 			bf.WriteUint16(0)
 			bf.WriteUint16(0)
@@ -85,7 +85,7 @@ func encodeServerInfo(config *_config.Config, s *Server, local bool) []byte {
 			bf.WriteUint16(12345)
 		}
 	}
-	bf.WriteUint32(uint32(channelserver.TimeAdjusted().Unix()))
+	bf.WriteUint32(uint32(gametime.Adjusted().Unix()))
 
 	// ClanMemberLimits requires at least 1 element with 2 columns to avoid index out of range panics
 	// Use default value (60) if array is empty or last row is too small

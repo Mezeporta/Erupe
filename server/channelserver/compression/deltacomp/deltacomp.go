@@ -2,8 +2,8 @@ package deltacomp
 
 import (
 	"bytes"
-	"fmt"
 	"io"
+	"log"
 )
 
 func checkReadUint8(r *bytes.Reader) (uint8, error) {
@@ -77,7 +77,7 @@ func ApplyDataDiff(diff []byte, baseData []byte) []byte {
 
 		// Grow slice if it's required
 		if len(baseCopy) < dataOffset {
-			fmt.Printf("Slice smaller than data offset, growing slice...")
+			log.Printf("Slice smaller than data offset, growing slice...")
 			baseCopy = append(baseCopy, make([]byte, (dataOffset+differentCount)-len(baseData))...)
 		} else {
 			length := len(baseCopy[dataOffset:])

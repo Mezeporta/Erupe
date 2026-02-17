@@ -84,7 +84,7 @@ func NewSession(server *Server, conn net.Conn) *Session {
 		rawConn:        conn,
 		cryptConn:      network.NewCryptConn(conn),
 		sendPackets:    make(chan packet, 20),
-		clientContext:  &clientctx.ClientContext{}, // Unused
+		clientContext:  &clientctx.ClientContext{},
 		lastPacket:     time.Now(),
 		objectID:       server.getObjectId(),
 		sessionStart:   TimeAdjusted().Unix(),
@@ -232,8 +232,7 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	// This shouldn't be needed, but it's better to recover and let the connection die than to panic the server.
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("[%s]", s.Name)
-			fmt.Println("Recovered from panic", r)
+			s.logger.Error("Recovered from panic", zap.String("name", s.Name), zap.Any("panic", r))
 		}
 	}()
 
@@ -246,13 +245,16 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	// Get the packet parser and handler for this opcode.
 	mhfPkt := mhfpacket.FromOpcode(opcode)
 	if mhfPkt == nil {
-		fmt.Println("Got opcode which we don't know how to parse, can't parse anymore for this group")
+		s.logger.Warn("Got opcode which we don't know how to parse, can't parse anymore for this group")
 		return
 	}
 	// Parse the packet.
 	err := mhfPkt.Parse(bf, s.clientContext)
 	if err != nil {
-		fmt.Printf("\n!!! [%s] %s NOT IMPLEMENTED !!! \n\n\n", s.Name, opcode)
+		s.logger.Warn("Packet not implemented",
+			zap.String("name", s.Name),
+			zap.Stringer("opcode", opcode),
+		)
 		return
 	}
 	// Handle the packet.
@@ -297,21 +299,23 @@ func (s *Session) logMessage(opcode uint16, data []byte, sender string, recipien
 	if len(data) >= 6 {
 		ackHandle = binary.BigEndian.Uint32(data[2:6])
 	}
-	if t, ok := s.ackStart[ackHandle]; ok {
-		fmt.Printf("[%s] -> [%s] (%fs)\n", sender, recipient, float64(time.Now().UnixNano()-t.UnixNano())/1000000000)
-	} else {
-		fmt.Printf("[%s] -> [%s]\n", sender, recipient)
+	fields := []zap.Field{
+		zap.String("sender", sender),
+		zap.String("recipient", recipient),
+		zap.Uint16("opcode_dec", opcode),
+		zap.String("opcode_hex", fmt.Sprintf("0x%04X", opcode)),
+		zap.Stringer("opcode_name", opcodePID),
+		zap.Int("data_bytes", len(data)),
 	}
-	fmt.Printf("Opcode: (Dec: %d Hex: 0x%04X Name: %s) \n", opcode, opcode, opcodePID)
+	if t, ok := s.ackStart[ackHandle]; ok {
+		fields = append(fields, zap.Duration("ack_latency", time.Since(t)))
+	}
 	if s.server.erupeConfig.DebugOptions.LogMessageData {
 		if len(data) <= s.server.erupeConfig.DebugOptions.MaxHexdumpLength {
-			fmt.Printf("Data [%d bytes]:\n%s\n", len(data), hex.Dump(data))
-		} else {
-			fmt.Printf("Data [%d bytes]: (Too long!)\n\n", len(data))
+			fields = append(fields, zap.String("data", hex.Dump(data)))
 		}
-	} else {
-		fmt.Printf("\n")
 	}
+	s.logger.Debug("Packet", fields...)
 }
 
 func (s *Session) getObjectId() uint32 {

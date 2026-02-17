@@ -1,10 +1,10 @@
 package channelserver
 
 import (
-	"fmt"
-
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
+
+	"go.uber.org/zap"
 )
 
 func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
@@ -34,7 +34,7 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 		OwnerCharID: newObj.ownerCharID,
 	}
 
-	s.logger.Info(fmt.Sprintf("Broadcasting new object: %s (%d)", s.Name, newObj.id))
+	s.logger.Info("Broadcasting new object", zap.String("name", s.Name), zap.Uint32("objectID", newObj.id))
 	s.stage.BroadcastMHF(dupObjUpdate, s)
 }
 
@@ -43,7 +43,13 @@ func handleMsgSysDeleteObject(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgSysPositionObject(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysPositionObject)
 	if s.server.erupeConfig.DebugOptions.LogInboundMessages {
-		fmt.Printf("[%s] with objectID [%d] move to (%f,%f,%f)\n\n", s.Name, pkt.ObjID, pkt.X, pkt.Y, pkt.Z)
+		s.logger.Debug("Object position update",
+			zap.String("name", s.Name),
+			zap.Uint32("objectID", pkt.ObjID),
+			zap.Float32("x", pkt.X),
+			zap.Float32("y", pkt.Y),
+			zap.Float32("z", pkt.Z),
+		)
 	}
 	s.stage.Lock()
 	object, ok := s.stage.objects[s.charID]
