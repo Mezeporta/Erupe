@@ -217,18 +217,22 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	if pkt.Op != 2 && pkt.Op != 5 {
 		var loans uint8
 		temp := byteframe.NewByteFrame()
-		rows, _ := s.server.db.Query("SELECT name, id, pact_id FROM characters WHERE pact_id=(SELECT rasta_id FROM characters WHERE id=$1)", s.charID)
-		for rows.Next() {
-			err := rows.Scan(&name, &cid, &pactID)
-			if err != nil {
-				continue
+		rows, err := s.server.db.Query("SELECT name, id, pact_id FROM characters WHERE pact_id=(SELECT rasta_id FROM characters WHERE id=$1)", s.charID)
+		if err != nil {
+			s.logger.Error("Failed to query mercenary loans", zap.Error(err))
+		} else {
+			defer rows.Close()
+			for rows.Next() {
+				if err := rows.Scan(&name, &cid, &pactID); err != nil {
+					continue
+				}
+				loans++
+				temp.WriteUint32(pactID)
+				temp.WriteUint32(cid)
+				temp.WriteUint32(uint32(TimeAdjusted().Unix()))
+				temp.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * 7).Unix()))
+				temp.WriteBytes(stringsupport.PaddedString(name, 18, true))
 			}
-			loans++
-			temp.WriteUint32(pactID)
-			temp.WriteUint32(cid)
-			temp.WriteUint32(uint32(TimeAdjusted().Unix()))
-			temp.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * 7).Unix()))
-			temp.WriteBytes(stringsupport.PaddedString(name, 18, true))
 		}
 		bf.WriteUint8(loans)
 		bf.WriteBytes(temp.Data())

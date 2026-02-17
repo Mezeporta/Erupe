@@ -95,11 +95,15 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 		houseQuery = `SELECT c.id, hr, gr, name, COALESCE(ub.house_state, 2) as house_state, COALESCE(ub.house_password, '') as house_password
 			FROM characters c LEFT JOIN user_binary ub ON ub.id = c.id WHERE name ILIKE $1`
 		house := HouseData{}
-		rows, _ := s.server.db.Queryx(houseQuery, fmt.Sprintf(`%%%s%%`, pkt.Name))
-		for rows.Next() {
-			err := rows.StructScan(&house)
-			if err == nil {
-				houses = append(houses, house)
+		rows, err := s.server.db.Queryx(houseQuery, fmt.Sprintf(`%%%s%%`, pkt.Name))
+		if err != nil {
+			s.logger.Error("Failed to query houses by name", zap.Error(err))
+		} else {
+			defer rows.Close()
+			for rows.Next() {
+				if err := rows.StructScan(&house); err == nil {
+					houses = append(houses, house)
+				}
 			}
 		}
 	case 4:

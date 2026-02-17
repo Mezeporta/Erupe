@@ -6,6 +6,7 @@ import (
 	"erupe-ce/common/token"
 	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
+	"go.uber.org/zap"
 	"sort"
 	"time"
 )
@@ -19,7 +20,9 @@ func handleMsgMhfSaveMezfesData(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfLoadMezfesData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadMezfesData)
 	var data []byte
-	s.server.db.QueryRow(`SELECT mezfes FROM characters WHERE id=$1`, s.charID).Scan(&data)
+	if err := s.server.db.QueryRow(`SELECT mezfes FROM characters WHERE id=$1`, s.charID).Scan(&data); err != nil {
+		s.logger.Error("Failed to load mezfes data", zap.Error(err))
+	}
 	bf := byteframe.NewByteFrame()
 	if len(data) > 0 {
 		bf.WriteBytes(data)
@@ -168,9 +171,14 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 
 	id, start := uint32(0xDEADBEEF), uint32(0)
-	rows, _ := s.server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='festa'")
-	for rows.Next() {
-		rows.Scan(&id, &start)
+	rows, err := s.server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='festa'")
+	if err != nil {
+		s.logger.Error("Failed to query festa schedule", zap.Error(err))
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			rows.Scan(&id, &start)
+		}
 	}
 
 	var timestamps []uint32
@@ -190,8 +198,12 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	var blueSouls, redSouls uint32
-	s.server.db.QueryRow(`SELECT COALESCE(SUM(fs.souls), 0) AS souls FROM festa_registrations fr LEFT JOIN festa_submissions fs ON fr.guild_id = fs.guild_id AND fr.team = 'blue'`).Scan(&blueSouls)
-	s.server.db.QueryRow(`SELECT COALESCE(SUM(fs.souls), 0) AS souls FROM festa_registrations fr LEFT JOIN festa_submissions fs ON fr.guild_id = fs.guild_id AND fr.team = 'red'`).Scan(&redSouls)
+	if err := s.server.db.QueryRow(`SELECT COALESCE(SUM(fs.souls), 0) AS souls FROM festa_registrations fr LEFT JOIN festa_submissions fs ON fr.guild_id = fs.guild_id AND fr.team = 'blue'`).Scan(&blueSouls); err != nil {
+		s.logger.Error("Failed to get blue souls", zap.Error(err))
+	}
+	if err := s.server.db.QueryRow(`SELECT COALESCE(SUM(fs.souls), 0) AS souls FROM festa_registrations fr LEFT JOIN festa_submissions fs ON fr.guild_id = fs.guild_id AND fr.team = 'red'`).Scan(&redSouls); err != nil {
+		s.logger.Error("Failed to get red souls", zap.Error(err))
+	}
 
 	bf.WriteUint32(id)
 	for _, timestamp := range timestamps {
@@ -206,7 +218,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 
 	var trials []FestaTrial
 	var trial FestaTrial
-	rows, _ = s.server.db.Queryx(`SELECT ft.*,
+	rows, err = s.server.db.Queryx(`SELECT ft.*,
 		COALESCE(CASE
 			WHEN COUNT(gc.id) FILTER (WHERE fr.team = 'blue' AND gc.trial_vote = ft.id) >
 				 COUNT(gc.id) FILTER (WHERE fr.team = 'red' AND gc.trial_vote = ft.id)
@@ -219,12 +231,16 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 		LEFT JOIN public.guild_characters gc ON ft.id = gc.trial_vote
 		LEFT JOIN public.festa_registrations fr ON gc.guild_id = fr.guild_id
 		GROUP BY ft.id`)
-	for rows.Next() {
-		err := rows.StructScan(&trial)
-		if err != nil {
-			continue
+	if err != nil {
+		s.logger.Error("Failed to query festa trials", zap.Error(err))
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			if err := rows.StructScan(&trial); err != nil {
+				continue
+			}
+			trials = append(trials, trial)
 		}
-		trials = append(trials, trial)
 	}
 	bf.WriteUint16(uint16(len(trials)))
 	for _, trial := range trials {
@@ -300,7 +316,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 		var guildID uint32
 		var guildName string
 		var guildTeam = FestivalColorNone
-		s.server.db.QueryRow(`
+		if err := s.server.db.QueryRow(`
 				SELECT fs.guild_id, g.name, fr.team, SUM(fs.souls) as _
 				FROM festa_submissions fs
 				LEFT JOIN festa_registrations fr ON fs.guild_id = fr.guild_id
@@ -308,7 +324,9 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 				WHERE fs.trial_type = $1
 				GROUP BY fs.guild_id, g.name, fr.team
 				ORDER BY _ DESC LIMIT 1
-			`, i+1).Scan(&guildID, &guildName, &guildTeam, &temp)
+			`, i+1).Scan(&guildID, &guildName, &guildTeam, &temp); err != nil {
+			s.logger.Error("Failed to get festa trial ranking", zap.Error(err))
+		}
 		bf.WriteUint32(guildID)
 		bf.WriteUint16(i + 1)
 		bf.WriteInt16(FestivalColorCodes[guildTeam])
@@ -320,7 +338,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 		var guildName string
 		var guildTeam = FestivalColorNone
 		offset := 86400 * uint32(i)
-		s.server.db.QueryRow(`
+		if err := s.server.db.QueryRow(`
 				SELECT fs.guild_id, g.name, fr.team, SUM(fs.souls) as _
 				FROM festa_submissions fs
 				LEFT JOIN festa_registrations fr ON fs.guild_id = fr.guild_id
@@ -328,7 +346,9 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 				WHERE EXTRACT(EPOCH FROM fs.timestamp)::int > $1 AND EXTRACT(EPOCH FROM fs.timestamp)::int < $2
 				GROUP BY fs.guild_id, g.name, fr.team
 				ORDER BY _ DESC LIMIT 1
-			`, timestamps[1]+offset, timestamps[1]+offset+86400).Scan(&guildID, &guildName, &guildTeam, &temp)
+			`, timestamps[1]+offset, timestamps[1]+offset+86400).Scan(&guildID, &guildName, &guildTeam, &temp); err != nil {
+			s.logger.Error("Failed to get festa daily ranking", zap.Error(err))
+		}
 		bf.WriteUint32(guildID)
 		bf.WriteUint16(i + 1)
 		bf.WriteInt16(FestivalColorCodes[guildTeam])
@@ -366,7 +386,9 @@ func handleMsgMhfStateFestaU(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	var souls, exists uint32
-	s.server.db.QueryRow(`SELECT COALESCE((SELECT SUM(souls) FROM festa_submissions WHERE character_id=$1), 0)`, s.charID).Scan(&souls)
+	if err := s.server.db.QueryRow(`SELECT COALESCE((SELECT SUM(souls) FROM festa_submissions WHERE character_id=$1), 0)`, s.charID).Scan(&souls); err != nil {
+		s.logger.Error("Failed to get festa user souls", zap.Error(err))
+	}
 	err = s.server.db.QueryRow("SELECT prize_id FROM festa_prizes_accepted WHERE prize_id=0 AND character_id=$1", s.charID).Scan(&exists)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(souls)
@@ -469,14 +491,22 @@ func handleMsgMhfEntryFesta(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfChargeFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfChargeFesta)
-	tx, _ := s.server.db.Begin()
-	for i := range pkt.Souls {
-		if pkt.Souls[i] == 0 {
-			continue
+	tx, err := s.server.db.Begin()
+	if err != nil {
+		s.logger.Error("Failed to begin festa submission transaction", zap.Error(err))
+	} else {
+		for i := range pkt.Souls {
+			if pkt.Souls[i] == 0 {
+				continue
+			}
+			if _, err := tx.Exec(`INSERT INTO festa_submissions VALUES ($1, $2, $3, $4, now())`, s.charID, pkt.GuildID, i, pkt.Souls[i]); err != nil {
+				s.logger.Error("Failed to insert festa submission", zap.Error(err))
+			}
 		}
-		_, _ = tx.Exec(`INSERT INTO festa_submissions VALUES ($1, $2, $3, $4, now())`, s.charID, pkt.GuildID, i, pkt.Souls[i])
+		if err := tx.Commit(); err != nil {
+			s.logger.Error("Failed to commit festa submissions", zap.Error(err))
+		}
 	}
-	_ = tx.Commit()
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -509,23 +539,27 @@ type Prize struct {
 
 func handleMsgMhfEnumerateFestaPersonalPrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateFestaPersonalPrize)
-	rows, _ := s.server.db.Queryx(`SELECT id, tier, souls_req, item_id, num_item, (SELECT count(*) FROM festa_prizes_accepted fpa WHERE fp.id = fpa.prize_id AND fpa.character_id = $1) AS claimed FROM festa_prizes fp WHERE type='personal'`, s.charID)
+	rows, err := s.server.db.Queryx(`SELECT id, tier, souls_req, item_id, num_item, (SELECT count(*) FROM festa_prizes_accepted fpa WHERE fp.id = fpa.prize_id AND fpa.character_id = $1) AS claimed FROM festa_prizes fp WHERE type='personal'`, s.charID)
 	var count uint32
 	prizeData := byteframe.NewByteFrame()
-	for rows.Next() {
-		prize := &Prize{}
-		err := rows.StructScan(&prize)
-		if err != nil {
-			continue
+	if err != nil {
+		s.logger.Error("Failed to query festa personal prizes", zap.Error(err))
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			prize := &Prize{}
+			if err := rows.StructScan(&prize); err != nil {
+				continue
+			}
+			count++
+			prizeData.WriteUint32(prize.ID)
+			prizeData.WriteUint32(prize.Tier)
+			prizeData.WriteUint32(prize.SoulsReq)
+			prizeData.WriteUint32(7) // Unk
+			prizeData.WriteUint32(prize.ItemID)
+			prizeData.WriteUint32(prize.NumItem)
+			prizeData.WriteBool(prize.Claimed > 0)
 		}
-		count++
-		prizeData.WriteUint32(prize.ID)
-		prizeData.WriteUint32(prize.Tier)
-		prizeData.WriteUint32(prize.SoulsReq)
-		prizeData.WriteUint32(7) // Unk
-		prizeData.WriteUint32(prize.ItemID)
-		prizeData.WriteUint32(prize.NumItem)
-		prizeData.WriteBool(prize.Claimed > 0)
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(count)
@@ -535,23 +569,27 @@ func handleMsgMhfEnumerateFestaPersonalPrize(s *Session, p mhfpacket.MHFPacket) 
 
 func handleMsgMhfEnumerateFestaIntermediatePrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateFestaIntermediatePrize)
-	rows, _ := s.server.db.Queryx(`SELECT id, tier, souls_req, item_id, num_item, (SELECT count(*) FROM festa_prizes_accepted fpa WHERE fp.id = fpa.prize_id AND fpa.character_id = $1) AS claimed FROM festa_prizes fp WHERE type='guild'`, s.charID)
+	rows, err := s.server.db.Queryx(`SELECT id, tier, souls_req, item_id, num_item, (SELECT count(*) FROM festa_prizes_accepted fpa WHERE fp.id = fpa.prize_id AND fpa.character_id = $1) AS claimed FROM festa_prizes fp WHERE type='guild'`, s.charID)
 	var count uint32
 	prizeData := byteframe.NewByteFrame()
-	for rows.Next() {
-		prize := &Prize{}
-		err := rows.StructScan(&prize)
-		if err != nil {
-			continue
+	if err != nil {
+		s.logger.Error("Failed to query festa intermediate prizes", zap.Error(err))
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			prize := &Prize{}
+			if err := rows.StructScan(&prize); err != nil {
+				continue
+			}
+			count++
+			prizeData.WriteUint32(prize.ID)
+			prizeData.WriteUint32(prize.Tier)
+			prizeData.WriteUint32(prize.SoulsReq)
+			prizeData.WriteUint32(7) // Unk
+			prizeData.WriteUint32(prize.ItemID)
+			prizeData.WriteUint32(prize.NumItem)
+			prizeData.WriteBool(prize.Claimed > 0)
 		}
-		count++
-		prizeData.WriteUint32(prize.ID)
-		prizeData.WriteUint32(prize.Tier)
-		prizeData.WriteUint32(prize.SoulsReq)
-		prizeData.WriteUint32(7) // Unk
-		prizeData.WriteUint32(prize.ItemID)
-		prizeData.WriteUint32(prize.NumItem)
-		prizeData.WriteBool(prize.Claimed > 0)
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(count)

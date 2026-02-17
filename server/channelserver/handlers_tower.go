@@ -317,11 +317,16 @@ func handleMsgMhfGetTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 				pkt.Unk3 = 3
 			}
 		}
-		rows, _ := s.server.db.Query(fmt.Sprintf(`SELECT name, tower_mission_%d FROM guild_characters gc INNER JOIN characters c ON gc.character_id = c.id WHERE guild_id=$1 AND tower_mission_%d IS NOT NULL ORDER BY tower_mission_%d DESC`, pkt.Unk3, pkt.Unk3, pkt.Unk3), pkt.GuildID)
-		for rows.Next() {
-			temp := TenrouiraiCharScore{}
-			rows.Scan(&temp.Name, &temp.Score)
-			tenrouirai.CharScore = append(tenrouirai.CharScore, temp)
+		rows, err := s.server.db.Query(fmt.Sprintf(`SELECT name, tower_mission_%d FROM guild_characters gc INNER JOIN characters c ON gc.character_id = c.id WHERE guild_id=$1 AND tower_mission_%d IS NOT NULL ORDER BY tower_mission_%d DESC`, pkt.Unk3, pkt.Unk3, pkt.Unk3), pkt.GuildID)
+		if err != nil {
+			s.logger.Error("Failed to query tower mission scores", zap.Error(err))
+		} else {
+			defer rows.Close()
+			for rows.Next() {
+				temp := TenrouiraiCharScore{}
+				rows.Scan(&temp.Name, &temp.Score)
+				tenrouirai.CharScore = append(tenrouirai.CharScore, temp)
+			}
 		}
 		for _, charScore := range tenrouirai.CharScore {
 			bf := byteframe.NewByteFrame()

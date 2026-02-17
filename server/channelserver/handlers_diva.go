@@ -8,6 +8,7 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
+	"go.uber.org/zap"
 )
 
 func cleanupDiva(s *Session) {
@@ -64,9 +65,14 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 
 	id, start := uint32(0xCAFEBEEF), uint32(0)
-	rows, _ := s.server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='diva'")
-	for rows.Next() {
-		rows.Scan(&id, &start)
+	rows, err := s.server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='diva'")
+	if err != nil {
+		s.logger.Error("Failed to query diva schedule", zap.Error(err))
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			rows.Scan(&id, &start)
+		}
 	}
 
 	var timestamps []uint32

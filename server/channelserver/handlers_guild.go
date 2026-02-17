@@ -763,7 +763,9 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OperateGuildEventExchange:
 		rp := uint16(pkt.Data1.ReadUint32())
 		var balance uint32
-		s.server.db.QueryRow(`UPDATE guilds SET event_rp=event_rp-$1 WHERE id=$2 RETURNING event_rp`, rp, guild.ID).Scan(&balance)
+		if err := s.server.db.QueryRow(`UPDATE guilds SET event_rp=event_rp-$1 WHERE id=$2 RETURNING event_rp`, rp, guild.ID).Scan(&balance); err != nil {
+			s.logger.Error("Failed to exchange guild event RP", zap.Error(err))
+		}
 		bf.WriteUint32(balance)
 	default:
 		panic(fmt.Sprintf("unhandled operate guild action '%d'", pkt.Action))
@@ -811,7 +813,9 @@ func handleDonateRP(s *Session, amount uint16, guild *Guild, _type int) []byte {
 	var resetRoom bool
 	if _type == 2 {
 		var currentRP uint16
-		s.server.db.QueryRow(`SELECT room_rp FROM guilds WHERE id = $1`, guild.ID).Scan(&currentRP)
+		if err := s.server.db.QueryRow(`SELECT room_rp FROM guilds WHERE id = $1`, guild.ID).Scan(&currentRP); err != nil {
+			s.logger.Error("Failed to get guild room RP", zap.Error(err))
+		}
 		if currentRP+amount >= 30 {
 			amount = 30 - currentRP
 			resetRoom = true
@@ -1593,7 +1597,9 @@ func handleMsgMhfGetGuildTargetMemberNum(s *Session, p mhfpacket.MHFPacket) {
 func guildGetItems(s *Session, guildID uint32) []mhfitem.MHFItemStack {
 	var data []byte
 	var items []mhfitem.MHFItemStack
-	s.server.db.QueryRow(`SELECT item_box FROM guilds WHERE id=$1`, guildID).Scan(&data)
+	if err := s.server.db.QueryRow(`SELECT item_box FROM guilds WHERE id=$1`, guildID).Scan(&data); err != nil {
+		s.logger.Error("Failed to get guild item box", zap.Error(err))
+	}
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()

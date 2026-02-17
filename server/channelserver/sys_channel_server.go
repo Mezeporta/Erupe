@@ -416,10 +416,15 @@ func (s *Server) FindSessionByCharID(charID uint32) *Session {
 func (s *Server) DisconnectUser(uid uint32) {
 	var cid uint32
 	var cids []uint32
-	rows, _ := s.db.Query(`SELECT id FROM characters WHERE user_id=$1`, uid)
-	for rows.Next() {
-		rows.Scan(&cid)
-		cids = append(cids, cid)
+	rows, err := s.db.Query(`SELECT id FROM characters WHERE user_id=$1`, uid)
+	if err != nil {
+		s.logger.Error("Failed to query characters for disconnect", zap.Error(err))
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			rows.Scan(&cid)
+			cids = append(cids, cid)
+		}
 	}
 	for _, c := range s.Channels {
 		for _, session := range c.sessions {

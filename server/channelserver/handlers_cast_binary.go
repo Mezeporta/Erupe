@@ -147,7 +147,9 @@ func parseChatCommand(s *Session, command string) {
 	case commands["Timer"].Prefix:
 		if commands["Timer"].Enabled || s.isOp() {
 			var state bool
-			s.server.db.QueryRow(`SELECT COALESCE(timer, false) FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&state)
+			if err := s.server.db.QueryRow(`SELECT COALESCE(timer, false) FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&state); err != nil {
+				s.logger.Error("Failed to get timer state", zap.Error(err))
+			}
 			s.server.db.Exec(`UPDATE users u SET timer=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, !state, s.charID)
 			if state {
 				sendServerChatMessage(s, s.server.i18n.commands.timer.disabled)
@@ -161,7 +163,9 @@ func parseChatCommand(s *Session, command string) {
 		if commands["PSN"].Enabled || s.isOp() {
 			if len(args) > 1 {
 				var exists int
-				s.server.db.QueryRow(`SELECT count(*) FROM users WHERE psn_id = $1`, args[1]).Scan(&exists)
+				if err := s.server.db.QueryRow(`SELECT count(*) FROM users WHERE psn_id = $1`, args[1]).Scan(&exists); err != nil {
+					s.logger.Error("Failed to check PSN ID existence", zap.Error(err))
+				}
 				if exists == 0 {
 					_, err := s.server.db.Exec(`UPDATE users u SET psn_id=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, args[1], s.charID)
 					if err == nil {
@@ -435,7 +439,9 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	if pkt.BroadcastType == 0x03 && pkt.MessageType == 0x03 && len(pkt.RawDataPayload) == 0x10 {
 		if tmp.ReadUint16() == 0x0002 && tmp.ReadUint8() == 0x18 {
 			var timer bool
-			s.server.db.QueryRow(`SELECT COALESCE(timer, false) FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&timer)
+			if err := s.server.db.QueryRow(`SELECT COALESCE(timer, false) FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&timer); err != nil {
+				s.logger.Error("Failed to get timer setting", zap.Error(err))
+			}
 			if timer {
 				_ = tmp.ReadBytes(9)
 				tmp.SetLE()
