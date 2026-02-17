@@ -178,7 +178,9 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	var nextID uint32
 	_ = s.server.db.QueryRow("SELECT nextval('rasta_id_seq')").Scan(&nextID)
-	_, _ = s.server.db.Exec("UPDATE characters SET rasta_id=$1 WHERE id=$2", nextID, s.charID)
+	if _, err := s.server.db.Exec("UPDATE characters SET rasta_id=$1 WHERE id=$2", nextID, s.charID); err != nil {
+		s.logger.Error("Failed to set rasta ID", zap.Error(err))
+	}
 	bf.WriteUint32(nextID)
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 }
@@ -188,9 +190,13 @@ func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	dumpSaveData(s, pkt.MercData, "mercenary")
 	if len(pkt.MercData) > 0 {
 		temp := byteframe.NewByteFrameFromBytes(pkt.MercData)
-		_, _ = s.server.db.Exec("UPDATE characters SET savemercenary=$1, rasta_id=$2 WHERE id=$3", pkt.MercData, temp.ReadUint32(), s.charID)
+		if _, err := s.server.db.Exec("UPDATE characters SET savemercenary=$1, rasta_id=$2 WHERE id=$3", pkt.MercData, temp.ReadUint32(), s.charID); err != nil {
+			s.logger.Error("Failed to save mercenary data", zap.Error(err))
+		}
 	}
-	_, _ = s.server.db.Exec("UPDATE characters SET gcp=$1, pact_id=$2 WHERE id=$3", pkt.GCP, pkt.PactMercID, s.charID)
+	if _, err := s.server.db.Exec("UPDATE characters SET gcp=$1, pact_id=$2 WHERE id=$3", pkt.GCP, pkt.PactMercID, s.charID); err != nil {
+		s.logger.Error("Failed to update GCP and pact ID", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
@@ -273,11 +279,17 @@ func handleMsgMhfContractMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfContractMercenary)
 	switch pkt.Op {
 	case 0: // Form loan
-		_, _ = s.server.db.Exec("UPDATE characters SET pact_id=$1 WHERE id=$2", pkt.PactMercID, pkt.CID)
+		if _, err := s.server.db.Exec("UPDATE characters SET pact_id=$1 WHERE id=$2", pkt.PactMercID, pkt.CID); err != nil {
+			s.logger.Error("Failed to form mercenary loan", zap.Error(err))
+		}
 	case 1: // Cancel lend
-		_, _ = s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", s.charID)
+		if _, err := s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", s.charID); err != nil {
+			s.logger.Error("Failed to cancel mercenary lend", zap.Error(err))
+		}
 	case 2: // Cancel loan
-		_, _ = s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", pkt.CID)
+		if _, err := s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", pkt.CID); err != nil {
+			s.logger.Error("Failed to cancel mercenary loan", zap.Error(err))
+		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -332,7 +344,9 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error("Failed to compress airou", zap.Error(err))
 	} else {
 		comp = append([]byte{0x01}, comp...)
-		_, _ = s.server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", comp, s.charID)
+		if _, err := s.server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", comp, s.charID); err != nil {
+			s.logger.Error("Failed to save otomoairou", zap.Error(err))
+		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -442,15 +456,15 @@ func GetAirouDetails(bf *byteframe.ByteFrame) []Airou {
 		catStart, _ := bf.Seek(0, io.SeekCurrent)
 
 		catDef.ID = bf.ReadUint32()
-		_, _ = bf.Seek(1, io.SeekCurrent)     // unknown value, probably a bool
-		catDef.Name = bf.ReadBytes(18) // always 18 len, reads first null terminated string out of section and discards rest
+		_, _ = bf.Seek(1, io.SeekCurrent) // unknown value, probably a bool
+		catDef.Name = bf.ReadBytes(18)    // always 18 len, reads first null terminated string out of section and discards rest
 		catDef.Task = bf.ReadUint8()
 		_, _ = bf.Seek(16, io.SeekCurrent) // appearance data and what is seemingly null bytes
 		catDef.Personality = bf.ReadUint8()
 		catDef.Class = bf.ReadUint8()
-		_, _ = bf.Seek(5, io.SeekCurrent)          // affection and colour sliders
+		_, _ = bf.Seek(5, io.SeekCurrent)   // affection and colour sliders
 		catDef.Experience = bf.ReadUint32() // raw cat rank points, doesn't have a rank
-		_, _ = bf.Seek(1, io.SeekCurrent)          // bool for weapon being equipped
+		_, _ = bf.Seek(1, io.SeekCurrent)   // bool for weapon being equipped
 		catDef.WeaponType = bf.ReadUint8()  // weapon type, presumably always 6 for melee?
 		catDef.WeaponID = bf.ReadUint16()   // weapon id
 		_, _ = bf.Seek(catStart+int64(catDefLen), io.SeekStart)

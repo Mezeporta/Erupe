@@ -145,11 +145,17 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OPERATE_JOINT_LEAVE:
 		if guild.LeaderCharID == s.charID {
 			if guild.ID == alliance.SubGuild1ID && alliance.SubGuild2ID > 0 {
-				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = sub2_id, sub2_id = NULL WHERE id = $1`, alliance.ID)
+				if _, err := s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = sub2_id, sub2_id = NULL WHERE id = $1`, alliance.ID); err != nil {
+					s.logger.Error("Failed to update alliance on guild leave", zap.Error(err))
+				}
 			} else if guild.ID == alliance.SubGuild1ID && alliance.SubGuild2ID == 0 {
-				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = NULL WHERE id = $1`, alliance.ID)
+				if _, err := s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = NULL WHERE id = $1`, alliance.ID); err != nil {
+					s.logger.Error("Failed to remove sub guild 1 from alliance", zap.Error(err))
+				}
 			} else {
-				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, alliance.ID)
+				if _, err := s.server.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, alliance.ID); err != nil {
+					s.logger.Error("Failed to remove sub guild 2 from alliance", zap.Error(err))
+				}
 			}
 			// NOTE: Alliance join requests are not yet implemented (no DB table exists),
 			// so there are no pending applications to clean up on leave.
@@ -165,11 +171,17 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 		if alliance.ParentGuild.LeaderCharID == s.charID {
 			kickedGuildID := pkt.Data1.ReadUint32()
 			if kickedGuildID == alliance.SubGuild1ID && alliance.SubGuild2ID > 0 {
-				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = sub2_id, sub2_id = NULL WHERE id = $1`, alliance.ID)
+				if _, err := s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = sub2_id, sub2_id = NULL WHERE id = $1`, alliance.ID); err != nil {
+					s.logger.Error("Failed to update alliance on guild kick", zap.Error(err))
+				}
 			} else if kickedGuildID == alliance.SubGuild1ID && alliance.SubGuild2ID == 0 {
-				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = NULL WHERE id = $1`, alliance.ID)
+				if _, err := s.server.db.Exec(`UPDATE guild_alliances SET sub1_id = NULL WHERE id = $1`, alliance.ID); err != nil {
+					s.logger.Error("Failed to remove kicked sub guild 1 from alliance", zap.Error(err))
+				}
 			} else {
-				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, alliance.ID)
+				if _, err := s.server.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, alliance.ID); err != nil {
+					s.logger.Error("Failed to remove kicked sub guild 2 from alliance", zap.Error(err))
+				}
 			}
 			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		} else {

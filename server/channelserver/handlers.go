@@ -303,7 +303,9 @@ func logoutPlayer(s *Session) {
 		if mhfcourse.CourseExists(30, s.courses) {
 			rpGained = timePlayed / 900
 			timePlayed = timePlayed % 900
-			_, _ = s.server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.charID)
+			if _, err := s.server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.charID); err != nil {
+				s.logger.Error("Failed to update cafe time", zap.Error(err))
+			}
 		} else {
 			rpGained = timePlayed / 1800
 			timePlayed = timePlayed % 1800
@@ -329,8 +331,12 @@ func logoutPlayer(s *Session) {
 		}
 
 		// Update time_played and guild treasure hunt
-		_, _ = s.server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.charID)
-		_, _ = s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE character_id=$1`, s.charID)
+		if _, err := s.server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.charID); err != nil {
+			s.logger.Error("Failed to update time played", zap.Error(err))
+		}
+		if _, err := s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE character_id=$1`, s.charID); err != nil {
+			s.logger.Error("Failed to clear treasure hunt", zap.Error(err))
+		}
 	}
 
 	// NOW do cleanup (after save is complete)
@@ -449,7 +455,9 @@ func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 		for i := 0; i < 176; i++ {
 			val = bf.ReadUint8()
 			if val > 0 && mhfmon.Monsters[i].Large {
-				_, _ = s.server.db.Exec(`INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, $2, $3, $4)`, s.charID, i, val, TimeAdjusted())
+				if _, err := s.server.db.Exec(`INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, $2, $3, $4)`, s.charID, i, val, TimeAdjusted()); err != nil {
+					s.logger.Error("Failed to insert kill log", zap.Error(err))
+				}
 			}
 		}
 	}
@@ -977,7 +985,9 @@ func handleMsgMhfEnumerateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateUnionItem)
 	newStacks := mhfitem.DiffItemStacks(userGetItems(s), pkt.UpdatedItems)
-	_, _ = s.server.db.Exec(`UPDATE users u SET item_box=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, mhfitem.SerializeWarehouseItems(newStacks), s.charID)
+	if _, err := s.server.db.Exec(`UPDATE users u SET item_box=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, mhfitem.SerializeWarehouseItems(newStacks), s.charID); err != nil {
+		s.logger.Error("Failed to update union item box", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -990,13 +1000,19 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	err := s.server.db.QueryRow(fmt.Sprintf("SELECT %s_checked FROM stamps WHERE character_id=$1", pkt.StampType), s.charID).Scan(&lastCheck)
 	if err != nil {
 		lastCheck = TimeAdjusted()
-		_, _ = s.server.db.Exec("INSERT INTO stamps (character_id, hl_checked, ex_checked) VALUES ($1, $2, $2)", s.charID, TimeAdjusted())
+		if _, err := s.server.db.Exec("INSERT INTO stamps (character_id, hl_checked, ex_checked) VALUES ($1, $2, $2)", s.charID, TimeAdjusted()); err != nil {
+			s.logger.Error("Failed to insert stamps record", zap.Error(err))
+		}
 	} else {
-		_, _ = s.server.db.Exec(fmt.Sprintf(`UPDATE stamps SET %s_checked=$1 WHERE character_id=$2`, pkt.StampType), TimeAdjusted(), s.charID)
+		if _, err := s.server.db.Exec(fmt.Sprintf(`UPDATE stamps SET %s_checked=$1 WHERE character_id=$2`, pkt.StampType), TimeAdjusted(), s.charID); err != nil {
+			s.logger.Error("Failed to update stamp check time", zap.Error(err))
+		}
 	}
 
 	if lastCheck.Before(TimeWeekStart()) {
-		_, _ = s.server.db.Exec(fmt.Sprintf("UPDATE stamps SET %s_total=%s_total+1 WHERE character_id=$1", pkt.StampType, pkt.StampType), s.charID)
+		if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE stamps SET %s_total=%s_total+1 WHERE character_id=$1", pkt.StampType, pkt.StampType), s.charID); err != nil {
+			s.logger.Error("Failed to increment stamp total", zap.Error(err))
+		}
 		updated = 1
 	}
 
@@ -1043,7 +1059,9 @@ func getGoocooData(s *Session, cid uint32) [][]byte {
 	for i := 0; i < 5; i++ {
 		err := s.server.db.QueryRow(fmt.Sprintf("SELECT goocoo%d FROM goocoo WHERE id=$1", i), cid).Scan(&goocoo)
 		if err != nil {
-			_, _ = s.server.db.Exec("INSERT INTO goocoo (id) VALUES ($1)", s.charID)
+			if _, err := s.server.db.Exec("INSERT INTO goocoo (id) VALUES ($1)", s.charID); err != nil {
+				s.logger.Error("Failed to insert goocoo record", zap.Error(err))
+			}
 			return goocoos
 		}
 		if err == nil && goocoo != nil {
@@ -1069,7 +1087,9 @@ func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuacot)
 	for _, goocoo := range pkt.Goocoos {
 		if goocoo.Data1[0] == 0 {
-			_, _ = s.server.db.Exec(fmt.Sprintf("UPDATE goocoo SET goocoo%d=NULL WHERE id=$1", goocoo.Index), s.charID)
+			if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE goocoo SET goocoo%d=NULL WHERE id=$1", goocoo.Index), s.charID); err != nil {
+				s.logger.Error("Failed to clear goocoo slot", zap.Error(err))
+			}
 		} else {
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint32(goocoo.Index)
@@ -1081,7 +1101,9 @@ func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
 			}
 			bf.WriteUint8(uint8(len(goocoo.Name)))
 			bf.WriteBytes(goocoo.Name)
-			_, _ = s.server.db.Exec(fmt.Sprintf("UPDATE goocoo SET goocoo%d=$1 WHERE id=$2", goocoo.Index), bf.Data(), s.charID)
+			if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE goocoo SET goocoo%d=$1 WHERE id=$2", goocoo.Index), bf.Data(), s.charID); err != nil {
+				s.logger.Error("Failed to update goocoo slot", zap.Error(err))
+			}
 			dumpSaveData(s, bf.Data(), fmt.Sprintf("goocoo-%d", goocoo.Index))
 		}
 	}
@@ -1144,7 +1166,9 @@ func handleMsgMhfGetEtcPoints(s *Session, p mhfpacket.MHFPacket) {
 	var dailyTime time.Time
 	_ = s.server.db.QueryRow("SELECT COALESCE(daily_time, $2) FROM characters WHERE id = $1", s.charID, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)).Scan(&dailyTime)
 	if TimeAdjusted().After(dailyTime) {
-		_, _ = s.server.db.Exec("UPDATE characters SET bonus_quests = 0, daily_quests = 0 WHERE id=$1", s.charID)
+		if _, err := s.server.db.Exec("UPDATE characters SET bonus_quests = 0, daily_quests = 0 WHERE id=$1", s.charID); err != nil {
+			s.logger.Error("Failed to reset daily quests", zap.Error(err))
+		}
 	}
 
 	var bonusQuests, dailyQuests, promoPoints uint32
@@ -1174,9 +1198,13 @@ func handleMsgMhfUpdateEtcPoint(s *Session, p mhfpacket.MHFPacket) {
 	err := s.server.db.QueryRow(fmt.Sprintf(`SELECT %s FROM characters WHERE id = $1`, column), s.charID).Scan(&value)
 	if err == nil {
 		if value+pkt.Delta < 0 {
-			_, _ = s.server.db.Exec(fmt.Sprintf(`UPDATE characters SET %s = 0 WHERE id = $1`, column), s.charID)
+			if _, err := s.server.db.Exec(fmt.Sprintf(`UPDATE characters SET %s = 0 WHERE id = $1`, column), s.charID); err != nil {
+				s.logger.Error("Failed to reset etc point", zap.Error(err))
+			}
 		} else {
-			_, _ = s.server.db.Exec(fmt.Sprintf(`UPDATE characters SET %s = %s + $1 WHERE id = $2`, column, column), pkt.Delta, s.charID)
+			if _, err := s.server.db.Exec(fmt.Sprintf(`UPDATE characters SET %s = %s + $1 WHERE id = $2`, column, column), pkt.Delta, s.charID); err != nil {
+				s.logger.Error("Failed to update etc point", zap.Error(err))
+			}
 		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -1517,7 +1545,9 @@ func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 	bitInByte := bit % 8
 	data[startByte+byteInd] |= bits.Reverse8(1 << uint(bitInByte))
 	dumpSaveData(s, data, "skinhist")
-	_, _ = s.server.db.Exec("UPDATE characters SET skin_hist=$1 WHERE id=$2", data, s.charID)
+	if _, err := s.server.db.Exec("UPDATE characters SET skin_hist=$1 WHERE id=$2", data, s.charID); err != nil {
+		s.logger.Error("Failed to update skin history", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -1600,7 +1630,9 @@ func handleMsgMhfGetTrendWeapon(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUpdateUseTrendWeaponLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateUseTrendWeaponLog)
-	_, _ = s.server.db.Exec(`INSERT INTO trend_weapons (weapon_id, weapon_type, count) VALUES ($1, $2, 1) ON CONFLICT (weapon_id) DO
-		UPDATE SET count = trend_weapons.count+1`, pkt.WeaponID, pkt.WeaponType)
+	if _, err := s.server.db.Exec(`INSERT INTO trend_weapons (weapon_id, weapon_type, count) VALUES ($1, $2, 1) ON CONFLICT (weapon_id) DO
+		UPDATE SET count = trend_weapons.count+1`, pkt.WeaponID, pkt.WeaponType); err != nil {
+		s.logger.Error("Failed to update trend weapon log", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

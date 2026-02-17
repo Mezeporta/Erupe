@@ -216,7 +216,9 @@ func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	_, _ = s.server.db.Exec(`UPDATE mail SET read = true WHERE id = $1`, mail.ID)
+	if _, err := s.server.db.Exec(`UPDATE mail SET read = true WHERE id = $1`, mail.ID); err != nil {
+		s.logger.Error("Failed to mark mail as read", zap.Error(err))
+	}
 	bf := byteframe.NewByteFrame()
 	body := stringsupport.UTF8ToSJIS(mail.Body)
 	bf.WriteNullTerminatedBytes(body)
@@ -303,13 +305,21 @@ func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 
 	switch pkt.Operation {
 	case mhfpacket.OperateMailDelete:
-		_, _ = s.server.db.Exec(`UPDATE mail SET deleted = true WHERE id = $1`, mail.ID)
+		if _, err := s.server.db.Exec(`UPDATE mail SET deleted = true WHERE id = $1`, mail.ID); err != nil {
+			s.logger.Error("Failed to delete mail", zap.Error(err))
+		}
 	case mhfpacket.OperateMailLock:
-		_, _ = s.server.db.Exec(`UPDATE mail SET locked = TRUE WHERE id = $1`, mail.ID)
+		if _, err := s.server.db.Exec(`UPDATE mail SET locked = TRUE WHERE id = $1`, mail.ID); err != nil {
+			s.logger.Error("Failed to lock mail", zap.Error(err))
+		}
 	case mhfpacket.OperateMailUnlock:
-		_, _ = s.server.db.Exec(`UPDATE mail SET locked = FALSE WHERE id = $1`, mail.ID)
+		if _, err := s.server.db.Exec(`UPDATE mail SET locked = FALSE WHERE id = $1`, mail.ID); err != nil {
+			s.logger.Error("Failed to unlock mail", zap.Error(err))
+		}
 	case mhfpacket.OperateMailAcquireItem:
-		_, _ = s.server.db.Exec(`UPDATE mail SET attached_item_received = TRUE WHERE id = $1`, mail.ID)
+		if _, err := s.server.db.Exec(`UPDATE mail SET attached_item_received = TRUE WHERE id = $1`, mail.ID); err != nil {
+			s.logger.Error("Failed to mark mail item received", zap.Error(err))
+		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

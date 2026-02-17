@@ -33,9 +33,13 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	var t int
 	err = s.server.db.QueryRow("SELECT character_id FROM rengoku_score WHERE character_id=$1", s.charID).Scan(&t)
 	if err != nil {
-		_, _ = s.server.db.Exec("INSERT INTO rengoku_score (character_id) VALUES ($1)", s.charID)
+		if _, err := s.server.db.Exec("INSERT INTO rengoku_score (character_id) VALUES ($1)", s.charID); err != nil {
+			s.logger.Error("Failed to insert rengoku score", zap.Error(err))
+		}
 	}
-	_, _ = s.server.db.Exec("UPDATE rengoku_score SET max_stages_mp=$1, max_points_mp=$2, max_stages_sp=$3, max_points_sp=$4 WHERE character_id=$5", maxStageMp, maxScoreMp, maxStageSp, maxScoreSp, s.charID)
+	if _, err := s.server.db.Exec("UPDATE rengoku_score SET max_stages_mp=$1, max_points_mp=$2, max_stages_sp=$3, max_points_sp=$4 WHERE character_id=$5", maxStageMp, maxScoreMp, maxStageSp, maxScoreSp, s.charID); err != nil {
+		s.logger.Error("Failed to update rengoku score", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 

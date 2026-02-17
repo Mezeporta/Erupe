@@ -5,6 +5,8 @@ import (
 	"erupe-ce/common/stringsupport"
 	"erupe-ce/network/mhfpacket"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type TreasureHunt struct {
@@ -108,14 +110,18 @@ func handleMsgMhfRegistGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 			huntData.WriteBytes(bf.ReadBytes(9))
 		}
 	}
-	_, _ = s.server.db.Exec(`INSERT INTO guild_hunts (guild_id, host_id, destination, level, hunt_data, cats_used) VALUES ($1, $2, $3, $4, $5, $6)
-		`, guild.ID, s.charID, destination, level, huntData.Data(), catsUsed)
+	if _, err := s.server.db.Exec(`INSERT INTO guild_hunts (guild_id, host_id, destination, level, hunt_data, cats_used) VALUES ($1, $2, $3, $4, $5, $6)
+		`, guild.ID, s.charID, destination, level, huntData.Data(), catsUsed); err != nil {
+		s.logger.Error("Failed to register guild treasure hunt", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfAcquireGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireGuildTresure)
-	_, _ = s.server.db.Exec(`UPDATE guild_hunts SET acquired=true WHERE id=$1`, pkt.HuntID)
+	if _, err := s.server.db.Exec(`UPDATE guild_hunts SET acquired=true WHERE id=$1`, pkt.HuntID); err != nil {
+		s.logger.Error("Failed to acquire guild treasure hunt", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -123,12 +129,20 @@ func handleMsgMhfOperateGuildTresureReport(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOperateGuildTresureReport)
 	switch pkt.State {
 	case 0: // Report registration
-		_, _ = s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=$1 WHERE character_id=$2`, pkt.HuntID, s.charID)
+		if _, err := s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=$1 WHERE character_id=$2`, pkt.HuntID, s.charID); err != nil {
+			s.logger.Error("Failed to register treasure hunt report", zap.Error(err))
+		}
 	case 1: // Collected by hunter
-		_, _ = s.server.db.Exec(`UPDATE guild_hunts SET collected=true WHERE id=$1`, pkt.HuntID)
-		_, _ = s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE treasure_hunt=$1`, pkt.HuntID)
+		if _, err := s.server.db.Exec(`UPDATE guild_hunts SET collected=true WHERE id=$1`, pkt.HuntID); err != nil {
+			s.logger.Error("Failed to mark treasure hunt collected", zap.Error(err))
+		}
+		if _, err := s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE treasure_hunt=$1`, pkt.HuntID); err != nil {
+			s.logger.Error("Failed to clear treasure hunt from guild characters", zap.Error(err))
+		}
 	case 2: // Claim treasure
-		_, _ = s.server.db.Exec(`INSERT INTO guild_hunts_claimed VALUES ($1, $2)`, pkt.HuntID, s.charID)
+		if _, err := s.server.db.Exec(`INSERT INTO guild_hunts_claimed VALUES ($1, $2)`, pkt.HuntID, s.charID); err != nil {
+			s.logger.Error("Failed to claim treasure hunt reward", zap.Error(err))
+		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

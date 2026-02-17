@@ -715,9 +715,13 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OperateGuildDonateRank:
 		bf.WriteBytes(handleDonateRP(s, uint16(pkt.Data1.ReadUint32()), guild, 0))
 	case mhfpacket.OperateGuildSetApplicationDeny:
-		_, _ = s.server.db.Exec("UPDATE guilds SET recruiting=false WHERE id=$1", guild.ID)
+		if _, err := s.server.db.Exec("UPDATE guilds SET recruiting=false WHERE id=$1", guild.ID); err != nil {
+			s.logger.Error("Failed to deny guild applications", zap.Error(err))
+		}
 	case mhfpacket.OperateGuildSetApplicationAllow:
-		_, _ = s.server.db.Exec("UPDATE guilds SET recruiting=true WHERE id=$1", guild.ID)
+		if _, err := s.server.db.Exec("UPDATE guilds SET recruiting=true WHERE id=$1", guild.ID); err != nil {
+			s.logger.Error("Failed to allow guild applications", zap.Error(err))
+		}
 	case mhfpacket.OperateGuildSetAvoidLeadershipTrue:
 		handleAvoidLeadershipUpdate(s, pkt, true)
 	case mhfpacket.OperateGuildSetAvoidLeadershipFalse:
@@ -751,7 +755,9 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OperateGuildChangePugi3:
 		handleChangePugi(s, uint8(pkt.Data1.ReadUint32()), guild, 3)
 	case mhfpacket.OperateGuildUnlockOutfit:
-		_, _ = s.server.db.Exec(`UPDATE guilds SET pugi_outfits=$1 WHERE id=$2`, pkt.Data1.ReadUint32(), guild.ID)
+		if _, err := s.server.db.Exec(`UPDATE guilds SET pugi_outfits=$1 WHERE id=$2`, pkt.Data1.ReadUint32(), guild.ID); err != nil {
+			s.logger.Error("Failed to unlock guild pugi outfit", zap.Error(err))
+		}
 	case mhfpacket.OperateGuildDonateRoom:
 		quantity := uint16(pkt.Data1.ReadUint32())
 		bf.WriteBytes(handleDonateRP(s, quantity, guild, 2))
@@ -759,7 +765,9 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		quantity := uint16(pkt.Data1.ReadUint32())
 		bf.WriteBytes(handleDonateRP(s, quantity, guild, 1))
 		// TODO: Move this value onto rp_yesterday and reset to 0... daily?
-		_, _ = s.server.db.Exec(`UPDATE guild_characters SET rp_today=rp_today+$1 WHERE character_id=$2`, quantity, s.charID)
+		if _, err := s.server.db.Exec(`UPDATE guild_characters SET rp_today=rp_today+$1 WHERE character_id=$2`, quantity, s.charID); err != nil {
+			s.logger.Error("Failed to update guild character daily RP", zap.Error(err))
+		}
 	case mhfpacket.OperateGuildEventExchange:
 		rp := uint16(pkt.Data1.ReadUint32())
 		var balance uint32
@@ -825,15 +833,25 @@ func handleDonateRP(s *Session, amount uint16, guild *Guild, _type int) []byte {
 	saveData.Save(s)
 	switch _type {
 	case 0:
-		_, _ = s.server.db.Exec(`UPDATE guilds SET rank_rp = rank_rp + $1 WHERE id = $2`, amount, guild.ID)
+		if _, err := s.server.db.Exec(`UPDATE guilds SET rank_rp = rank_rp + $1 WHERE id = $2`, amount, guild.ID); err != nil {
+			s.logger.Error("Failed to update guild rank RP", zap.Error(err))
+		}
 	case 1:
-		_, _ = s.server.db.Exec(`UPDATE guilds SET event_rp = event_rp + $1 WHERE id = $2`, amount, guild.ID)
+		if _, err := s.server.db.Exec(`UPDATE guilds SET event_rp = event_rp + $1 WHERE id = $2`, amount, guild.ID); err != nil {
+			s.logger.Error("Failed to update guild event RP", zap.Error(err))
+		}
 	case 2:
 		if resetRoom {
-			_, _ = s.server.db.Exec(`UPDATE guilds SET room_rp = 0 WHERE id = $1`, guild.ID)
-			_, _ = s.server.db.Exec(`UPDATE guilds SET room_expiry = $1 WHERE id = $2`, TimeAdjusted().Add(time.Hour*24*7), guild.ID)
+			if _, err := s.server.db.Exec(`UPDATE guilds SET room_rp = 0 WHERE id = $1`, guild.ID); err != nil {
+				s.logger.Error("Failed to reset guild room RP", zap.Error(err))
+			}
+			if _, err := s.server.db.Exec(`UPDATE guilds SET room_expiry = $1 WHERE id = $2`, TimeAdjusted().Add(time.Hour*24*7), guild.ID); err != nil {
+				s.logger.Error("Failed to update guild room expiry", zap.Error(err))
+			}
 		} else {
-			_, _ = s.server.db.Exec(`UPDATE guilds SET room_rp = room_rp + $1 WHERE id = $2`, amount, guild.ID)
+			if _, err := s.server.db.Exec(`UPDATE guilds SET room_rp = room_rp + $1 WHERE id = $2`, amount, guild.ID); err != nil {
+				s.logger.Error("Failed to update guild room RP", zap.Error(err))
+			}
 		}
 	}
 	_, _ = bf.Seek(0, 0)
@@ -1597,7 +1615,7 @@ func handleMsgMhfGetGuildTargetMemberNum(s *Session, p mhfpacket.MHFPacket) {
 func guildGetItems(s *Session, guildID uint32) []mhfitem.MHFItemStack {
 	var data []byte
 	var items []mhfitem.MHFItemStack
-	if err := s.server.db.QueryRow(`SELECT item_box FROM guilds WHERE id=$1`, guildID).Scan(&data); err != nil {
+	if err := s.server.db.QueryRow(`SELECT item_box FROM guilds WHERE id=$1`, guildID).Scan(&data); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		s.logger.Error("Failed to get guild item box", zap.Error(err))
 	}
 	if len(data) > 0 {
@@ -1622,7 +1640,9 @@ func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuildItem)
 	newStacks := mhfitem.DiffItemStacks(guildGetItems(s, pkt.GuildID), pkt.UpdatedItems)
-	_, _ = s.server.db.Exec(`UPDATE guilds SET item_box=$1 WHERE id=$2`, mhfitem.SerializeWarehouseItems(newStacks), pkt.GuildID)
+	if _, err := s.server.db.Exec(`UPDATE guilds SET item_box=$1 WHERE id=$2`, mhfitem.SerializeWarehouseItems(newStacks), pkt.GuildID); err != nil {
+		s.logger.Error("Failed to update guild item box", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -1810,7 +1830,9 @@ func handleMsgMhfRegistGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
 	startTime := TimeAdjusted().Add(time.Duration(s.server.erupeConfig.GameplayOptions.ClanMealDuration-3600) * time.Second)
 	if pkt.OverwriteID != 0 {
-		_, _ = s.server.db.Exec("UPDATE guild_meals SET meal_id = $1, level = $2, created_at = $3 WHERE id = $4", pkt.MealID, pkt.Success, startTime, pkt.OverwriteID)
+		if _, err := s.server.db.Exec("UPDATE guild_meals SET meal_id = $1, level = $2, created_at = $3 WHERE id = $4", pkt.MealID, pkt.Success, startTime, pkt.OverwriteID); err != nil {
+			s.logger.Error("Failed to update guild meal", zap.Error(err))
+		}
 	} else {
 		_ = s.server.db.QueryRow("INSERT INTO guild_meals (guild_id, meal_id, level, created_at) VALUES ($1, $2, $3, $4) RETURNING id", guild.ID, pkt.MealID, pkt.Success, startTime).Scan(&pkt.OverwriteID)
 	}
@@ -1843,7 +1865,9 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	switch pkt.Operation {
 	case 0: // Acquire
-		_, _ = s.server.db.Exec(`UPDATE guild_characters SET box_claimed=$1 WHERE character_id=$2`, TimeAdjusted(), s.charID)
+		if _, err := s.server.db.Exec(`UPDATE guild_characters SET box_claimed=$1 WHERE character_id=$2`, TimeAdjusted(), s.charID); err != nil {
+			s.logger.Error("Failed to update guild hunt box claimed time", zap.Error(err))
+		}
 	case 1: // Enumerate
 		bf.WriteUint8(0) // Entries
 		rows, err := s.server.db.Query(`SELECT kl.id, kl.monster FROM kill_logs kl
@@ -1913,7 +1937,9 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	_, _ = s.server.db.Exec("UPDATE characters SET guild_post_checked = now() WHERE id = $1", s.charID)
+	if _, err := s.server.db.Exec("UPDATE characters SET guild_post_checked = now() WHERE id = $1", s.charID); err != nil {
+		s.logger.Error("Failed to update guild post checked time", zap.Error(err))
+	}
 	bf := byteframe.NewByteFrame()
 	var postCount uint32
 	for msgs.Next() {
@@ -1952,21 +1978,31 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	}
 	switch pkt.MessageOp {
 	case 0: // Create message
-		_, _ = s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, s.charID, pkt.StampID, pkt.PostType, pkt.Title, pkt.Body)
+		if _, err := s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, s.charID, pkt.StampID, pkt.PostType, pkt.Title, pkt.Body); err != nil {
+			s.logger.Error("Failed to insert guild post", zap.Error(err))
+		}
 		maxPosts := 100
 		if pkt.PostType == 1 {
 			maxPosts = 4
 		}
-		_, _ = s.server.db.Exec(`DELETE FROM guild_posts WHERE id IN (
+		if _, err := s.server.db.Exec(`DELETE FROM guild_posts WHERE id IN (
 			SELECT id FROM guild_posts WHERE guild_id = $1 AND post_type = $2
 			ORDER BY created_at DESC OFFSET $3
-		)`, guild.ID, pkt.PostType, maxPosts)
+		)`, guild.ID, pkt.PostType, maxPosts); err != nil {
+			s.logger.Error("Failed to purge excess guild posts", zap.Error(err))
+		}
 	case 1: // Delete message
-		_, _ = s.server.db.Exec("DELETE FROM guild_posts WHERE id = $1", pkt.PostID)
+		if _, err := s.server.db.Exec("DELETE FROM guild_posts WHERE id = $1", pkt.PostID); err != nil {
+			s.logger.Error("Failed to delete guild post", zap.Error(err))
+		}
 	case 2: // Update message
-		_, _ = s.server.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE id = $3", pkt.Title, pkt.Body, pkt.PostID)
+		if _, err := s.server.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE id = $3", pkt.Title, pkt.Body, pkt.PostID); err != nil {
+			s.logger.Error("Failed to update guild post", zap.Error(err))
+		}
 	case 3: // Update stamp
-		_, _ = s.server.db.Exec("UPDATE guild_posts SET stamp_id = $1 WHERE id = $2", pkt.StampID, pkt.PostID)
+		if _, err := s.server.db.Exec("UPDATE guild_posts SET stamp_id = $1 WHERE id = $2", pkt.StampID, pkt.PostID); err != nil {
+			s.logger.Error("Failed to update guild post stamp", zap.Error(err))
+		}
 	case 4: // Like message
 		var likedBy string
 		err := s.server.db.QueryRow("SELECT liked_by FROM guild_posts WHERE id = $1", pkt.PostID).Scan(&likedBy)
@@ -1975,10 +2011,14 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		} else {
 			if pkt.LikeState {
 				likedBy = stringsupport.CSVAdd(likedBy, int(s.charID))
-				_, _ = s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID)
+				if _, err := s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID); err != nil {
+					s.logger.Error("Failed to update guild post likes", zap.Error(err))
+				}
 			} else {
 				likedBy = stringsupport.CSVRemove(likedBy, int(s.charID))
-				_, _ = s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID)
+				if _, err := s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID); err != nil {
+					s.logger.Error("Failed to update guild post likes", zap.Error(err))
+				}
 			}
 		}
 	case 5: // Check for new messages
@@ -2019,7 +2059,9 @@ func handleMsgMhfUpdateGuild(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfSetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetGuildManageRight)
-	_, _ = s.server.db.Exec("UPDATE guild_characters SET recruiter=$1 WHERE character_id=$2", pkt.Allowed, pkt.CharID)
+	if _, err := s.server.db.Exec("UPDATE guild_characters SET recruiter=$1 WHERE character_id=$2", pkt.Allowed, pkt.CharID); err != nil {
+		s.logger.Error("Failed to update guild manage right", zap.Error(err))
+	}
 	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 

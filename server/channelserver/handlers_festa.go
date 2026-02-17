@@ -1,26 +1,32 @@
 package channelserver
 
 import (
+	"database/sql"
+	"errors"
+	"sort"
+	"time"
+
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/common/token"
 	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
+
 	"go.uber.org/zap"
-	"sort"
-	"time"
 )
 
 func handleMsgMhfSaveMezfesData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveMezfesData)
-	_, _ = s.server.db.Exec(`UPDATE characters SET mezfes=$1 WHERE id=$2`, pkt.RawDataPayload, s.charID)
+	if _, err := s.server.db.Exec(`UPDATE characters SET mezfes=$1 WHERE id=$2`, pkt.RawDataPayload, s.charID); err != nil {
+		s.logger.Error("Failed to save mezfes data", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfLoadMezfesData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadMezfesData)
 	var data []byte
-	if err := s.server.db.QueryRow(`SELECT mezfes FROM characters WHERE id=$1`, s.charID).Scan(&data); err != nil {
+	if err := s.server.db.QueryRow(`SELECT mezfes FROM characters WHERE id=$1`, s.charID).Scan(&data); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		s.logger.Error("Failed to load mezfes data", zap.Error(err))
 	}
 	bf := byteframe.NewByteFrame()
@@ -96,11 +102,21 @@ func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func cleanupFesta(s *Session) {
-	_, _ = s.server.db.Exec("DELETE FROM events WHERE event_type='festa'")
-	_, _ = s.server.db.Exec("DELETE FROM festa_registrations")
-	_, _ = s.server.db.Exec("DELETE FROM festa_submissions")
-	_, _ = s.server.db.Exec("DELETE FROM festa_prizes_accepted")
-	_, _ = s.server.db.Exec("UPDATE guild_characters SET trial_vote=NULL")
+	if _, err := s.server.db.Exec("DELETE FROM events WHERE event_type='festa'"); err != nil {
+		s.logger.Error("Failed to delete festa events", zap.Error(err))
+	}
+	if _, err := s.server.db.Exec("DELETE FROM festa_registrations"); err != nil {
+		s.logger.Error("Failed to delete festa registrations", zap.Error(err))
+	}
+	if _, err := s.server.db.Exec("DELETE FROM festa_submissions"); err != nil {
+		s.logger.Error("Failed to delete festa submissions", zap.Error(err))
+	}
+	if _, err := s.server.db.Exec("DELETE FROM festa_prizes_accepted"); err != nil {
+		s.logger.Error("Failed to delete festa prizes accepted", zap.Error(err))
+	}
+	if _, err := s.server.db.Exec("UPDATE guild_characters SET trial_vote=NULL"); err != nil {
+		s.logger.Error("Failed to reset festa trial votes", zap.Error(err))
+	}
 }
 
 func generateFestaTimestamps(s *Session, start uint32, debug bool) []uint32 {
@@ -134,7 +150,9 @@ func generateFestaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		cleanupFesta(s)
 		// Generate a new festa, starting midnight tomorrow
 		start = uint32(midnight.Add(24 * time.Hour).Unix())
-		_, _ = s.server.db.Exec("INSERT INTO events (event_type, start_time) VALUES ('festa', to_timestamp($1)::timestamp without time zone)", start)
+		if _, err := s.server.db.Exec("INSERT INTO events (event_type, start_time) VALUES ('festa', to_timestamp($1)::timestamp without time zone)", start); err != nil {
+			s.logger.Error("Failed to insert festa event", zap.Error(err))
+		}
 	}
 	timestamps[0] = start
 	timestamps[1] = timestamps[0] + 604800
@@ -324,7 +342,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 				WHERE fs.trial_type = $1
 				GROUP BY fs.guild_id, g.name, fr.team
 				ORDER BY _ DESC LIMIT 1
-			`, i+1).Scan(&guildID, &guildName, &guildTeam, &temp); err != nil {
+			`, i+1).Scan(&guildID, &guildName, &guildTeam, &temp); err != nil && !errors.Is(err, sql.ErrNoRows) {
 			s.logger.Error("Failed to get festa trial ranking", zap.Error(err))
 		}
 		bf.WriteUint32(guildID)
@@ -346,7 +364,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 				WHERE EXTRACT(EPOCH FROM fs.timestamp)::int > $1 AND EXTRACT(EPOCH FROM fs.timestamp)::int < $2
 				GROUP BY fs.guild_id, g.name, fr.team
 				ORDER BY _ DESC LIMIT 1
-			`, timestamps[1]+offset, timestamps[1]+offset+86400).Scan(&guildID, &guildName, &guildTeam, &temp); err != nil {
+			`, timestamps[1]+offset, timestamps[1]+offset+86400).Scan(&guildID, &guildName, &guildTeam, &temp); err != nil && !errors.Is(err, sql.ErrNoRows) {
 			s.logger.Error("Failed to get festa daily ranking", zap.Error(err))
 		}
 		bf.WriteUint32(guildID)
@@ -466,7 +484,9 @@ func handleMsgMhfEnumerateFestaMember(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfVoteFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfVoteFesta)
-	_, _ = s.server.db.Exec(`UPDATE guild_characters SET trial_vote=$1 WHERE character_id=$2`, pkt.TrialID, s.charID)
+	if _, err := s.server.db.Exec(`UPDATE guild_characters SET trial_vote=$1 WHERE character_id=$2`, pkt.TrialID, s.charID); err != nil {
+		s.logger.Error("Failed to update festa trial vote", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -480,9 +500,13 @@ func handleMsgMhfEntryFesta(s *Session, p mhfpacket.MHFPacket) {
 	team := uint32(token.RNG.Intn(2))
 	switch team {
 	case 0:
-		_, _ = s.server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'blue')", guild.ID)
+		if _, err := s.server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'blue')", guild.ID); err != nil {
+			s.logger.Error("Failed to register guild for festa blue team", zap.Error(err))
+		}
 	case 1:
-		_, _ = s.server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'red')", guild.ID)
+		if _, err := s.server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'red')", guild.ID); err != nil {
+			s.logger.Error("Failed to register guild for festa red team", zap.Error(err))
+		}
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(team)
@@ -512,19 +536,25 @@ func handleMsgMhfChargeFesta(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAcquireFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFesta)
-	_, _ = s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES (0, $1)", s.charID)
+	if _, err := s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES (0, $1)", s.charID); err != nil {
+		s.logger.Error("Failed to accept festa prize", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfAcquireFestaPersonalPrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFestaPersonalPrize)
-	_, _ = s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.charID)
+	if _, err := s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.charID); err != nil {
+		s.logger.Error("Failed to accept festa personal prize", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfAcquireFestaIntermediatePrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFestaIntermediatePrize)
-	_, _ = s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.charID)
+	if _, err := s.server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.charID); err != nil {
+		s.logger.Error("Failed to accept festa intermediate prize", zap.Error(err))
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 

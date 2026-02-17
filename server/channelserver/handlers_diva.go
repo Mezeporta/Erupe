@@ -12,7 +12,9 @@ import (
 )
 
 func cleanupDiva(s *Session) {
-	_, _ = s.server.db.Exec("DELETE FROM events WHERE event_type='diva'")
+	if _, err := s.server.db.Exec("DELETE FROM events WHERE event_type='diva'"); err != nil {
+		s.logger.Error("Failed to delete diva events", zap.Error(err))
+	}
 }
 
 func generateDivaTimestamps(s *Session, start uint32, debug bool) []uint32 {
@@ -49,7 +51,9 @@ func generateDivaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		cleanupDiva(s)
 		// Generate a new diva defense, starting midnight tomorrow
 		start = uint32(midnight.Add(24 * time.Hour).Unix())
-		_, _ = s.server.db.Exec("INSERT INTO events (event_type, start_time) VALUES ('diva', to_timestamp($1)::timestamp without time zone)", start)
+		if _, err := s.server.db.Exec("INSERT INTO events (event_type, start_time) VALUES ('diva', to_timestamp($1)::timestamp without time zone)", start); err != nil {
+			s.logger.Error("Failed to insert diva event", zap.Error(err))
+		}
 	}
 	timestamps[0] = start
 	timestamps[1] = timestamps[0] + 601200

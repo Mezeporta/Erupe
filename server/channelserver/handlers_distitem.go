@@ -170,11 +170,17 @@ func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 				case 17:
 					_ = addPointNetcafe(s, int(item.Quantity))
 				case 19:
-					_, _ = s.server.db.Exec("UPDATE users u SET gacha_premium=gacha_premium+$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", item.Quantity, s.charID)
+					if _, err := s.server.db.Exec("UPDATE users u SET gacha_premium=gacha_premium+$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", item.Quantity, s.charID); err != nil {
+						s.logger.Error("Failed to update gacha premium", zap.Error(err))
+					}
 				case 20:
-					_, _ = s.server.db.Exec("UPDATE users u SET gacha_trial=gacha_trial+$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", item.Quantity, s.charID)
+					if _, err := s.server.db.Exec("UPDATE users u SET gacha_trial=gacha_trial+$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", item.Quantity, s.charID); err != nil {
+						s.logger.Error("Failed to update gacha trial", zap.Error(err))
+					}
 				case 21:
-					_, _ = s.server.db.Exec("UPDATE users u SET frontier_points=frontier_points+$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", item.Quantity, s.charID)
+					if _, err := s.server.db.Exec("UPDATE users u SET frontier_points=frontier_points+$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", item.Quantity, s.charID); err != nil {
+						s.logger.Error("Failed to update frontier points", zap.Error(err))
+					}
 				case 23:
 					saveData, err := GetCharacterSaveData(s, s.charID)
 					if err == nil {

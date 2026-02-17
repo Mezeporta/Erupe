@@ -5,6 +5,8 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"fmt"
 	"io"
+
+	"go.uber.org/zap"
 )
 
 var achievementCurves = [][]int32{
@@ -90,7 +92,9 @@ func handleMsgMhfGetAchievement(s *Session, p mhfpacket.MHFPacket) {
 	var exists int
 	err := s.server.db.QueryRow("SELECT id FROM achievements WHERE id=$1", pkt.CharID).Scan(&exists)
 	if err != nil {
-		_, _ = s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", pkt.CharID)
+		if _, err := s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", pkt.CharID); err != nil {
+			s.logger.Error("Failed to insert achievements record", zap.Error(err))
+		}
 	}
 
 	var scores [33]int32
@@ -152,10 +156,14 @@ func handleMsgMhfAddAchievement(s *Session, p mhfpacket.MHFPacket) {
 	var exists int
 	err := s.server.db.QueryRow("SELECT id FROM achievements WHERE id=$1", s.charID).Scan(&exists)
 	if err != nil {
-		_, _ = s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", s.charID)
+		if _, err := s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", s.charID); err != nil {
+			s.logger.Error("Failed to insert achievements record", zap.Error(err))
+		}
 	}
 
-	_, _ = s.server.db.Exec(fmt.Sprintf("UPDATE achievements SET ach%d=ach%d+1 WHERE id=$1", pkt.AchievementID, pkt.AchievementID), s.charID)
+	if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE achievements SET ach%d=ach%d+1 WHERE id=$1", pkt.AchievementID, pkt.AchievementID), s.charID); err != nil {
+		s.logger.Error("Failed to update achievement score", zap.Error(err))
+	}
 }
 
 func handleMsgMhfPaymentAchievement(s *Session, p mhfpacket.MHFPacket) {}

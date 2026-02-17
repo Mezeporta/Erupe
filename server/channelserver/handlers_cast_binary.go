@@ -123,12 +123,16 @@ func parseChatCommand(s *Session, command string) {
 					err := s.server.db.QueryRow(`SELECT id, username FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, cid).Scan(&uid, &uname)
 					if err == nil {
 						if expiry.IsZero() {
-							_, _ = s.server.db.Exec(`INSERT INTO bans VALUES ($1)
-                 				ON CONFLICT (user_id) DO UPDATE SET expires=NULL`, uid)
+							if _, err := s.server.db.Exec(`INSERT INTO bans VALUES ($1)
+                 				ON CONFLICT (user_id) DO UPDATE SET expires=NULL`, uid); err != nil {
+								s.logger.Error("Failed to ban user", zap.Error(err))
+							}
 							sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.ban.success, uname))
 						} else {
-							_, _ = s.server.db.Exec(`INSERT INTO bans VALUES ($1, $2)
-                 				ON CONFLICT (user_id) DO UPDATE SET expires=$2`, uid, expiry)
+							if _, err := s.server.db.Exec(`INSERT INTO bans VALUES ($1, $2)
+                 				ON CONFLICT (user_id) DO UPDATE SET expires=$2`, uid, expiry); err != nil {
+								s.logger.Error("Failed to ban user with expiry", zap.Error(err))
+							}
 							sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.ban.success, uname)+fmt.Sprintf(s.server.i18n.commands.ban.length, expiry.Format(time.DateTime)))
 						}
 						s.server.DisconnectUser(uid)
@@ -150,7 +154,9 @@ func parseChatCommand(s *Session, command string) {
 			if err := s.server.db.QueryRow(`SELECT COALESCE(timer, false) FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&state); err != nil {
 				s.logger.Error("Failed to get timer state", zap.Error(err))
 			}
-			_, _ = s.server.db.Exec(`UPDATE users u SET timer=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, !state, s.charID)
+			if _, err := s.server.db.Exec(`UPDATE users u SET timer=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, !state, s.charID); err != nil {
+				s.logger.Error("Failed to update timer setting", zap.Error(err))
+			}
 			if state {
 				sendServerChatMessage(s, s.server.i18n.commands.timer.disabled)
 			} else {
@@ -308,7 +314,9 @@ func parseChatCommand(s *Session, command string) {
 								}
 								err := s.server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", s.charID).Scan(&rightsInt)
 								if err == nil {
-									_, _ = s.server.db.Exec("UPDATE users u SET rights=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", rightsInt+delta, s.charID)
+									if _, err := s.server.db.Exec("UPDATE users u SET rights=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", rightsInt+delta, s.charID); err != nil {
+										s.logger.Error("Failed to update user rights", zap.Error(err))
+									}
 								}
 								updateRights(s)
 							} else {
@@ -406,7 +414,9 @@ func parseChatCommand(s *Session, command string) {
 				randToken := make([]byte, 4)
 				_, _ = rand.Read(randToken)
 				_token = fmt.Sprintf("%x-%x", randToken[:2], randToken[2:])
-				_, _ = s.server.db.Exec(`UPDATE users u SET discord_token = $1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, _token, s.charID)
+				if _, err := s.server.db.Exec(`UPDATE users u SET discord_token = $1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, _token, s.charID); err != nil {
+					s.logger.Error("Failed to update discord token", zap.Error(err))
+				}
 			}
 			sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.discord.success, _token))
 		} else {

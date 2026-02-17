@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"erupe-ce/network/mhfpacket"
+	"go.uber.org/zap"
 )
 
 func handleMsgSysInsertUser(s *Session, p mhfpacket.MHFPacket) {}
@@ -19,10 +20,14 @@ func handleMsgSysSetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	var exists []byte
 	err := s.server.db.QueryRow("SELECT type2 FROM user_binary WHERE id=$1", s.charID).Scan(&exists)
 	if err != nil {
-		_, _ = s.server.db.Exec("INSERT INTO user_binary (id) VALUES ($1)", s.charID)
+		if _, err := s.server.db.Exec("INSERT INTO user_binary (id) VALUES ($1)", s.charID); err != nil {
+			s.logger.Error("Failed to insert user binary", zap.Error(err))
+		}
 	}
 
-	_, _ = s.server.db.Exec(fmt.Sprintf("UPDATE user_binary SET type%d=$1 WHERE id=$2", pkt.BinaryType), pkt.RawDataPayload, s.charID)
+	if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE user_binary SET type%d=$1 WHERE id=$2", pkt.BinaryType), pkt.RawDataPayload, s.charID); err != nil {
+		s.logger.Error("Failed to update user binary", zap.Error(err))
+	}
 
 	msg := &mhfpacket.MsgSysNotifyUserBinary{
 		CharID:     s.charID,

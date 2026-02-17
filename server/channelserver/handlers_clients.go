@@ -94,7 +94,9 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 				} else {
 					csv = stringsupport.CSVAdd(csv, int(cid))
 				}
-				_, _ = s.server.db.Exec("UPDATE characters SET blocked=$1 WHERE id=$2", csv, s.charID)
+				if _, err := s.server.db.Exec("UPDATE characters SET blocked=$1 WHERE id=$2", csv, s.charID); err != nil {
+					s.logger.Error("Failed to update blocked list", zap.Error(err))
+				}
 			}
 		} else { // Friendlist
 			err := s.server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.charID).Scan(&csv)
@@ -104,7 +106,9 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 				} else {
 					csv = stringsupport.CSVAdd(csv, int(cid))
 				}
-				_, _ = s.server.db.Exec("UPDATE characters SET friends=$1 WHERE id=$2", csv, s.charID)
+				if _, err := s.server.db.Exec("UPDATE characters SET friends=$1 WHERE id=$2", csv, s.charID); err != nil {
+					s.logger.Error("Failed to update friends list", zap.Error(err))
+				}
 			}
 		}
 	}
