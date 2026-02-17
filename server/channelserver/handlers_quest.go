@@ -139,31 +139,57 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 	}
 }
 
+func questFileExists(s *Session, filename string) bool {
+	_, err := os.Stat(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", filename)))
+	return err == nil
+}
+
 func seasonConversion(s *Session, questFile string) string {
+	// Try the seasonal override file (e.g., 00001d2 for season 2)
 	filename := fmt.Sprintf("%s%d", questFile[:6], s.server.Season())
-
-	// Return the seasonal file
-	if _, err := os.Stat(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", filename))); err == nil {
+	if questFileExists(s, filename) {
 		return filename
-	} else {
-		// Attempt to return the requested quest file if the seasonal file doesn't exist
-		if _, err = os.Stat(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", questFile))); err == nil {
-			return questFile
-		}
-
-		// If the code reaches this point, it's most likely a custom quest with no seasonal variations in the files.
-		// Since event quests when seasonal pick day or night and the client requests either one, we need to differentiate between the two to prevent issues.
-		var _time string
-
-		if TimeGameAbsolute() > 2880 {
-			_time = "d"
-		} else {
-			_time = "n"
-		}
-
-		// Request a d0 or n0 file depending on the time of day. The time of day matters and issues will occur if it's different to the one it requests.
-		return fmt.Sprintf("%s%s%d", questFile[:5], _time, 0)
 	}
+
+	// Try the originally requested file as-is
+	if questFileExists(s, questFile) {
+		return questFile
+	}
+
+	// Try constructing a day/night base file (e.g., 00001d0 or 00001n0).
+	// Quest filenames are formatted as [5-digit ID][d/n][season]: e.g., "00001d0".
+	var currentTime, oppositeTime string
+	if TimeGameAbsolute() > 2880 {
+		currentTime = "d"
+		oppositeTime = "n"
+	} else {
+		currentTime = "n"
+		oppositeTime = "d"
+	}
+
+	// Try current time-of-day base variant
+	dayNightFile := fmt.Sprintf("%s%s%d", questFile[:5], currentTime, 0)
+	if questFileExists(s, dayNightFile) {
+		return dayNightFile
+	}
+
+	// Try opposite time-of-day base variant as last resort
+	oppositeFile := fmt.Sprintf("%s%s%d", questFile[:5], oppositeTime, 0)
+	if questFileExists(s, oppositeFile) {
+		s.logger.Warn("Quest file not found for current time, using opposite variant",
+			zap.String("requested", questFile),
+			zap.String("using", oppositeFile),
+		)
+		return oppositeFile
+	}
+
+	// No valid file found. Return the original request so handleMsgSysGetFile
+	// sends doAckBufFail, which triggers the client's error dialog
+	// (snj_questd_matching_fail → SetDialogData) instead of a softlock.
+	s.logger.Warn("No quest file variant found for any season or time-of-day",
+		zap.String("requested", questFile),
+	)
+	return questFile
 }
 
 func handleMsgMhfLoadFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
