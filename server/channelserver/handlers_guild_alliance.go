@@ -151,7 +151,8 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 			} else {
 				_, _ = s.server.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, alliance.ID)
 			}
-			// TODO: Handle deleting Alliance applications
+			// NOTE: Alliance join requests are not yet implemented (no DB table exists),
+			// so there are no pending applications to clean up on leave.
 			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		} else {
 			s.logger.Warn(

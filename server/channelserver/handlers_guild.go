@@ -1953,7 +1953,14 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	switch pkt.MessageOp {
 	case 0: // Create message
 		_, _ = s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, s.charID, pkt.StampID, pkt.PostType, pkt.Title, pkt.Body)
-		// TODO: if there are too many messages, purge excess
+		maxPosts := 100
+		if pkt.PostType == 1 {
+			maxPosts = 4
+		}
+		_, _ = s.server.db.Exec(`DELETE FROM guild_posts WHERE id IN (
+			SELECT id FROM guild_posts WHERE guild_id = $1 AND post_type = $2
+			ORDER BY created_at DESC OFFSET $3
+		)`, guild.ID, pkt.PostType, maxPosts)
 	case 1: // Delete message
 		_, _ = s.server.db.Exec("DELETE FROM guild_posts WHERE id = $1", pkt.PostID)
 	case 2: // Update message
