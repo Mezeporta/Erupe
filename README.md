@@ -322,7 +322,7 @@ Enable detailed logging in `config.json`:
 - **Binary Files**: [Quest and Scenario Binary Files](https://files.catbox.moe/xf0l7w.7z)
 - **Discord Communities**:
   - [Mezeporta Square Discord](https://discord.gg/DnwcpXM488)
-  - [Mogapedia's Discord](https://discord.gg/f77VwBX5w7)
+  - [Mogapedia's Discord](https://discord.gg/f77VwBX5w7) (French Monster Hunter community, current Erupe maintainers)
   - [PewPewDojo Discord](https://discord.gg/CFnzbhQ)
 - **Documentation**: [Erupe Wiki](https://github.com/Mezeporta/Erupe/wiki)
 - **FAQ**: [Community FAQ Pastebin](https://pastebin.com/QqAwZSTC)
