@@ -7,10 +7,162 @@
 
 Erupe is a community-maintained server emulator for Monster Hunter Frontier written in Go. It is a complete reverse-engineered solution to self-host a Monster Hunter Frontier server, using no code from Capcom.
 
-## Branch Strategy
+## Quick Start
 
-- **main**: Active development branch with the latest features and improvements
-- **stable/v9.2.x**: Stable release branch for those seeking stability over cutting-edge features
+Pick one of three installation methods, then continue to [Quest & Scenario Files](#quest--scenario-files).
+
+### Option A: Docker (recommended)
+
+Docker handles the database automatically. You only need to provide quest files and a config.
+
+1. Clone the repository and enter the Docker directory:
+
+   ```bash
+   git clone https://github.com/Mezeporta/Erupe.git
+   cd Erupe
+   ```
+
+2. Copy and edit the config (set your database password to match `docker-compose.yml`):
+
+   ```bash
+   cp config.example.json docker/config.json
+   # Edit docker/config.json — set Database.Host to "db"
+   ```
+
+3. Download [quest/scenario files](#quest--scenario-files) and extract them to `docker/bin/`
+
+4. Start everything:
+
+   ```bash
+   cd docker
+   docker compose up
+   ```
+
+   pgAdmin is available at `http://localhost:5050` for database management.
+
+### Option B: Pre-compiled Binary
+
+1. Download the latest release for your platform from [GitHub Releases](https://github.com/Mezeporta/Erupe/releases/latest):
+   - `erupe-ce` for Linux
+   - `erupe.exe` for Windows
+
+2. Set up PostgreSQL and create a database:
+
+   ```bash
+   wget https://github.com/Mezeporta/Erupe/releases/latest/download/SCHEMA.sql
+   psql -U postgres -d erupe -f SCHEMA.sql
+   ```
+
+3. Apply any patch schemas from [schemas/patch-schema/](./schemas/patch-schema/) in numerical order:
+
+   ```bash
+   psql -U postgres -d erupe -f schemas/patch-schema/01_patch.sql
+   # Repeat for each patch file
+   ```
+
+4. Copy and edit the config:
+
+   ```bash
+   cp config.example.json config.json
+   # Edit config.json with your database credentials
+   ```
+
+5. Download [quest/scenario files](#quest--scenario-files) and extract them to `bin/`
+
+6. Run: `./erupe-ce`
+
+### Option C: From Source
+
+Requires [Go 1.25+](https://go.dev/dl/) and [PostgreSQL](https://www.postgresql.org/download/).
+
+1. Clone and build:
+
+   ```bash
+   git clone https://github.com/Mezeporta/Erupe.git
+   cd Erupe
+   go mod download
+   go build -o erupe-ce
+   ```
+
+2. Set up the database (same as Option B, steps 2–3)
+
+3. Copy and edit the config:
+
+   ```bash
+   cp config.example.json config.json
+   ```
+
+4. Download [quest/scenario files](#quest--scenario-files) and extract them to `bin/`
+
+5. Run: `./erupe-ce`
+
+## Quest & Scenario Files
+
+**Download**: [Quest and Scenario Binary Files](https://files.catbox.moe/xf0l7w.7z)
+
+These files contain quest definitions and scenario data that the server sends to clients during gameplay. Extract the archive into your `bin/` directory (or `docker/bin/` for Docker installs). The path must match the `BinPath` setting in your config (default: `"bin"`).
+
+**Without these files, quests will not load and the client will crash.**
+
+## Client Setup
+
+1. Obtain a Monster Hunter Frontier client (version G10 or later recommended)
+2. Point the client to your server by editing `host.txt` or using a launcher to redirect to your server's IP
+3. Launch `mhf.exe`, select your server, and create an account
+
+If you have an **installed** copy of Monster Hunter Frontier on an old hard drive, **please** get in contact so we can archive it!
+
+## Updating
+
+### From Source
+
+```bash
+git pull origin main
+go mod tidy
+go build -o erupe-ce
+```
+
+**Check for new patch schemas** in [schemas/patch-schema/](./schemas/patch-schema/) after pulling — apply any you haven't run yet, in numerical order.
+
+### Docker
+
+```bash
+cd docker
+docker compose down
+docker compose build
+docker compose up
+```
+
+Apply any new patch schemas via pgAdmin or `psql` into the running container.
+
+## Configuration
+
+Edit `config.json` before starting the server. The essential settings are:
+
+```json
+{
+  "Host": "127.0.0.1",
+  "BinPath": "bin",
+  "Language": "en",
+  "ClientMode": "ZZ",
+  "Database": {
+    "Host": "localhost",
+    "Port": 5432,
+    "User": "postgres",
+    "Password": "your_password",
+    "Database": "erupe"
+  }
+}
+```
+
+| Setting | Description |
+|---------|-------------|
+| `Host` | Bind address. Use `127.0.0.1` for local, `0.0.0.0` for remote access |
+| `ClientMode` | Target client version (`ZZ`, `G10`, `Forward4`, etc.) |
+| `BinPath` | Path to quest/scenario files |
+| `Language` | `"en"` or `"jp"` |
+
+For the full configuration reference (gameplay multipliers, debug options, Discord integration, in-game commands, entrance/channel definitions), see [config.example.json](./config.example.json) and the [Erupe Wiki](https://github.com/Mezeporta/Erupe/wiki).
 
 ## Features
 
@@ -31,14 +183,7 @@ Erupe consists of three main server components:
 - **Entrance Server** (Port 53310): Manages world/server selection
 - **Channel Servers** (Ports 54001+): Handle game sessions, quests, and player interactions
 
-Multiple channel servers can run simultaneously, organized by world types:
-
-- **Newbie**: For new players
-- **Normal**: Standard gameplay
-- **Cities**: City-focused instances
-- **Tavern**: Special tavern area
-- **Return**: For returning players
-- **MezFes**: Festival events
+Multiple channel servers can run simultaneously, organized by world types: Newbie, Normal, Cities, Tavern, Return, and MezFes.
 
 ## Client Compatibility
 
@@ -56,202 +201,6 @@ Multiple channel servers can run simultaneously, organized by world types:
 - **Forward.4**: Basic functionality
 - **Season 6.0**: Limited functionality (oldest supported version)
 
-If you have an **installed** copy of Monster Hunter Frontier on an old hard drive, **please** get in contact so we can archive it!
-
-## Requirements
-
-- [Go 1.25+](https://go.dev/dl/)
-- [PostgreSQL](https://www.postgresql.org/download/)
-- Monster Hunter Frontier client (see [Client Setup](#client-setup))
-- Quest and scenario binary files (see [Resources](#resources))
-
-## Installation
-
-### Quick Start (Pre-compiled Binary)
-
-If you only want to run Erupe, download a [pre-compiled binary](https://github.com/Mezeporta/Erupe/releases/latest):
-
-- `erupe-ce` for Linux
-- `erupe.exe` for Windows
-
-Then proceed to [Configuration](#configuration).
-
-### Building from Source
-
-#### First-time Setup
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/Mezeporta/Erupe.git
-   cd Erupe
-   ```
-
-2. Create a PostgreSQL database and install the base schema:
-
-   ```bash
-   # Download and apply the base schema
-   wget https://github.com/Mezeporta/Erupe/releases/latest/download/SCHEMA.sql
-   psql -U your_user -d your_database -f SCHEMA.sql
-   ```
-
-3. Apply schema patches in order:
-
-   ```bash
-   psql -U your_user -d your_database -f schemas/patch-schema/01_patch.sql
-   # Repeat for each patch file in numerical order
-   ```
-
-4. Copy and configure the config file:
-
-   ```bash
-   cp config.example.json config.json
-   # Edit config.json with your settings (see Configuration section)
-   ```
-
-5. Install dependencies and build:
-
-   ```bash
-   go mod download
-   go build
-   ```
-
-6. Run the server:
-
-   ```bash
-   ./erupe-ce
-   ```
-
-   Or run directly without building:
-
-   ```bash
-   go run .
-   ```
-
-#### Updating an Existing Installation
-
-1. Pull the latest changes:
-
-   ```bash
-   git pull origin main
-   ```
-
-2. Update dependencies:
-
-   ```bash
-   go mod tidy
-   ```
-
-3. Apply any new schema patches from [schemas/patch-schema](./schemas/patch-schema) that you haven't run yet
-
-4. Rebuild and restart:
-
-   ```bash
-   go build
-   ./erupe-ce
-   ```
-
-### Docker Installation
-
-For quick setup and development (not recommended for production), see [docker/README.md](./docker/README.md).
-
-## Configuration
-
-Edit `config.json` to configure your server. Key settings include:
-
-### Core Settings
-
-```json
-{
-  "Host": "127.0.0.1",           // Server binding address
-  "BinPath": "bin",              // Path to quest/scenario binaries
-  "Language": "en",              // "en" or "jp"
-  "ClientMode": "ZZ"             // Target client version
-}
-```
-
-### Database
-
-```json
-{
-  "Database": {
-    "Host": "localhost",
-    "Port": 5432,
-    "User": "postgres",
-    "Password": "your_password",
-    "Database": "erupe"
-  }
-}
-```
-
-### Server Ports
-
-```json
-{
-  "Sign": {
-    "Enabled": true,
-    "Port": 53312              // Authentication server
-  },
-  "Entrance": {
-    "Enabled": true,
-    "Port": 53310              // World selection server
-  }
-}
-```
-
-Channel servers are configured under `Entrance.Entries[].Channels[]` with individual ports (default: 54001+).
-
-### Development Options
-
-```json
-{
-  "DebugOptions": {
-    "LogInboundMessages": false,   // Log incoming packets
-    "LogOutboundMessages": false,  // Log outgoing packets
-    "MaxHexdumpLength": 256       // Max bytes for hexdump logs
-  }
-}
-```
-
-### Gameplay Options
-
-```json
-{
-  "GameplayOptions": {
-    "MaximumNP": 100000,           // Max Netcafe Points
-    "MaximumRP": 50000,            // Max Road Points
-    "BoostTimeDuration": 7200,     // Login boost duration (seconds)
-    "BonusQuestAllowance": 3,      // Daily bonus quests
-    "DailyQuestAllowance": 1       // Daily quest limit
-  }
-}
-```
-
-### In-game Commands
-
-Configure available commands and their prefixes:
-
-```json
-{
-  "CommandPrefix": "!",
-  "Commands": [
-    {"Name": "Raviente", "Enabled": true, "Prefix": "ravi"},
-    {"Name": "Reload", "Enabled": true, "Prefix": "reload"},
-    {"Name": "Course", "Enabled": true, "Prefix": "course"}
-  ]
-}
-```
-
-For a complete configuration example, see [config.example.json](./config.example.json).
-
-## Client Setup
-
-1. Download and install a Monster Hunter Frontier client (version G10 or later recommended)
-2. Download [Quest and Scenario Binary Files](https://files.catbox.moe/xf0l7w.7z)
-3. Extract the binary files to the `bin` directory in your Erupe installation
-4. Configure your client to point to your Erupe server IP/hostname
-5. Modify the client's `host.txt` or use a launcher to redirect to your server
-
 ## Database Schemas
 
 Erupe uses a structured schema system:
@@ -265,40 +214,40 @@ Erupe uses a structured schema system:
 
 ## Development
 
+### Branch Strategy
+
+- **main**: Active development branch with the latest features and improvements
+- **stable/v9.2.x**: Stable release branch for those seeking stability over cutting-edge features
+
 ### Running Tests
 
 ```bash
-# Run all tests
-go test -v ./...
-
-# Check for race conditions
-go test -v -race ./...
+go test -v ./...           # Run all tests
+go test -v -race ./...     # Check for race conditions (mandatory before merging)
 ```
 
 ## Troubleshooting
 
-### Common Issues
-
-#### Server won't start
+### Server won't start
 
 - Verify PostgreSQL is running: `systemctl status postgresql` (Linux) or `pg_ctl status` (Windows)
 - Check database credentials in `config.json`
 - Ensure all required ports are available and not blocked by firewall
 
-#### Client can't connect
+### Client can't connect
 
 - Verify server is listening: `netstat -an | grep 53310`
 - Check firewall rules allow traffic on ports 53310, 53312, and 54001+
 - Ensure client's `host.txt` points to correct server IP
 - For remote connections, set `"Host"` in config.json to `0.0.0.0` or your server's IP
 
-#### Database schema errors
+### Database schema errors
 
 - Ensure all patch files are applied in order
 - Check PostgreSQL logs for detailed error messages
 - Verify database user has sufficient privileges
 
-#### Quest files not loading
+### Quest files not loading
 
 - Confirm `BinPath` in config.json points to extracted quest/scenario files
 - Verify binary files match your `ClientMode` setting
@@ -319,13 +268,16 @@ Enable detailed logging in `config.json`:
 
 ## Resources
 
-- **Binary Files**: [Quest and Scenario Binary Files](https://files.catbox.moe/xf0l7w.7z)
-- **Discord Communities**:
-  - [Mezeporta Square Discord](https://discord.gg/DnwcpXM488)
-  - [Mogapedia's Discord](https://discord.gg/f77VwBX5w7) (French Monster Hunter community, current Erupe maintainers)
-  - [PewPewDojo Discord](https://discord.gg/CFnzbhQ)
+- **Quest/Scenario Files**: [Download (catbox)](https://files.catbox.moe/xf0l7w.7z)
 - **Documentation**: [Erupe Wiki](https://github.com/Mezeporta/Erupe/wiki)
-- **FAQ**: [Community FAQ Pastebin](https://pastebin.com/QqAwZSTC)
+- **Discord Communities**:
+  - [Mezeporta Square](https://discord.gg/DnwcpXM488)
+  - [Mogapedia](https://discord.gg/f77VwBX5w7) (French Monster Hunter community, current Erupe maintainers)
+  - [PewPewDojo](https://discord.gg/CFnzbhQ)
+- **Community Tools**:
+  - [Ferias](https://xl3lackout.github.io/MHFZ-Ferias-English-Project/) — Material and item database
+  - [Damage Calculator](https://mh.fist.moe/damagecalc.html) — Online damage calculator
+  - [Armor Set Searcher](https://github.com/matthe815/mhfz-ass/releases) — Armor set search application
 
 ## Changelog
 
