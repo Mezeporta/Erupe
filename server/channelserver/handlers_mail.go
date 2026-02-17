@@ -108,7 +108,7 @@ func GetMailListForCharacter(s *Session, charID uint32) ([]Mail, error) {
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	allMail := make([]Mail, 0)
 

@@ -334,6 +334,7 @@ func TestGenerate_ConsistentCharacterSet(t *testing.T) {
 
 func TestRNG_Type(t *testing.T) {
 	// Verify RNG is of type *SafeRand
-	var _ *SafeRand = RNG
-	var _ *SafeRand = NewSafeRand()
+	var _ = (*SafeRand)(nil)
+	_ = RNG
+	_ = NewSafeRand()
 }

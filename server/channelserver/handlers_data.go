@@ -75,7 +75,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		characterSaveData.Save(s)
 		s.logger.Info("Wrote recompressed savedata back to DB.")
 	} else {
-		s.rawConn.Close()
+		_ = s.rawConn.Close()
 		s.logger.Warn("Save cancelled due to corruption.")
 		if s.server.erupeConfig.DeleteOnSaveCorruption {
 			if _, err := s.server.db.Exec("UPDATE characters SET deleted=true WHERE id=$1", s.charID); err != nil {
@@ -164,7 +164,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 	err := s.server.db.QueryRow("SELECT savedata FROM characters WHERE id = $1", s.charID).Scan(&data)
 	if err != nil || len(data) == 0 {
 		s.logger.Warn(fmt.Sprintf("Failed to load savedata (CID: %d)", s.charID), zap.Error(err))
-		s.rawConn.Close() // Terminate the connection
+		_ = s.rawConn.Close() // Terminate the connection
 		return
 	}
 	doAckBufSucceed(s, pkt.AckHandle, data)

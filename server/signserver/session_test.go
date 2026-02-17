@@ -354,8 +354,8 @@ func TestSessionWorkWithDevModeLogging(t *testing.T) {
 	}
 
 	clientConn, serverConn := net.Pipe()
-	defer clientConn.Close()
-	defer serverConn.Close()
+	defer func() { _ = clientConn.Close() }()
+	defer func() { _ = serverConn.Close() }()
 
 	session := &Session{
 		logger:    logger,
@@ -364,7 +364,7 @@ func TestSessionWorkWithDevModeLogging(t *testing.T) {
 		cryptConn: network.NewCryptConn(serverConn),
 	}
 
-	clientConn.Close()
+	_ = clientConn.Close()
 
 	session.work()
 }
@@ -380,7 +380,7 @@ func TestSessionWorkWithEmptyRead(t *testing.T) {
 	}
 
 	clientConn, serverConn := net.Pipe()
-	defer serverConn.Close()
+	defer func() { _ = serverConn.Close() }()
 
 	session := &Session{
 		logger:    logger,
@@ -389,7 +389,7 @@ func TestSessionWorkWithEmptyRead(t *testing.T) {
 		cryptConn: network.NewCryptConn(serverConn),
 	}
 
-	clientConn.Close()
+	_ = clientConn.Close()
 
 	session.work()
 }

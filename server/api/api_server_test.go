@@ -124,7 +124,7 @@ func TestAPIServerStart(t *testing.T) {
 		// This might fail if the server didn't start properly or port is blocked
 		t.Logf("Failed to connect to server: %v", err)
 	} else {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
 			t.Logf("Unexpected status code: %d", resp.StatusCode)
 		}

@@ -327,7 +327,7 @@ func handleMsgMhfGetTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 		if err != nil {
 			s.logger.Error("Failed to query tower mission scores", zap.Error(err))
 		} else {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 			for rows.Next() {
 				temp := TenrouiraiCharScore{}
 				_ = rows.Scan(&temp.Name, &temp.Score)

@@ -60,7 +60,7 @@ func SetupTestDB(t *testing.T) *sqlx.DB {
 
 	// Test connection
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Skipf("Test database not available: %v. Run: docker compose -f docker/docker-compose.test.yml up -d", err)
 		return nil
 	}
@@ -207,7 +207,7 @@ func findProjectRoot(t *testing.T) string {
 func TeardownTestDB(t *testing.T, db *sqlx.DB) {
 	t.Helper()
 	if db != nil {
-		db.Close()
+		_ = db.Close()
 	}
 }
 

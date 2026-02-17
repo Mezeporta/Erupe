@@ -216,7 +216,7 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	bf := byteframe.NewByteFrame()
 

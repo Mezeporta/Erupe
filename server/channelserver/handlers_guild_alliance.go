@@ -52,7 +52,7 @@ func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {
 		s.logger.Error("Failed to retrieve alliance data from database", zap.Error(err))
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	hasRow := rows.Next()
 	if !hasRow {
 		return nil, nil

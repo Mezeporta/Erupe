@@ -227,7 +227,7 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 		if err != nil {
 			s.logger.Error("Failed to query mercenary loans", zap.Error(err))
 		} else {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 			for rows.Next() {
 				if err := rows.Scan(&name, &cid, &pactID); err != nil {
 					continue

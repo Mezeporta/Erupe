@@ -422,7 +422,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 
-		rows.Close()
+		_ = rows.Close()
 		_ = tx.Commit()
 	}
 

@@ -139,7 +139,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 	var loginBoosts []loginBoost
 	rows, err := s.server.db.Queryx("SELECT week_req, expiration, reset FROM login_boost WHERE char_id=$1 ORDER BY week_req", s.charID)
 	if err != nil || s.server.erupeConfig.GameplayOptions.DisableLoginBoost {
-		rows.Close()
+		_ = rows.Close()
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 35))
 		return
 	}

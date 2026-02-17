@@ -445,7 +445,7 @@ func TestServerHandleConnectionImmediateClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Dial() error: %v", err)
 	}
-	conn.Close()
+	_ = conn.Close()
 
 	time.Sleep(50 * time.Millisecond)
 }
@@ -477,7 +477,7 @@ func TestServerHandleConnectionShortInit(t *testing.T) {
 		t.Fatalf("Dial() error: %v", err)
 	}
 	_, _ = conn.Write([]byte{0, 0, 0, 0})
-	conn.Close()
+	_ = conn.Close()
 
 	time.Sleep(50 * time.Millisecond)
 }
@@ -517,6 +517,6 @@ func TestServerMultipleConnections(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	for _, conn := range conns {
-		conn.Close()
+		_ = conn.Close()
 	}
 }

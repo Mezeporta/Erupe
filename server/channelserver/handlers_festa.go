@@ -193,7 +193,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	if err != nil {
 		s.logger.Error("Failed to query festa schedule", zap.Error(err))
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			_ = rows.Scan(&id, &start)
 		}
@@ -252,7 +252,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	if err != nil {
 		s.logger.Error("Failed to query festa trials", zap.Error(err))
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			if err := rows.StructScan(&trial); err != nil {
 				continue
@@ -575,7 +575,7 @@ func handleMsgMhfEnumerateFestaPersonalPrize(s *Session, p mhfpacket.MHFPacket) 
 	if err != nil {
 		s.logger.Error("Failed to query festa personal prizes", zap.Error(err))
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			prize := &Prize{}
 			if err := rows.StructScan(&prize); err != nil {
@@ -605,7 +605,7 @@ func handleMsgMhfEnumerateFestaIntermediatePrize(s *Session, p mhfpacket.MHFPack
 	if err != nil {
 		s.logger.Error("Failed to query festa intermediate prizes", zap.Error(err))
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			prize := &Prize{}
 			if err := rows.StructScan(&prize); err != nil {

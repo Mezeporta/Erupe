@@ -103,7 +103,7 @@ func GetGuildMembers(s *Session, guildID uint32, applicants bool) ([]*GuildMembe
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	members := make([]*GuildMember, 0)
 
@@ -128,7 +128,7 @@ func GetCharacterGuildData(s *Session, charID uint32) (*GuildMember, error) {
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	hasRow := rows.Next()
 

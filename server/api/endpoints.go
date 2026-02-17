@@ -319,7 +319,7 @@ func (s *APIServer) ScreenShotGet(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Image not found", http.StatusNotFound)
 			return
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 		// Set content type header to image/jpeg
 		w.Header().Set("Content-Type", "image/jpeg")
 		// Copy the image content to the response writer
@@ -390,7 +390,7 @@ func (s *APIServer) ScreenShot(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				result = Result{Code: "500"}
 			}
-			defer outputFile.Close()
+			defer func() { _ = outputFile.Close() }()
 
 			// Encode the image and write it to the file
 			err = jpeg.Encode(outputFile, img, &jpeg.Options{Quality: s.erupeConfig.Screenshots.UploadQuality})

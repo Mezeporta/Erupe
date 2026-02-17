@@ -73,7 +73,7 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 	if err != nil {
 		s.logger.Error("Failed to query diva schedule", zap.Error(err))
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			_ = rows.Scan(&id, &start)
 		}

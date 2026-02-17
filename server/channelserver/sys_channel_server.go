@@ -223,7 +223,7 @@ func (s *Server) Shutdown() {
 	s.isShuttingDown = true
 	s.Unlock()
 
-	s.listener.Close()
+	_ = s.listener.Close()
 
 	close(s.acceptConns)
 }
@@ -420,7 +420,7 @@ func (s *Server) DisconnectUser(uid uint32) {
 	if err != nil {
 		s.logger.Error("Failed to query characters for disconnect", zap.Error(err))
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			_ = rows.Scan(&cid)
 			cids = append(cids, cid)
@@ -430,7 +430,7 @@ func (s *Server) DisconnectUser(uid uint32) {
 		for _, session := range c.sessions {
 			for _, cid := range cids {
 				if session.charID == cid {
-					session.rawConn.Close()
+					_ = session.rawConn.Close()
 					break
 				}
 			}

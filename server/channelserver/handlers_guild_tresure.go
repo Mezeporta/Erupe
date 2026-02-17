@@ -50,7 +50,7 @@ func handleMsgMhfEnumerateGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 			WHERE gh.guild_id=$2 AND gh.level=2 AND gh.acquired=TRUE
 		`, s.charID, guild.ID)
 		if err != nil {
-			rows.Close()
+			_ = rows.Close()
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
 		} else {

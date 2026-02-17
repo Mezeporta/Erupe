@@ -556,7 +556,7 @@ func GetGuildInfoByID(s *Session, guildID uint32) (*Guild, error) {
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	hasRow := rows.Next()
 
@@ -591,7 +591,7 @@ func GetGuildInfoByCharacterId(s *Session, charID uint32) (*Guild, error) {
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	hasRow := rows.Next()
 
@@ -1884,7 +1884,7 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 					continue
 				}
 				if count == 255 {
-					rows.Close()
+					_ = rows.Close()
 					break
 				}
 				count++

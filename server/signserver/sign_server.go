@@ -61,7 +61,7 @@ func (s *Server) Shutdown() {
 	s.Unlock()
 
 	// This will cause the acceptor goroutine to error and exit gracefully.
-	s.listener.Close()
+	_ = s.listener.Close()
 }
 
 func (s *Server) acceptClients() {
@@ -86,7 +86,7 @@ func (s *Server) acceptClients() {
 
 func (s *Server) handleConnection(conn net.Conn) {
 	s.logger.Debug("New connection", zap.String("RemoteAddr", conn.RemoteAddr().String()))
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Client initalizes the connection with a one-time buffer of 8 NULL bytes.
 	nullInit := make([]byte, 8)

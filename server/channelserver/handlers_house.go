@@ -101,7 +101,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 		if err != nil {
 			s.logger.Error("Failed to query houses by name", zap.Error(err))
 		} else {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 			for rows.Next() {
 				if err := rows.StructScan(&house); err == nil {
 					houses = append(houses, house)

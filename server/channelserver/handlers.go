@@ -132,7 +132,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 		var token string
 		err := s.server.db.QueryRow("SELECT token FROM sign_sessions ss INNER JOIN public.users u on ss.user_id = u.id WHERE token=$1 AND ss.id=$2 AND u.id=(SELECT c.user_id FROM characters c WHERE c.id=$3)", pkt.LoginTokenString, pkt.LoginTokenNumber, pkt.CharID0).Scan(&token)
 		if err != nil {
-			s.rawConn.Close()
+			_ = s.rawConn.Close()
 			s.logger.Warn(fmt.Sprintf("Invalid login token, offending CID: (%d)", pkt.CharID0))
 			return
 		}
@@ -342,7 +342,7 @@ func logoutPlayer(s *Session) {
 	// NOW do cleanup (after save is complete)
 	s.server.Lock()
 	delete(s.server.sessions, s.rawConn)
-	s.rawConn.Close()
+	_ = s.rawConn.Close()
 	s.server.Unlock()
 
 	// Stage cleanup
@@ -1126,7 +1126,7 @@ func handleMsgMhfInfoScenarioCounter(s *Session, p mhfpacket.MHFPacket) {
 	var scenario Scenario
 	scenarioData, err := s.server.db.Queryx("SELECT scenario_id, category_id FROM scenario_counter")
 	if err != nil {
-		scenarioData.Close()
+		_ = scenarioData.Close()
 		s.logger.Error("Failed to get scenario counter info from db", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
