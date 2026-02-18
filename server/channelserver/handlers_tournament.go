@@ -54,7 +54,7 @@ func handleMsgMhfInfoTournament(s *Session, p mhfpacket.MHFPacket) {
 	tournamentInfo21 := []TournamentInfo21{}
 	tournamentInfo22 := []TournamentInfo22{}
 
-	switch pkt.Unk0 {
+	switch pkt.QueryType {
 	case 0:
 		bf.WriteUint32(0)
 		bf.WriteUint32(uint32(len(tournamentInfo0)))

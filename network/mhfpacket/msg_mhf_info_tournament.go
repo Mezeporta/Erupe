@@ -11,8 +11,8 @@ import (
 // MsgMhfInfoTournament represents the MSG_MHF_INFO_TOURNAMENT
 type MsgMhfInfoTournament struct {
 	AckHandle uint32
-	Unk0      uint8
-	Unk1      uint32
+	QueryType    uint8
+	TournamentID uint32
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -23,8 +23,8 @@ func (m *MsgMhfInfoTournament) Opcode() network.PacketID {
 // Parse parses the packet from binary
 func (m *MsgMhfInfoTournament) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
-	m.Unk0 = bf.ReadUint8()
-	m.Unk1 = bf.ReadUint32()
+	m.QueryType = bf.ReadUint8()
+	m.TournamentID = bf.ReadUint32()
 	return nil
 }
 

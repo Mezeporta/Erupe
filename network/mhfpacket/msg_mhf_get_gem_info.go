@@ -11,7 +11,7 @@ import (
 // MsgMhfGetGemInfo represents the MSG_MHF_GET_GEM_INFO
 type MsgMhfGetGemInfo struct {
 	AckHandle uint32
-	Unk0      uint32
+	QueryType uint32
 	Unk1      uint32
 	Unk2      int32
 	Unk3      int32
@@ -28,7 +28,7 @@ func (m *MsgMhfGetGemInfo) Opcode() network.PacketID {
 // Parse parses the packet from binary
 func (m *MsgMhfGetGemInfo) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
-	m.Unk0 = bf.ReadUint32()
+	m.QueryType = bf.ReadUint32()
 	m.Unk1 = bf.ReadUint32()
 	m.Unk2 = bf.ReadInt32()
 	m.Unk3 = bf.ReadInt32()

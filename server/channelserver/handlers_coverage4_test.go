@@ -17,7 +17,7 @@ func TestHandleMsgMhfGetPaperData_Case0(t *testing.T) {
 
 	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
 		AckHandle: 1,
-		Unk2:      0,
+		DataType:      0,
 	})
 
 	select {
@@ -36,7 +36,7 @@ func TestHandleMsgMhfGetPaperData_Case5(t *testing.T) {
 
 	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
 		AckHandle: 1,
-		Unk2:      5,
+		DataType:      5,
 	})
 
 	select {
@@ -55,7 +55,7 @@ func TestHandleMsgMhfGetPaperData_Case6(t *testing.T) {
 
 	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
 		AckHandle: 1,
-		Unk2:      6,
+		DataType:      6,
 	})
 
 	select {
@@ -75,7 +75,7 @@ func TestHandleMsgMhfGetPaperData_GreaterThan1000_KnownKey(t *testing.T) {
 	// 6001 is a known key in paperGiftData
 	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
 		AckHandle: 1,
-		Unk2:      6001,
+		DataType:      6001,
 	})
 
 	select {
@@ -95,7 +95,7 @@ func TestHandleMsgMhfGetPaperData_GreaterThan1000_UnknownKey(t *testing.T) {
 	// 9999 is not a known key in paperGiftData
 	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
 		AckHandle: 1,
-		Unk2:      9999,
+		DataType:      9999,
 	})
 
 	select {
@@ -114,7 +114,7 @@ func TestHandleMsgMhfGetPaperData_DefaultUnknownLessThan1000(t *testing.T) {
 	// Unknown type < 1000, hits default case then falls to else branch
 	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
 		AckHandle: 1,
-		Unk2:      99,
+		DataType:      99,
 	})
 
 	select {

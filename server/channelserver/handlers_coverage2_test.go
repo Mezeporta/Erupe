@@ -134,13 +134,13 @@ func TestHandleMsgMhfOperationInvGuild(t *testing.T) {
 
 // Tests for mercenary handlers that do not require database access.
 
-func TestHandleMsgMhfMercenaryHuntdata_Unk0Is1(t *testing.T) {
+func TestHandleMsgMhfMercenaryHuntdata_RequestTypeIs1(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
 	pkt := &mhfpacket.MsgMhfMercenaryHuntdata{
 		AckHandle: 12345,
-		Unk0:      1,
+		RequestType:      1,
 	}
 
 	handleMsgMhfMercenaryHuntdata(session, pkt)
@@ -155,13 +155,13 @@ func TestHandleMsgMhfMercenaryHuntdata_Unk0Is1(t *testing.T) {
 	}
 }
 
-func TestHandleMsgMhfMercenaryHuntdata_Unk0Is0(t *testing.T) {
+func TestHandleMsgMhfMercenaryHuntdata_RequestTypeIs0(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
 	pkt := &mhfpacket.MsgMhfMercenaryHuntdata{
 		AckHandle: 12345,
-		Unk0:      0,
+		RequestType:      0,
 	}
 
 	handleMsgMhfMercenaryHuntdata(session, pkt)
@@ -176,18 +176,18 @@ func TestHandleMsgMhfMercenaryHuntdata_Unk0Is0(t *testing.T) {
 	}
 }
 
-func TestHandleMsgMhfMercenaryHuntdata_Unk0Is2(t *testing.T) {
+func TestHandleMsgMhfMercenaryHuntdata_RequestTypeIs2(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
 	pkt := &mhfpacket.MsgMhfMercenaryHuntdata{
 		AckHandle: 12345,
-		Unk0:      2,
+		RequestType:      2,
 	}
 
 	handleMsgMhfMercenaryHuntdata(session, pkt)
 
-	// Unk0=2 takes the else branch (same as 0)
+	// RequestType=2 takes the else branch (same as 0)
 	select {
 	case p := <-session.sendPackets:
 		if len(p.data) == 0 {
@@ -557,7 +557,7 @@ func TestHandlersConcurrentInvocations(t *testing.T) {
 			handleMsgSysIssueLogkey(session, &mhfpacket.MsgSysIssueLogkey{AckHandle: id})
 			<-session.sendPackets
 
-			handleMsgMhfMercenaryHuntdata(session, &mhfpacket.MsgMhfMercenaryHuntdata{AckHandle: id, Unk0: 1})
+			handleMsgMhfMercenaryHuntdata(session, &mhfpacket.MsgMhfMercenaryHuntdata{AckHandle: id, RequestType: 1})
 			<-session.sendPackets
 
 			handleMsgMhfEnumerateMercenaryLog(session, &mhfpacket.MsgMhfEnumerateMercenaryLog{AckHandle: id})

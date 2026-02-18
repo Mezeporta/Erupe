@@ -123,8 +123,8 @@ func TestParseSmallLogout(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
-			if pkt.Unk0 != tt.unk0 {
-				t.Errorf("Unk0 = %d, want %d", pkt.Unk0, tt.unk0)
+			if pkt.LogoutType != tt.unk0 {
+				t.Errorf("Unk0 = %d, want %d", pkt.LogoutType, tt.unk0)
 			}
 		})
 	}

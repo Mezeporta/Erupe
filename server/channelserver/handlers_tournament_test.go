@@ -12,7 +12,7 @@ func TestHandleMsgMhfInfoTournament_Type0(t *testing.T) {
 
 	pkt := &mhfpacket.MsgMhfInfoTournament{
 		AckHandle: 12345,
-		Unk0:      0,
+		QueryType:      0,
 	}
 
 	handleMsgMhfInfoTournament(session, pkt)
@@ -34,7 +34,7 @@ func TestHandleMsgMhfInfoTournament_Type1(t *testing.T) {
 
 	pkt := &mhfpacket.MsgMhfInfoTournament{
 		AckHandle: 12345,
-		Unk0:      1,
+		QueryType:      1,
 	}
 
 	handleMsgMhfInfoTournament(session, pkt)

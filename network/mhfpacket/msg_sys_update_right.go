@@ -14,7 +14,7 @@ type MsgSysUpdateRight struct {
 	ClientRespAckHandle uint32 // If non-0, requests the client to send back a MSG_SYS_ACK packet with this value.
 	Bitfield            uint32
 	Rights              []mhfcourse.Course
-	UnkSize             uint16 // Count of some buf up to 0x800 bytes following it.
+	TokenLength         uint16 // Length of the login token/password buffer (up to 0x800 bytes).
 }
 
 // Opcode returns the ID associated with this packet type.

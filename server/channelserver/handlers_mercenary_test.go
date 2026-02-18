@@ -239,7 +239,7 @@ func TestHandleMsgMhfMercenaryHuntdata_Unk0_1(t *testing.T) {
 
 	pkt := &mhfpacket.MsgMhfMercenaryHuntdata{
 		AckHandle: 12345,
-		Unk0:      1,
+		RequestType:      1,
 	}
 
 	handleMsgMhfMercenaryHuntdata(session, pkt)
@@ -261,7 +261,7 @@ func TestHandleMsgMhfMercenaryHuntdata_Unk0_0(t *testing.T) {
 
 	pkt := &mhfpacket.MsgMhfMercenaryHuntdata{
 		AckHandle: 12345,
-		Unk0:      0,
+		RequestType:      0,
 	}
 
 	handleMsgMhfMercenaryHuntdata(session, pkt)

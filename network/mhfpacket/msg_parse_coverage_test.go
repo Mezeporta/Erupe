@@ -298,7 +298,7 @@ func TestBuildCoverage_Implemented(t *testing.T) {
 		defer func() {
 			_ = recover() // may panic due to bug
 		}()
-		pkt := &MsgSysLogout{Unk0: 1}
+		pkt := &MsgSysLogout{LogoutType: 1}
 		bf := byteframe.NewByteFrame()
 		_ = pkt.Build(bf, ctx)
 	})

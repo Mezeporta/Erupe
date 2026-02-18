@@ -148,7 +148,7 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfMercenaryHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfMercenaryHuntdata)
-	if pkt.Unk0 == 1 {
+	if pkt.RequestType == 1 {
 		// Format:
 		// uint8 Hunts
 		// struct Hunt

@@ -23,8 +23,8 @@ type MsgMhfAcquireUdItem struct {
   // personal achievement = 6
   // guild achievement = 7
   RewardType uint8
-  Unk2 uint8 // Number of uint32s to read?
-	Unk3 []byte
+  ItemIDCount uint8
+	Unk3        []byte
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -37,8 +37,8 @@ func (m *MsgMhfAcquireUdItem) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clie
   m.AckHandle = bf.ReadUint32()
 	m.Unk0 = bf.ReadUint8()
 	m.RewardType = bf.ReadUint8()
-  m.Unk2 = bf.ReadUint8()
-  for i := uint8(0); i < m.Unk2; i++ {
+  m.ItemIDCount = bf.ReadUint8()
+  for i := uint8(0); i < m.ItemIDCount; i++ {
     bf.ReadUint32()
   }
 	return nil

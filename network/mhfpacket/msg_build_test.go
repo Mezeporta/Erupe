@@ -359,7 +359,7 @@ func TestBuildParseUpdateObjectBinary(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysUpdateObjectBinary{
-				Unk0: tt.unk0,
+				ObjectHandleID: tt.unk0,
 				Unk1: tt.unk1,
 			}
 
@@ -374,8 +374,8 @@ func TestBuildParseUpdateObjectBinary(t *testing.T) {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
-			if parsed.Unk0 != original.Unk0 {
-				t.Errorf("Unk0 = %d, want %d", parsed.Unk0, original.Unk0)
+			if parsed.ObjectHandleID != original.ObjectHandleID {
+				t.Errorf("Unk0 = %d, want %d", parsed.ObjectHandleID, original.ObjectHandleID)
 			}
 			if parsed.Unk1 != original.Unk1 {
 				t.Errorf("Unk1 = %d, want %d", parsed.Unk1, original.Unk1)
@@ -767,7 +767,7 @@ func TestBuildParseEnumerateDistItem(t *testing.T) {
 				AckHandle: tt.ackHandle,
 				DistType:  tt.distType,
 				Unk1:      tt.unk1,
-				Unk2:      tt.unk2,
+				MaxCount:      tt.unk2,
 			}
 
 			bf := byteframe.NewByteFrame()
@@ -775,7 +775,7 @@ func TestBuildParseEnumerateDistItem(t *testing.T) {
 			bf.WriteUint32(original.AckHandle)
 			bf.WriteUint8(original.DistType)
 			bf.WriteUint8(original.Unk1)
-			bf.WriteUint16(original.Unk2)
+			bf.WriteUint16(original.MaxCount)
 			bf.WriteUint8(0) // Unk3 length (for Z1+ client mode)
 
 			_, _ = bf.Seek(0, io.SeekStart)
@@ -793,8 +793,8 @@ func TestBuildParseEnumerateDistItem(t *testing.T) {
 			if parsed.Unk1 != original.Unk1 {
 				t.Errorf("Unk1 = %d, want %d", parsed.Unk1, original.Unk1)
 			}
-			if parsed.Unk2 != original.Unk2 {
-				t.Errorf("Unk2 = %d, want %d", parsed.Unk2, original.Unk2)
+			if parsed.MaxCount != original.MaxCount {
+				t.Errorf("Unk2 = %d, want %d", parsed.MaxCount, original.MaxCount)
 			}
 		})
 	}

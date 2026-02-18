@@ -273,7 +273,7 @@ func handleMsgMhfGetTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 		Ticket:   []TenrouiraiTicket{{0, 0, 0}},
 	}
 
-	switch pkt.Unk1 {
+	switch pkt.DataType {
 	case 1:
 		for _, tdata := range tenrouirai.Data {
 			bf := byteframe.NewByteFrame()
@@ -329,13 +329,13 @@ func handleMsgMhfGetTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 			data = append(data, bf)
 		}
 	case 5:
-		if pkt.Unk3 > 3 {
-			pkt.Unk3 %= 3
-			if pkt.Unk3 == 0 {
-				pkt.Unk3 = 3
+		if pkt.MissionIndex > 3 {
+			pkt.MissionIndex %= 3
+			if pkt.MissionIndex == 0 {
+				pkt.MissionIndex = 3
 			}
 		}
-		rows, err := s.server.db.Query(fmt.Sprintf(`SELECT name, tower_mission_%d FROM guild_characters gc INNER JOIN characters c ON gc.character_id = c.id WHERE guild_id=$1 AND tower_mission_%d IS NOT NULL ORDER BY tower_mission_%d DESC`, pkt.Unk3, pkt.Unk3, pkt.Unk3), pkt.GuildID)
+		rows, err := s.server.db.Query(fmt.Sprintf(`SELECT name, tower_mission_%d FROM guild_characters gc INNER JOIN characters c ON gc.character_id = c.id WHERE guild_id=$1 AND tower_mission_%d IS NOT NULL ORDER BY tower_mission_%d DESC`, pkt.MissionIndex, pkt.MissionIndex, pkt.MissionIndex), pkt.GuildID)
 		if err != nil {
 			s.logger.Error("Failed to query tower mission scores", zap.Error(err))
 		} else {
@@ -470,7 +470,7 @@ func handleMsgMhfGetGemInfo(s *Session, p mhfpacket.MHFPacket) {
 		gemInfo = append(gemInfo, GemInfo{uint16((i / 5 << 8) + (i%5 + 1)), uint16(v)})
 	}
 
-	switch pkt.Unk0 {
+	switch pkt.QueryType {
 	case 1:
 		for _, info := range gemInfo {
 			bf := byteframe.NewByteFrame()

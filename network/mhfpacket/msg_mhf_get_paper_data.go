@@ -12,9 +12,9 @@ import (
 type MsgMhfGetPaperData struct {
 	// Communicator type, multi-format. This might be valid for only one type.
 	AckHandle uint32
-	Unk0      uint32
-	Unk1      uint32
-	Unk2      uint32
+	Unk0     uint32
+	Unk1     uint32
+	DataType uint32
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -27,7 +27,7 @@ func (m *MsgMhfGetPaperData) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clien
 	m.AckHandle = bf.ReadUint32()
 	m.Unk0 = bf.ReadUint32()
 	m.Unk1 = bf.ReadUint32()
-	m.Unk2 = bf.ReadUint32()
+	m.DataType = bf.ReadUint32()
 	return nil
 }
 

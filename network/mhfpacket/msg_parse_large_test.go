@@ -16,7 +16,7 @@ func TestParseLargeMsgSysUpdateRightBuild(t *testing.T) {
 		ClientRespAckHandle: 0x12345678,
 		Bitfield:            0xDEADBEEF,
 		Rights:              nil,
-		UnkSize:             0,
+		TokenLength:             0,
 	}
 
 	bf := byteframe.NewByteFrame()

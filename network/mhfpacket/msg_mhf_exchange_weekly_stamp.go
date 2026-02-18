@@ -12,7 +12,7 @@ import (
 type MsgMhfExchangeWeeklyStamp struct {
 	AckHandle uint32
 	StampType string
-	Unk1      uint8
+	ExchangeType uint8
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -30,7 +30,7 @@ func (m *MsgMhfExchangeWeeklyStamp) Parse(bf *byteframe.ByteFrame, ctx *clientct
 	case 2:
 		m.StampType = "ex"
 	}
-	m.Unk1 = bf.ReadUint8()
+	m.ExchangeType = bf.ReadUint8()
 	bf.ReadUint16() // Zeroed
 	return nil
 }

@@ -9,7 +9,7 @@ func handleMsgMhfRegisterEvent(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfRegisterEvent)
 	bf := byteframe.NewByteFrame()
 	// Some kind of check if there's already a session
-	if pkt.Unk1 && s.server.getRaviSemaphore() == nil {
+	if pkt.CheckOnly && s.server.getRaviSemaphore() == nil {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}

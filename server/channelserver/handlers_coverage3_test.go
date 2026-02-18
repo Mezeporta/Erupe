@@ -640,7 +640,7 @@ func TestNonTrivialHandlers_TowerGo(t *testing.T) {
 			handleMsgMhfGetTenrouirai(s, &mhfpacket.MsgMhfGetTenrouirai{AckHandle: 1, Unk0: 1})
 		}},
 		{"handleMsgMhfGetTenrouirai_Unknown", func(s *Session) {
-			handleMsgMhfGetTenrouirai(s, &mhfpacket.MsgMhfGetTenrouirai{AckHandle: 1, Unk0: 0, Unk1: 0})
+			handleMsgMhfGetTenrouirai(s, &mhfpacket.MsgMhfGetTenrouirai{AckHandle: 1, Unk0: 0, DataType: 0})
 		}},
 		// handleMsgMhfGetTenrouirai_Type4, handleMsgMhfPostTenrouirai, handleMsgMhfGetGemInfo removed: require DB
 		{"handleMsgMhfGetWeeklySeibatuRankingReward", func(s *Session) {

@@ -110,8 +110,8 @@ func TestMsgSysEnterStageFields(t *testing.T) {
 			if pkt.AckHandle != tt.handle {
 				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.handle)
 			}
-			if pkt.Unk != tt.unk {
-				t.Errorf("Unk = %v, want %v", pkt.Unk, tt.unk)
+			if pkt.IsQuest != tt.unk {
+				t.Errorf("Unk = %v, want %v", pkt.IsQuest, tt.unk)
 			}
 			if pkt.StageID != tt.stageID {
 				t.Errorf("StageID = %q, want %q", pkt.StageID, tt.stageID)

@@ -564,8 +564,8 @@ func TestMsgSysEnterStageParse(t *testing.T) {
 			if pkt.AckHandle != tt.wantHandle {
 				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.wantHandle)
 			}
-			if pkt.Unk != tt.wantUnk {
-				t.Errorf("Unk = %v, want %v", pkt.Unk, tt.wantUnk)
+			if pkt.IsQuest != tt.wantUnk {
+				t.Errorf("Unk = %v, want %v", pkt.IsQuest, tt.wantUnk)
 			}
 			if pkt.StageID != tt.wantStageID {
 				t.Errorf("StageID = %q, want %q", pkt.StageID, tt.wantStageID)
@@ -754,8 +754,8 @@ func TestMsgSysLogoutParse(t *testing.T) {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
-			if pkt.Unk0 != tt.wantUnk0 {
-				t.Errorf("Unk0 = %d, want %d", pkt.Unk0, tt.wantUnk0)
+			if pkt.LogoutType != tt.wantUnk0 {
+				t.Errorf("Unk0 = %d, want %d", pkt.LogoutType, tt.wantUnk0)
 			}
 		})
 	}

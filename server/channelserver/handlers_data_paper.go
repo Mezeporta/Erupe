@@ -60,7 +60,7 @@ func handleMsgMhfGetPaperData(s *Session, p mhfpacket.MHFPacket) {
 	var paperMissions PaperMission
 	var paperGift []PaperGift
 
-	switch pkt.Unk2 {
+	switch pkt.DataType {
 	case 0:
 		paperMissions = PaperMission{
 			[]PaperMissionTimetable{{TimeMidnight(), TimeMidnight().Add(24 * time.Hour)}},
@@ -565,17 +565,17 @@ func handleMsgMhfGetPaperData(s *Session, p mhfpacket.MHFPacket) {
 			{4202, 2, 0, 11469, 1, 1400, 1},
 		}
 	default:
-		if pkt.Unk2 < 1000 {
-			s.logger.Info("PaperData request for unknown type", zap.Uint32("Unk2", pkt.Unk2))
+		if pkt.DataType < 1000 {
+			s.logger.Info("PaperData request for unknown type", zap.Uint32("DataType", pkt.DataType))
 		}
 	}
 
-	if pkt.Unk2 > 1000 {
-		_, ok := paperGiftData[pkt.Unk2]
+	if pkt.DataType > 1000 {
+		_, ok := paperGiftData[pkt.DataType]
 		if ok {
-			paperGift = paperGiftData[pkt.Unk2]
+			paperGift = paperGiftData[pkt.DataType]
 		} else {
-			s.logger.Info("PaperGift request for unknown type", zap.Uint32("Unk2", pkt.Unk2))
+			s.logger.Info("PaperGift request for unknown type", zap.Uint32("DataType", pkt.DataType))
 		}
 		for _, gift := range paperGift {
 			bf := byteframe.NewByteFrame()
@@ -586,7 +586,7 @@ func handleMsgMhfGetPaperData(s *Session, p mhfpacket.MHFPacket) {
 			data = append(data, bf)
 		}
 		doAckEarthSucceed(s, pkt.AckHandle, data)
-	} else if pkt.Unk2 == 0 {
+	} else if pkt.DataType == 0 {
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint16(uint16(len(paperMissions.Timetables)))
 		bf.WriteUint16(uint16(len(paperMissions.Data)))

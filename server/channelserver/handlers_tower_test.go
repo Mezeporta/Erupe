@@ -35,7 +35,7 @@ func TestHandleMsgMhfGetTenrouirai_Default(t *testing.T) {
 	pkt := &mhfpacket.MsgMhfGetTenrouirai{
 		AckHandle: 12345,
 		Unk0:      0,
-		Unk1:      0,
+		DataType:      0,
 	}
 
 	handleMsgMhfGetTenrouirai(session, pkt)

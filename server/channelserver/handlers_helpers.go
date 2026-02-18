@@ -70,7 +70,7 @@ func updateRights(s *Session) {
 		ClientRespAckHandle: 0,
 		Bitfield:            rightsInt,
 		Rights:              s.courses,
-		UnkSize:             0,
+		TokenLength:         0,
 	}
 	s.QueueSendMHFNonBlocking(update)
 }

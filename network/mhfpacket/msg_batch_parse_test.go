@@ -141,7 +141,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
 		}
-		if pkt.AckHandle != 1 || pkt.DistType != 2 || pkt.Unk1 != 3 || pkt.Unk2 != 4 {
+		if pkt.AckHandle != 1 || pkt.DistType != 2 || pkt.Unk1 != 3 || pkt.MaxCount != 4 {
 			t.Error("field mismatch")
 		}
 	})
@@ -206,7 +206,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
 		}
-		if pkt.AckHandle != 1 || pkt.Unk0 != 2 || pkt.WorldID != 3 || pkt.LandID != 4 || !pkt.Unk1 {
+		if pkt.AckHandle != 1 || pkt.Unk0 != 2 || pkt.WorldID != 3 || pkt.LandID != 4 || !pkt.CheckOnly {
 			t.Error("field mismatch")
 		}
 	})
@@ -316,7 +316,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
 		}
-		if pkt.Unk2 != 4 {
+		if pkt.DataType != 4 {
 			t.Error("field mismatch")
 		}
 	})
@@ -433,7 +433,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
 		}
-		if pkt.Unk0 != 2 {
+		if pkt.RequestType != 2 {
 			t.Error("field mismatch")
 		}
 	})
