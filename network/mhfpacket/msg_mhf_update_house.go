@@ -13,7 +13,7 @@ import (
 type MsgMhfUpdateHouse struct {
 	AckHandle uint32
 	State     uint8
-	Unk1      uint8 // Always 0x01
+	HasPassword uint8 // 0 = no password, 1 = has password
 	Password  string
 }
 
@@ -26,7 +26,7 @@ func (m *MsgMhfUpdateHouse) Opcode() network.PacketID {
 func (m *MsgMhfUpdateHouse) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
 	m.State = bf.ReadUint8()
-	m.Unk1 = bf.ReadUint8()
+	m.HasPassword = bf.ReadUint8()
 	bf.ReadUint8() // Zeroed
 	bf.ReadUint8() // Zeroed
 	bf.ReadUint8() // Password length

@@ -455,8 +455,8 @@ func TestParseLargeMsgMhfUpdateHouse(t *testing.T) {
 			if pkt.State != tt.state {
 				t.Errorf("State = %d, want %d", pkt.State, tt.state)
 			}
-			if pkt.Unk1 != 1 {
-				t.Errorf("Unk1 = %d, want 1", pkt.Unk1)
+			if pkt.HasPassword != 1 {
+				t.Errorf("HasPassword = %d, want 1", pkt.HasPassword)
 			}
 			if pkt.Password != tt.password {
 				t.Errorf("Password = %q, want %q", pkt.Password, tt.password)
