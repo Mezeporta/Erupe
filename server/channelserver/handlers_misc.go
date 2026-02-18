@@ -211,11 +211,12 @@ func handleMsgMhfUseUdShopCoin(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfGetEnhancedMinidata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetEnhancedMinidata)
-	// this looks to be the detailed chunk of information you can pull up on players in town
-	var data []byte
-	err := s.server.db.QueryRow("SELECT minidata FROM characters WHERE id = $1", pkt.CharID).Scan(&data)
-	if err != nil {
-		s.logger.Error("Failed to load minidata")
+
+	s.server.minidataLock.RLock()
+	data, ok := s.server.minidataParts[pkt.CharID]
+	s.server.minidataLock.RUnlock()
+
+	if !ok {
 		data = make([]byte, 1)
 	}
 	doAckBufSucceed(s, pkt.AckHandle, data)
@@ -224,10 +225,11 @@ func handleMsgMhfGetEnhancedMinidata(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSetEnhancedMinidata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetEnhancedMinidata)
 	dumpSaveData(s, pkt.RawDataPayload, "minidata")
-	_, err := s.server.db.Exec("UPDATE characters SET minidata=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
-	if err != nil {
-		s.logger.Error("Failed to save minidata", zap.Error(err))
-	}
+
+	s.server.minidataLock.Lock()
+	s.server.minidataParts[s.charID] = pkt.RawDataPayload
+	s.server.minidataLock.Unlock()
+
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 

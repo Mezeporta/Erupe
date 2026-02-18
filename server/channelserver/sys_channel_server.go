@@ -60,6 +60,10 @@ type Server struct {
 	userBinaryPartsLock sync.RWMutex
 	userBinaryParts     map[userBinaryPartID][]byte
 
+	// EnhancedMinidata
+	minidataLock  sync.RWMutex
+	minidataParts map[uint32][]byte
+
 	// Semaphore
 	semaphoreLock  sync.RWMutex
 	semaphore      map[string]*Semaphore
@@ -89,6 +93,7 @@ func NewServer(config *Config) *Server {
 		sessions:        make(map[net.Conn]*Session),
 		stages:          make(map[string]*Stage),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
+		minidataParts:   make(map[uint32][]byte),
 		semaphore:       make(map[string]*Semaphore),
 		semaphoreIndex:  7,
 		discordBot:      config.DiscordBot,
