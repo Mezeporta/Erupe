@@ -393,17 +393,19 @@ func handleMsgSysGetStageBinary(s *Session, p mhfpacket.MHFPacket) {
 		if binaryData, exists := stage.rawBinaryData[stageBinaryKey{pkt.BinaryType0, pkt.BinaryType1}]; exists {
 			doAckBufSucceed(s, pkt.AckHandle, binaryData)
 		} else if pkt.BinaryType1 == 4 {
-			// Unknown binary type that is supposedly generated server side
-			// Temporary response
-			doAckBufSucceed(s, pkt.AckHandle, []byte{})
+			// Server-generated binary used for guild room checks and lobby state.
+			// Earlier clients (G1) crash on a completely empty response when parsing
+			// this during lobby initialization, so return a minimal valid structure
+			// with a zero entry count.
+			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 		} else {
 			s.logger.Warn("Failed to get stage binary", zap.Uint8("BinaryType0", pkt.BinaryType0), zap.Uint8("pkt.BinaryType1", pkt.BinaryType1))
-			s.logger.Warn("Sending blank stage binary")
-			doAckBufSucceed(s, pkt.AckHandle, []byte{})
+			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 		}
 		stage.Unlock()
 	} else {
 		s.logger.Warn("Failed to get stage", zap.String("StageID", pkt.StageID))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
 	s.logger.Debug("MsgSysGetStageBinary Done!")
 }
@@ -435,6 +437,7 @@ func handleMsgSysWaitStageBinary(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, []byte{})
 	} else {
 		s.logger.Warn("Failed to get stage", zap.String("StageID", pkt.StageID))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
 	s.logger.Debug("MsgSysWaitStageBinary Done!")
 }
