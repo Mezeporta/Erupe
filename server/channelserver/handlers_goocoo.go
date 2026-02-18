@@ -41,6 +41,9 @@ func handleMsgMhfEnumerateGuacot(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuacot)
 	for _, goocoo := range pkt.Goocoos {
+		if goocoo.Index > 4 {
+			continue
+		}
 		if goocoo.Data1[0] == 0 {
 			if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE goocoo SET goocoo%d=NULL WHERE id=$1", goocoo.Index), s.charID); err != nil {
 				s.logger.Error("Failed to clear goocoo slot", zap.Error(err))

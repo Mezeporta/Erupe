@@ -329,11 +329,8 @@ func handleMsgMhfGetTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 			data = append(data, bf)
 		}
 	case 5:
-		if pkt.MissionIndex > 3 {
-			pkt.MissionIndex %= 3
-			if pkt.MissionIndex == 0 {
-				pkt.MissionIndex = 3
-			}
+		if pkt.MissionIndex < 1 || pkt.MissionIndex > 3 {
+			pkt.MissionIndex = (pkt.MissionIndex % 3) + 1
 		}
 		rows, err := s.server.db.Query(fmt.Sprintf(`SELECT name, tower_mission_%d FROM guild_characters gc INNER JOIN characters c ON gc.character_id = c.id WHERE guild_id=$1 AND tower_mission_%d IS NOT NULL ORDER BY tower_mission_%d DESC`, pkt.MissionIndex, pkt.MissionIndex, pkt.MissionIndex), pkt.GuildID)
 		if err != nil {

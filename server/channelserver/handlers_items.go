@@ -225,6 +225,10 @@ func handleMsgMhfGetCogInfo(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCheckWeeklyStamp)
+	if pkt.StampType != "hl" && pkt.StampType != "ex" {
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 14))
+		return
+	}
 	var total, redeemed, updated uint16
 	var lastCheck time.Time
 	err := s.server.db.QueryRow(fmt.Sprintf("SELECT %s_checked FROM stamps WHERE character_id=$1", pkt.StampType), s.charID).Scan(&lastCheck)
@@ -259,6 +263,10 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeWeeklyStamp)
+	if pkt.StampType != "hl" && pkt.StampType != "ex" {
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 12))
+		return
+	}
 	var total, redeemed uint16
 	var tktStack mhfitem.MHFItemStack
 	if pkt.ExchangeType == 10 { // Yearly Sub Ex

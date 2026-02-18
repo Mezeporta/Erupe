@@ -154,6 +154,9 @@ func handleMsgMhfResetAchievement(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfAddAchievement(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAddAchievement)
+	if pkt.AchievementID > 32 {
+		return
+	}
 
 	var exists int
 	err := s.server.db.QueryRow("SELECT id FROM achievements WHERE id=$1", s.charID).Scan(&exists)

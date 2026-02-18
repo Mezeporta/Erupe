@@ -43,6 +43,9 @@ func handleMsgMhfUpdateEtcPoint(s *Session, p mhfpacket.MHFPacket) {
 		column = "daily_quests"
 	case 2:
 		column = "promo_points"
+	default:
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	var value int16
@@ -187,9 +190,17 @@ func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
+	if pkt.ArmourID < 10000 || pkt.MogType > 4 {
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	bit := int(pkt.ArmourID) - 10000
-	startByte := (size / 5) * int(pkt.MogType)
-	// psql set_bit could also work but I couldn't get it working
+	sectionSize := size / 5
+	if bit/8 >= sectionSize {
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
+	startByte := sectionSize * int(pkt.MogType)
 	byteInd := bit / 8
 	bitInByte := bit % 8
 	data[startByte+byteInd] |= bits.Reverse8(1 << uint(bitInByte))

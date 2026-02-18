@@ -307,6 +307,10 @@ func handleMsgMhfLoadOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveOtomoAirou)
+	if len(pkt.RawDataPayload) < 2 {
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	dumpSaveData(s, pkt.RawDataPayload, "otomoairou")
 	decomp, err := nullcomp.Decompress(pkt.RawDataPayload[1:])
 	if err != nil {

@@ -208,6 +208,10 @@ func getCharacterName(s *Session, charID uint32) string {
 func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMail)
 
+	if int(pkt.AccIndex) >= len(s.mailList) {
+		doAckBufSucceed(s, pkt.AckHandle, []byte{0})
+		return
+	}
 	mailId := s.mailList[pkt.AccIndex]
 	if mailId == 0 {
 		doAckBufSucceed(s, pkt.AckHandle, []byte{0})
@@ -301,6 +305,10 @@ func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOprtMail)
 
+	if int(pkt.AccIndex) >= len(s.mailList) {
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	mail, err := GetMailByID(s, s.mailList[pkt.AccIndex])
 	if err != nil {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

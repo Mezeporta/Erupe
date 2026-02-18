@@ -58,6 +58,10 @@ type RaviUpdate struct {
 func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysOperateRegister)
 
+	if len(pkt.RawDataPayload) == 0 {
+		return
+	}
+
 	var raviUpdates []RaviUpdate
 	var raviUpdate RaviUpdate
 	// Strip null terminator

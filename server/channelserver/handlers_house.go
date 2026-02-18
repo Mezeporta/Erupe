@@ -277,6 +277,10 @@ func handleMsgMhfLoadDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveDecoMyset)
+	if len(pkt.RawDataPayload) < 3 {
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	var temp []byte
 	err := s.server.db.QueryRow("SELECT decomyset FROM characters WHERE id = $1", s.charID).Scan(&temp)
 	if err != nil {
@@ -432,6 +436,9 @@ func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 	case 1:
 		bf.WriteUint8(0)
 	case 2:
+		if pkt.BoxIndex > 9 {
+			break
+		}
 		switch pkt.BoxType {
 		case 0:
 			if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE warehouse SET item%dname=$1 WHERE character_id=$2", pkt.BoxIndex), pkt.Name, s.charID); err != nil {
@@ -472,6 +479,9 @@ func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
 	initializeWarehouse(s)
 	var data []byte
 	var items []mhfitem.MHFItemStack
+	if index > 10 {
+		return items
+	}
 	_ = s.server.db.QueryRow(fmt.Sprintf(`SELECT item%d FROM warehouse WHERE character_id=$1`, index), s.charID).Scan(&data)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
@@ -487,6 +497,9 @@ func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
 func warehouseGetEquipment(s *Session, index uint8) []mhfitem.MHFEquipment {
 	var data []byte
 	var equipment []mhfitem.MHFEquipment
+	if index > 10 {
+		return equipment
+	}
 	_ = s.server.db.QueryRow(fmt.Sprintf(`SELECT equip%d FROM warehouse WHERE character_id=$1`, index), s.charID).Scan(&data)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
@@ -519,6 +532,10 @@ func handleMsgMhfEnumerateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateWarehouse)
+	if pkt.BoxIndex > 10 {
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	saveStart := time.Now()
 
 	var err error
