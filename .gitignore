@@ -27,3 +27,14 @@ logs/
 
 # Deployment scripts
 deploy.sh
+
+# Editor artifacts
+*.swp
+*.swo
+*~
+
+# Test/build artifacts
+coverage.out
+
+# Claude Code local config
+.claude/
