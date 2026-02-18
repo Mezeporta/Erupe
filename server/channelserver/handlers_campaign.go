@@ -49,6 +49,16 @@ type CampaignReward struct {
 	Deadline time.Time `db:"deadline"`
 }
 
+// campaignRequiredStamps returns the stamp requirement for a campaign,
+// clamping to a minimum of 1. Campaigns with 0 stamps in the DB are
+// treated as requiring a single stamp (code redemption) to unlock.
+func campaignRequiredStamps(stamps int) int {
+	if stamps < 1 {
+		return 1
+	}
+	return stamps
+}
+
 func handleMsgMhfEnumerateCampaign(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateCampaign)
 	bf := byteframe.NewByteFrame()
@@ -168,10 +178,7 @@ func handleMsgMhfStateCampaign(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	bf.WriteUint16(uint16(len(stamps) + 1))
-
-	if required == 0 {
-		required = 1 // TODO: I don't understand how this is supposed to work
-	}
+	required = campaignRequiredStamps(required)
 
 	if len(stamps) >= required && deadline.After(time.Now()) {
 		bf.WriteUint16(2)
@@ -191,7 +198,7 @@ func handleMsgMhfApplyCampaign(s *Session, p mhfpacket.MHFPacket) {
 
 	// Check if the code exists and check if it's a multi-code
 	var multi bool
-	err := s.server.db.QueryRow(`SELECT multi FROM public.campaign_codes WHERE code = $1 GROUP BY multi`, pkt.Code).Scan(&multi)
+	err := s.server.db.QueryRow(`SELECT multi FROM public.campaign_codes WHERE code = $1`, pkt.Code).Scan(&multi)
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -232,10 +239,7 @@ func handleMsgMhfEnumerateItem(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-
-	if required == 0 {
-		required = 1 // TODO: I don't understand how this is supposed to work
-	}
+	required = uint16(campaignRequiredStamps(int(required)))
 
 	if stamps >= required {
 		var items []CampaignReward
