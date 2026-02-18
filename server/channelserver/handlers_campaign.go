@@ -173,10 +173,10 @@ func handleMsgMhfStateCampaign(s *Session, p mhfpacket.MHFPacket) {
 		required = 1 // TODO: I don't understand how this is supposed to work
 	}
 
-	if len(stamps) < required {
-		bf.WriteUint16(0)
-	} else if len(stamps) >= required || deadline.After(time.Now()) {
+	if len(stamps) >= required && deadline.After(time.Now()) {
 		bf.WriteUint16(2)
+	} else {
+		bf.WriteUint16(0)
 	}
 
 	for _, v := range stamps {
@@ -200,16 +200,20 @@ func handleMsgMhfApplyCampaign(s *Session, p mhfpacket.MHFPacket) {
 	// Check if the code is already used
 	var exists bool
 	if multi {
-		s.server.db.QueryRow(`SELECT COUNT(*) FROM public.campaign_state WHERE code = $1 AND character_id = $2`, pkt.Code, s.charID).Scan(&exists)
+		err = s.server.db.QueryRow(`SELECT COUNT(*) > 0 FROM public.campaign_state WHERE code = $1 AND character_id = $2`, pkt.Code, s.charID).Scan(&exists)
 	} else {
-		s.server.db.QueryRow(`SELECT COUNT(*) FROM public.campaign_state WHERE code = $1`, pkt.Code).Scan(&exists)
+		err = s.server.db.QueryRow(`SELECT COUNT(*) > 0 FROM public.campaign_state WHERE code = $1`, pkt.Code).Scan(&exists)
 	}
-	if exists {
+	if err != nil || exists {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
-	s.server.db.Exec(`INSERT INTO public.campaign_state (code, campaign_id, character_id) VALUES ($1, $2, $3)`, pkt.Code, pkt.CampaignID, s.charID)
+	_, err = s.server.db.Exec(`INSERT INTO public.campaign_state (code, campaign_id, character_id) VALUES ($1, $2, $3)`, pkt.Code, pkt.CampaignID, s.charID)
+	if err != nil {
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -218,15 +222,14 @@ func handleMsgMhfEnumerateItem(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 
 	var stamps, required, rewardType uint16
-	var deadline time.Time
 	err := s.server.db.QueryRow(`SELECT COUNT(*) FROM campaign_state WHERE campaign_id = $1 AND character_id = $2`, pkt.CampaignID, s.charID).Scan(&stamps)
 	if err != nil {
-		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	err = s.server.db.QueryRow(`SELECT stamps, reward_type, end_time FROM campaigns WHERE id = $1`, pkt.CampaignID).Scan(&required, &rewardType, &deadline)
+	err = s.server.db.QueryRow(`SELECT stamps, reward_type FROM campaigns WHERE id = $1`, pkt.CampaignID).Scan(&required, &rewardType)
 	if err != nil {
-		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
@@ -238,7 +241,11 @@ func handleMsgMhfEnumerateItem(s *Session, p mhfpacket.MHFPacket) {
 		var items []CampaignReward
 		if rewardType == 2 {
 			var exists int
-			s.server.db.QueryRow(`SELECT COUNT(*) FROM campaign_quest WHERE campaign_id = $1 AND character_id = $2`, pkt.CampaignID, s.charID).Scan(&exists)
+			err = s.server.db.QueryRow(`SELECT COUNT(*) FROM campaign_quest WHERE campaign_id = $1 AND character_id = $2`, pkt.CampaignID, s.charID).Scan(&exists)
+			if err != nil {
+				doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+				return
+			}
 			if exists > 0 {
 				err = s.server.db.Select(&items, `
 					SELECT id, item_type, quantity, item_id, TO_TIMESTAMP(0) AS deadline FROM campaign_rewards
@@ -249,7 +256,7 @@ func handleMsgMhfEnumerateItem(s *Session, p mhfpacket.MHFPacket) {
 				err = s.server.db.Select(&items, `
 					SELECT cr.id, cr.item_type, cr.quantity, cr.item_id, COALESCE(c.end_time, TO_TIMESTAMP(0)) AS deadline FROM campaign_rewards cr
 					JOIN campaigns c ON cr.campaign_id = c.id
-                    WHERE campaign_id = $1 AND item_type = 9`, pkt.CampaignID)
+					WHERE campaign_id = $1 AND item_type = 9`, pkt.CampaignID)
 			}
 		} else {
 			err = s.server.db.Select(&items, `
@@ -259,7 +266,7 @@ func handleMsgMhfEnumerateItem(s *Session, p mhfpacket.MHFPacket) {
 			`, pkt.CampaignID, s.charID)
 		}
 		if err != nil {
-			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+			doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 
@@ -271,7 +278,7 @@ func handleMsgMhfEnumerateItem(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint16(item.ItemID) //HACK:placed quest id in this field to fit with Item No pattern. however it could be another field... possibly the other unks.
 			bf.WriteUint16(0)           //Unk4, gets cast to uint8
 			bf.WriteUint32(0)           //Unk5
-			bf.WriteUint32(uint32(deadline.Unix()))
+			bf.WriteUint32(uint32(item.Deadline.Unix()))
 		}
 		if len(items) == 0 {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -286,7 +293,11 @@ func handleMsgMhfEnumerateItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfAcquireItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireItem)
 	for _, id := range pkt.RewardIDs {
-		s.server.db.Exec(`INSERT INTO campaign_rewards_claimed (reward_id, character_id) VALUES ($1, $2)`, id, s.charID)
+		_, err := s.server.db.Exec(`INSERT INTO campaign_rewards_claimed (reward_id, character_id) VALUES ($1, $2)`, id, s.charID)
+		if err != nil {
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -301,7 +312,7 @@ func handleMsgMhfTransferItem(s *Session, p mhfpacket.MHFPacket) {
 			WHERE eq.id = $1
 		`, pkt.QuestID).Scan(&campaignID)
 		if err == nil {
-			s.server.db.Exec(`INSERT INTO campaign_quest (campaign_id, character_id) VALUES ($1, $2)`, campaignID, s.charID)
+			_, _ = s.server.db.Exec(`INSERT INTO campaign_quest (campaign_id, character_id) VALUES ($1, $2)`, campaignID, s.charID)
 		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

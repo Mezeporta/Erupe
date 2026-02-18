@@ -1,7 +1,7 @@
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.campaigns (
-  id SERIAL PRIMARY KEY,
+  id INTEGER PRIMARY KEY,
   min_hr INTEGER,
   max_hr INTEGER,
   min_sr INTEGER,
@@ -29,27 +29,27 @@ CREATE TABLE IF NOT EXISTS public.campaign_categories (
 
 CREATE TABLE IF NOT EXISTS public.campaign_category_links (
   id SERIAL PRIMARY KEY,
-  campaign_id INTEGER,
-  category_id INTEGER
+  campaign_id INTEGER REFERENCES public.campaigns(id) ON DELETE CASCADE,
+  category_id INTEGER REFERENCES public.campaign_categories(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS public.campaign_rewards (
   id SERIAL PRIMARY KEY,
-  campaign_id INTEGER,
+  campaign_id INTEGER REFERENCES public.campaigns(id) ON DELETE CASCADE,
   item_type INTEGER,
   quantity INTEGER,
   item_id INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS public.campaign_rewards_claimed (
-  character_id INTEGER,
-  reward_id INTEGER
+  character_id INTEGER REFERENCES public.characters(id) ON DELETE CASCADE,
+  reward_id INTEGER REFERENCES public.campaign_rewards(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS public.campaign_state (
   id SERIAL PRIMARY KEY,
-  campaign_id INTEGER,
-  character_id INTEGER,
+  campaign_id INTEGER REFERENCES public.campaigns(id) ON DELETE CASCADE,
+  character_id INTEGER REFERENCES public.characters(id) ON DELETE CASCADE,
   code TEXT
 );
 
@@ -59,8 +59,8 @@ CREATE TABLE IF NOT EXISTS public.campaign_codes (
 );
 
 CREATE TABLE IF NOT EXISTS public.campaign_quest (
-  campaign_id INTEGER,
-  character_id INTEGER
+  campaign_id INTEGER REFERENCES public.campaigns(id) ON DELETE CASCADE,
+  character_id INTEGER REFERENCES public.characters(id) ON DELETE CASCADE
 );
 
 END;
