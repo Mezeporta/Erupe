@@ -188,7 +188,7 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveMercenary)
 	dumpSaveData(s, pkt.MercData, "mercenary")
-	if len(pkt.MercData) > 0 {
+	if len(pkt.MercData) >= 4 {
 		temp := byteframe.NewByteFrameFromBytes(pkt.MercData)
 		if _, err := s.server.db.Exec("UPDATE characters SET savemercenary=$1, rasta_id=$2 WHERE id=$3", pkt.MercData, temp.ReadUint32(), s.charID); err != nil {
 			s.logger.Error("Failed to save mercenary data", zap.Error(err))

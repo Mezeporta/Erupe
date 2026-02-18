@@ -13,6 +13,10 @@ func handleMsgSysDeleteUser(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysSetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysSetUserBinary)
+	if pkt.BinaryType < 1 || pkt.BinaryType > 5 {
+		s.logger.Warn("Invalid BinaryType", zap.Uint8("type", pkt.BinaryType))
+		return
+	}
 	s.server.userBinaryPartsLock.Lock()
 	s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: pkt.BinaryType}] = pkt.RawDataPayload
 	s.server.userBinaryPartsLock.Unlock()
