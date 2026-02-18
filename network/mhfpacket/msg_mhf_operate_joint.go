@@ -8,6 +8,7 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
+// OperateJointAction identifies the alliance (joint) operation to perform.
 type OperateJointAction uint8
 
 const (

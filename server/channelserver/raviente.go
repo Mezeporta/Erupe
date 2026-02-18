@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Raviente holds shared state for the Raviente siege event.
 type Raviente struct {
 	sync.Mutex
 	id       uint16

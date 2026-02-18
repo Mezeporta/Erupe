@@ -8,6 +8,7 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
+// OperateGuildMemberAction identifies the guild member management action.
 type OperateGuildMemberAction uint8
 
 const (

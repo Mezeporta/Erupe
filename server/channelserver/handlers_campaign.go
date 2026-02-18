@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// CampaignEvent represents a promotional campaign event.
 type CampaignEvent struct {
 	ID         uint32
 	Unk0       uint32
@@ -35,6 +36,7 @@ type CampaignEvent struct {
 	Categories []uint16
 }
 
+// CampaignCategory represents a category grouping for campaign events.
 type CampaignCategory struct {
 	ID          uint16
 	Type        uint8
@@ -42,6 +44,7 @@ type CampaignCategory struct {
 	Description string
 }
 
+// CampaignLink links a campaign event to its items/rewards.
 type CampaignLink struct {
 	CategoryID uint16
 	CampaignID uint32

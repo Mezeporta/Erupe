@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Config holds the dependencies required to initialize an APIServer.
 type Config struct {
 	Logger      *zap.Logger
 	DB          *sqlx.DB

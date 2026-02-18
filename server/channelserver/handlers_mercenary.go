@@ -370,6 +370,7 @@ func handleMsgMhfEnumerateAiroulist(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
+// Airou represents Airou (felyne companion) data.
 type Airou struct {
 	ID          uint32
 	Name        []byte
@@ -445,6 +446,7 @@ func getGuildAirouList(s *Session) []Airou {
 	return guildCats
 }
 
+// GetAirouDetails parses Airou data from a ByteFrame.
 func GetAirouDetails(bf *byteframe.ByteFrame) []Airou {
 	catCount := bf.ReadUint8()
 	cats := make([]Airou, catCount)

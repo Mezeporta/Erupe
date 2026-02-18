@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// GuildAdventure represents a guild adventure expedition.
 type GuildAdventure struct {
 	ID          uint32 `db:"id"`
 	Destination uint32 `db:"destination"`

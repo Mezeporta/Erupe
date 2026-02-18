@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// GuildMember represents a guild member with role and stats.
 type GuildMember struct {
 	GuildID         uint32     `db:"guild_id"`
 	CharID          uint32     `db:"character_id"`
@@ -92,6 +93,7 @@ SELECT
 	LEFT JOIN guilds g ON g.id = gc.guild_id
 `
 
+// GetGuildMembers loads all members of a guild.
 func GetGuildMembers(s *Session, guildID uint32, applicants bool) ([]*GuildMember, error) {
 	rows, err := s.server.db.Queryx(fmt.Sprintf(`
 			%s
@@ -120,6 +122,7 @@ func GetGuildMembers(s *Session, guildID uint32, applicants bool) ([]*GuildMembe
 	return members, nil
 }
 
+// GetCharacterGuildData loads a character's guild membership.
 func GetCharacterGuildData(s *Session, charID uint32) (*GuildMember, error) {
 	rows, err := s.server.db.Queryx(fmt.Sprintf("%s	WHERE character.character_id=$1", guildMembersSelectSQL), charID)
 

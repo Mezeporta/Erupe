@@ -28,6 +28,7 @@ END
 FROM guild_alliances ga
 `
 
+// GuildAlliance represents a multi-guild alliance.
 type GuildAlliance struct {
 	ID           uint32    `db:"id"`
 	Name         string    `db:"name"`
@@ -43,6 +44,7 @@ type GuildAlliance struct {
 	SubGuild2   Guild
 }
 
+// GetAllianceData loads alliance data from the database.
 func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {
 	rows, err := s.server.db.Queryx(fmt.Sprintf(`
 		%s

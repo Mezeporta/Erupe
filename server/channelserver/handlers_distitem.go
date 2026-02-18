@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Distribution represents an item distribution event.
 type Distribution struct {
 	ID              uint32    `db:"id"`
 	Deadline        time.Time `db:"deadline"`
@@ -119,6 +120,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
+// DistributionItem represents a single item in a distribution.
 type DistributionItem struct {
 	ItemType uint8  `db:"item_type"`
 	ID       uint32 `db:"id"`

@@ -13,6 +13,8 @@ import (
 var mShiftIndex = 0
 var mFlag = byte(0)
 
+// UnpackSimple decompresses a JPK type-3 compressed byte slice. If the data
+// does not start with the JKR magic header it is returned unchanged.
 func UnpackSimple(data []byte) []byte {
 	mShiftIndex = 0
 	mFlag = byte(0)
@@ -40,6 +42,8 @@ func UnpackSimple(data []byte) []byte {
 	return data
 }
 
+// ProcessDecode runs the JPK LZ-style decompression loop, reading compressed
+// tokens from data and writing decompressed bytes into outBuffer.
 func ProcessDecode(data *byteframe.ByteFrame, outBuffer []byte) {
 	outIndex := 0
 
@@ -85,6 +89,8 @@ func ProcessDecode(data *byteframe.ByteFrame, outBuffer []byte) {
 	}
 }
 
+// JPKBitShift reads one bit from the compressed stream's flag byte, refilling
+// the flag from the next byte in data when all 8 bits have been consumed.
 func JPKBitShift(data *byteframe.ByteFrame) byte {
 	mShiftIndex--
 
@@ -96,6 +102,8 @@ func JPKBitShift(data *byteframe.ByteFrame) byte {
 	return (byte)((mFlag >> mShiftIndex) & 1)
 }
 
+// JPKCopy copies length bytes from a previous position in outBuffer (determined
+// by offset back from the current index) to implement LZ back-references.
 func JPKCopy(outBuffer []byte, offset int, length int, index *int) {
 	for i := 0; i < length; i++ {
 		outBuffer[*index] = outBuffer[*index-offset-1]
@@ -103,6 +111,7 @@ func JPKCopy(outBuffer []byte, offset int, length int, index *int) {
 	}
 }
 
+// ReadByte reads a single byte from the ByteFrame.
 func ReadByte(bf *byteframe.ByteFrame) byte {
 	value := bf.ReadUint8()
 	return value

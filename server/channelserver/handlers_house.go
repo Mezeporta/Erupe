@@ -47,6 +47,7 @@ func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
+// HouseData represents player house/my house data.
 type HouseData struct {
 	CharID        uint32 `db:"id"`
 	HR            uint16 `db:"hr"`
@@ -329,6 +330,7 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
+// Title represents a hunter title entry.
 type Title struct {
 	ID       uint16    `db:"id"`
 	Acquired time.Time `db:"unlocked_at"`

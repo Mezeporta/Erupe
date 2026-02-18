@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// GetCharacterSaveData loads a character's save data from the database.
 func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error) {
 	result, err := s.server.db.Query("SELECT id, savedata, is_new_character, name FROM characters WHERE id = $1", charID)
 	if err != nil {

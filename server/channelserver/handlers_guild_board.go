@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// MessageBoardPost represents a guild message board post.
 type MessageBoardPost struct {
 	ID        uint32    `db:"id"`
 	StampID   uint32    `db:"stamp_id"`

@@ -48,6 +48,7 @@ func equal(a, b []byte) bool {
 	return true
 }
 
+// BackportQuest converts a quest binary to an older format.
 func BackportQuest(data []byte) []byte {
 	wp := binary.LittleEndian.Uint32(data[0:4]) + 96
 	rp := wp + 4

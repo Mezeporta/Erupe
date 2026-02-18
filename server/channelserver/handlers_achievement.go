@@ -32,6 +32,7 @@ var achievementCurveMap = map[uint8][]int32{
 	32: achievementCurves[3],
 }
 
+// Achievement represents computed achievement data for a character.
 type Achievement struct {
 	Level     uint8
 	Value     uint32
@@ -42,6 +43,7 @@ type Achievement struct {
 	Trophy    uint8
 }
 
+// GetAchData computes achievement level and progress from a raw score.
 func GetAchData(id uint8, score int32) Achievement {
 	curve := achievementCurveMap[id]
 	var ach Achievement

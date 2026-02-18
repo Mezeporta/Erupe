@@ -109,6 +109,7 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
+// CafeBonus represents a cafe duration bonus reward entry.
 type CafeBonus struct {
 	ID       uint32 `db:"id"`
 	TimeReq  uint32 `db:"time_req"`

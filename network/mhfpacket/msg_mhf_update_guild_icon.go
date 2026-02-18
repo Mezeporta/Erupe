@@ -8,6 +8,7 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
+// GuildIconMsgPart represents one graphical part of a guild icon (emblem).
 type GuildIconMsgPart struct {
 	Index    uint16
 	ID       uint16

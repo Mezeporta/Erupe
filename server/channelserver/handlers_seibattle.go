@@ -6,27 +6,32 @@ import (
 	"time"
 )
 
+// SeibattleTimetable represents a seibattle schedule entry.
 type SeibattleTimetable struct {
 	Start time.Time
 	End   time.Time
 }
 
+// SeibattleKeyScore represents a seibattle key score.
 type SeibattleKeyScore struct {
 	Unk0 uint8
 	Unk1 int32
 }
 
+// SeibattleCareer represents seibattle career stats.
 type SeibattleCareer struct {
 	Unk0 uint16
 	Unk1 uint16
 	Unk2 uint16
 }
 
+// SeibattleOpponent represents seibattle opponent data.
 type SeibattleOpponent struct {
 	Unk0 int32
 	Unk1 int8
 }
 
+// SeibattleConventionResult represents a seibattle convention result.
 type SeibattleConventionResult struct {
 	Unk0 uint32
 	Unk1 uint16
@@ -35,10 +40,12 @@ type SeibattleConventionResult struct {
 	Unk4 uint16
 }
 
+// SeibattleCharScore represents a seibattle per-character score.
 type SeibattleCharScore struct {
 	Unk0 uint32
 }
 
+// SeibattleCurResult represents a seibattle current result.
 type SeibattleCurResult struct {
 	Unk0 uint32
 	Unk1 uint16
@@ -46,6 +53,7 @@ type SeibattleCurResult struct {
 	Unk3 uint16
 }
 
+// Seibattle represents complete seibattle data.
 type Seibattle struct {
 	Timetable        []SeibattleTimetable
 	KeyScore         []SeibattleKeyScore
@@ -159,6 +167,7 @@ func handleMsgMhfGetBreakSeibatuLevelReward(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
+// WeeklySeibatuRankingReward represents a weekly seibattle ranking reward.
 type WeeklySeibatuRankingReward struct {
 	Unk0 int32
 	Unk1 int32

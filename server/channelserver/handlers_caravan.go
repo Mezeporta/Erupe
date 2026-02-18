@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// RyoudamaReward represents a caravan (Ryoudama) reward entry.
 type RyoudamaReward struct {
 	Unk0 uint8
 	Unk1 uint8
@@ -16,22 +17,26 @@ type RyoudamaReward struct {
 	Unk5 uint16
 }
 
+// RyoudamaKeyScore represents a caravan key score entry.
 type RyoudamaKeyScore struct {
 	Unk0 uint8
 	Unk1 int32
 }
 
+// RyoudamaCharInfo represents per-character caravan info.
 type RyoudamaCharInfo struct {
 	CID  uint32
 	Unk0 int32
 	Name string
 }
 
+// RyoudamaBoostInfo represents caravan boost status.
 type RyoudamaBoostInfo struct {
 	Start time.Time
 	End   time.Time
 }
 
+// Ryoudama represents complete caravan data.
 type Ryoudama struct {
 	Reward    []RyoudamaReward
 	KeyScore  []RyoudamaKeyScore

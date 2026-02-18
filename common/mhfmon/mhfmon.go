@@ -180,11 +180,13 @@ const (
 	KingShakalaka
 )
 
+// Monster holds display metadata for a single monster species.
 type Monster struct {
 	Name  string
 	Large bool
 }
 
+// Monsters is an ordered table of all MHF monsters, indexed by enemy ID.
 var Monsters = []Monster{
 	{"Mon0", false},
 	{"Rathian", true},

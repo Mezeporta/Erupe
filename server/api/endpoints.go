@@ -24,23 +24,30 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Notification type constants for launcher messages.
 const (
+	// NotificationDefault represents a standard notification.
 	NotificationDefault = iota
+	// NotificationNew represents a new/unread notification.
 	NotificationNew
 )
 
+// LauncherResponse is the JSON payload returned by the /launcher endpoint,
+// containing banners, messages, and links for the game launcher UI.
 type LauncherResponse struct {
 	Banners  []_config.APISignBanner  `json:"banners"`
 	Messages []_config.APISignMessage `json:"messages"`
 	Links    []_config.APISignLink    `json:"links"`
 }
 
+// User represents an authenticated user's session credentials and permissions.
 type User struct {
 	TokenID uint32 `json:"tokenId"`
 	Token   string `json:"token"`
 	Rights  uint32 `json:"rights"`
 }
 
+// Character represents a player character's summary data as returned by the API.
 type Character struct {
 	ID        uint32 `json:"id"`
 	Name      string `json:"name"`
@@ -51,6 +58,7 @@ type Character struct {
 	LastLogin int32  `json:"lastLogin" db:"last_login"`
 }
 
+// MezFes represents the current Mezeporta Festival event schedule and ticket configuration.
 type MezFes struct {
 	ID           uint32   `json:"id"`
 	Start        uint32   `json:"start"`
@@ -60,6 +68,8 @@ type MezFes struct {
 	Stalls       []uint32 `json:"stalls"`
 }
 
+// AuthData is the JSON payload returned after successful login or registration,
+// containing session info, character list, event data, and server notices.
 type AuthData struct {
 	CurrentTS     uint32      `json:"currentTs"`
 	ExpiryTS      uint32      `json:"expiryTs"`
@@ -71,6 +81,7 @@ type AuthData struct {
 	PatchServer   string      `json:"patchServer"`
 }
 
+// ExportData wraps a character's full database row for save export.
 type ExportData struct {
 	Character map[string]interface{} `json:"character"`
 }
@@ -112,6 +123,7 @@ func (s *APIServer) newAuthData(userID uint32, userRights uint32, userTokenID ui
 	return resp
 }
 
+// Launcher handles GET /launcher and returns banners, messages, and links for the launcher UI.
 func (s *APIServer) Launcher(w http.ResponseWriter, r *http.Request) {
 	var respData LauncherResponse
 	respData.Banners = s.erupeConfig.API.Banners
@@ -121,6 +133,8 @@ func (s *APIServer) Launcher(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(respData)
 }
 
+// Login handles POST /login, authenticating a user by username and password
+// and returning a session token with character data.
 func (s *APIServer) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var reqData struct {
@@ -173,6 +187,8 @@ func (s *APIServer) Login(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(respData)
 }
 
+// Register handles POST /register, creating a new user account and returning
+// a session token.
 func (s *APIServer) Register(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var reqData struct {
@@ -213,6 +229,8 @@ func (s *APIServer) Register(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(respData)
 }
 
+// CreateCharacter handles POST /character/create, creating a new character
+// slot for the authenticated user.
 func (s *APIServer) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var reqData struct {
@@ -242,6 +260,8 @@ func (s *APIServer) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(character)
 }
 
+// DeleteCharacter handles POST /character/delete, soft-deleting an existing
+// character or removing an unfinished one.
 func (s *APIServer) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var reqData struct {
@@ -267,6 +287,8 @@ func (s *APIServer) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(struct{}{})
 }
 
+// ExportSave handles POST /character/export, returning the full character
+// database row as JSON for backup purposes.
 func (s *APIServer) ExportSave(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var reqData struct {
@@ -295,6 +317,8 @@ func (s *APIServer) ExportSave(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(save)
 }
+// ScreenShotGet handles GET /api/ss/bbs/{id}, serving a previously uploaded
+// screenshot image by its token ID.
 func (s *APIServer) ScreenShotGet(w http.ResponseWriter, r *http.Request) {
 	// Get the 'id' parameter from the URL
 	token := mux.Vars(r)["id"]
@@ -329,6 +353,8 @@ func (s *APIServer) ScreenShotGet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+// ScreenShot handles POST /api/ss/bbs/upload.php, accepting a JPEG image
+// upload from the game client and saving it to the configured output directory.
 func (s *APIServer) ScreenShot(w http.ResponseWriter, r *http.Request) {
 	type Result struct {
 		XMLName xml.Name `xml:"result"`

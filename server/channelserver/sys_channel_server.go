@@ -264,6 +264,7 @@ func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) 
 	}
 }
 
+// WorldcastMHF broadcasts a packet to all sessions across all channel servers.
 func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, ignoredChannel *Server) {
 	for _, c := range s.Channels {
 		if c == ignoredChannel {
@@ -292,6 +293,7 @@ func (s *Server) BroadcastChatMessage(message string) {
 	}, nil)
 }
 
+// DiscordChannelSend sends a chat message to the configured Discord channel.
 func (s *Server) DiscordChannelSend(charName string, content string) {
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
 		message := fmt.Sprintf("**%s**: %s", charName, content)
@@ -299,6 +301,7 @@ func (s *Server) DiscordChannelSend(charName string, content string) {
 	}
 }
 
+// DiscordScreenShotSend sends a screenshot link to the configured Discord channel.
 func (s *Server) DiscordScreenShotSend(charName string, title string, description string, articleToken string) {
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
 		imageUrl := fmt.Sprintf("%s:%d/api/ss/bbs/%s", s.erupeConfig.Screenshots.Host, s.erupeConfig.Screenshots.Port, articleToken)
@@ -307,6 +310,7 @@ func (s *Server) DiscordScreenShotSend(charName string, title string, descriptio
 	}
 }
 
+// FindSessionByCharID looks up a session by character ID across all channels.
 func (s *Server) FindSessionByCharID(charID uint32) *Session {
 	for _, c := range s.Channels {
 		for _, session := range c.sessions {
@@ -318,6 +322,7 @@ func (s *Server) FindSessionByCharID(charID uint32) *Session {
 	return nil
 }
 
+// DisconnectUser disconnects all sessions belonging to the given user ID.
 func (s *Server) DisconnectUser(uid uint32) {
 	var cid uint32
 	var cids []uint32
@@ -343,6 +348,7 @@ func (s *Server) DisconnectUser(uid uint32) {
 	}
 }
 
+// FindObjectByChar finds a stage object owned by the given character ID.
 func (s *Server) FindObjectByChar(charID uint32) *Object {
 	s.stagesLock.RLock()
 	defer s.stagesLock.RUnlock()
@@ -361,6 +367,7 @@ func (s *Server) FindObjectByChar(charID uint32) *Object {
 	return nil
 }
 
+// HasSemaphore checks if the given session is hosting any semaphore.
 func (s *Server) HasSemaphore(ses *Session) bool {
 	for _, semaphore := range s.semaphore {
 		if semaphore.host == ses {
@@ -370,6 +377,7 @@ func (s *Server) HasSemaphore(ses *Session) bool {
 	return false
 }
 
+// Season returns the current in-game season (0-2) based on server ID and time.
 func (s *Server) Season() uint8 {
 	sid := int64(((s.ID & 0xFF00) - 4096) / 256)
 	return uint8(((TimeAdjusted().Unix() / 86400) + sid) % 3)

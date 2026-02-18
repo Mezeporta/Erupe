@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// TreasureHunt represents a guild treasure hunt entry.
 type TreasureHunt struct {
 	HuntID      uint32    `db:"id"`
 	HostID      uint32    `db:"host_id"`
@@ -147,6 +148,7 @@ func handleMsgMhfOperateGuildTresureReport(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
+// TreasureSouvenir represents a guild treasure souvenir entry.
 type TreasureSouvenir struct {
 	Destination uint32
 	Quantity    uint32

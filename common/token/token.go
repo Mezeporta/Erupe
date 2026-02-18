@@ -12,12 +12,15 @@ type SafeRand struct {
 	rng *rand.Rand
 }
 
+// NewSafeRand creates a SafeRand seeded with the current time.
 func NewSafeRand() *SafeRand {
 	return &SafeRand{
 		rng: rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
+// Intn returns a non-negative pseudo-random int in [0,n). It is safe for
+// concurrent use.
 func (sr *SafeRand) Intn(n int) int {
 	sr.mu.Lock()
 	v := sr.rng.Intn(n)
@@ -25,6 +28,7 @@ func (sr *SafeRand) Intn(n int) int {
 	return v
 }
 
+// Uint32 returns a pseudo-random uint32. It is safe for concurrent use.
 func (sr *SafeRand) Uint32() uint32 {
 	sr.mu.Lock()
 	v := sr.rng.Uint32()
@@ -32,6 +36,8 @@ func (sr *SafeRand) Uint32() uint32 {
 	return v
 }
 
+// RNG is the global concurrency-safe random number generator used throughout
+// the server for generating warehouse IDs, session tokens, and other values.
 var RNG = NewSafeRand()
 
 // Generate returns an alphanumeric token of specified length

@@ -7,6 +7,7 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
+// Goocoo represents a single Goocoo (guacot) companion entry in an update packet.
 type Goocoo struct {
 	Index uint32
 	Data1 []int16

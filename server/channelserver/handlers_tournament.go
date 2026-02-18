@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// TournamentInfo0 represents tournament information (type 0).
 type TournamentInfo0 struct {
 	ID             uint32
 	MaxPlayers     uint32
@@ -28,6 +29,7 @@ type TournamentInfo0 struct {
 	Unk6           string
 }
 
+// TournamentInfo21 represents tournament information (type 21).
 type TournamentInfo21 struct {
 	Unk0 uint32
 	Unk1 uint32
@@ -35,6 +37,7 @@ type TournamentInfo21 struct {
 	Unk3 uint8
 }
 
+// TournamentInfo22 represents tournament information (type 22).
 type TournamentInfo22 struct {
 	Unk0 uint32
 	Unk1 uint32
@@ -110,6 +113,7 @@ func handleMsgMhfEntryTournament(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
+// TournamentReward represents a tournament reward entry.
 type TournamentReward struct {
 	Unk0 uint16
 	Unk1 uint16

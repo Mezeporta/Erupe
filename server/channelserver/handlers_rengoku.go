@@ -107,6 +107,7 @@ const rengokuScoreQuery = `, c.name FROM rengoku_score rs
 LEFT JOIN characters c ON c.id = rs.character_id
 LEFT JOIN guild_characters gc ON gc.character_id = rs.character_id `
 
+// RengokuScore represents a Rengoku (Hunting Road) ranking score.
 type RengokuScore struct {
 	Name  string `db:"name"`
 	Score uint32 `db:"score"`

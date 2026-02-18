@@ -1,6 +1,8 @@
 package network
 
 //revive:disable
+
+// PacketID identifies an MHF network message type.
 type PacketID uint16
 
 //go:generate stringer -type=PacketID

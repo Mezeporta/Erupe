@@ -9,6 +9,7 @@ import (
 	"erupe-ce/server/channelserver/compression/nullcomp"
 )
 
+// SavePointer identifies a section within the character save data blob.
 type SavePointer int
 
 const (
@@ -29,6 +30,7 @@ const (
 	lBookshelfData
 )
 
+// CharacterSaveData holds a character's save data and its parsed fields.
 type CharacterSaveData struct {
 	CharID         uint32
 	Name           string

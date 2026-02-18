@@ -5,6 +5,7 @@ import (
 	"erupe-ce/network/mhfpacket"
 )
 
+// GuildMission represents a guild mission entry.
 type GuildMission struct {
 	ID          uint32
 	Unk         uint32

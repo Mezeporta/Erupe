@@ -48,6 +48,7 @@ func handleMsgMhfReleaseEvent(s *Session, p mhfpacket.MHFPacket) {
 	})
 }
 
+// RaviUpdate represents a Raviente register update entry.
 type RaviUpdate struct {
 	Op   uint8
 	Dest uint8

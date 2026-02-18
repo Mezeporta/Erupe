@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Course represents an active subscription course with its ID and expiry time.
 type Course struct {
 	ID     uint16
 	Expiry time.Time
@@ -39,10 +40,12 @@ var aliases = map[uint16][]string{
 	// 30 = Real NetCafe course
 }
 
+// Aliases returns the human-readable names for this course (e.g. "HunterLife", "HL").
 func (c Course) Aliases() []string {
 	return aliases[c.ID]
 }
 
+// Courses returns all 32 possible course slots with zero-value expiry times.
 func Courses() []Course {
 	courses := make([]Course, 32)
 	for i := range courses {
@@ -51,6 +54,7 @@ func Courses() []Course {
 	return courses
 }
 
+// Value returns the bitmask value for this course (2^ID).
 func (c Course) Value() uint32 {
 	return uint32(math.Pow(2, float64(c.ID)))
 }

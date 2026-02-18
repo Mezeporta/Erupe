@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// ShopItem represents a shop item listing.
 type ShopItem struct {
 	ID           uint32 `db:"id"`
 	ItemID       uint32 `db:"item_id"`
@@ -248,6 +249,7 @@ func handleMsgMhfAcquireExchangeShop(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
+// FPointExchange represents a frontier point exchange entry.
 type FPointExchange struct {
 	ID       uint32 `db:"id"`
 	ItemType uint8  `db:"item_type"`

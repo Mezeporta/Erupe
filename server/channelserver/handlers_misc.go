@@ -241,6 +241,7 @@ func handleMsgMhfGetLobbyCrowd(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0x320))
 }
 
+// TrendWeapon represents trending weapon usage data.
 type TrendWeapon struct {
 	WeaponType uint8
 	WeaponID   uint16

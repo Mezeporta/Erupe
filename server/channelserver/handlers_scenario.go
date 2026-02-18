@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Scenario represents scenario counter data.
 type Scenario struct {
 	MainID uint32
 	// 0 = Basic

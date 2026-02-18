@@ -8,6 +8,7 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
+// CaAchievementHist is a single entry in the CA achievement history packet.
 type CaAchievementHist struct {
 	Unk0 uint32
 	Unk1 uint8

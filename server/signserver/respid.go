@@ -1,7 +1,11 @@
 package signserver
 
+// RespID represents a sign server response code sent to the client
+// to indicate the result of an authentication or session operation.
 type RespID uint8
 
+// Sign server response codes. These values are sent as the first byte of
+// a sign response and map to client-side error messages.
 const (
 	SIGN_UNKNOWN RespID = iota
 	SIGN_SUCCESS

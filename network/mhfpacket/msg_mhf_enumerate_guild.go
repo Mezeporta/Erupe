@@ -7,6 +7,7 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
+// EnumerateGuildType specifies the search/sort criteria for guild enumeration.
 type EnumerateGuildType uint8
 
 const (

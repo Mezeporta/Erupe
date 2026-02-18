@@ -10,11 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// PaperMissionTimetable represents a daily mission schedule entry.
 type PaperMissionTimetable struct {
 	Start time.Time
 	End   time.Time
 }
 
+// PaperMissionData represents daily mission details.
 type PaperMissionData struct {
 	Unk0            uint8
 	Unk1            uint8
@@ -25,11 +27,13 @@ type PaperMissionData struct {
 	Reward2Quantity uint8
 }
 
+// PaperMission represents a daily mission wrapper.
 type PaperMission struct {
 	Timetables []PaperMissionTimetable
 	Data       []PaperMissionData
 }
 
+// PaperData represents complete daily paper data.
 type PaperData struct {
 	Unk0 uint16
 	Unk1 int16
@@ -40,6 +44,7 @@ type PaperData struct {
 	Unk6 int16
 }
 
+// PaperGift represents a paper gift reward entry.
 type PaperGift struct {
 	Unk0 uint16
 	Unk1 uint8

@@ -6,15 +6,18 @@ import (
 	_config "erupe-ce/config"
 )
 
+// MHFItem represents a single item identified by its in-game item ID.
 type MHFItem struct {
 	ItemID uint16
 }
 
+// MHFSigilEffect represents a single effect slot on a sigil with an ID and level.
 type MHFSigilEffect struct {
 	ID    uint16
 	Level uint16
 }
 
+// MHFSigil represents a weapon sigil containing up to three effects.
 type MHFSigil struct {
 	Effects []MHFSigilEffect
 	Unk0    uint8
@@ -23,6 +26,8 @@ type MHFSigil struct {
 	Unk3    uint8
 }
 
+// MHFEquipment represents an equipment piece (weapon or armor) with its
+// decorations and sigils as stored in the player's warehouse.
 type MHFEquipment struct {
 	WarehouseID uint32
 	ItemType    uint8
@@ -34,6 +39,7 @@ type MHFEquipment struct {
 	Unk1        uint16
 }
 
+// MHFItemStack represents a stacked item slot in the warehouse with a quantity.
 type MHFItemStack struct {
 	WarehouseID uint32
 	Item        MHFItem
@@ -41,6 +47,8 @@ type MHFItemStack struct {
 	Unk0        uint32
 }
 
+// ReadWarehouseItem deserializes an MHFItemStack from a ByteFrame, assigning a
+// random warehouse ID if the encoded ID is zero.
 func ReadWarehouseItem(bf *byteframe.ByteFrame) MHFItemStack {
 	var item MHFItemStack
 	item.WarehouseID = bf.ReadUint32()
@@ -53,6 +61,9 @@ func ReadWarehouseItem(bf *byteframe.ByteFrame) MHFItemStack {
 	return item
 }
 
+// DiffItemStacks merges an updated item stack list into an existing one,
+// matching by warehouse ID. New items receive a random ID; items with zero
+// quantity in the old list are removed.
 func DiffItemStacks(o []MHFItemStack, u []MHFItemStack) []MHFItemStack {
 	// o = old, u = update, f = final
 	var f []MHFItemStack
@@ -77,6 +88,7 @@ func DiffItemStacks(o []MHFItemStack, u []MHFItemStack) []MHFItemStack {
 	return f
 }
 
+// ToBytes serializes the item stack to its binary protocol representation.
 func (is MHFItemStack) ToBytes() []byte {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(is.WarehouseID)
@@ -86,6 +98,8 @@ func (is MHFItemStack) ToBytes() []byte {
 	return bf.Data()
 }
 
+// SerializeWarehouseItems serializes a slice of item stacks with a uint16
+// count header for transmission in warehouse response packets.
 func SerializeWarehouseItems(i []MHFItemStack) []byte {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(uint16(len(i)))
@@ -96,6 +110,9 @@ func SerializeWarehouseItems(i []MHFItemStack) []byte {
 	return bf.Data()
 }
 
+// ReadWarehouseEquipment deserializes an MHFEquipment from a ByteFrame. The
+// binary layout varies by game version: sigils are present from G1 onward and
+// an additional field is present from Z1 onward.
 func ReadWarehouseEquipment(bf *byteframe.ByteFrame) MHFEquipment {
 	var equipment MHFEquipment
 	equipment.Decorations = make([]MHFItem, 3)
@@ -134,6 +151,7 @@ func ReadWarehouseEquipment(bf *byteframe.ByteFrame) MHFEquipment {
 	return equipment
 }
 
+// ToBytes serializes the equipment to its binary protocol representation.
 func (e MHFEquipment) ToBytes() []byte {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(e.WarehouseID)
@@ -164,6 +182,8 @@ func (e MHFEquipment) ToBytes() []byte {
 	return bf.Data()
 }
 
+// SerializeWarehouseEquipment serializes a slice of equipment with a uint16
+// count header for transmission in warehouse response packets.
 func SerializeWarehouseEquipment(i []MHFEquipment) []byte {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(uint16(len(i)))

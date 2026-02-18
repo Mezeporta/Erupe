@@ -14,21 +14,25 @@ import (
 	"erupe-ce/network/mhfpacket"
 )
 
+// TowerInfoTRP represents tower RP (points) info.
 type TowerInfoTRP struct {
 	TR  int32
 	TRP int32
 }
 
+// TowerInfoSkill represents tower skill info.
 type TowerInfoSkill struct {
 	TSP    int32
 	Skills []int16 // 64
 }
 
+// TowerInfoHistory represents tower clear history.
 type TowerInfoHistory struct {
 	Unk0 []int16 // 5
 	Unk1 []int16 // 5
 }
 
+// TowerInfoLevel represents tower level info.
 type TowerInfoLevel struct {
 	Floors int32
 	Unk1   int32
@@ -36,6 +40,7 @@ type TowerInfoLevel struct {
 	Unk3   int32
 }
 
+// EmptyTowerCSV creates an empty CSV string of the given length.
 func EmptyTowerCSV(len int) string {
 	temp := make([]string, len)
 	for i := range temp {
@@ -194,6 +199,7 @@ var tenrouiraiData = []TenrouiraiData{
 	{2, 6, 40, 0, 3, 1, 0, 0, 1, 1},
 }
 
+// TenrouiraiProgress represents Tenrouirai (sky corridor) progress.
 type TenrouiraiProgress struct {
 	Page     uint8
 	Mission1 uint16
@@ -201,17 +207,20 @@ type TenrouiraiProgress struct {
 	Mission3 uint16
 }
 
+// TenrouiraiReward represents a Tenrouirai reward.
 type TenrouiraiReward struct {
 	Index    uint8
 	Item     []uint16 // 5
 	Quantity []uint8  // 5
 }
 
+// TenrouiraiKeyScore represents a Tenrouirai key score.
 type TenrouiraiKeyScore struct {
 	Unk0 uint8
 	Unk1 int32
 }
 
+// TenrouiraiData represents Tenrouirai data.
 type TenrouiraiData struct {
 	Block   uint8
 	Mission uint8
@@ -231,17 +240,20 @@ type TenrouiraiData struct {
 	Skill6 uint8 // 50
 }
 
+// TenrouiraiCharScore represents a Tenrouirai per-character score.
 type TenrouiraiCharScore struct {
 	Score int32
 	Name  string
 }
 
+// TenrouiraiTicket represents a Tenrouirai ticket entry.
 type TenrouiraiTicket struct {
 	Unk0 uint8
 	RP   uint32
 	Unk2 uint32
 }
 
+// Tenrouirai represents complete Tenrouirai data.
 type Tenrouirai struct {
 	Progress  []TenrouiraiProgress
 	Reward    []TenrouiraiReward
@@ -429,11 +441,13 @@ func handleMsgMhfPresentBox(s *Session, p mhfpacket.MHFPacket) {
 	doAckEarthSucceed(s, pkt.AckHandle, data)
 }
 
+// GemInfo represents gem (decoration) info.
 type GemInfo struct {
 	Gem      uint16
 	Quantity uint16
 }
 
+// GemHistory represents gem usage history.
 type GemHistory struct {
 	Gem       uint16
 	Message   uint16

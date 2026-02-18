@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Gacha represents a gacha lottery definition.
 type Gacha struct {
 	ID           uint32 `db:"id"`
 	MinGR        uint32 `db:"min_gr"`
@@ -22,6 +23,7 @@ type Gacha struct {
 	Hidden       bool   `db:"hidden"`
 }
 
+// GachaEntry represents a gacha entry (step/box).
 type GachaEntry struct {
 	EntryType      uint8   `db:"entry_type"`
 	ID             uint32  `db:"id"`
@@ -36,6 +38,7 @@ type GachaEntry struct {
 	Name           string  `db:"name"`
 }
 
+// GachaItem represents a single item in a gacha pool.
 type GachaItem struct {
 	ItemType uint8  `db:"item_type"`
 	ItemID   uint16 `db:"item_id"`

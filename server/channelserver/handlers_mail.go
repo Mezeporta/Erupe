@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Mail represents an in-game mail message.
 type Mail struct {
 	ID                   int       `db:"id"`
 	SenderID             uint32    `db:"sender_id"`
@@ -79,6 +80,7 @@ func (m *Mail) MarkRead(s *Session) error {
 	return nil
 }
 
+// GetMailListForCharacter loads all mail for a character.
 func GetMailListForCharacter(s *Session, charID uint32) ([]Mail, error) {
 	rows, err := s.server.db.Queryx(`
 		SELECT
@@ -127,6 +129,7 @@ func GetMailListForCharacter(s *Session, charID uint32) ([]Mail, error) {
 	return allMail, nil
 }
 
+// GetMailByID loads a single mail by ID.
 func GetMailByID(s *Session, ID int) (*Mail, error) {
 	row := s.server.db.QueryRowx(`
 		SELECT
@@ -167,6 +170,7 @@ func GetMailByID(s *Session, ID int) (*Mail, error) {
 	return mail, nil
 }
 
+// SendMailNotification sends a new mail notification to a player.
 func SendMailNotification(s *Session, m *Mail, recipient *Session) {
 	bf := byteframe.NewByteFrame()
 

@@ -8,6 +8,7 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
+// OperateMailOperation identifies the mail operation to perform.
 type OperateMailOperation uint8
 
 const (

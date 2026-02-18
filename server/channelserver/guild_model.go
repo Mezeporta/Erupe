@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// FestivalColor is a festival color identifier string.
 type FestivalColor string
 
 const (
@@ -23,12 +24,14 @@ const (
 	FestivalColorRed  FestivalColor = "red"
 )
 
+// FestivalColorCodes maps festival colors to their numeric codes.
 var FestivalColorCodes = map[FestivalColor]int16{
 	FestivalColorNone: -1,
 	FestivalColorBlue: 0,
 	FestivalColorRed:  1,
 }
 
+// GuildApplicationType is the type of a guild application (applied or invited).
 type GuildApplicationType string
 
 const (
@@ -36,6 +39,7 @@ const (
 	GuildApplicationTypeInvited GuildApplicationType = "invited"
 )
 
+// Guild represents a guild with all its metadata.
 type Guild struct {
 	ID            uint32        `db:"id"`
 	Name          string        `db:"name"`
@@ -64,11 +68,13 @@ type Guild struct {
 	GuildLeader
 }
 
+// GuildLeader holds the character ID and name of a guild's leader.
 type GuildLeader struct {
 	LeaderCharID uint32 `db:"leader_id"`
 	LeaderName   string `db:"leader_name"`
 }
 
+// GuildIconPart represents one graphical part of a guild icon.
 type GuildIconPart struct {
 	Index    uint16
 	ID       uint16
@@ -82,6 +88,7 @@ type GuildIconPart struct {
 	PosY     uint16
 }
 
+// GuildApplication represents a pending guild application or invitation.
 type GuildApplication struct {
 	ID              int                  `db:"id"`
 	GuildID         uint32               `db:"guild_id"`
@@ -91,6 +98,7 @@ type GuildApplication struct {
 	CreatedAt       time.Time            `db:"created_at"`
 }
 
+// GuildIcon is a composite guild icon made up of multiple parts.
 type GuildIcon struct {
 	Parts []GuildIconPart
 }
@@ -467,6 +475,7 @@ func (guild *Guild) HasApplicationForCharID(s *Session, charID uint32) (bool, er
 	return true, nil
 }
 
+// CreateGuild creates a new guild in the database and adds the session's character as its leader.
 func CreateGuild(s *Session, guildName string) (int32, error) {
 	transaction, err := s.server.db.Begin()
 
@@ -539,6 +548,7 @@ func rollbackTransaction(s *Session, transaction *sql.Tx) {
 	}
 }
 
+// GetGuildInfoByID retrieves guild info by guild ID, returning nil if not found.
 func GetGuildInfoByID(s *Session, guildID uint32) (*Guild, error) {
 	rows, err := s.server.db.Queryx(fmt.Sprintf(`
 		%s
@@ -562,6 +572,7 @@ func GetGuildInfoByID(s *Session, guildID uint32) (*Guild, error) {
 	return buildGuildObjectFromDbResult(rows, err, s)
 }
 
+// GetGuildInfoByCharacterId retrieves guild info for a character, including applied guilds.
 func GetGuildInfoByCharacterId(s *Session, charID uint32) (*Guild, error) {
 	rows, err := s.server.db.Queryx(fmt.Sprintf(`
 		%s

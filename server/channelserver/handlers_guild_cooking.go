@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// GuildMeal represents a guild cooking meal entry.
 type GuildMeal struct {
 	ID        uint32    `db:"id"`
 	MealID    uint32    `db:"meal_id"`

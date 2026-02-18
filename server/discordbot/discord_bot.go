@@ -8,6 +8,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// Commands defines the slash commands registered with Discord, including
+// account linking and password management.
 var Commands = []*discordgo.ApplicationCommand{
 	{
 		Name:        "link",
@@ -35,6 +37,8 @@ var Commands = []*discordgo.ApplicationCommand{
 	},
 }
 
+// DiscordBot manages a Discord session and provides methods for relaying
+// messages between the game server and a configured Discord channel.
 type DiscordBot struct {
 	Session      *discordgo.Session
 	config       *_config.Config
@@ -43,11 +47,14 @@ type DiscordBot struct {
 	RelayChannel *discordgo.Channel
 }
 
+// Options holds the configuration and logger required to create a DiscordBot.
 type Options struct {
 	Config *_config.Config
 	Logger *zap.Logger
 }
 
+// NewDiscordBot creates a DiscordBot using the provided options, establishing
+// a Discord session and optionally resolving the relay channel.
 func NewDiscordBot(options Options) (discordBot *DiscordBot, err error) {
 	session, err := discordgo.New("Bot " + options.Config.Discord.BotToken)
 
@@ -77,6 +84,7 @@ func NewDiscordBot(options Options) (discordBot *DiscordBot, err error) {
 	return
 }
 
+// Start opens the websocket connection to Discord.
 func (bot *DiscordBot) Start() (err error) {
 	err = bot.Session.Open()
 
@@ -105,6 +113,8 @@ func (bot *DiscordBot) NormalizeDiscordMessage(message string) string {
 	return result
 }
 
+// RealtimeChannelSend sends a message to the configured relay channel. If no
+// relay channel is configured, the call is a no-op.
 func (bot *DiscordBot) RealtimeChannelSend(message string) (err error) {
 	if bot.RelayChannel == nil {
 		return
@@ -114,6 +124,8 @@ func (bot *DiscordBot) RealtimeChannelSend(message string) (err error) {
 
 	return
 }
+// ReplaceTextAll replaces every match of regex in text by calling handler with
+// the first capture group of each match and substituting the result.
 func ReplaceTextAll(text string, regex *regexp.Regexp, handler func(input string) string) string {
 	result := regex.ReplaceAllFunc([]byte(text), func(s []byte) []byte {
 		input := regex.ReplaceAllString(string(s), `$1`)

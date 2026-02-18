@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Event represents an in-game event entry.
 type Event struct {
 	EventType    uint16
 	Unk1         uint16

@@ -135,6 +135,7 @@ func (b *ByteFrame) DataFromCurrent() []byte {
 	return b.buf[b.index:b.usedSize]
 }
 
+// Index returns the current read/write position in the buffer.
 func (b *ByteFrame) Index() uint {
 	return b.index
 }
