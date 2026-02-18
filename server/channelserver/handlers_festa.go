@@ -311,8 +311,8 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(reward.ItemType)
 		bf.WriteUint16(reward.Quantity)
 		bf.WriteUint16(reward.ItemID)
-		// Not confirmed to be G1 but exists in G3
-		if _config.ErupeConfig.RealClientMode >= _config.G1 {
+		// Confirmed present in G3 via Wii U disassembly of import_festa_info
+		if _config.ErupeConfig.RealClientMode >= _config.G3 {
 			bf.WriteUint16(reward.Unk5)
 			bf.WriteUint16(reward.Unk6)
 			bf.WriteUint8(reward.Unk7)
