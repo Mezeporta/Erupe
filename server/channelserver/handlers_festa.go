@@ -257,6 +257,15 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 			if err := rows.StructScan(&trial); err != nil {
 				continue
 			}
+			// em106 (Odibatorasu) is the last monster added in Forward.5
+			if _config.ErupeConfig.RealClientMode <= _config.F5 {
+				if (trial.Objective == 1 || trial.Objective == 2 || trial.Objective == 3) && trial.GoalID > 106 {
+					continue
+				}
+				if trial.Objective == 4 && trial.GoalID > 6430 {
+					continue
+				}
+			}
 			trials = append(trials, trial)
 		}
 	}
@@ -275,7 +284,6 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	// The Winner and Loser Armor IDs are missing
-	// Item 7011 may not exist in older versions, remove to prevent crashes
 	rewards := []FestaReward{
 		{1, 0, 7, 350, 1520, 0, 0, 0},
 		{1, 0, 7, 1000, 7011, 0, 0, 1},
@@ -302,6 +310,18 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 		{5, 0, 12, 1000, 0, 0, 0, 0},
 		{5, 0, 13, 0, 0, 0, 0, 0},
 		//{5, 0, 1, 0, 0, 0, 0, 0},
+	}
+
+	// Filter out item 7011 (does not exist before G1)
+	if _config.ErupeConfig.RealClientMode <= _config.F5 {
+		filtered := rewards[:0]
+		for _, r := range rewards {
+			if r.ItemType == 7 && r.ItemID == 7011 {
+				continue
+			}
+			filtered = append(filtered, r)
+		}
+		rewards = filtered
 	}
 
 	bf.WriteUint16(uint16(len(rewards)))
