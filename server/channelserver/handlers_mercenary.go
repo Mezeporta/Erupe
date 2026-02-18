@@ -25,6 +25,11 @@ func handleMsgMhfLoadPartner(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSavePartner(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePartner)
+	if len(pkt.RawDataPayload) > 65536 {
+		s.logger.Warn("Partner payload too large", zap.Int("len", len(pkt.RawDataPayload)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	dumpSaveData(s, pkt.RawDataPayload, "partner")
 	_, err := s.server.db.Exec("UPDATE characters SET partner=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
 	if err != nil {
@@ -69,6 +74,11 @@ func handleMsgMhfLoadHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveHunterNavi)
+	if len(pkt.RawDataPayload) > 4096 {
+		s.logger.Warn("HunterNavi payload too large", zap.Int("len", len(pkt.RawDataPayload)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	saveStart := time.Now()
 
 	s.logger.Debug("Hunter Navi save request",
@@ -187,6 +197,11 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveMercenary)
+	if len(pkt.MercData) > 65536 {
+		s.logger.Warn("Mercenary payload too large", zap.Int("len", len(pkt.MercData)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	dumpSaveData(s, pkt.MercData, "mercenary")
 	if len(pkt.MercData) >= 4 {
 		temp := byteframe.NewByteFrameFromBytes(pkt.MercData)

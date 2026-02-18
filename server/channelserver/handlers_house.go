@@ -41,6 +41,11 @@ FROM warehouse
 
 func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateInterior)
+	if len(pkt.InteriorData) > 64 {
+		s.logger.Warn("Interior payload too large", zap.Int("len", len(pkt.InteriorData)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	if _, err := s.server.db.Exec(`UPDATE user_binary SET house_furniture=$1 WHERE id=$2`, pkt.InteriorData, s.charID); err != nil {
 		s.logger.Error("Failed to update house furniture", zap.Error(err))
 	}
@@ -253,6 +258,11 @@ func handleMsgMhfGetMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateMyhouseInfo)
+	if len(pkt.Data) > 512 {
+		s.logger.Warn("MyhouseInfo payload too large", zap.Int("len", len(pkt.Data)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	if _, err := s.server.db.Exec("UPDATE user_binary SET mission=$1 WHERE id=$2", pkt.Data, s.charID); err != nil {
 		s.logger.Error("Failed to update myhouse mission", zap.Error(err))
 	}

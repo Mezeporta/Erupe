@@ -17,6 +17,11 @@ import (
 
 func handleMsgMhfSaveMezfesData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveMezfesData)
+	if len(pkt.RawDataPayload) > 4096 {
+		s.logger.Warn("MezFes payload too large", zap.Int("len", len(pkt.RawDataPayload)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	if _, err := s.server.db.Exec(`UPDATE characters SET mezfes=$1 WHERE id=$2`, pkt.RawDataPayload, s.charID); err != nil {
 		s.logger.Error("Failed to save mezfes data", zap.Error(err))
 	}

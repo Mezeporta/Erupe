@@ -41,6 +41,11 @@ func handleMsgMhfLoadPlateData(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateData)
+	if len(pkt.RawDataPayload) > 262144 {
+		s.logger.Warn("PlateData payload too large", zap.Int("len", len(pkt.RawDataPayload)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	saveStart := time.Now()
 
 	s.logger.Debug("PlateData save request",
@@ -149,6 +154,11 @@ func handleMsgMhfLoadPlateBox(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateBox)
+	if len(pkt.RawDataPayload) > 32768 {
+		s.logger.Warn("PlateBox payload too large", zap.Int("len", len(pkt.RawDataPayload)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 
 	if pkt.IsDataDiff {
 		var data []byte
@@ -224,6 +234,11 @@ func handleMsgMhfLoadPlateMyset(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSavePlateMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateMyset)
+	if len(pkt.RawDataPayload) > 4096 {
+		s.logger.Warn("PlateMyset payload too large", zap.Int("len", len(pkt.RawDataPayload)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	saveStart := time.Now()
 
 	s.logger.Debug("PlateMyset save request",

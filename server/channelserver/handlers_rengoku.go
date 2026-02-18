@@ -16,8 +16,8 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	// saved every floor on road, holds values such as floors progressed, points etc.
 	// can be safely handled by the client
 	pkt := p.(*mhfpacket.MsgMhfSaveRengokuData)
-	if len(pkt.RawDataPayload) < 91 {
-		s.logger.Warn("Rengoku payload too short", zap.Int("len", len(pkt.RawDataPayload)))
+	if len(pkt.RawDataPayload) < 91 || len(pkt.RawDataPayload) > 4096 {
+		s.logger.Warn("Rengoku payload size out of range", zap.Int("len", len(pkt.RawDataPayload)))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}

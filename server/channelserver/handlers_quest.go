@@ -206,6 +206,11 @@ func handleMsgMhfLoadFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveFavoriteQuest)
+	if len(pkt.Data) > 65536 {
+		s.logger.Warn("FavoriteQuest payload too large", zap.Int("len", len(pkt.Data)))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	dumpSaveData(s, pkt.Data, "favquest")
 	if _, err := s.server.db.Exec("UPDATE characters SET savefavoritequest=$1 WHERE id=$2", pkt.Data, s.charID); err != nil {
 		s.logger.Error("Failed to save favorite quest", zap.Error(err))
