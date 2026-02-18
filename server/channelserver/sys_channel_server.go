@@ -223,9 +223,13 @@ func (s *Server) Shutdown() {
 	s.isShuttingDown = true
 	s.Unlock()
 
-	_ = s.listener.Close()
+	if s.listener != nil {
+		_ = s.listener.Close()
+	}
 
-	close(s.acceptConns)
+	if s.acceptConns != nil {
+		close(s.acceptConns)
+	}
 }
 
 func (s *Server) acceptClients() {

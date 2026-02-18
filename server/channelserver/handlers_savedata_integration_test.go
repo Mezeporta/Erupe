@@ -120,7 +120,7 @@ func TestSaveLoad_MonsterKillCounter(t *testing.T) {
 
 	// Initial Koryo points
 	initialPoints := uint32(0)
-	err := db.QueryRow("SELECT kouryou_point FROM characters WHERE id = $1", charID).Scan(&initialPoints)
+	err := db.QueryRow("SELECT COALESCE(kouryou_point, 0) FROM characters WHERE id = $1", charID).Scan(&initialPoints)
 	if err != nil {
 		t.Fatalf("Failed to query initial koryo points: %v", err)
 	}
@@ -197,28 +197,30 @@ func TestSaveLoad_Warehouse(t *testing.T) {
 	userID := CreateTestUser(t, db, "testuser")
 	charID := CreateTestCharacter(t, db, userID, "TestChar")
 
-	// Create test equipment for warehouse
+	// Create test equipment for warehouse (Decorations and Sigils must be initialized)
+	newEquip := func(id uint16, wid uint32) mhfitem.MHFEquipment {
+		e := mhfitem.MHFEquipment{ItemID: id, WarehouseID: wid}
+		e.Decorations = make([]mhfitem.MHFItem, 3)
+		e.Sigils = make([]mhfitem.MHFSigil, 3)
+		for i := range e.Sigils {
+			e.Sigils[i].Effects = make([]mhfitem.MHFSigilEffect, 3)
+		}
+		return e
+	}
 	equipment := []mhfitem.MHFEquipment{
-		{ItemID: 100, WarehouseID: 1},
-		{ItemID: 101, WarehouseID: 2},
-		{ItemID: 102, WarehouseID: 3},
+		newEquip(100, 1),
+		newEquip(101, 2),
+		newEquip(102, 3),
 	}
 
 	// Serialize and save to warehouse
 	serializedEquip := mhfitem.SerializeWarehouseEquipment(equipment)
 
-	// Update warehouse equip0
+	// Initialize warehouse row then update
+	_, _ = db.Exec("INSERT INTO warehouse (character_id) VALUES ($1) ON CONFLICT DO NOTHING", charID)
 	_, err := db.Exec("UPDATE warehouse SET equip0 = $1 WHERE character_id = $2", serializedEquip, charID)
 	if err != nil {
-		// Warehouse entry might not exist, try insert
-		_, err = db.Exec(`
-			INSERT INTO warehouse (character_id, equip0)
-			VALUES ($1, $2)
-			ON CONFLICT (character_id) DO UPDATE SET equip0 = $2
-		`, charID, serializedEquip)
-		if err != nil {
-			t.Fatalf("Failed to save warehouse: %v", err)
-		}
+		t.Fatalf("Failed to save warehouse: %v", err)
 	}
 
 	// Reload warehouse
@@ -368,11 +370,16 @@ func TestSaveLoad_Transmog(t *testing.T) {
 	s.charID = charID
 	s.server.db = db
 
-	// Create transmog/decoration set data
-	transmogData := make([]byte, 100)
-	for i := range transmogData {
-		transmogData[i] = byte((i * 3) % 256)
-	}
+	// Create valid transmog/decoration set data
+	// Format: [version byte][count byte][count * (uint16 index + setSize bytes)]
+	// setSize is 76 for G10+, 68 otherwise
+	setSize := 76 // G10+
+	numSets := 1
+	transmogData := make([]byte, 2+numSets*(2+setSize))
+	transmogData[0] = 1           // version
+	transmogData[1] = byte(numSets) // count
+	transmogData[2] = 0           // index high byte
+	transmogData[3] = 1           // index low byte (set #1)
 
 	// Save transmog data
 	pkt := &mhfpacket.MsgMhfSaveDecoMyset{
@@ -409,23 +416,20 @@ func TestSaveLoad_CraftedEquipment(t *testing.T) {
 	// Crafted equipment would be stored in savedata or warehouse
 	// Let's test warehouse equipment with upgrade levels
 
-	// Create crafted equipment with upgrade level
-	equipment := []mhfitem.MHFEquipment{
-		{
-			ItemID:      5000, // Crafted weapon
-			WarehouseID: 12345,
-			// Upgrade level would be in equipment metadata
-		},
+	// Create crafted equipment with upgrade level (Decorations and Sigils must be initialized)
+	equip := mhfitem.MHFEquipment{ItemID: 5000, WarehouseID: 12345}
+	equip.Decorations = make([]mhfitem.MHFItem, 3)
+	equip.Sigils = make([]mhfitem.MHFSigil, 3)
+	for i := range equip.Sigils {
+		equip.Sigils[i].Effects = make([]mhfitem.MHFSigilEffect, 3)
 	}
+	equipment := []mhfitem.MHFEquipment{equip}
 
 	serialized := mhfitem.SerializeWarehouseEquipment(equipment)
 
 	// Save to warehouse
-	_, err := db.Exec(`
-		INSERT INTO warehouse (character_id, equip0)
-		VALUES ($1, $2)
-		ON CONFLICT (character_id) DO UPDATE SET equip0 = $2
-	`, charID, serialized)
+	_, _ = db.Exec("INSERT INTO warehouse (character_id) VALUES ($1) ON CONFLICT DO NOTHING", charID)
+	_, err := db.Exec("UPDATE warehouse SET equip0 = $1 WHERE character_id = $2", serialized, charID)
 	if err != nil {
 		t.Fatalf("Failed to save crafted equipment: %v", err)
 	}

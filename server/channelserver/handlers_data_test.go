@@ -444,8 +444,6 @@ func TestHandleMsgMhfLoaddata_Integration(t *testing.T) {
 	s.charID = charID
 	s.server.db = db
 	s.server.userBinaryParts = make(map[userBinaryPartID][]byte)
-	s.server.userBinaryPartsLock.Lock()
-	defer s.server.userBinaryPartsLock.Unlock()
 
 	pkt := &mhfpacket.MsgMhfLoaddata{
 		AckHandle: 5678,
@@ -570,7 +568,8 @@ func TestSaveDataCorruptionDetection_Integration(t *testing.T) {
 	s.server.erupeConfig.DeleteOnSaveCorruption = false
 
 	// Create save data with a DIFFERENT name (corruption)
-	corruptedData := make([]byte, 200)
+	// Must be large enough for ZZ save pointer offsets (highest: pKQF at 146728)
+	corruptedData := make([]byte, 150000)
 	copy(corruptedData[88:], []byte("HackedName\x00"))
 	compressed, _ := nullcomp.Compress(corruptedData)
 
@@ -618,7 +617,7 @@ func TestConcurrentSaveData_Integration(t *testing.T) {
 			s.Name = fmt.Sprintf("Char%d", index)
 			s.server.db = db
 
-			saveData := make([]byte, 200)
+			saveData := make([]byte, 150000)
 			copy(saveData[88:], []byte(fmt.Sprintf("Char%d\x00", index)))
 			compressed, _ := nullcomp.Compress(saveData)
 

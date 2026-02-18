@@ -494,7 +494,7 @@ func TestOprMember_EdgeCases_Integration(t *testing.T) {
 			initialList:   "1,2,3",
 			operation:     false, // add
 			targetCharIDs: []uint32{2},
-			wantList:      "1,2,3,2", // CSV helper adds duplicates
+			wantList:      "1,2,3", // CSV helper deduplicates
 		},
 		{
 			name:          "remove_nonexistent_from_list",

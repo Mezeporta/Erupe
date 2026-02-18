@@ -179,11 +179,8 @@ func TestSessionLifecycle_WarehouseDataPersistence(t *testing.T) {
 	serializedEquip := mhfitem.SerializeWarehouseEquipment(equipment)
 
 	// Save to warehouse directly (simulating a save handler)
-	_, err := db.Exec(`
-		INSERT INTO warehouse (character_id, equip0)
-		VALUES ($1, $2)
-		ON CONFLICT (character_id) DO UPDATE SET equip0 = $2
-	`, charID, serializedEquip)
+	_, _ = db.Exec("INSERT INTO warehouse (character_id) VALUES ($1) ON CONFLICT DO NOTHING", charID)
+	_, err := db.Exec("UPDATE warehouse SET equip0 = $1 WHERE character_id = $2", serializedEquip, charID)
 	if err != nil {
 		t.Fatalf("Failed to save warehouse: %v", err)
 	}
@@ -562,11 +559,15 @@ func TestSessionLifecycle_RapidReconnect(t *testing.T) {
 
 // Helper function to create test equipment item with proper initialization
 func createTestEquipmentItem(itemID uint16, warehouseID uint32) mhfitem.MHFEquipment {
+	sigils := make([]mhfitem.MHFSigil, 3)
+	for i := range sigils {
+		sigils[i].Effects = make([]mhfitem.MHFSigilEffect, 3)
+	}
 	return mhfitem.MHFEquipment{
 		ItemID:      itemID,
 		WarehouseID: warehouseID,
 		Decorations: make([]mhfitem.MHFItem, 3),
-		Sigils:      make([]mhfitem.MHFSigil, 3),
+		Sigils:      sigils,
 	}
 }
 
