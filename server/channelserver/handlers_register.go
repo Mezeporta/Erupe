@@ -3,7 +3,6 @@ package channelserver
 import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
-	"strings"
 )
 
 func handleMsgMhfRegisterEvent(s *Session, p mhfpacket.MHFPacket) {
@@ -138,15 +137,6 @@ func (s *Session) notifyRavi() {
 			}
 		}
 	}
-}
-
-func (s *Server) getRaviSemaphore() *Semaphore {
-	for _, semaphore := range s.semaphore {
-		if strings.HasPrefix(semaphore.name, "hs_l0") && strings.HasSuffix(semaphore.name, "3") {
-			return semaphore
-		}
-	}
-	return nil
 }
 
 func handleMsgSysNotifyRegister(s *Session, p mhfpacket.MHFPacket) {}
