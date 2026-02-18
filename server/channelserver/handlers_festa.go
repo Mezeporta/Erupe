@@ -162,6 +162,7 @@ func generateFestaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 	return timestamps
 }
 
+// FestaTrial represents a festa trial/challenge entry.
 type FestaTrial struct {
 	ID        uint32        `db:"id"`
 	Objective uint16        `db:"objective"`
@@ -173,15 +174,16 @@ type FestaTrial struct {
 	Unk       uint16
 }
 
+// FestaReward represents a festa reward entry.
 type FestaReward struct {
 	Unk0     uint8
 	Unk1     uint8
 	ItemType uint16
 	Quantity uint16
 	ItemID   uint16
-	Unk5     uint16
-	Unk6     uint16
-	Unk7     uint8
+	MinHR    uint16 // Minimum Hunter Rank to receive this reward
+	MinSR    uint16 // Minimum Skill Rank (max across weapon types) to receive this reward
+	MinGR    uint8  // Minimum G Rank to receive this reward
 }
 
 func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
@@ -276,6 +278,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 
 	// The Winner and Loser Armor IDs are missing
 	// Item 7011 may not exist in older versions, remove to prevent crashes
+	// Fields: {Unk0, Unk1, ItemType, Quantity, ItemID, MinHR, MinSR, MinGR}
 	rewards := []FestaReward{
 		{1, 0, 7, 350, 1520, 0, 0, 0},
 		{1, 0, 7, 1000, 7011, 0, 0, 1},
@@ -313,9 +316,9 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(reward.ItemID)
 		// Confirmed present in G3 via Wii U disassembly of import_festa_info
 		if _config.ErupeConfig.RealClientMode >= _config.G3 {
-			bf.WriteUint16(reward.Unk5)
-			bf.WriteUint16(reward.Unk6)
-			bf.WriteUint8(reward.Unk7)
+			bf.WriteUint16(reward.MinHR)
+			bf.WriteUint16(reward.MinSR)
+			bf.WriteUint8(reward.MinGR)
 		}
 	}
 	if _config.ErupeConfig.RealClientMode <= _config.G61 {
@@ -558,6 +561,7 @@ func handleMsgMhfAcquireFestaIntermediatePrize(s *Session, p mhfpacket.MHFPacket
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
+// Prize represents a festa prize entry.
 type Prize struct {
 	ID       uint32 `db:"id"`
 	Tier     uint32 `db:"tier"`
