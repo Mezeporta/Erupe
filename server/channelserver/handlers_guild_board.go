@@ -26,7 +26,7 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	if pkt.BoardType == 1 {
 		pkt.MaxPosts = 4
 	}
-	msgs, err := s.server.db.Queryx("SELECT id, stamp_id, title, body, author_id, created_at, liked_by FROM guild_posts WHERE guild_id = $1 AND post_type = $2 ORDER BY created_at DESC", guild.ID, int(pkt.BoardType))
+	msgs, err := s.server.db.Queryx("SELECT id, stamp_id, title, body, author_id, created_at, liked_by FROM guild_posts WHERE guild_id = $1 AND post_type = $2 AND deleted = false ORDER BY created_at DESC", guild.ID, int(pkt.BoardType))
 	if err != nil {
 		s.logger.Error("Failed to get guild messages from db", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -80,15 +80,15 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		if pkt.PostType == 1 {
 			maxPosts = 4
 		}
-		if _, err := s.server.db.Exec(`DELETE FROM guild_posts WHERE id IN (
-			SELECT id FROM guild_posts WHERE guild_id = $1 AND post_type = $2
+		if _, err := s.server.db.Exec(`UPDATE guild_posts SET deleted = true WHERE id IN (
+			SELECT id FROM guild_posts WHERE guild_id = $1 AND post_type = $2 AND deleted = false
 			ORDER BY created_at DESC OFFSET $3
 		)`, guild.ID, pkt.PostType, maxPosts); err != nil {
-			s.logger.Error("Failed to purge excess guild posts", zap.Error(err))
+			s.logger.Error("Failed to soft-delete excess guild posts", zap.Error(err))
 		}
 	case 1: // Delete message
-		if _, err := s.server.db.Exec("DELETE FROM guild_posts WHERE id = $1", pkt.PostID); err != nil {
-			s.logger.Error("Failed to delete guild post", zap.Error(err))
+		if _, err := s.server.db.Exec("UPDATE guild_posts SET deleted = true WHERE id = $1", pkt.PostID); err != nil {
+			s.logger.Error("Failed to soft-delete guild post", zap.Error(err))
 		}
 	case 2: // Update message
 		if _, err := s.server.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE id = $3", pkt.Title, pkt.Body, pkt.PostID); err != nil {
@@ -121,7 +121,7 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		var newPosts int
 		err := s.server.db.QueryRow("SELECT guild_post_checked FROM characters WHERE id = $1", s.charID).Scan(&timeChecked)
 		if err == nil {
-			_ = s.server.db.QueryRow("SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND (EXTRACT(epoch FROM created_at)::int) > $2", guild.ID, timeChecked.Unix()).Scan(&newPosts)
+			_ = s.server.db.QueryRow("SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND deleted = false AND (EXTRACT(epoch FROM created_at)::int) > $2", guild.ID, timeChecked.Unix()).Scan(&newPosts)
 			if newPosts > 0 {
 				doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
 				return
