@@ -66,8 +66,8 @@ func TestMsgSysCreateStageFields(t *testing.T) {
 			if pkt.AckHandle != tt.ackHandle {
 				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.ackHandle)
 			}
-			if pkt.Unk0 != tt.unk0 {
-				t.Errorf("Unk0 = %d, want %d", pkt.Unk0, tt.unk0)
+			if pkt.CreateType != tt.unk0 {
+				t.Errorf("CreateType = %d, want %d", pkt.CreateType, tt.unk0)
 			}
 			if pkt.PlayerCount != tt.playerCount {
 				t.Errorf("PlayerCount = %d, want %d", pkt.PlayerCount, tt.playerCount)

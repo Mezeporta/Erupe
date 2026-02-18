@@ -467,15 +467,15 @@ func TestMsgSysCreateStageParse(t *testing.T) {
 		name        string
 		data        []byte
 		wantHandle  uint32
-		wantUnk0    uint8
-		wantPlayers uint8
-		wantStageID string
+		wantCreateType uint8
+		wantPlayers    uint8
+		wantStageID    string
 	}{
 		{
 			name:        "simple stage",
 			data:        append([]byte{0x00, 0x00, 0x00, 0x01, 0x02, 0x04, 0x05}, append([]byte("test"), 0x00)...),
 			wantHandle:  1,
-			wantUnk0:    2,
+			wantCreateType:    2,
 			wantPlayers: 4,
 			wantStageID: "test",
 		},
@@ -483,7 +483,7 @@ func TestMsgSysCreateStageParse(t *testing.T) {
 			name:        "empty stage ID",
 			data:        []byte{0x12, 0x34, 0x56, 0x78, 0x01, 0x02, 0x00},
 			wantHandle:  0x12345678,
-			wantUnk0:    1,
+			wantCreateType:    1,
 			wantPlayers: 2,
 			wantStageID: "",
 		},
@@ -491,7 +491,7 @@ func TestMsgSysCreateStageParse(t *testing.T) {
 			name:        "with null terminator",
 			data:        append([]byte{0x00, 0x00, 0x00, 0x0A, 0x01, 0x01, 0x08}, append([]byte("stage01"), 0x00)...),
 			wantHandle:  10,
-			wantUnk0:    1,
+			wantCreateType:    1,
 			wantPlayers: 1,
 			wantStageID: "stage01",
 		},
@@ -512,8 +512,8 @@ func TestMsgSysCreateStageParse(t *testing.T) {
 			if pkt.AckHandle != tt.wantHandle {
 				t.Errorf("AckHandle = %d, want %d", pkt.AckHandle, tt.wantHandle)
 			}
-			if pkt.Unk0 != tt.wantUnk0 {
-				t.Errorf("Unk0 = %d, want %d", pkt.Unk0, tt.wantUnk0)
+			if pkt.CreateType != tt.wantCreateType {
+				t.Errorf("CreateType = %d, want %d", pkt.CreateType, tt.wantCreateType)
 			}
 			if pkt.PlayerCount != tt.wantPlayers {
 				t.Errorf("PlayerCount = %d, want %d", pkt.PlayerCount, tt.wantPlayers)
