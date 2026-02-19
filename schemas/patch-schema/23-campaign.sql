@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS public.campaign_rewards (
 
 CREATE TABLE IF NOT EXISTS public.campaign_rewards_claimed (
   character_id INTEGER REFERENCES public.characters(id) ON DELETE CASCADE,
-  reward_id INTEGER REFERENCES public.campaign_rewards(id) ON DELETE CASCADE
+  reward_id INTEGER REFERENCES public.campaign_rewards(id) ON DELETE CASCADE,
+  PRIMARY KEY (character_id, reward_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.campaign_state (
@@ -54,13 +55,15 @@ CREATE TABLE IF NOT EXISTS public.campaign_state (
 );
 
 CREATE TABLE IF NOT EXISTS public.campaign_codes (
-  code TEXT,
-  multi BOOLEAN
+  code TEXT PRIMARY KEY,
+  campaign_id INTEGER REFERENCES public.campaigns(id) ON DELETE CASCADE,
+  multi BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS public.campaign_quest (
   campaign_id INTEGER REFERENCES public.campaigns(id) ON DELETE CASCADE,
-  character_id INTEGER REFERENCES public.characters(id) ON DELETE CASCADE
+  character_id INTEGER REFERENCES public.characters(id) ON DELETE CASCADE,
+  PRIMARY KEY (campaign_id, character_id)
 );
 
 END;

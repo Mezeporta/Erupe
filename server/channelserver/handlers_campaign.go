@@ -106,11 +106,7 @@ func handleMsgMhfEnumerateCampaign(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(0)
 		bf.WriteUint32(uint32(event.Start.Unix()))
 		bf.WriteUint32(uint32(event.End.Unix()))
-		if event.End.After(time.Now()) {
-			bf.WriteBool(true)
-		} else {
-			bf.WriteBool(false)
-		}
+		bf.WriteBool(event.End.Before(time.Now()))
 		ps.Uint8(bf, event.Title, true)
 		ps.Uint8(bf, event.Reward, true)
 		ps.Uint8(bf, "", false)
@@ -177,7 +173,7 @@ func handleMsgMhfStateCampaign(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	bf.WriteUint16(uint16(len(stamps) + 1))
+	bf.WriteUint16(uint16(len(stamps)))
 	required = campaignRequiredStamps(required)
 
 	if len(stamps) >= required && deadline.After(time.Now()) {
@@ -196,9 +192,9 @@ func handleMsgMhfStateCampaign(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfApplyCampaign(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfApplyCampaign)
 
-	// Check if the code exists and check if it's a multi-code
+	// Check if the code exists, belongs to this campaign, and check if it's a multi-code
 	var multi bool
-	err := s.server.db.QueryRow(`SELECT multi FROM public.campaign_codes WHERE code = $1`, pkt.Code).Scan(&multi)
+	err := s.server.db.QueryRow(`SELECT multi FROM public.campaign_codes WHERE code = $1 AND campaign_id = $2`, pkt.Code, pkt.CampaignID).Scan(&multi)
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -316,7 +312,11 @@ func handleMsgMhfTransferItem(s *Session, p mhfpacket.MHFPacket) {
 			WHERE eq.id = $1
 		`, pkt.QuestID).Scan(&campaignID)
 		if err == nil {
-			_, _ = s.server.db.Exec(`INSERT INTO campaign_quest (campaign_id, character_id) VALUES ($1, $2)`, campaignID, s.charID)
+			_, err = s.server.db.Exec(`INSERT INTO campaign_quest (campaign_id, character_id) VALUES ($1, $2)`, campaignID, s.charID)
+			if err != nil {
+				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+				return
+			}
 		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

@@ -284,6 +284,7 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 			FROM campaign_rewards
 			WHERE item_type = 9
 			AND item_id = $1
+			LIMIT 1
 		) AND character_id = $2`, questId, s.charID).Scan(&stamps)
 		if err != nil {
 			bf.WriteBool(false)
@@ -295,6 +296,7 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 				FROM campaign_rewards
 				WHERE item_type = 9
 				AND item_id = $1
+				LIMIT 1
 			)`, questId).Scan(&required, &deadline)
 			required = campaignRequiredStamps(required)
 			// Check if there are enough stamps to activate the quest, the deadline hasn't passed, and there are no errors
