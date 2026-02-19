@@ -11,7 +11,7 @@ INSERT INTO
     max_gr,
     reward_type,
     stamps,
-    unk,
+    receive_type,
     background_id,
     start_time,
     end_time,

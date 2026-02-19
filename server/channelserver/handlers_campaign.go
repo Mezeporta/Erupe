@@ -19,7 +19,7 @@ type CampaignEvent struct {
 	MaxGR        int16     `db:"max_gr"`
 	RewardType   uint16    `db:"reward_type"`
 	Stamps       uint8     `db:"stamps"`
-	Unk          uint8     `db:"unk"`
+	ReceiveType  uint8     `db:"receive_type"`
 	BackgroundID uint16    `db:"background_id"`
 	Start        time.Time `db:"start_time"`
 	End          time.Time `db:"end_time"`
@@ -67,7 +67,7 @@ func handleMsgMhfEnumerateCampaign(s *Session, p mhfpacket.MHFPacket) {
 	var categories []CampaignCategory
 	var campaignLinks []CampaignLink
 
-	err := s.server.db.Select(&events, "SELECT id,min_hr,max_hr,min_sr,max_sr,min_gr,max_gr,reward_type,stamps,unk,background_id,start_time,end_time,title,reward,link,code_prefix FROM campaigns")
+	err := s.server.db.Select(&events, "SELECT id,min_hr,max_hr,min_sr,max_sr,min_gr,max_gr,reward_type,stamps,receive_type,background_id,start_time,end_time,title,reward,link,code_prefix FROM campaigns")
 	if err != nil {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -101,7 +101,7 @@ func handleMsgMhfEnumerateCampaign(s *Session, p mhfpacket.MHFPacket) {
 		}
 		bf.WriteUint16(event.RewardType)
 		bf.WriteUint8(event.Stamps)
-		bf.WriteUint8(event.Unk) // Related to stamp count
+		bf.WriteUint8(event.ReceiveType)
 		bf.WriteUint16(event.BackgroundID)
 		bf.WriteUint16(0)
 		bf.WriteUint32(uint32(event.Start.Unix()))
@@ -122,7 +122,7 @@ func handleMsgMhfEnumerateCampaign(s *Session, p mhfpacket.MHFPacket) {
 	}
 	for _, event := range events {
 		bf.WriteUint32(event.ID)
-		bf.WriteUint8(1) // Related to stamp count
+		bf.WriteUint8(uint8(campaignRequiredStamps(int(event.Stamps))))
 		bf.WriteBytes([]byte(event.Prefix))
 	}
 

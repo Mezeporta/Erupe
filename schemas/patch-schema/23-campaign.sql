@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.campaigns (
   max_gr INTEGER,
   reward_type INTEGER,
   stamps INTEGER,
-  unk INTEGER,
+  receive_type INTEGER,
   background_id INTEGER,
   start_time TIMESTAMP WITH TIME ZONE,
   end_time TIMESTAMP WITH TIME ZONE,
