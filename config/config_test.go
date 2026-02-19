@@ -536,6 +536,34 @@ func TestEntranceChannelInfo(t *testing.T) {
 	}
 }
 
+// TestEntranceChannelInfoIsEnabled tests the Enabled field and IsEnabled helper
+func TestEntranceChannelInfoIsEnabled(t *testing.T) {
+	trueVal := true
+	falseVal := false
+
+	tests := []struct {
+		name    string
+		enabled *bool
+		want    bool
+	}{
+		{"nil defaults to true", nil, true},
+		{"explicit true", &trueVal, true},
+		{"explicit false", &falseVal, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := EntranceChannelInfo{
+				Port:    10001,
+				Enabled: tt.enabled,
+			}
+			if got := info.IsEnabled(); got != tt.want {
+				t.Errorf("IsEnabled() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestDiscord verifies Discord struct
 func TestDiscord(t *testing.T) {
 	discord := Discord{

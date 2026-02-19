@@ -219,34 +219,34 @@
       {
         "Name": "Newbie", "Description": "", "IP": "", "Type": 3, "Recommended": 2, "AllowedClientFlags": 0,
         "Channels": [
-          { "Port": 54001, "MaxPlayers": 100 },
-          { "Port": 54002, "MaxPlayers": 100 }
+          { "Port": 54001, "MaxPlayers": 100, "Enabled": true },
+          { "Port": 54002, "MaxPlayers": 100, "Enabled": true }
         ]
       }, {
         "Name": "Normal", "Description": "", "IP": "", "Type": 1, "Recommended": 0, "AllowedClientFlags": 0,
         "Channels": [
-          { "Port": 54003, "MaxPlayers": 100 },
-          { "Port": 54004, "MaxPlayers": 100 }
+          { "Port": 54003, "MaxPlayers": 100, "Enabled": true },
+          { "Port": 54004, "MaxPlayers": 100, "Enabled": true }
         ]
       }, {
         "Name": "Cities", "Description": "", "IP": "", "Type": 2, "Recommended": 0, "AllowedClientFlags": 0,
         "Channels": [
-          { "Port": 54005, "MaxPlayers": 100 }
+          { "Port": 54005, "MaxPlayers": 100, "Enabled": true }
         ]
       }, {
         "Name": "Tavern", "Description": "", "IP": "", "Type": 4, "Recommended": 0, "AllowedClientFlags": 0,
         "Channels": [
-          { "Port": 54006, "MaxPlayers": 100 }
+          { "Port": 54006, "MaxPlayers": 100, "Enabled": true }
         ]
       }, {
         "Name": "Return", "Description": "", "IP": "", "Type": 5, "Recommended": 0, "AllowedClientFlags": 0,
         "Channels": [
-          { "Port": 54007, "MaxPlayers": 100 }
+          { "Port": 54007, "MaxPlayers": 100, "Enabled": true }
         ]
       }, {
         "Name": "MezFes", "Description": "", "IP": "", "Type": 6, "Recommended": 6, "AllowedClientFlags": 0,
         "Channels": [
-          { "Port": 54008, "MaxPlayers": 100 }
+          { "Port": 54008, "MaxPlayers": 100, "Enabled": true }
         ]
       }
     ]

@@ -16,6 +16,7 @@ import (
 	"erupe-ce/server/discordbot"
 	"erupe-ce/server/entranceserver"
 	"erupe-ce/server/signserver"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -129,11 +130,30 @@ func main() {
 	}
 	logger.Info("Database: Started successfully")
 
-	// Clear stale data
-	if config.DebugOptions.ProxyPort == 0 {
-		_ = db.MustExec("DELETE FROM sign_sessions")
+	// Pre-compute all server IDs this instance will own, so we only
+	// delete our own rows (safe for multi-instance on the same DB).
+	var ownedServerIDs []string
+	{
+		si := 0
+		for _, ee := range config.Entrance.Entries {
+			ci := 0
+			for range ee.Channels {
+				sid := (4096 + si*256) + (16 + ci)
+				ownedServerIDs = append(ownedServerIDs, fmt.Sprint(sid))
+				ci++
+			}
+			si++
+		}
 	}
-	_ = db.MustExec("DELETE FROM servers")
+
+	// Clear stale data scoped to this instance's server IDs
+	if len(ownedServerIDs) > 0 {
+		idList := strings.Join(ownedServerIDs, ",")
+		if config.DebugOptions.ProxyPort == 0 {
+			_ = db.MustExec("DELETE FROM sign_sessions WHERE server_id IN (" + idList + ")")
+		}
+		_ = db.MustExec("DELETE FROM servers WHERE server_id IN (" + idList + ")")
+	}
 	_ = db.MustExec(`UPDATE guild_characters SET treasure_hunt=NULL`)
 
 	// Clean the DB if the option is on.
@@ -213,6 +233,12 @@ func main() {
 		for j, ee := range config.Entrance.Entries {
 			for i, ce := range ee.Channels {
 				sid := (4096 + si*256) + (16 + ci)
+				if !ce.IsEnabled() {
+					logger.Info(fmt.Sprintf("Channel %d (%d): Disabled via config", count, ce.Port))
+					ci++
+					count++
+					continue
+				}
 				c := *channelserver.NewServer(&channelserver.Config{
 					ID:          uint16(sid),
 					Logger:      logger.Named("channel-" + fmt.Sprint(count)),
@@ -237,9 +263,9 @@ func main() {
 					)
 					channels = append(channels, &c)
 					logger.Info(fmt.Sprintf("Channel %d (%d): Started successfully", count, ce.Port))
-					ci++
 					count++
 				}
+				ci++
 			}
 			ci = 0
 			si++
@@ -248,8 +274,10 @@ func main() {
 		// Register all servers in DB
 		_ = db.MustExec(channelQuery)
 
+		registry := channelserver.NewLocalChannelRegistry(channels)
 		for _, c := range channels {
 			c.Channels = channels
+			c.Registry = registry
 		}
 	}
 

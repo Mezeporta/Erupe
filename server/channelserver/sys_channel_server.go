@@ -37,6 +37,7 @@ type userBinaryPartID struct {
 type Server struct {
 	sync.Mutex
 	Channels       []*Server
+	Registry       ChannelRegistry
 	ID             uint16
 	GlobalID       string
 	IP             string
@@ -271,6 +272,10 @@ func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) 
 
 // WorldcastMHF broadcasts a packet to all sessions across all channel servers.
 func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, ignoredChannel *Server) {
+	if s.Registry != nil {
+		s.Registry.Worldcast(pkt, ignoredSession, ignoredChannel)
+		return
+	}
 	for _, c := range s.Channels {
 		if c == ignoredChannel {
 			continue
@@ -317,12 +322,18 @@ func (s *Server) DiscordScreenShotSend(charName string, title string, descriptio
 
 // FindSessionByCharID looks up a session by character ID across all channels.
 func (s *Server) FindSessionByCharID(charID uint32) *Session {
+	if s.Registry != nil {
+		return s.Registry.FindSessionByCharID(charID)
+	}
 	for _, c := range s.Channels {
+		c.Lock()
 		for _, session := range c.sessions {
 			if session.charID == charID {
+				c.Unlock()
 				return session
 			}
 		}
+		c.Unlock()
 	}
 	return nil
 }
@@ -341,7 +352,12 @@ func (s *Server) DisconnectUser(uid uint32) {
 			cids = append(cids, cid)
 		}
 	}
+	if s.Registry != nil {
+		s.Registry.DisconnectUser(cids)
+		return
+	}
 	for _, c := range s.Channels {
+		c.Lock()
 		for _, session := range c.sessions {
 			for _, cid := range cids {
 				if session.charID == cid {
@@ -350,6 +366,7 @@ func (s *Server) DisconnectUser(uid uint32) {
 				}
 			}
 		}
+		c.Unlock()
 	}
 }
 
