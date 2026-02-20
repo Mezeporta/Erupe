@@ -25,6 +25,11 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
+	// Snapshot current house tier before applying the update so we can
+	// restore it if the incoming data is corrupted (issue #92).
+	prevHouseTier := make([]byte, len(characterSaveData.HouseTier))
+	copy(prevHouseTier, characterSaveData.HouseTier)
+
 	// Var to hold the decompressed savedata for updating the launcher response fields.
 	if pkt.SaveType == 1 {
 		// Diff-based update.
@@ -54,6 +59,20 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		characterSaveData.decompSave = saveData
 	}
 	characterSaveData.updateStructWithSaveData()
+
+	// Mitigate house theme corruption (issue #92): the game client
+	// sometimes sends house_tier as -1 (all 0xFF bytes), which causes
+	// the house theme to vanish on next login. If the new value looks
+	// corrupted, restore the previous value in both the struct and the
+	// decompressed blob so Save() persists consistent data.
+	if len(prevHouseTier) > 0 && characterSaveData.isHouseTierCorrupted() {
+		s.logger.Warn("Detected corrupted house_tier in save data, restoring previous value",
+			zap.Binary("corrupted", characterSaveData.HouseTier),
+			zap.Binary("restored", prevHouseTier),
+			zap.Uint32("charID", s.charID),
+		)
+		characterSaveData.restoreHouseTier(prevHouseTier)
+	}
 
 	s.playtime = characterSaveData.Playtime
 	s.playtimeTime = time.Now()

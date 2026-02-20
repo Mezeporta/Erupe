@@ -202,3 +202,27 @@ func (save *CharacterSaveData) updateStructWithSaveData() {
 		}
 	}
 }
+
+// isHouseTierCorrupted checks whether the house tier field contains 0xFF
+// bytes, which indicates an uninitialized or -1 value from the game client.
+// The game uses small positive integers for theme IDs; 0xFF is never valid.
+func (save *CharacterSaveData) isHouseTierCorrupted() bool {
+	for _, b := range save.HouseTier {
+		if b == 0xFF {
+			return true
+		}
+	}
+	return false
+}
+
+// restoreHouseTier replaces the current house tier with the given value in
+// both the struct field and the underlying decompressed save blob, keeping
+// them consistent for Save().
+func (save *CharacterSaveData) restoreHouseTier(valid []byte) {
+	save.HouseTier = make([]byte, len(valid))
+	copy(save.HouseTier, valid)
+	offset, ok := save.Pointers[pHouseTier]
+	if ok && offset+len(valid) <= len(save.decompSave) {
+		copy(save.decompSave[offset:offset+len(valid)], valid)
+	}
+}
