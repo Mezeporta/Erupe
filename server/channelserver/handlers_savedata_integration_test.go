@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	_config "erupe-ce/config"
 	"erupe-ce/common/mhfitem"
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/nullcomp"
@@ -214,7 +215,7 @@ func TestSaveLoad_Warehouse(t *testing.T) {
 	}
 
 	// Serialize and save to warehouse
-	serializedEquip := mhfitem.SerializeWarehouseEquipment(equipment)
+	serializedEquip := mhfitem.SerializeWarehouseEquipment(equipment, _config.ZZ)
 
 	// Initialize warehouse row then update
 	_, _ = db.Exec("INSERT INTO warehouse (character_id) VALUES ($1) ON CONFLICT DO NOTHING", charID)
@@ -425,7 +426,7 @@ func TestSaveLoad_CraftedEquipment(t *testing.T) {
 	}
 	equipment := []mhfitem.MHFEquipment{equip}
 
-	serialized := mhfitem.SerializeWarehouseEquipment(equipment)
+	serialized := mhfitem.SerializeWarehouseEquipment(equipment, _config.ZZ)
 
 	// Save to warehouse
 	_, _ = db.Exec("INSERT INTO warehouse (character_id) VALUES ($1) ON CONFLICT DO NOTHING", charID)

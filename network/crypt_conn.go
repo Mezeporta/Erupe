@@ -3,7 +3,7 @@ package network
 import (
 	"encoding/hex"
 	"errors"
-	_config "erupe-ce/config"
+	"erupe-ce/config"
 	"erupe-ce/network/crypto"
 	"fmt"
 	"io"
@@ -24,6 +24,7 @@ type Conn interface {
 // it automatically handles encryption, decryption, and key rotation via it's methods.
 type CryptConn struct {
 	conn                        net.Conn
+	realClientMode              _config.Mode
 	readKeyRot                  uint32
 	sendKeyRot                  uint32
 	sentPackets                 int32
@@ -32,11 +33,12 @@ type CryptConn struct {
 }
 
 // NewCryptConn creates a new CryptConn with proper default values.
-func NewCryptConn(conn net.Conn) *CryptConn {
+func NewCryptConn(conn net.Conn, mode _config.Mode) *CryptConn {
 	cc := &CryptConn{
-		conn:       conn,
-		readKeyRot: 995117,
-		sendKeyRot: 995117,
+		conn:           conn,
+		realClientMode: mode,
+		readKeyRot:     995117,
+		sendKeyRot:     995117,
 	}
 	return cc
 }
@@ -61,7 +63,7 @@ func (cc *CryptConn) ReadPacket() ([]byte, error) {
 	var encryptedPacketBody []byte
 
 	// Don't know when support for this was added, works in Forward.4, doesn't work in Season 6.0
-	if _config.ErupeConfig.RealClientMode < _config.F1 {
+	if cc.realClientMode < _config.F1 {
 		encryptedPacketBody = make([]byte, cph.DataSize)
 	} else {
 		encryptedPacketBody = make([]byte, uint32(cph.DataSize)+(uint32(cph.Pf0-0x03)*0x1000))

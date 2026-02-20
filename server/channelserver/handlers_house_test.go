@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	_config "erupe-ce/config"
 	"erupe-ce/common/mhfitem"
 	"erupe-ce/common/token"
 	"testing"
@@ -92,7 +93,7 @@ func TestWarehouseEquipmentSerialization(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Serialize
-			serialized := mhfitem.SerializeWarehouseEquipment(tt.equipment)
+			serialized := mhfitem.SerializeWarehouseEquipment(tt.equipment, _config.ZZ)
 
 			// Basic validation
 			if serialized == nil {

@@ -27,10 +27,10 @@ func (m *MsgMhfApplyDistItem) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clie
 	m.AckHandle = bf.ReadUint32()
 	m.DistributionType = bf.ReadUint8()
 	m.DistributionID = bf.ReadUint32()
-	if _config.ErupeConfig.RealClientMode >= _config.G8 {
+	if ctx.RealClientMode >= _config.G8 {
 		m.Unk2 = bf.ReadUint32()
 	}
-	if _config.ErupeConfig.RealClientMode >= _config.G10 {
+	if ctx.RealClientMode >= _config.G10 {
 		m.Unk3 = bf.ReadUint32()
 	}
 	return nil

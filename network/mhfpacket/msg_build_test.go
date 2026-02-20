@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
@@ -25,7 +26,7 @@ func TestBuildParseDuplicateObject(t *testing.T) {
 		{"negative coords", 1, -1.0, -2.0, -3.0, 100, 200},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysDuplicateObject{
@@ -83,7 +84,7 @@ func TestBuildParsePositionObject(t *testing.T) {
 		{"max object id", 0xFFFFFFFF, 999.999, -999.999, 0.001},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysPositionObject{
@@ -136,7 +137,7 @@ func TestBuildParseCastedBinary(t *testing.T) {
 		{"larger payload", 42, 3, 4, []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A}},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysCastedBinary{
@@ -187,7 +188,7 @@ func TestBuildParseLoadRegister(t *testing.T) {
 		{"max values", 0xFFFFFFFF, 0xFFFFFFFF, 255},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -230,7 +231,7 @@ func TestBuildParseOperateRegister(t *testing.T) {
 		{"large payload", 0xFFFFFFFF, 0xDEADBEEF, make([]byte, 256)},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -271,7 +272,7 @@ func TestBuildParseNotifyUserBinary(t *testing.T) {
 		{"max", 0xFFFFFFFF, 255},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysNotifyUserBinary{
@@ -314,7 +315,7 @@ func TestBuildParseTime(t *testing.T) {
 		{"typical timestamp", false, 1700000000},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysTime{
@@ -355,7 +356,7 @@ func TestBuildParseUpdateObjectBinary(t *testing.T) {
 		{"max", 0xFFFFFFFF, 0xFFFFFFFF},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysUpdateObjectBinary{
@@ -400,7 +401,7 @@ func TestBuildParseArrangeGuildMember(t *testing.T) {
 		{"many members", 999, 400, []uint32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -451,7 +452,7 @@ func TestBuildParseEnumerateGuildMember(t *testing.T) {
 		{"large values", 0xFFFFFFFF, 0xDEADBEEF, 0xCAFEBABE},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -494,7 +495,7 @@ func TestBuildParseStateCampaign(t *testing.T) {
 		{"max", 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -536,7 +537,7 @@ func TestBuildParseApplyCampaign(t *testing.T) {
 		{"max", 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF, make([]byte, 16)},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -579,7 +580,7 @@ func TestBuildParseEnumerateCampaign(t *testing.T) {
 		{"zero", 0, 0, 0},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgMhfEnumerateCampaign{
@@ -622,7 +623,7 @@ func TestBuildParseEnumerateEvent(t *testing.T) {
 		{"nonzero", 42},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgMhfEnumerateEvent{
@@ -661,7 +662,7 @@ func TestBuildParseAddUdTacticsPoint(t *testing.T) {
 		{"max", 0xFFFFFFFF, 0xFFFF, 0xFFFFFFFF},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgMhfAddUdTacticsPoint{
@@ -712,7 +713,7 @@ func TestBuildParseApplyDistItem(t *testing.T) {
 		{"max", 0xFFFFFFFF, 255, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -760,7 +761,7 @@ func TestBuildParseEnumerateDistItem(t *testing.T) {
 		{"zero", 0, 0, 0, 0},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgMhfEnumerateDistItem{
@@ -813,7 +814,7 @@ func TestBuildParseAcquireExchangeShop(t *testing.T) {
 		{"larger payload", 0xDEADBEEF, []byte{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22}},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgMhfAcquireExchangeShop{
@@ -849,7 +850,7 @@ func TestBuildParseAcquireExchangeShop(t *testing.T) {
 // TestBuildParseDisplayedAchievement verifies Parse for MsgMhfDisplayedAchievement.
 // This struct has no exported fields; Parse only discards a single zeroed byte.
 func TestBuildParseDisplayedAchievement(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint8(0) // Zeroed (discarded by Parse)
 	_, _ = bf.Seek(0, io.SeekStart)
@@ -872,7 +873,7 @@ func TestBuildParseAddKouryouPoint(t *testing.T) {
 		{"max", 0xFFFFFFFF, 0xFFFFFFFF},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgMhfAddKouryouPoint{
@@ -913,7 +914,7 @@ func TestBuildParseCheckDailyCafepoint(t *testing.T) {
 		{"zero", 0, 0},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -947,7 +948,7 @@ func TestBuildParsePing(t *testing.T) {
 		{"max", 0xFFFFFFFF},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysPing{
@@ -983,7 +984,7 @@ func TestBuildParseDeleteObject(t *testing.T) {
 		{"max", 0xFFFFFFFF},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysDeleteObject{
@@ -1019,7 +1020,7 @@ func TestBuildParseNotifyRegister(t *testing.T) {
 		{"max", 0xFFFFFFFF},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysNotifyRegister{
@@ -1047,7 +1048,7 @@ func TestBuildParseNotifyRegister(t *testing.T) {
 // TestBuildParseUnlockStage verifies Parse for MsgSysUnlockStage.
 // This struct has no exported fields; Parse only discards a single zeroed uint16.
 func TestBuildParseUnlockStage(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(0) // Zeroed (discarded by Parse)
 	_, _ = bf.Seek(0, io.SeekStart)
@@ -1068,7 +1069,7 @@ func TestBuildParseUnlockGlobalSema(t *testing.T) {
 		{"zero", 0},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgSysUnlockGlobalSema{
@@ -1096,7 +1097,7 @@ func TestBuildParseUnlockGlobalSema(t *testing.T) {
 // TestBuildParseStageDestruct verifies Build/Parse round-trip for MsgSysStageDestruct.
 // This packet has no fields at all.
 func TestBuildParseStageDestruct(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	original := &MsgSysStageDestruct{}
 
 	bf := byteframe.NewByteFrame()
@@ -1117,7 +1118,7 @@ func TestBuildParseStageDestruct(t *testing.T) {
 // TestBuildParseCastedBinaryPayloadIntegrity verifies that a large payload is preserved
 // exactly through Build/Parse for MsgSysCastedBinary.
 func TestBuildParseCastedBinaryPayloadIntegrity(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	// Build a payload with recognizable pattern
 	payload := make([]byte, 1024)
@@ -1159,7 +1160,7 @@ func TestBuildParseCastedBinaryPayloadIntegrity(t *testing.T) {
 // manual-build/Parse for MsgSysOperateRegister.
 // Build is NOT IMPLEMENTED, so we manually write the binary representation.
 func TestBuildParseOperateRegisterPayloadIntegrity(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	payload := make([]byte, 512)
 	for i := range payload {
@@ -1189,7 +1190,7 @@ func TestBuildParseOperateRegisterPayloadIntegrity(t *testing.T) {
 // Build is NOT IMPLEMENTED, so we manually write the binary representation.
 // Parse reads: uint32 AckHandle, uint32 GuildID, uint8 zeroed, uint8 charCount.
 func TestBuildParseArrangeGuildMemberEmptySlice(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(1)   // AckHandle
@@ -1216,7 +1217,7 @@ func TestBuildParseArrangeGuildMemberEmptySlice(t *testing.T) {
 // TestBuildBinaryFormat verifies the exact binary output format of a Build call
 // for MsgSysDuplicateObject to ensure correct endianness and field ordering.
 func TestBuildBinaryFormat(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	pkt := &MsgSysDuplicateObject{
 		ObjID:       0x00000001,
 		X:           0,
@@ -1256,7 +1257,7 @@ func TestBuildBinaryFormat(t *testing.T) {
 // TestBuildParseTimeBooleanEncoding verifies that the boolean field in MsgSysTime
 // is encoded/decoded correctly for both true and false.
 func TestBuildParseTimeBooleanEncoding(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	for _, val := range []bool{true, false} {
 		t.Run("GetRemoteTime="+boolStr(val), func(t *testing.T) {
@@ -1302,7 +1303,7 @@ func boolStr(b bool) string {
 // TestBuildParseSysAckBufferSmall verifies MsgSysAck round-trip with buffer response
 // using the normal (non-extended) size field.
 func TestBuildParseSysAckBufferSmall(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	payload := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
 
 	original := &MsgSysAck{
@@ -1340,7 +1341,7 @@ func TestBuildParseSysAckBufferSmall(t *testing.T) {
 // TestBuildParseSysAckExtendedSize verifies MsgSysAck round-trip with a payload
 // large enough to trigger the extended size field (>= 0xFFFF bytes).
 func TestBuildParseSysAckExtendedSize(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	payload := make([]byte, 0x10000) // 65536 bytes, triggers extended size
 	for i := range payload {
 		payload[i] = byte(i % 256)
@@ -1375,7 +1376,7 @@ func TestBuildParseSysAckExtendedSize(t *testing.T) {
 // TestBuildParseSysAckNonBuffer verifies MsgSysAck round-trip with non-buffer response
 // (exactly 4 bytes of data always read in Parse).
 func TestBuildParseSysAckNonBuffer(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	original := &MsgSysAck{
 		AckHandle:        100,
 		IsBufferResponse: false,

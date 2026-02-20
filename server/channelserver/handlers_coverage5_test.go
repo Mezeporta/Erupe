@@ -12,46 +12,30 @@ import (
 // =============================================================================
 
 func TestEquipSkinHistSize_Default(t *testing.T) {
-	orig := _config.ErupeConfig.RealClientMode
-	defer func() { _config.ErupeConfig.RealClientMode = orig }()
-
-	_config.ErupeConfig.RealClientMode = _config.ZZ
-	got := equipSkinHistSize()
+	got := equipSkinHistSize(_config.ZZ)
 	if got != 3200 {
-		t.Errorf("equipSkinHistSize() with ZZ = %d, want 3200", got)
+		t.Errorf("equipSkinHistSize(ZZ) = %d, want 3200", got)
 	}
 }
 
 func TestEquipSkinHistSize_Z2(t *testing.T) {
-	orig := _config.ErupeConfig.RealClientMode
-	defer func() { _config.ErupeConfig.RealClientMode = orig }()
-
-	_config.ErupeConfig.RealClientMode = _config.Z2
-	got := equipSkinHistSize()
+	got := equipSkinHistSize(_config.Z2)
 	if got != 2560 {
-		t.Errorf("equipSkinHistSize() with Z2 = %d, want 2560", got)
+		t.Errorf("equipSkinHistSize(Z2) = %d, want 2560", got)
 	}
 }
 
 func TestEquipSkinHistSize_Z1(t *testing.T) {
-	orig := _config.ErupeConfig.RealClientMode
-	defer func() { _config.ErupeConfig.RealClientMode = orig }()
-
-	_config.ErupeConfig.RealClientMode = _config.Z1
-	got := equipSkinHistSize()
+	got := equipSkinHistSize(_config.Z1)
 	if got != 1280 {
-		t.Errorf("equipSkinHistSize() with Z1 = %d, want 1280", got)
+		t.Errorf("equipSkinHistSize(Z1) = %d, want 1280", got)
 	}
 }
 
 func TestEquipSkinHistSize_OlderMode(t *testing.T) {
-	orig := _config.ErupeConfig.RealClientMode
-	defer func() { _config.ErupeConfig.RealClientMode = orig }()
-
-	_config.ErupeConfig.RealClientMode = _config.G1
-	got := equipSkinHistSize()
+	got := equipSkinHistSize(_config.G1)
 	if got != 1280 {
-		t.Errorf("equipSkinHistSize() with G1 = %d, want 1280", got)
+		t.Errorf("equipSkinHistSize(G1) = %d, want 1280", got)
 	}
 }
 

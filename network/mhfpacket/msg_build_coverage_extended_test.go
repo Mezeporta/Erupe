@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
@@ -302,7 +303,7 @@ func TestBuildCoverage_NotImplemented_Extended(t *testing.T) {
 		{"MsgMhfEnumerateCampaign", &MsgMhfEnumerateCampaign{}},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -346,7 +347,7 @@ func TestParseCoverage_NotImplemented_Extended(t *testing.T) {
 		{"MsgMhfRegistGuildAdventureDiva", &MsgMhfRegistGuildAdventureDiva{}},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	bf := byteframe.NewByteFrame()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -24,7 +24,8 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 	}
 
 	saveData := &CharacterSaveData{
-		Pointers: getPointers(),
+		Mode:     s.server.erupeConfig.RealClientMode,
+		Pointers: getPointers(s.server.erupeConfig.RealClientMode),
 	}
 	err = result.Scan(&saveData.CharID, &saveData.compSave, &saveData.IsNewCharacter, &saveData.Name)
 	if err != nil {
@@ -63,7 +64,7 @@ func (save *CharacterSaveData) Save(s *Session) {
 
 	save.updateSaveDataWithStruct()
 
-	if _config.ErupeConfig.RealClientMode >= _config.G1 {
+	if s.server.erupeConfig.RealClientMode >= _config.G1 {
 		err := save.Compress()
 		if err != nil {
 			s.logger.Error("Failed to compress savedata", zap.Error(err))

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -58,7 +59,7 @@ func TestMsgSysCreateStageFields(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysCreateStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -102,7 +103,7 @@ func TestMsgSysEnterStageFields(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysEnterStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -142,7 +143,7 @@ func TestMsgSysMoveStageFields(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysMoveStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -184,7 +185,7 @@ func TestMsgSysLockStageFields(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysLockStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -218,7 +219,7 @@ func TestMsgSysUnlockStageFields(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysUnlockStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -245,7 +246,7 @@ func TestMsgSysBackStageFields(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysBackStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -274,7 +275,7 @@ func TestStageIDEdgeCases(t *testing.T) {
 		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgSysCreateStage{}
-		err := pkt.Parse(bf, &clientctx.ClientContext{})
+		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
@@ -296,7 +297,7 @@ func TestStageIDEdgeCases(t *testing.T) {
 		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgSysEnterStage{}
-		err := pkt.Parse(bf, &clientctx.ClientContext{})
+		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}

@@ -28,7 +28,7 @@ func (m *MsgMhfEnumerateDistItem) Parse(bf *byteframe.ByteFrame, ctx *clientctx.
 	m.DistType = bf.ReadUint8()
 	m.Unk1 = bf.ReadUint8()
 	m.MaxCount = bf.ReadUint16() // Hardcoded to 256
-	if _config.ErupeConfig.RealClientMode >= _config.Z1 {
+	if ctx.RealClientMode >= _config.Z1 {
 		m.Unk3 = bf.ReadBytes(uint(bf.ReadUint8()))
 	}
 	return nil

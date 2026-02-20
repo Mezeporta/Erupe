@@ -176,7 +176,7 @@ func TestSessionLifecycle_WarehouseDataPersistence(t *testing.T) {
 		createTestEquipmentItem(102, 3),
 	}
 
-	serializedEquip := mhfitem.SerializeWarehouseEquipment(equipment)
+	serializedEquip := mhfitem.SerializeWarehouseEquipment(equipment, _config.ZZ)
 
 	// Save to warehouse directly (simulating a save handler)
 	_, _ = db.Exec("INSERT INTO warehouse (character_id) VALUES ($1) ON CONFLICT DO NOTHING", charID)
@@ -586,7 +586,9 @@ func createTestServerWithDB(t *testing.T, db *sqlx.DB) *Server {
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		minidataParts:   make(map[uint32][]byte),
 		semaphore:       make(map[string]*Semaphore),
-		erupeConfig:     _config.ErupeConfig,
+		erupeConfig: &_config.Config{
+			RealClientMode: _config.ZZ,
+		},
 		isShuttingDown:  false,
 	}
 

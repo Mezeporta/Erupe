@@ -23,11 +23,11 @@ func (m *MsgMhfUpdateMyhouseInfo) Opcode() network.PacketID {
 // Parse parses the packet from binary
 func (m *MsgMhfUpdateMyhouseInfo) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
-	if _config.ErupeConfig.RealClientMode >= _config.G10 {
+	if ctx.RealClientMode >= _config.G10 {
 		m.Data = bf.ReadBytes(362)
-	} else if _config.ErupeConfig.RealClientMode >= _config.GG {
+	} else if ctx.RealClientMode >= _config.GG {
 		m.Data = bf.ReadBytes(338)
-	} else if _config.ErupeConfig.RealClientMode >= _config.F5 {
+	} else if ctx.RealClientMode >= _config.F5 {
 		// G1 is a guess
 		m.Data = bf.ReadBytes(314)
 	} else {

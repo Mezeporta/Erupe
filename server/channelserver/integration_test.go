@@ -621,16 +621,13 @@ func IntegrationTest_ClientVersionCompatibility(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalVersion := _config.ErupeConfig.RealClientMode
-			defer func() { _config.ErupeConfig.RealClientMode = originalVersion }()
-
-			_config.ErupeConfig.RealClientMode = tt.clientVersion
-
 			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 			s := &Session{
 				sendPackets: make(chan packet, 100),
-					server: &Server{
-					erupeConfig: _config.ErupeConfig,
+				server: &Server{
+					erupeConfig: &_config.Config{
+						RealClientMode: tt.clientVersion,
+					},
 				},
 			}
 			s.cryptConn = mock

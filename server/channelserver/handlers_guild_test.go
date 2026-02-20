@@ -117,16 +117,11 @@ func TestGuildRankCalculation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalConfig := _config.ErupeConfig.RealClientMode
-			defer func() { _config.ErupeConfig.RealClientMode = originalConfig }()
-
-			_config.ErupeConfig.RealClientMode = tt.config
-
 			guild := &Guild{
 				RankRP: tt.rankRP,
 			}
 
-			rank := guild.Rank()
+			rank := guild.Rank(tt.config)
 			if rank != tt.wantRank {
 				t.Errorf("guild rank calculation: got %d, want %d for RP %d", rank, tt.wantRank, tt.rankRP)
 			}

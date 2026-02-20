@@ -70,7 +70,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		characterSaveData.updateSaveDataWithStruct()
 	}
 
-	if characterSaveData.Name == s.Name || _config.ErupeConfig.RealClientMode <= _config.S10 {
+	if characterSaveData.Name == s.Name || s.server.erupeConfig.RealClientMode <= _config.S10 {
 		characterSaveData.Save(s)
 		s.logger.Info("Wrote recompressed savedata back to DB.")
 	} else {

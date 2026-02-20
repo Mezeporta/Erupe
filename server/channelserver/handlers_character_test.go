@@ -52,12 +52,7 @@ func TestGetPointers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save and restore original config
-			originalMode := _config.ErupeConfig.RealClientMode
-			defer func() { _config.ErupeConfig.RealClientMode = originalMode }()
-
-			_config.ErupeConfig.RealClientMode = tt.clientMode
-			pointers := getPointers()
+			pointers := getPointers(tt.clientMode)
 
 			if pointers[pGender] != tt.wantGender {
 				t.Errorf("pGender = %d, want %d", pointers[pGender], tt.wantGender)
@@ -216,10 +211,6 @@ func TestCharacterSaveData_RoundTrip(t *testing.T) {
 
 // TestCharacterSaveData_updateStructWithSaveData tests parsing save data
 func TestCharacterSaveData_updateStructWithSaveData(t *testing.T) {
-	originalMode := _config.ErupeConfig.RealClientMode
-	defer func() { _config.ErupeConfig.RealClientMode = originalMode }()
-	_config.ErupeConfig.RealClientMode = _config.Z2
-
 	tests := []struct {
 		name           string
 		isNewCharacter bool
@@ -267,7 +258,8 @@ func TestCharacterSaveData_updateStructWithSaveData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			save := &CharacterSaveData{
-				Pointers:       getPointers(),
+				Mode:           _config.Z2,
+				Pointers:       getPointers(_config.Z2),
 				decompSave:     tt.setupSaveData(),
 				IsNewCharacter: tt.isNewCharacter,
 			}
@@ -287,10 +279,6 @@ func TestCharacterSaveData_updateStructWithSaveData(t *testing.T) {
 
 // TestCharacterSaveData_updateSaveDataWithStruct tests writing struct to save data
 func TestCharacterSaveData_updateSaveDataWithStruct(t *testing.T) {
-	originalMode := _config.ErupeConfig.RealClientMode
-	defer func() { _config.ErupeConfig.RealClientMode = originalMode }()
-	_config.ErupeConfig.RealClientMode = _config.G10
-
 	tests := []struct {
 		name   string
 		rp     uint16
@@ -320,7 +308,8 @@ func TestCharacterSaveData_updateSaveDataWithStruct(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			save := &CharacterSaveData{
-				Pointers:   getPointers(),
+				Mode:       _config.G10,
+				Pointers:   getPointers(_config.G10),
 				decompSave: make([]byte, 150000),
 				RP:         tt.rp,
 				KQF:        tt.kqf,
@@ -388,11 +377,6 @@ func TestGetCharacterSaveData_Integration(t *testing.T) {
 	db := SetupTestDB(t)
 	defer TeardownTestDB(t, db)
 
-	// Save original config mode
-	originalMode := _config.ErupeConfig.RealClientMode
-	defer func() { _config.ErupeConfig.RealClientMode = originalMode }()
-	_config.ErupeConfig.RealClientMode = _config.Z2
-
 	tests := []struct {
 		name           string
 		charName       string
@@ -430,6 +414,7 @@ func TestGetCharacterSaveData_Integration(t *testing.T) {
 			s := createTestSession(mock)
 			s.charID = charID
 			s.server.db = db
+			s.server.erupeConfig.RealClientMode = _config.Z2
 
 			// Get character save data
 			saveData, err := GetCharacterSaveData(s, charID)
@@ -464,11 +449,6 @@ func TestCharacterSaveData_Save_Integration(t *testing.T) {
 	db := SetupTestDB(t)
 	defer TeardownTestDB(t, db)
 
-	// Save original config mode
-	originalMode := _config.ErupeConfig.RealClientMode
-	defer func() { _config.ErupeConfig.RealClientMode = originalMode }()
-	_config.ErupeConfig.RealClientMode = _config.Z2
-
 	// Create test user and character
 	userID := CreateTestUser(t, db, "savetest")
 	charID := CreateTestCharacter(t, db, userID, "SaveChar")
@@ -478,6 +458,7 @@ func TestCharacterSaveData_Save_Integration(t *testing.T) {
 	s := createTestSession(mock)
 	s.charID = charID
 	s.server.db = db
+	s.server.erupeConfig.RealClientMode = _config.Z2
 
 	// Load character save data
 	saveData, err := GetCharacterSaveData(s, charID)

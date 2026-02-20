@@ -54,7 +54,7 @@ func (m *mockConn) SetWriteDeadline(t time.Time) error { return nil }
 
 func TestNewCryptConn(t *testing.T) {
 	mockConn := newMockConn(nil)
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.ZZ)
 
 	if cc == nil {
 		t.Fatal("NewCryptConn() returned nil")
@@ -83,15 +83,13 @@ func TestNewCryptConn(t *testing.T) {
 	if cc.prevSendPacketCombinedCheck != 0 {
 		t.Errorf("prevSendPacketCombinedCheck = %d, want 0", cc.prevSendPacketCombinedCheck)
 	}
+
+	if cc.realClientMode != _config.ZZ {
+		t.Errorf("realClientMode = %d, want %d", cc.realClientMode, _config.ZZ)
+	}
 }
 
 func TestCryptConn_SendPacket(t *testing.T) {
-	// Save original config and restore after test
-	originalMode := _config.ErupeConfig.RealClientMode
-	defer func() {
-		_config.ErupeConfig.RealClientMode = originalMode
-	}()
-
 	tests := []struct {
 		name string
 		data []byte
@@ -113,7 +111,7 @@ func TestCryptConn_SendPacket(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockConn := newMockConn(nil)
-			cc := NewCryptConn(mockConn)
+			cc := NewCryptConn(mockConn, _config.ZZ)
 
 			err := cc.SendPacket(tt.data)
 			if err != nil {
@@ -157,7 +155,7 @@ func TestCryptConn_SendPacket(t *testing.T) {
 
 func TestCryptConn_SendPacket_MultiplePackets(t *testing.T) {
 	mockConn := newMockConn(nil)
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.ZZ)
 
 	// Send first packet
 	err := cc.SendPacket([]byte{0x01, 0x02})
@@ -192,7 +190,7 @@ func TestCryptConn_SendPacket_MultiplePackets(t *testing.T) {
 
 func TestCryptConn_SendPacket_KeyRotation(t *testing.T) {
 	mockConn := newMockConn(nil)
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.ZZ)
 
 	initialKey := cc.sendKeyRot
 
@@ -211,7 +209,7 @@ func TestCryptConn_SendPacket_KeyRotation(t *testing.T) {
 func TestCryptConn_SendPacket_WriteError(t *testing.T) {
 	mockConn := newMockConn(nil)
 	mockConn.writeErr = errors.New("write error")
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.ZZ)
 
 	err := cc.SendPacket([]byte{0x01, 0x02, 0x03})
 	// Note: Current implementation doesn't return write error
@@ -222,13 +220,6 @@ func TestCryptConn_SendPacket_WriteError(t *testing.T) {
 }
 
 func TestCryptConn_ReadPacket_Success(t *testing.T) {
-	// Save original config and restore after test
-	originalMode := _config.ErupeConfig.RealClientMode
-	_config.ErupeConfig.RealClientMode = _config.Z1 // Use older mode for simpler test
-	defer func() {
-		_config.ErupeConfig.RealClientMode = originalMode
-	}()
-
 	testData := []byte{0x74, 0x65, 0x73, 0x74} // "test"
 	key := uint32(0)
 
@@ -253,7 +244,7 @@ func TestCryptConn_ReadPacket_Success(t *testing.T) {
 	packet := append(headerBytes, encryptedData...)
 
 	mockConn := newMockConn(packet)
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.Z1)
 
 	// Set the key to match what we used for encryption
 	cc.readKeyRot = key
@@ -273,13 +264,6 @@ func TestCryptConn_ReadPacket_Success(t *testing.T) {
 }
 
 func TestCryptConn_ReadPacket_KeyRotation(t *testing.T) {
-	// Save original config and restore after test
-	originalMode := _config.ErupeConfig.RealClientMode
-	_config.ErupeConfig.RealClientMode = _config.Z1
-	defer func() {
-		_config.ErupeConfig.RealClientMode = originalMode
-	}()
-
 	testData := []byte{0x01, 0x02, 0x03, 0x04}
 	key := uint32(995117)
 	keyRotDelta := byte(3)
@@ -306,7 +290,7 @@ func TestCryptConn_ReadPacket_KeyRotation(t *testing.T) {
 	packet := append(headerBytes, encryptedData...)
 
 	mockConn := newMockConn(packet)
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.Z1)
 	cc.readKeyRot = key
 
 	result, err := cc.ReadPacket()
@@ -325,13 +309,6 @@ func TestCryptConn_ReadPacket_KeyRotation(t *testing.T) {
 }
 
 func TestCryptConn_ReadPacket_NoKeyRotation(t *testing.T) {
-	// Save original config and restore after test
-	originalMode := _config.ErupeConfig.RealClientMode
-	_config.ErupeConfig.RealClientMode = _config.Z1
-	defer func() {
-		_config.ErupeConfig.RealClientMode = originalMode
-	}()
-
 	testData := []byte{0x01, 0x02}
 	key := uint32(12345)
 
@@ -353,7 +330,7 @@ func TestCryptConn_ReadPacket_NoKeyRotation(t *testing.T) {
 	packet := append(headerBytes, encryptedData...)
 
 	mockConn := newMockConn(packet)
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.Z1)
 	cc.readKeyRot = key
 
 	originalKeyRot := cc.readKeyRot
@@ -375,7 +352,7 @@ func TestCryptConn_ReadPacket_NoKeyRotation(t *testing.T) {
 
 func TestCryptConn_ReadPacket_HeaderReadError(t *testing.T) {
 	mockConn := newMockConn([]byte{0x01, 0x02}) // Only 2 bytes, header needs 14
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.ZZ)
 
 	_, err := cc.ReadPacket()
 	if err == nil {
@@ -391,7 +368,7 @@ func TestCryptConn_ReadPacket_InvalidHeader(t *testing.T) {
 	// Create invalid header data (wrong endianness or malformed)
 	invalidHeader := []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 	mockConn := newMockConn(invalidHeader)
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.ZZ)
 
 	_, err := cc.ReadPacket()
 	if err == nil {
@@ -400,13 +377,6 @@ func TestCryptConn_ReadPacket_InvalidHeader(t *testing.T) {
 }
 
 func TestCryptConn_ReadPacket_BodyReadError(t *testing.T) {
-	// Save original config and restore after test
-	originalMode := _config.ErupeConfig.RealClientMode
-	_config.ErupeConfig.RealClientMode = _config.Z1
-	defer func() {
-		_config.ErupeConfig.RealClientMode = originalMode
-	}()
-
 	// Create valid header but incomplete body
 	header := &CryptPacketHeader{
 		Pf0:                     0x03,
@@ -425,7 +395,7 @@ func TestCryptConn_ReadPacket_BodyReadError(t *testing.T) {
 	packet := append(headerBytes, incompleteBody...)
 
 	mockConn := newMockConn(packet)
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.Z1)
 
 	_, err := cc.ReadPacket()
 	if err == nil {
@@ -434,13 +404,6 @@ func TestCryptConn_ReadPacket_BodyReadError(t *testing.T) {
 }
 
 func TestCryptConn_ReadPacket_ChecksumMismatch(t *testing.T) {
-	// Save original config and restore after test
-	originalMode := _config.ErupeConfig.RealClientMode
-	_config.ErupeConfig.RealClientMode = _config.Z1
-	defer func() {
-		_config.ErupeConfig.RealClientMode = originalMode
-	}()
-
 	testData := []byte{0x01, 0x02, 0x03, 0x04}
 	key := uint32(0)
 
@@ -462,7 +425,7 @@ func TestCryptConn_ReadPacket_ChecksumMismatch(t *testing.T) {
 	packet := append(headerBytes, encryptedData...)
 
 	mockConn := newMockConn(packet)
-	cc := NewCryptConn(mockConn)
+	cc := NewCryptConn(mockConn, _config.Z1)
 	cc.readKeyRot = key
 
 	_, err := cc.ReadPacket()

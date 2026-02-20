@@ -101,7 +101,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 		logger:    s.logger,
 		server:    s,
 		rawConn:   conn,
-		cryptConn: network.NewCryptConn(conn),
+		cryptConn: network.NewCryptConn(conn, s.erupeConfig.RealClientMode),
 	}
 
 	// Do the session's work.

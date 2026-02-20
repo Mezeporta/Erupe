@@ -49,7 +49,7 @@ func (m *MsgSysTerminalLog) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Client
 		e.Unk1 = bf.ReadInt32()
 		e.Unk2 = bf.ReadInt32()
 		e.Unk3 = bf.ReadInt32()
-		if _config.ErupeConfig.RealClientMode >= _config.G1 {
+		if ctx.RealClientMode >= _config.G1 {
 			for j := 0; j < 4; j++ {
 				e.Unk4 = append(e.Unk4, bf.ReadInt32())
 			}

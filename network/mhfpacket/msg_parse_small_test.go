@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
@@ -59,7 +60,7 @@ func TestParseSmallNotImplemented(t *testing.T) {
 		{"MsgSysTransBinary", &MsgSysTransBinary{}},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tc := range packets {
 		t.Run(tc.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -88,7 +89,7 @@ func TestParseSmallNoData(t *testing.T) {
 		{"MsgSysUnreserveStage", &MsgSysUnreserveStage{}},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tc := range packets {
 		t.Run(tc.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -111,7 +112,7 @@ func TestParseSmallLogout(t *testing.T) {
 		{"max", 255},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -133,7 +134,7 @@ func TestParseSmallLogout(t *testing.T) {
 // TestParseSmallEnumerateHouse tests Parse for MsgMhfEnumerateHouse which reads
 // AckHandle, CharID, Method, Unk, lenName, and optional Name.
 func TestParseSmallEnumerateHouse(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("no name", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -196,7 +197,7 @@ func TestParseSmallEnumerateHouse(t *testing.T) {
 }
 
 // TestParseSmallNotImplementedDoesNotPanic ensures that calling Parse on NOT IMPLEMENTED
-// packets with a nil ClientContext does not cause a nil pointer dereference panic.
+// packets returns an error and does not panic.
 func TestParseSmallNotImplementedDoesNotPanic(t *testing.T) {
 	packets := []MHFPacket{
 		&MsgMhfAcceptReadReward{},
@@ -204,10 +205,11 @@ func TestParseSmallNotImplementedDoesNotPanic(t *testing.T) {
 		&MsgSysSerialize{},
 	}
 
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, pkt := range packets {
-		t.Run("nil_ctx", func(t *testing.T) {
+		t.Run("not_implemented", func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
-			err := pkt.Parse(bf, nil)
+			err := pkt.Parse(bf, ctx)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}

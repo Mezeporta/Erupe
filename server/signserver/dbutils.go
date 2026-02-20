@@ -105,7 +105,7 @@ func (s *Server) getUserRights(uid uint32) uint32 {
 	var rights uint32
 	if uid != 0 {
 		_ = s.db.QueryRow("SELECT rights FROM users WHERE id=$1", uid).Scan(&rights)
-		_, rights = mhfcourse.GetCourseStruct(rights)
+		_, rights = mhfcourse.GetCourseStruct(rights, s.erupeConfig.DefaultCourses)
 	}
 	return rights
 }

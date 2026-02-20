@@ -94,14 +94,6 @@ func TestModeConstants(t *testing.T) {
 	}
 }
 
-// TestIsTestEnvironment tests the isTestEnvironment function
-func TestIsTestEnvironment(t *testing.T) {
-	result := isTestEnvironment()
-	if !result {
-		t.Error("isTestEnvironment() should return true when running tests")
-	}
-}
-
 // TestVersionStringsLength verifies versionStrings has correct length
 func TestVersionStringsLength(t *testing.T) {
 	expectedCount := 41 // S1 through ZZ = 41 versions
@@ -708,10 +700,3 @@ func BenchmarkGetOutboundIP4(b *testing.B) {
 	}
 }
 
-// BenchmarkIsTestEnvironment benchmarks test environment detection
-func BenchmarkIsTestEnvironment(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = isTestEnvironment()
-	}
-}

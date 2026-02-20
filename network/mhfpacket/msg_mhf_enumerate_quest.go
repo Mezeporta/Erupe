@@ -30,7 +30,7 @@ func (m *MsgMhfEnumerateQuest) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cli
 	m.Unk0 = bf.ReadUint8()
 	m.World = bf.ReadUint8()
 	m.Counter = bf.ReadUint16()
-	if _config.ErupeConfig.RealClientMode <= _config.Z1 {
+	if ctx.RealClientMode <= _config.Z1 {
 		m.Offset = uint16(bf.ReadUint8())
 	} else {
 		m.Offset = bf.ReadUint16()

@@ -51,7 +51,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 
 		bf.WriteUint32(guild.ID)
 		bf.WriteUint32(guild.LeaderCharID)
-		bf.WriteUint16(guild.Rank())
+		bf.WriteUint16(guild.Rank(s.server.erupeConfig.RealClientMode))
 		bf.WriteUint16(guild.MemberCount)
 
 		bf.WriteUint8(guild.MainMotto)
@@ -114,7 +114,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 
 		limit := s.server.erupeConfig.GameplayOptions.ClanMemberLimits[0][1]
 		for _, j := range s.server.erupeConfig.GameplayOptions.ClanMemberLimits {
-			if guild.Rank() >= uint16(j[0]) {
+			if guild.Rank(s.server.erupeConfig.RealClientMode) >= uint16(j[0]) {
 				limit = j[1]
 			}
 		}
@@ -155,7 +155,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 				} else {
 					bf.WriteUint16(0)
 				}
-				bf.WriteUint16(alliance.ParentGuild.Rank())
+				bf.WriteUint16(alliance.ParentGuild.Rank(s.server.erupeConfig.RealClientMode))
 				bf.WriteUint16(alliance.ParentGuild.MemberCount)
 				ps.Uint16(bf, alliance.ParentGuild.Name, true)
 				ps.Uint16(bf, alliance.ParentGuild.LeaderName, true)
@@ -167,7 +167,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 					} else {
 						bf.WriteUint16(0)
 					}
-					bf.WriteUint16(alliance.SubGuild1.Rank())
+					bf.WriteUint16(alliance.SubGuild1.Rank(s.server.erupeConfig.RealClientMode))
 					bf.WriteUint16(alliance.SubGuild1.MemberCount)
 					ps.Uint16(bf, alliance.SubGuild1.Name, true)
 					ps.Uint16(bf, alliance.SubGuild1.LeaderName, true)
@@ -180,7 +180,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 					} else {
 						bf.WriteUint16(0)
 					}
-					bf.WriteUint16(alliance.SubGuild2.Rank())
+					bf.WriteUint16(alliance.SubGuild2.Rank(s.server.erupeConfig.RealClientMode))
 					bf.WriteUint16(alliance.SubGuild2.MemberCount)
 					ps.Uint16(bf, alliance.SubGuild2.Name, true)
 					ps.Uint16(bf, alliance.SubGuild2.LeaderName, true)
@@ -460,7 +460,7 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint32(guild.LeaderCharID)
 			bf.WriteUint16(guild.MemberCount)
 			bf.WriteUint16(0x0000) // Unk
-			bf.WriteUint16(guild.Rank())
+			bf.WriteUint16(guild.Rank(s.server.erupeConfig.RealClientMode))
 			bf.WriteUint32(uint32(guild.CreatedAt.Unix()))
 			ps.Uint8(bf, guild.Name, true)
 			ps.Uint8(bf, guild.LeaderName, true)

@@ -35,7 +35,7 @@ func (m *MsgMhfUpdateWarehouse) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cl
 		case 0:
 			m.UpdatedItems = append(m.UpdatedItems, mhfitem.ReadWarehouseItem(bf))
 		case 1:
-			m.UpdatedEquipment = append(m.UpdatedEquipment, mhfitem.ReadWarehouseEquipment(bf))
+			m.UpdatedEquipment = append(m.UpdatedEquipment, mhfitem.ReadWarehouseEquipment(bf, ctx.RealClientMode))
 		}
 	}
 	return nil

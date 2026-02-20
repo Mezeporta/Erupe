@@ -5,6 +5,7 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/mhfcourse"
+	_config "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
@@ -12,7 +13,7 @@ import (
 // method is implemented (reads from ByteFrame) but was not yet covered by tests.
 // Each test provides a ByteFrame with enough bytes for the Parse to succeed.
 func TestParseCoverage_Implemented(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	tests := []struct {
 		name     string
@@ -75,7 +76,7 @@ func TestParseCoverage_Implemented(t *testing.T) {
 // TestParseCoverage_VariableLength tests Parse for variable-length packets
 // that require specific data layouts.
 func TestParseCoverage_VariableLength(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("MsgMhfAcquireItem_EmptyList", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -239,7 +240,7 @@ func TestParseCoverage_VariableLength(t *testing.T) {
 // TestBuildCoverage_Implemented tests Build() on packet types whose Build method
 // is implemented (writes to ByteFrame) but was not yet covered.
 func TestBuildCoverage_Implemented(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("MsgSysDeleteUser", func(t *testing.T) {
 		pkt := &MsgSysDeleteUser{CharID: 123}
@@ -306,7 +307,7 @@ func TestBuildCoverage_Implemented(t *testing.T) {
 
 // TestParseCoverage_EmptyPackets tests Parse() for packets with no payload fields.
 func TestParseCoverage_EmptyPackets(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("MsgSysCleanupObject_Parse", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -343,7 +344,7 @@ func TestParseCoverage_EmptyPackets(t *testing.T) {
 
 // TestParseCoverage_NotImplemented2 tests Parse/Build for packets that return NOT IMPLEMENTED.
 func TestParseCoverage_NotImplemented2(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("MsgSysGetObjectOwner_Parse", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -366,7 +367,7 @@ func TestParseCoverage_NotImplemented2(t *testing.T) {
 
 // TestParseCoverage_UpdateWarehouse tests MsgMhfUpdateWarehouse.Parse with different box types.
 func TestParseCoverage_UpdateWarehouse(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("EmptyChanges", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()

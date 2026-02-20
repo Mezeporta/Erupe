@@ -4,6 +4,7 @@ import (
 	"math/bits"
 	"testing"
 
+	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 )
 
@@ -121,7 +122,7 @@ func TestGenerateFeatureWeapons(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := generateFeatureWeapons(tt.count)
+			result := generateFeatureWeapons(tt.count, _config.ZZ)
 
 			// Result should be non-zero for positive counts
 			if tt.count > 0 && result.ActiveFeatures == 0 {
@@ -142,7 +143,7 @@ func TestGenerateFeatureWeapons_Randomness(t *testing.T) {
 	iterations := 100
 
 	for i := 0; i < iterations; i++ {
-		result := generateFeatureWeapons(5)
+		result := generateFeatureWeapons(5, _config.ZZ)
 		results[result.ActiveFeatures]++
 	}
 
@@ -153,7 +154,7 @@ func TestGenerateFeatureWeapons_Randomness(t *testing.T) {
 }
 
 func TestGenerateFeatureWeapons_ZeroCount(t *testing.T) {
-	result := generateFeatureWeapons(0)
+	result := generateFeatureWeapons(0, _config.ZZ)
 
 	// Should return 0 for no weapons
 	if result.ActiveFeatures != 0 {
@@ -180,7 +181,7 @@ func TestGenerateFeatureWeapons_BitCount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := generateFeatureWeapons(tt.count)
+			result := generateFeatureWeapons(tt.count, _config.ZZ)
 			setBits := bits.OnesCount32(result.ActiveFeatures)
 			if setBits != tt.wantBits {
 				t.Errorf("Set bits = %d, want %d (ActiveFeatures=0b%032b)",
@@ -194,7 +195,7 @@ func TestGenerateFeatureWeapons_BitCount(t *testing.T) {
 // bits 0-13 (no bits above bit 13 should be set).
 func TestGenerateFeatureWeapons_BitsInRange(t *testing.T) {
 	for i := 0; i < 50; i++ {
-		result := generateFeatureWeapons(7)
+		result := generateFeatureWeapons(7, _config.ZZ)
 		// Bits 14+ should never be set
 		if result.ActiveFeatures&^uint32(0x3FFF) != 0 {
 			t.Errorf("Bits above 13 are set: 0x%08X", result.ActiveFeatures)
@@ -205,7 +206,7 @@ func TestGenerateFeatureWeapons_BitsInRange(t *testing.T) {
 // TestGenerateFeatureWeapons_MaxYieldsAllBits verifies that requesting 14
 // weapons sets exactly bits 0-13 (the value 16383 = 0x3FFF).
 func TestGenerateFeatureWeapons_MaxYieldsAllBits(t *testing.T) {
-	result := generateFeatureWeapons(14)
+	result := generateFeatureWeapons(14, _config.ZZ)
 	if result.ActiveFeatures != 0x3FFF {
 		t.Errorf("ActiveFeatures = 0x%04X, want 0x3FFF (all 14 bits set)", result.ActiveFeatures)
 	}
@@ -214,7 +215,7 @@ func TestGenerateFeatureWeapons_MaxYieldsAllBits(t *testing.T) {
 // TestGenerateFeatureWeapons_StartTimeZero verifies that the returned
 // activeFeature has a zero StartTime (not set by generateFeatureWeapons).
 func TestGenerateFeatureWeapons_StartTimeZero(t *testing.T) {
-	result := generateFeatureWeapons(5)
+	result := generateFeatureWeapons(5, _config.ZZ)
 	if !result.StartTime.IsZero() {
 		t.Errorf("StartTime should be zero, got %v", result.StartTime)
 	}

@@ -1,12 +1,9 @@
 package _config
 
 import (
-	"fmt"
 	"log"
 	"net"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/spf13/viper"
 )
@@ -308,36 +305,6 @@ func (c *EntranceChannelInfo) IsEnabled() bool {
 	return *c.Enabled
 }
 
-var ErupeConfig *Config
-
-func init() {
-	var err error
-	ErupeConfig, err = LoadConfig()
-	if err != nil {
-		// In test environments or when config.toml is missing, use defaults
-		ErupeConfig = &Config{
-			ClientMode:   "ZZ",
-			RealClientMode: ZZ,
-		}
-		// Only call preventClose if it's not a test environment
-		if !isTestEnvironment() {
-			preventClose(fmt.Sprintf("Failed to load config: %s", err.Error()))
-		}
-	}
-}
-
-func isTestEnvironment() bool {
-	// Check if we're running under test
-	for _, arg := range os.Args {
-		if arg == "-test.v" || arg == "-test.run" || arg == "-test.timeout" {
-			return true
-		}
-		if strings.Contains(arg, "test") {
-			return true
-		}
-	}
-	return false
-}
 
 // getOutboundIP4 gets the preferred outbound ip4 of this machine
 // From https://stackoverflow.com/a/37382208
@@ -399,19 +366,3 @@ func LoadConfig() (*Config, error) {
 	return c, nil
 }
 
-func preventClose(text string) {
-	if ErupeConfig != nil && ErupeConfig.DisableSoftCrash {
-		os.Exit(0)
-	}
-	fmt.Println("\nFailed to start Erupe:\n" + text)
-	go wait()
-	fmt.Println("\nPress Enter/Return to exit...")
-	_, _ = fmt.Scanln()
-	os.Exit(0)
-}
-
-func wait() {
-	for {
-		time.Sleep(time.Millisecond * 100)
-	}
-}

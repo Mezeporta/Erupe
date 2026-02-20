@@ -75,7 +75,7 @@ func handleMsgMhfGetTowerInfo(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	if _config.ErupeConfig.RealClientMode <= _config.G7 {
+	if s.server.erupeConfig.RealClientMode <= _config.G7 {
 		towerInfo.Level = towerInfo.Level[:1]
 	}
 

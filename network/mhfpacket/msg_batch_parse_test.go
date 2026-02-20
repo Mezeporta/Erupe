@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
@@ -52,7 +53,7 @@ func TestBatchParseAckHandleOnly(t *testing.T) {
 		{"MsgMhfLoadPlateMyset", &MsgMhfLoadPlateMyset{}},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tc := range packets {
 		t.Run(tc.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -97,7 +98,7 @@ func TestBatchParseTwoUint32(t *testing.T) {
 		{"MsgMhfInfoJoint", &MsgMhfInfoJoint{}},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	for _, tc := range packets {
 		t.Run(tc.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -116,7 +117,7 @@ func TestBatchParseTwoUint32(t *testing.T) {
 
 // TestBatchParseMultiField tests packets with various field combinations.
 func TestBatchParseMultiField(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("MsgMhfGetRengokuBinary", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -1041,7 +1042,7 @@ func TestBatchParseMultiField(t *testing.T) {
 
 // TestBatchParseVariableLength tests packets with variable-length data.
 func TestBatchParseVariableLength(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("MsgMhfSaveFavoriteQuest", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -1344,7 +1345,7 @@ func TestBatchParseArrangeGuildMember(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfArrangeGuildMember{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 		t.Fatal(err)
 	}
 	if len(pkt.CharIDs) != 3 || pkt.CharIDs[2] != 30 {
@@ -1373,7 +1374,7 @@ func TestBatchParseUpdateGuildIcon(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfUpdateGuildIcon{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 		t.Fatal(err)
 	}
 	if len(pkt.IconParts) != 1 || pkt.IconParts[0].Red != 0xFF {
@@ -1392,7 +1393,7 @@ func TestBatchParseSysLoadRegister(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysLoadRegister{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 		t.Fatal(err)
 	}
 	if pkt.RegisterID != 2 || pkt.Values != 3 {
@@ -1412,7 +1413,7 @@ func TestBatchParseSysLoadRegisterNonZeroPadding(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysLoadRegister{}
-	err := pkt.Parse(bf, &clientctx.ClientContext{})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -1438,7 +1439,7 @@ func TestBatchParseSysOperateRegister(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysOperateRegister{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 		t.Fatal(err)
 	}
 	if len(pkt.RawDataPayload) != 3 {
@@ -1457,7 +1458,7 @@ func TestBatchParseSysOperateRegisterNonZeroPadding(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysOperateRegister{}
-	err := pkt.Parse(bf, &clientctx.ClientContext{})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -1474,7 +1475,7 @@ func TestBatchParseSysOperateRegisterNonZeroPadding(t *testing.T) {
 
 // TestBatchParseSysGetFile tests the conditional scenario file packet.
 func TestBatchParseSysGetFile(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("non-scenario", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -1529,7 +1530,7 @@ func TestBatchParseSysTerminalLog(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysTerminalLog{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 		t.Fatal(err)
 	}
 	if len(pkt.Entries) != 1 || pkt.Entries[0].Type1 != 1 {
@@ -1539,7 +1540,7 @@ func TestBatchParseSysTerminalLog(t *testing.T) {
 
 // TestBatchParseNoOpPackets tests packets with empty Parse (return nil).
 func TestBatchParseNoOpPackets(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	bf := byteframe.NewByteFrame()
 
 	packets := []struct {
@@ -1563,7 +1564,7 @@ func TestBatchParseNoOpPackets(t *testing.T) {
 
 // TestBatchParseNotImplemented tests that Parse returns NOT IMPLEMENTED for stub packets.
 func TestBatchParseNotImplemented(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	bf := byteframe.NewByteFrame()
 
 	packets := []MHFPacket{
@@ -1609,7 +1610,7 @@ func TestBatchParseNotImplemented(t *testing.T) {
 
 // TestBatchBuildNotImplemented tests that Build returns NOT IMPLEMENTED for many packets.
 func TestBatchBuildNotImplemented(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	bf := byteframe.NewByteFrame()
 
 	packets := []MHFPacket{
@@ -1720,7 +1721,7 @@ func TestBatchBuildNotImplemented(t *testing.T) {
 
 // TestBatchParseReserve188and18B tests reserve packets with AckHandle.
 func TestBatchParseReserve188and18B(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	for _, tc := range []struct {
 		name string
@@ -1742,7 +1743,7 @@ func TestBatchParseReserve188and18B(t *testing.T) {
 
 // TestBatchParseStageStringPackets tests packets that read a stage ID string.
 func TestBatchParseStageStringPackets(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("MsgSysGetStageBinary", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -1848,7 +1849,7 @@ func TestBatchParseStampcardStamp(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfStampcardStamp{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 		t.Fatal(err)
 	}
 	if pkt.HR != 2 || pkt.GR != 3 || pkt.Stamps != 4 || pkt.Reward1 != 5 {
@@ -1869,7 +1870,7 @@ func TestBatchParseAnnounce(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAnnounce{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 		t.Fatal(err)
 	}
 	if pkt.IPAddress != 0x7F000001 || pkt.Port != 54001 {
@@ -1879,7 +1880,7 @@ func TestBatchParseAnnounce(t *testing.T) {
 
 // TestBatchParseOprtMail tests conditional parsing.
 func TestBatchParseOprtMail(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("delete", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -1925,7 +1926,7 @@ func TestBatchParsePostTowerInfo(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfPostTowerInfo{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -1933,7 +1934,7 @@ func TestBatchParsePostTowerInfo(t *testing.T) {
 // TestBatchParseGuildHuntdata tests conditional guild huntdata.
 // TestBatchParseAdditionalMultiField tests Parse for more packets with multiple fields.
 func TestBatchParseAdditionalMultiField(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("MsgMhfAcquireFesta", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -2202,7 +2203,7 @@ func TestBatchParseAdditionalMultiField(t *testing.T) {
 }
 
 func TestBatchParseGuildHuntdata(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	t.Run("operation_0", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()

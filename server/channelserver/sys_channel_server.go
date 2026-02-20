@@ -145,6 +145,8 @@ func (s *Server) Start() error {
 	}
 	s.listener = l
 
+	initCommands(s.erupeConfig.Commands, s.logger)
+
 	go s.acceptClients()
 	go s.manageSessions()
 	go s.invalidateSessions()

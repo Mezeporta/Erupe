@@ -49,7 +49,7 @@ func equal(a, b []byte) bool {
 }
 
 // BackportQuest converts a quest binary to an older format.
-func BackportQuest(data []byte) []byte {
+func BackportQuest(data []byte, mode _config.Mode) []byte {
 	wp := binary.LittleEndian.Uint32(data[0:4]) + 96
 	rp := wp + 4
 	for i := uint32(0); i < 6; i++ {
@@ -61,16 +61,16 @@ func BackportQuest(data []byte) []byte {
 	}
 
 	fillLength := uint32(108)
-	if _config.ErupeConfig.RealClientMode <= _config.S6 {
+	if mode <= _config.S6 {
 		fillLength = 44
-	} else if _config.ErupeConfig.RealClientMode <= _config.F5 {
+	} else if mode <= _config.F5 {
 		fillLength = 52
-	} else if _config.ErupeConfig.RealClientMode <= _config.G101 {
+	} else if mode <= _config.G101 {
 		fillLength = 76
 	}
 
 	copy(data[wp:wp+fillLength], data[rp:rp+fillLength])
-	if _config.ErupeConfig.RealClientMode <= _config.G91 {
+	if mode <= _config.G91 {
 		patterns := [][]byte{
 			{0x0A, 0x00, 0x01, 0x33, 0xD7, 0x00}, // 10% Armor Sphere -> Stone
 			{0x06, 0x00, 0x02, 0x33, 0xD8, 0x00}, // 6% Armor Sphere+ -> Iron Ore
@@ -87,7 +87,7 @@ func BackportQuest(data []byte) []byte {
 		}
 	}
 
-	if _config.ErupeConfig.RealClientMode <= _config.S6 {
+	if mode <= _config.S6 {
 		binary.LittleEndian.PutUint32(data[16:20], binary.LittleEndian.Uint32(data[8:12]))
 	}
 	return data
@@ -133,8 +133,8 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
-		if _config.ErupeConfig.RealClientMode <= _config.Z1 && s.server.erupeConfig.DebugOptions.AutoQuestBackport {
-			data = BackportQuest(decryption.UnpackSimple(data))
+		if s.server.erupeConfig.RealClientMode <= _config.Z1 && s.server.erupeConfig.DebugOptions.AutoQuestBackport {
+			data = BackportQuest(decryption.UnpackSimple(data), s.server.erupeConfig.RealClientMode)
 		}
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	}
@@ -230,21 +230,21 @@ func loadQuestFile(s *Session, questId int) []byte {
 	}
 
 	decrypted := decryption.UnpackSimple(file)
-	if _config.ErupeConfig.RealClientMode <= _config.Z1 && s.server.erupeConfig.DebugOptions.AutoQuestBackport {
-		decrypted = BackportQuest(decrypted)
+	if s.server.erupeConfig.RealClientMode <= _config.Z1 && s.server.erupeConfig.DebugOptions.AutoQuestBackport {
+		decrypted = BackportQuest(decrypted, s.server.erupeConfig.RealClientMode)
 	}
 	fileBytes := byteframe.NewByteFrameFromBytes(decrypted)
 	fileBytes.SetLE()
 	_, _ = fileBytes.Seek(int64(fileBytes.ReadUint32()), 0)
 
 	bodyLength := 320
-	if _config.ErupeConfig.RealClientMode <= _config.S6 {
+	if s.server.erupeConfig.RealClientMode <= _config.S6 {
 		bodyLength = 160
-	} else if _config.ErupeConfig.RealClientMode <= _config.F5 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.F5 {
 		bodyLength = 168
-	} else if _config.ErupeConfig.RealClientMode <= _config.G101 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.G101 {
 		bodyLength = 192
-	} else if _config.ErupeConfig.RealClientMode <= _config.Z1 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.Z1 {
 		bodyLength = 224
 	}
 
@@ -318,7 +318,7 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 		bf.WriteBool(true)
 	}
 	bf.WriteUint16(0) // Unk
-	if _config.ErupeConfig.RealClientMode >= _config.G2 {
+	if s.server.erupeConfig.RealClientMode >= _config.G2 {
 		bf.WriteUint32(mark)
 	}
 	bf.WriteUint16(0) // Unk
@@ -616,23 +616,23 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	tuneValues = temp
 
 	tuneLimit := 770
-	if _config.ErupeConfig.RealClientMode <= _config.G1 {
+	if s.server.erupeConfig.RealClientMode <= _config.G1 {
 		tuneLimit = 256
-	} else if _config.ErupeConfig.RealClientMode <= _config.G3 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.G3 {
 		tuneLimit = 283
-	} else if _config.ErupeConfig.RealClientMode <= _config.GG {
+	} else if s.server.erupeConfig.RealClientMode <= _config.GG {
 		tuneLimit = 315
-	} else if _config.ErupeConfig.RealClientMode <= _config.G61 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.G61 {
 		tuneLimit = 332
-	} else if _config.ErupeConfig.RealClientMode <= _config.G7 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.G7 {
 		tuneLimit = 339
-	} else if _config.ErupeConfig.RealClientMode <= _config.G81 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.G81 {
 		tuneLimit = 396
-	} else if _config.ErupeConfig.RealClientMode <= _config.G91 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.G91 {
 		tuneLimit = 694
-	} else if _config.ErupeConfig.RealClientMode <= _config.G101 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.G101 {
 		tuneLimit = 704
-	} else if _config.ErupeConfig.RealClientMode <= _config.Z2 {
+	} else if s.server.erupeConfig.RealClientMode <= _config.Z2 {
 		tuneLimit = 750
 	}
 	if len(tuneValues) > tuneLimit {

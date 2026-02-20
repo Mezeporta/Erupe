@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"os"
 	"path/filepath"
@@ -61,7 +62,7 @@ func TestBackportQuestBasic(t *testing.T) {
 				}
 			}()
 
-			result := BackportQuest(data)
+			result := BackportQuest(data, _config.ZZ)
 			if result != nil && !tc.verify(result) {
 				t.Errorf("BackportQuest verification failed for result: %d bytes", len(result))
 			}
@@ -685,7 +686,7 @@ func BenchmarkBackportQuest(b *testing.B) {
 	binary.LittleEndian.PutUint32(data[0:4], 100)
 
 	for i := 0; i < b.N; i++ {
-		_ = BackportQuest(data)
+		_ = BackportQuest(data, _config.ZZ)
 	}
 }
 

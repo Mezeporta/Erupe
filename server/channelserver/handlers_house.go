@@ -133,7 +133,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint8(0)
 		}
 		bf.WriteUint16(house.HR)
-		if _config.ErupeConfig.RealClientMode >= _config.G10 {
+		if s.server.erupeConfig.RealClientMode >= _config.G10 {
 			bf.WriteUint16(house.GR)
 		}
 		ps.Uint8(bf, house.Name, true)
@@ -516,7 +516,7 @@ func warehouseGetEquipment(s *Session, index uint8) []mhfitem.MHFEquipment {
 		numStacks := box.ReadUint16()
 		box.ReadUint16() // Unused
 		for i := 0; i < int(numStacks); i++ {
-			equipment = append(equipment, mhfitem.ReadWarehouseEquipment(box))
+			equipment = append(equipment, mhfitem.ReadWarehouseEquipment(box, s.server.erupeConfig.RealClientMode))
 		}
 	}
 	return equipment
@@ -531,7 +531,7 @@ func handleMsgMhfEnumerateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteBytes(mhfitem.SerializeWarehouseItems(items))
 	case 1:
 		equipment := warehouseGetEquipment(s, pkt.BoxIndex)
-		bf.WriteBytes(mhfitem.SerializeWarehouseEquipment(equipment))
+		bf.WriteBytes(mhfitem.SerializeWarehouseEquipment(equipment, s.server.erupeConfig.RealClientMode))
 	}
 	if bf.Index() > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
@@ -602,7 +602,7 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 
-		serialized := mhfitem.SerializeWarehouseEquipment(fEquip)
+		serialized := mhfitem.SerializeWarehouseEquipment(fEquip, s.server.erupeConfig.RealClientMode)
 		dataSize = len(serialized)
 
 		s.logger.Debug("Warehouse save request",

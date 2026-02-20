@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -55,7 +56,7 @@ func TestMsgSysAckRoundTrip(t *testing.T) {
 				ErrorCode:        tt.errorCode,
 				AckData:          tt.ackData,
 			}
-			ctx := &clientctx.ClientContext{}
+			ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 			// Build
 			bf := byteframe.NewByteFrame()
@@ -99,7 +100,7 @@ func TestMsgSysAckLargePayload(t *testing.T) {
 		ErrorCode:        0,
 		AckData:          largeData,
 	}
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	// Build
 	bf := byteframe.NewByteFrame()
@@ -130,7 +131,7 @@ func TestMsgSysAckOpcode(t *testing.T) {
 
 func TestMsgSysNopRoundTrip(t *testing.T) {
 	original := &MsgSysNop{}
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	// Build
 	bf := byteframe.NewByteFrame()
@@ -161,7 +162,7 @@ func TestMsgSysNopOpcode(t *testing.T) {
 
 func TestMsgSysEndRoundTrip(t *testing.T) {
 	original := &MsgSysEnd{}
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	// Build
 	bf := byteframe.NewByteFrame()
@@ -198,7 +199,7 @@ func TestMsgSysAckNonBufferResponse(t *testing.T) {
 		ErrorCode:        0,
 		AckData:          []byte{0xAA, 0xBB, 0xCC, 0xDD},
 	}
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	bf := byteframe.NewByteFrame()
 	err := original.Build(bf, ctx)
@@ -227,7 +228,7 @@ func TestMsgSysAckNonBufferShortData(t *testing.T) {
 		ErrorCode:        0,
 		AckData:          []byte{0x01}, // Only 1 byte
 	}
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	bf := byteframe.NewByteFrame()
 	err := original.Build(bf, ctx)
@@ -255,7 +256,7 @@ func TestMsgSysAckBuildFormat(t *testing.T) {
 		ErrorCode:        0x55,
 		AckData:          []byte{0xAA, 0xBB},
 	}
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 
 	bf := byteframe.NewByteFrame()
 	_ = pkt.Build(bf, ctx)

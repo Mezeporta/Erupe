@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
@@ -36,7 +37,7 @@ func TestParseMediumVoteFesta(t *testing.T) {
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			pkt := &MsgMhfVoteFesta{}
-			if err := pkt.Parse(bf, nil); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -81,7 +82,7 @@ func TestParseMediumAcquireSemaphore(t *testing.T) {
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			pkt := &MsgSysAcquireSemaphore{}
-			if err := pkt.Parse(bf, nil); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -119,7 +120,7 @@ func TestParseMediumCheckSemaphore(t *testing.T) {
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			pkt := &MsgSysCheckSemaphore{}
-			if err := pkt.Parse(bf, nil); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -156,7 +157,7 @@ func TestParseMediumGetUserBinary(t *testing.T) {
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			pkt := &MsgSysGetUserBinary{}
-			if err := pkt.Parse(bf, nil); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -195,7 +196,7 @@ func TestParseMediumSetObjectBinary(t *testing.T) {
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			pkt := &MsgSysSetObjectBinary{}
-			if err := pkt.Parse(bf, nil); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -234,7 +235,7 @@ func TestParseMediumSetUserBinary(t *testing.T) {
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			pkt := &MsgSysSetUserBinary{}
-			if err := pkt.Parse(bf, nil); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -274,7 +275,7 @@ func TestParseMediumGetUdRanking(t *testing.T) {
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			pkt := &MsgMhfGetUdRanking{}
-			if err := pkt.Parse(bf, nil); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -309,7 +310,7 @@ func TestParseMediumGetUdTacticsRanking(t *testing.T) {
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			pkt := &MsgMhfGetUdTacticsRanking{}
-			if err := pkt.Parse(bf, nil); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -346,7 +347,7 @@ func TestParseMediumRegistGuildTresure(t *testing.T) {
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			pkt := &MsgMhfRegistGuildTresure{}
-			if err := pkt.Parse(bf, nil); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -377,7 +378,7 @@ func TestParseMediumUpdateMyhouseInfo(t *testing.T) {
 
 		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfUpdateMyhouseInfo{}
-		if err := pkt.Parse(bf, nil); err != nil {
+		if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
 
@@ -399,7 +400,7 @@ func TestParseMediumUpdateMyhouseInfo(t *testing.T) {
 
 		_, _ = bf.Seek(0, io.SeekStart)
 		pkt := &MsgMhfUpdateMyhouseInfo{}
-		if err := pkt.Parse(bf, nil); err != nil {
+		if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
 
@@ -517,7 +518,7 @@ func TestParseMediumAckHandleOnlyBatch(t *testing.T) {
 		},
 	}
 
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	ackValues := []uint32{0x12345678, 0, 0xFFFFFFFF, 0xDEADBEEF}
 
 	for _, tc := range packets {
@@ -539,7 +540,7 @@ func TestParseMediumAckHandleOnlyBatch(t *testing.T) {
 // TestParseMediumAckHandleOnlyVerifyValues tests each 3-stmt AckHandle-only
 // packet individually, verifying that the AckHandle field is correctly populated.
 func TestParseMediumAckHandleOnlyVerifyValues(t *testing.T) {
-	ctx := &clientctx.ClientContext{}
+	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
 	ack := uint32(0xCAFEBABE)
 
 	makeFrame := func() *byteframe.ByteFrame {
@@ -738,7 +739,7 @@ func TestParseMediumDeleteUser(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysDeleteUser{}
-	err := pkt.Parse(bf, nil)
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 	if err == nil {
 		t.Fatal("Parse() should return error for NOT IMPLEMENTED")
 	}
@@ -755,7 +756,7 @@ func TestParseMediumInsertUser(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysInsertUser{}
-	err := pkt.Parse(bf, nil)
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 	if err == nil {
 		t.Fatal("Parse() should return error for NOT IMPLEMENTED")
 	}

@@ -25,7 +25,7 @@ func (m *MsgSysCreateAcquireSemaphore) Opcode() network.PacketID {
 func (m *MsgSysCreateAcquireSemaphore) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
 	m.Unk0 = bf.ReadUint16()
-	if _config.ErupeConfig.RealClientMode >= _config.S7 { // Assuming this was added with Ravi?
+	if ctx.RealClientMode >= _config.S7 { // Assuming this was added with Ravi?
 		m.PlayerCount = bf.ReadUint8()
 	}
 	bf.ReadUint8() // SemaphoreID length

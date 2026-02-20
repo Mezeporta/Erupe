@@ -378,7 +378,7 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysRecordLog)
-	if _config.ErupeConfig.RealClientMode == _config.ZZ {
+	if s.server.erupeConfig.RealClientMode == _config.ZZ {
 		bf := byteframe.NewByteFrameFromBytes(pkt.Data)
 		_, _ = bf.Seek(32, 0)
 		var val uint8
@@ -536,7 +536,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint16(uint16(len(r.userBin3)))
 
 			// TODO: This case might be <=G2
-			if _config.ErupeConfig.RealClientMode <= _config.G1 {
+			if s.server.erupeConfig.RealClientMode <= _config.G1 {
 				resp.WriteBytes(make([]byte, 8))
 			} else {
 				resp.WriteBytes(make([]byte, 40))
@@ -566,7 +566,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			case 0:
 				values := bf.ReadUint8()
 				for i := uint8(0); i < values; i++ {
-					if _config.ErupeConfig.RealClientMode >= _config.Z1 {
+					if s.server.erupeConfig.RealClientMode >= _config.Z1 {
 						findPartyParams.RankRestriction = bf.ReadInt16()
 					} else {
 						findPartyParams.RankRestriction = int16(bf.ReadInt8())
@@ -575,7 +575,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			case 1:
 				values := bf.ReadUint8()
 				for i := uint8(0); i < values; i++ {
-					if _config.ErupeConfig.RealClientMode >= _config.Z1 {
+					if s.server.erupeConfig.RealClientMode >= _config.Z1 {
 						findPartyParams.Targets = append(findPartyParams.Targets, bf.ReadInt16())
 					} else {
 						findPartyParams.Targets = append(findPartyParams.Targets, int16(bf.ReadInt8()))
@@ -585,7 +585,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 				values := bf.ReadUint8()
 				for i := uint8(0); i < values; i++ {
 					var value int16
-					if _config.ErupeConfig.RealClientMode >= _config.Z1 {
+					if s.server.erupeConfig.RealClientMode >= _config.Z1 {
 						value = bf.ReadInt16()
 					} else {
 						value = int16(bf.ReadInt8())
@@ -606,7 +606,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			case 3: // Unknown
 				values := bf.ReadUint8()
 				for i := uint8(0); i < values; i++ {
-					if _config.ErupeConfig.RealClientMode >= _config.Z1 {
+					if s.server.erupeConfig.RealClientMode >= _config.Z1 {
 						findPartyParams.Unk0 = append(findPartyParams.Unk0, bf.ReadInt16())
 					} else {
 						findPartyParams.Unk0 = append(findPartyParams.Unk0, int16(bf.ReadInt8()))
@@ -615,7 +615,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			case 4: // Looking for n or already have n
 				values := bf.ReadUint8()
 				for i := uint8(0); i < values; i++ {
-					if _config.ErupeConfig.RealClientMode >= _config.Z1 {
+					if s.server.erupeConfig.RealClientMode >= _config.Z1 {
 						findPartyParams.Unk1 = append(findPartyParams.Unk1, bf.ReadInt16())
 					} else {
 						findPartyParams.Unk1 = append(findPartyParams.Unk1, int16(bf.ReadInt8()))
@@ -624,7 +624,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			case 5:
 				values := bf.ReadUint8()
 				for i := uint8(0); i < values; i++ {
-					if _config.ErupeConfig.RealClientMode >= _config.Z1 {
+					if s.server.erupeConfig.RealClientMode >= _config.Z1 {
 						findPartyParams.QuestID = append(findPartyParams.QuestID, bf.ReadInt16())
 					} else {
 						findPartyParams.QuestID = append(findPartyParams.QuestID, int16(bf.ReadInt8()))
@@ -661,15 +661,15 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 					_, _ = sb3.Seek(4, 0)
 
 					stageDataParams := 7
-					if _config.ErupeConfig.RealClientMode <= _config.G10 {
+					if s.server.erupeConfig.RealClientMode <= _config.G10 {
 						stageDataParams = 4
-					} else if _config.ErupeConfig.RealClientMode <= _config.Z1 {
+					} else if s.server.erupeConfig.RealClientMode <= _config.Z1 {
 						stageDataParams = 6
 					}
 
 					var stageData []int16
 					for i := 0; i < stageDataParams; i++ {
-						if _config.ErupeConfig.RealClientMode >= _config.Z1 {
+						if s.server.erupeConfig.RealClientMode >= _config.Z1 {
 							stageData = append(stageData, sb3.ReadInt16())
 						} else {
 							stageData = append(stageData, int16(sb3.ReadInt8()))
@@ -746,7 +746,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint8(uint8(len(sr.rawBinData1)))
 
 			for i := range sr.stageData {
-				if _config.ErupeConfig.RealClientMode >= _config.Z1 {
+				if s.server.erupeConfig.RealClientMode >= _config.Z1 {
 					resp.WriteInt16(sr.stageData[i])
 				} else {
 					resp.WriteInt8(int8(sr.stageData[i]))

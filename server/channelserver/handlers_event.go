@@ -69,7 +69,7 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 		err := s.server.db.QueryRowx(`SELECT start_time, featured FROM feature_weapon WHERE start_time=$1`, t).StructScan(&temp)
 		if err != nil || temp.StartTime.IsZero() {
 			weapons := token.RNG.Intn(s.server.erupeConfig.GameplayOptions.MaxFeatureWeapons-s.server.erupeConfig.GameplayOptions.MinFeatureWeapons+1) + s.server.erupeConfig.GameplayOptions.MinFeatureWeapons
-			temp = generateFeatureWeapons(weapons)
+			temp = generateFeatureWeapons(weapons, s.server.erupeConfig.RealClientMode)
 			temp.StartTime = t
 			if _, err := s.server.db.Exec(`INSERT INTO feature_weapon VALUES ($1, $2)`, temp.StartTime, temp.ActiveFeatures); err != nil {
 				s.logger.Error("Failed to insert feature weapon", zap.Error(err))
@@ -89,15 +89,15 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func generateFeatureWeapons(count int) activeFeature {
+func generateFeatureWeapons(count int, mode _config.Mode) activeFeature {
 	_max := 14
-	if _config.ErupeConfig.RealClientMode < _config.ZZ {
+	if mode < _config.ZZ {
 		_max = 13
 	}
-	if _config.ErupeConfig.RealClientMode < _config.G10 {
+	if mode < _config.G10 {
 		_max = 12
 	}
-	if _config.ErupeConfig.RealClientMode < _config.GG {
+	if mode < _config.GG {
 		_max = 11
 	}
 	if count > _max {

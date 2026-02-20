@@ -32,7 +32,7 @@ func (m *MsgMhfEnumerateShop) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clie
 	m.ShopID = bf.ReadUint32()
 	m.Limit = bf.ReadUint16()
 	m.Unk3 = bf.ReadUint8()
-	if _config.ErupeConfig.RealClientMode >= _config.G2 {
+	if ctx.RealClientMode >= _config.G2 {
 		m.Unk4 = bf.ReadUint8()
 		m.Unk5 = bf.ReadUint32()
 	}

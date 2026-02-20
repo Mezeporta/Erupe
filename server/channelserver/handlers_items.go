@@ -307,7 +307,7 @@ func handleMsgMhfStampcardStamp(s *Session, p mhfpacket.MHFPacket) {
 		{300, 5392, 1, 5392, 3},
 		{999, 5392, 1, 5392, 4},
 	}
-	if _config.ErupeConfig.RealClientMode <= _config.Z1 {
+	if s.server.erupeConfig.RealClientMode <= _config.Z1 {
 		for _, reward := range rewards {
 			if pkt.HR >= reward.HR {
 				pkt.Item1 = reward.Item1
@@ -320,7 +320,7 @@ func handleMsgMhfStampcardStamp(s *Session, p mhfpacket.MHFPacket) {
 
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(pkt.HR)
-	if _config.ErupeConfig.RealClientMode >= _config.G1 {
+	if s.server.erupeConfig.RealClientMode >= _config.G1 {
 		bf.WriteUint16(pkt.GR)
 	}
 	var stamps, rewardTier, rewardUnk uint16

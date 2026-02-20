@@ -15,29 +15,29 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-var commands map[string]_config.Command
+var (
+	commands     map[string]_config.Command
+	commandsOnce sync.Once
+)
 
-func init() {
-	commands = make(map[string]_config.Command)
-	zapConfig := zap.NewDevelopmentConfig()
-	zapConfig.DisableCaller = true
-	zapLogger, _ := zapConfig.Build()
-	defer func() { _ = zapLogger.Sync() }()
-	logger := zapLogger.Named("commands")
-	cmds := _config.ErupeConfig.Commands
-	for _, cmd := range cmds {
-		commands[cmd.Name] = cmd
-		if cmd.Enabled {
-			logger.Info(fmt.Sprintf("Command %s: Enabled, prefix: %s", cmd.Name, cmd.Prefix))
-		} else {
-			logger.Info(fmt.Sprintf("Command %s: Disabled", cmd.Name))
+func initCommands(cmds []_config.Command, logger *zap.Logger) {
+	commandsOnce.Do(func() {
+		commands = make(map[string]_config.Command)
+		for _, cmd := range cmds {
+			commands[cmd.Name] = cmd
+			if cmd.Enabled {
+				logger.Info(fmt.Sprintf("Command %s: Enabled, prefix: %s", cmd.Name, cmd.Prefix))
+			} else {
+				logger.Info(fmt.Sprintf("Command %s: Disabled", cmd.Name))
+			}
 		}
-	}
+	})
 }
 
 func sendDisabledCommandMessage(s *Session, cmd _config.Command) {

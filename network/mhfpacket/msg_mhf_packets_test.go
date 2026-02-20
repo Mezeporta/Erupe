@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
+	_config "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -520,7 +521,7 @@ func TestAchievementPacketParse(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAddAchievement{}
-	err := pkt.Parse(bf, &clientctx.ClientContext{})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}

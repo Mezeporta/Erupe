@@ -1,7 +1,6 @@
 package mhfcourse
 
 import (
-	_config "erupe-ce/config"
 	"math"
 	"testing"
 	"time"
@@ -121,14 +120,7 @@ func TestCourseExists_EmptySlice(t *testing.T) {
 }
 
 func TestGetCourseStruct(t *testing.T) {
-	// Save original config and restore after test
-	originalDefaultCourses := _config.ErupeConfig.DefaultCourses
-	defer func() {
-		_config.ErupeConfig.DefaultCourses = originalDefaultCourses
-	}()
-
-	// Set up test config
-	_config.ErupeConfig.DefaultCourses = []uint16{1, 2}
+	defaultCourses := []uint16{1, 2}
 
 	tests := []struct {
 		name         string
@@ -164,7 +156,7 @@ func TestGetCourseStruct(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			courses, newRights := GetCourseStruct(tt.rights)
+			courses, newRights := GetCourseStruct(tt.rights, defaultCourses)
 
 			if len(courses) < tt.wantMinLen {
 				t.Errorf("GetCourseStruct(%d) returned %d courses, want at least %d", tt.rights, len(courses), tt.wantMinLen)
@@ -193,15 +185,8 @@ func TestGetCourseStruct(t *testing.T) {
 }
 
 func TestGetCourseStruct_NetcafeCourse(t *testing.T) {
-	// Save original config
-	originalDefaultCourses := _config.ErupeConfig.DefaultCourses
-	defer func() {
-		_config.ErupeConfig.DefaultCourses = originalDefaultCourses
-	}()
-	_config.ErupeConfig.DefaultCourses = []uint16{}
-
 	// Course 26 (NetCafe) should add course 25
-	courses, _ := GetCourseStruct(1 << 26)
+	courses, _ := GetCourseStruct(1<<26, nil)
 
 	hasNetcafe := false
 	hasCafeSP := false
@@ -230,15 +215,8 @@ func TestGetCourseStruct_NetcafeCourse(t *testing.T) {
 }
 
 func TestGetCourseStruct_NCourse(t *testing.T) {
-	// Save original config
-	originalDefaultCourses := _config.ErupeConfig.DefaultCourses
-	defer func() {
-		_config.ErupeConfig.DefaultCourses = originalDefaultCourses
-	}()
-	_config.ErupeConfig.DefaultCourses = []uint16{}
-
 	// Course 9 should add course 30
-	courses, _ := GetCourseStruct(1 << 9)
+	courses, _ := GetCourseStruct(1<<9, nil)
 
 	hasNCourse := false
 	hasRealNetcafe := false
@@ -260,15 +238,8 @@ func TestGetCourseStruct_NCourse(t *testing.T) {
 }
 
 func TestGetCourseStruct_HidenCourse(t *testing.T) {
-	// Save original config
-	originalDefaultCourses := _config.ErupeConfig.DefaultCourses
-	defer func() {
-		_config.ErupeConfig.DefaultCourses = originalDefaultCourses
-	}()
-	_config.ErupeConfig.DefaultCourses = []uint16{}
-
 	// Course 10 (Hiden) should add course 31
-	courses, _ := GetCourseStruct(1 << 10)
+	courses, _ := GetCourseStruct(1<<10, nil)
 
 	hasHiden := false
 	hasHidenExtra := false
@@ -290,14 +261,7 @@ func TestGetCourseStruct_HidenCourse(t *testing.T) {
 }
 
 func TestGetCourseStruct_ExpiryDate(t *testing.T) {
-	// Save original config
-	originalDefaultCourses := _config.ErupeConfig.DefaultCourses
-	defer func() {
-		_config.ErupeConfig.DefaultCourses = originalDefaultCourses
-	}()
-	_config.ErupeConfig.DefaultCourses = []uint16{}
-
-	courses, _ := GetCourseStruct(1 << 3)
+	courses, _ := GetCourseStruct(1<<3, nil)
 
 	expectedExpiry := time.Date(2030, 1, 1, 0, 0, 0, 0, time.FixedZone("UTC+9", 9*60*60))
 
@@ -311,14 +275,7 @@ func TestGetCourseStruct_ExpiryDate(t *testing.T) {
 }
 
 func TestGetCourseStruct_ReturnsRecalculatedRights(t *testing.T) {
-	// Save original config
-	originalDefaultCourses := _config.ErupeConfig.DefaultCourses
-	defer func() {
-		_config.ErupeConfig.DefaultCourses = originalDefaultCourses
-	}()
-	_config.ErupeConfig.DefaultCourses = []uint16{}
-
-	courses, newRights := GetCourseStruct(2 + 8 + 32) // courses 1, 3, 5
+	courses, newRights := GetCourseStruct(2+8+32, nil) // courses 1, 3, 5
 
 	// Calculate expected rights from returned courses
 	var expectedRights uint32
@@ -363,17 +320,11 @@ func BenchmarkCourseExists(b *testing.B) {
 }
 
 func BenchmarkGetCourseStruct(b *testing.B) {
-	// Save original config
-	originalDefaultCourses := _config.ErupeConfig.DefaultCourses
-	defer func() {
-		_config.ErupeConfig.DefaultCourses = originalDefaultCourses
-	}()
-	_config.ErupeConfig.DefaultCourses = []uint16{1, 2}
-
+	defaultCourses := []uint16{1, 2}
 	rights := uint32(2 + 8 + 32 + 128 + 512)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = GetCourseStruct(rights)
+		_, _ = GetCourseStruct(rights, defaultCourses)
 	}
 }
 
