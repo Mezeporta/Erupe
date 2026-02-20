@@ -193,16 +193,11 @@ func SendMailNotification(s *Session, m *Mail, recipient *Session) {
 }
 
 func getCharacterName(s *Session, charID uint32) string {
-	row := s.server.db.QueryRow("SELECT name FROM characters WHERE id = $1", charID)
-
-	charName := ""
-
-	err := row.Scan(&charName)
-
+	name, err := s.server.charRepo.GetName(charID)
 	if err != nil {
 		return ""
 	}
-	return charName
+	return name
 }
 
 func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {

@@ -71,16 +71,18 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	s.token = pkt.LoginTokenString
 	s.Unlock()
 
-	if err := s.server.db.QueryRow("SELECT user_id FROM characters WHERE id=$1", s.charID).Scan(&s.userID); err != nil {
+	userID, err := s.server.charRepo.GetUserID(s.charID)
+	if err != nil {
 		s.logger.Error("Failed to resolve user ID for character", zap.Error(err), zap.Uint32("charID", s.charID))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
+	s.userID = userID
 
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(TimeAdjusted().Unix())) // Unix timestamp
 
-	_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
+	_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
 	if err != nil {
 		s.logger.Error("Failed to update current players", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -94,8 +96,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	_, err = s.server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", TimeAdjusted().Unix(), s.charID)
-	if err != nil {
+	if err = s.server.charRepo.UpdateLastLogin(s.charID, TimeAdjusted().Unix()); err != nil {
 		s.logger.Error("Failed to update last login", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -238,8 +239,10 @@ func logoutPlayer(s *Session) {
 	var rpGained int
 
 	if s.charID != 0 {
-		if err := s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed); err != nil {
+		if val, err := s.server.charRepo.ReadInt(s.charID, "time_played"); err != nil {
 			s.logger.Error("Failed to read time_played, RP accrual may be inaccurate", zap.Error(err))
+		} else {
+			timePlayed = val
 		}
 		sessionTime = int(TimeAdjusted().Unix()) - int(s.sessionStart)
 		timePlayed += sessionTime
@@ -275,7 +278,7 @@ func logoutPlayer(s *Session) {
 		}
 
 		// Update time_played and guild treasure hunt
-		if _, err := s.server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.charID); err != nil {
+		if err := s.server.charRepo.UpdateTimePlayed(s.charID, timePlayed); err != nil {
 			s.logger.Error("Failed to update time played", zap.Error(err))
 		}
 		if _, err := s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE character_id=$1`, s.charID); err != nil {

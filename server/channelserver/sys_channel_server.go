@@ -45,6 +45,7 @@ type Server struct {
 	Port           uint16
 	logger         *zap.Logger
 	db             *sqlx.DB
+	charRepo       *CharacterRepository
 	erupeConfig    *_config.Config
 	acceptConns    chan net.Conn
 	deleteConns    chan net.Conn
@@ -114,6 +115,8 @@ func NewServer(config *Config) *Server {
 		questCacheTime: make(map[int]time.Time),
 		handlerTable:   buildHandlerTable(),
 	}
+
+	s.charRepo = NewCharacterRepository(config.DB)
 
 	// Mezeporta
 	s.stages["sl1Ns200p0a0u0"] = NewStage("sl1Ns200p0a0u0")
@@ -361,17 +364,9 @@ func (s *Server) FindSessionByCharID(charID uint32) *Session {
 
 // DisconnectUser disconnects all sessions belonging to the given user ID.
 func (s *Server) DisconnectUser(uid uint32) {
-	var cid uint32
-	var cids []uint32
-	rows, err := s.db.Query(`SELECT id FROM characters WHERE user_id=$1`, uid)
+	cids, err := s.charRepo.GetCharIDsByUserID(uid)
 	if err != nil {
 		s.logger.Error("Failed to query characters for disconnect", zap.Error(err))
-	} else {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			_ = rows.Scan(&cid)
-			cids = append(cids, cid)
-		}
 	}
 	if s.Registry != nil {
 		s.Registry.DisconnectUser(cids)

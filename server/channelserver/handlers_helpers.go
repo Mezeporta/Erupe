@@ -67,8 +67,7 @@ func doAckSimpleFail(s *Session, ackHandle uint32, data []byte) {
 // loadCharacterData loads a column from the characters table and sends it as
 // a buffered ack response. If the data is empty/nil, defaultData is sent instead.
 func loadCharacterData(s *Session, ackHandle uint32, column string, defaultData []byte) {
-	var data []byte
-	err := s.server.db.QueryRow("SELECT "+column+" FROM characters WHERE id = $1", s.charID).Scan(&data)
+	data, err := s.server.charRepo.LoadColumn(s.charID, column)
 	if err != nil {
 		s.logger.Error("Failed to load "+column, zap.Error(err))
 	}
@@ -87,7 +86,7 @@ func saveCharacterData(s *Session, ackHandle uint32, column string, data []byte,
 		return
 	}
 	dumpSaveData(s, data, column)
-	_, err := s.server.db.Exec("UPDATE characters SET "+column+"=$1 WHERE id=$2", data, s.charID)
+	err := s.server.charRepo.SaveColumn(s.charID, column, data)
 	if err != nil {
 		s.logger.Error("Failed to save "+column, zap.Error(err))
 		doAckSimpleFail(s, ackHandle, make([]byte, 4))
@@ -99,17 +98,13 @@ func saveCharacterData(s *Session, ackHandle uint32, column string, data []byte,
 // readCharacterInt reads a single integer column from the characters table.
 // Returns 0 for NULL columns via COALESCE.
 func readCharacterInt(s *Session, column string) (int, error) {
-	var value int
-	err := s.server.db.QueryRow("SELECT COALESCE("+column+", 0) FROM characters WHERE id=$1", s.charID).Scan(&value)
-	return value, err
+	return s.server.charRepo.ReadInt(s.charID, column)
 }
 
 // adjustCharacterInt atomically adds delta to an integer column and returns the new value.
 // Handles NULL columns via COALESCE (NULL + delta = delta).
 func adjustCharacterInt(s *Session, column string, delta int) (int, error) {
-	var value int
-	err := s.server.db.QueryRow("UPDATE characters SET "+column+"=COALESCE("+column+", 0)+$1 WHERE id=$2 RETURNING "+column, delta, s.charID).Scan(&value)
-	return value, err
+	return s.server.charRepo.AdjustInt(s.charID, column, delta)
 }
 
 func updateRights(s *Session) {

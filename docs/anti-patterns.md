@@ -240,6 +240,8 @@ The same table is queried in different handlers with slightly different column s
 
 **Recommendation:** At minimum, define query constants. Ideally, introduce a repository layer that encapsulates all queries for a given entity.
 
+**Status (partial):** A `CharacterRepository` layer has been introduced in `repo_character.go`, centralizing all `characters` table access behind a concrete struct. The 4 existing helpers (`loadCharacterData`, `saveCharacterData`, `readCharacterInt`, `adjustCharacterInt`) now delegate to the repository, covering ~70% of character queries. Direct queries in `handlers_session.go` (login/logout), `sys_channel_server.go` (`DisconnectUser`), and `handlers_mail.go` (name lookup) have also been migrated. Remaining work: guild repository (second-highest duplication), per-handler migration of remaining inline character queries (plate, mercenary, rengoku, cafe, clients), and column allowlist for SQL injection hardening.
+
 ---
 
 ## 10. init() Function for Handler Registration
