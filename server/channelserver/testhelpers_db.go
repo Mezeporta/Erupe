@@ -341,4 +341,6 @@ func SetTestDB(s *Server, db *sqlx.DB) {
 	s.houseRepo = NewHouseRepository(db)
 	s.festaRepo = NewFestaRepository(db)
 	s.towerRepo = NewTowerRepository(db)
+	s.rengokuRepo = NewRengokuRepository(db)
+	s.mailRepo = NewMailRepository(db)
 }

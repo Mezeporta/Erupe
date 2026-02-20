@@ -76,13 +76,9 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		if err != nil {
 			response = 0
 		} else {
-			mail := Mail{
-				RecipientID:     s.charID,
-				Subject:         "Withdrawal",
-				Body:            fmt.Sprintf("You have withdrawn from 「%s」.", guild.Name),
-				IsSystemMessage: true,
-			}
-			_ = mail.Send(s, nil)
+			_ = s.server.mailRepo.SendMail(0, s.charID, "Withdrawal",
+				fmt.Sprintf("You have withdrawn from 「%s」.", guild.Name),
+				0, 0, false, true)
 		}
 		bf.WriteUint32(uint32(response))
 	case mhfpacket.OperateGuildDonateRank:
@@ -303,7 +299,7 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 	} else {
-		_ = mail.Send(s, nil)
+		_ = s.server.mailRepo.SendMail(mail.SenderID, mail.RecipientID, mail.Subject, mail.Body, 0, 0, false, true)
 		if s.server.Registry != nil {
 			s.server.Registry.NotifyMailToCharID(pkt.CharID, s, &mail)
 		} else {

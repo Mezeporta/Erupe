@@ -3,11 +3,8 @@ package channelserver
 import (
 	"encoding/binary"
 	ps "erupe-ce/common/pascalstring"
-	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/jmoiron/sqlx"
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
@@ -125,15 +122,8 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	_, _ = bf.Seek(4, 1)
 	maxStageSp := bf.ReadUint32()
 	maxScoreSp := bf.ReadUint32()
-	var t int
-	err = s.server.db.QueryRow("SELECT character_id FROM rengoku_score WHERE character_id=$1", s.charID).Scan(&t)
-	if err != nil {
-		if _, err := s.server.db.Exec("INSERT INTO rengoku_score (character_id) VALUES ($1)", s.charID); err != nil {
-			s.logger.Error("Failed to insert rengoku score", zap.Error(err))
-		}
-	}
-	if _, err := s.server.db.Exec("UPDATE rengoku_score SET max_stages_mp=$1, max_points_mp=$2, max_stages_sp=$3, max_points_sp=$4 WHERE character_id=$5", maxStageMp, maxScoreMp, maxStageSp, maxScoreSp, s.charID); err != nil {
-		s.logger.Error("Failed to update rengoku score", zap.Error(err))
+	if err := s.server.rengokuRepo.UpsertScore(s.charID, maxStageMp, maxScoreMp, maxStageSp, maxScoreSp); err != nil {
+		s.logger.Error("Failed to upsert rengoku score", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -200,10 +190,6 @@ func handleMsgMhfGetRengokuBinary(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
-const rengokuScoreQuery = `, c.name FROM rengoku_score rs
-LEFT JOIN characters c ON c.id = rs.character_id
-LEFT JOIN guild_characters gc ON gc.character_id = rs.character_id `
-
 // RengokuScore represents a Rengoku (Hunting Road) ranking score.
 type RengokuScore struct {
 	Name  string `db:"name"`
@@ -235,26 +221,11 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	scoreData := byteframe.NewByteFrame()
 
-	var rows *sqlx.Rows
-	var err error
-	switch pkt.Leaderboard {
-	case 0:
-		rows, err = s.server.db.Queryx(fmt.Sprintf("SELECT max_stages_mp AS score %s ORDER BY max_stages_mp DESC", rengokuScoreQuery))
-	case 1:
-		rows, err = s.server.db.Queryx(fmt.Sprintf("SELECT max_points_mp AS score %s ORDER BY max_points_mp DESC", rengokuScoreQuery))
-	case 2:
-		rows, err = s.server.db.Queryx(fmt.Sprintf("SELECT max_stages_mp AS score %s WHERE guild_id=$1 ORDER BY max_stages_mp DESC", rengokuScoreQuery), guild.ID)
-	case 3:
-		rows, err = s.server.db.Queryx(fmt.Sprintf("SELECT max_points_mp AS score %s WHERE guild_id=$1 ORDER BY max_points_mp DESC", rengokuScoreQuery), guild.ID)
-	case 4:
-		rows, err = s.server.db.Queryx(fmt.Sprintf("SELECT max_stages_sp AS score %s ORDER BY max_stages_sp DESC", rengokuScoreQuery))
-	case 5:
-		rows, err = s.server.db.Queryx(fmt.Sprintf("SELECT max_points_sp AS score %s ORDER BY max_points_sp DESC", rengokuScoreQuery))
-	case 6:
-		rows, err = s.server.db.Queryx(fmt.Sprintf("SELECT max_stages_sp AS score %s WHERE guild_id=$1 ORDER BY max_stages_sp DESC", rengokuScoreQuery), guild.ID)
-	case 7:
-		rows, err = s.server.db.Queryx(fmt.Sprintf("SELECT max_points_sp AS score %s WHERE guild_id=$1 ORDER BY max_points_sp DESC", rengokuScoreQuery), guild.ID)
+	var guildID uint32
+	if guild != nil {
+		guildID = guild.ID
 	}
+	rows, err := s.server.rengokuRepo.GetRanking(pkt.Leaderboard, guildID)
 	if err != nil {
 		s.logger.Error("Failed to query rengoku ranking", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 11))

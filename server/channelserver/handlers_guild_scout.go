@@ -62,18 +62,10 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	mail := &Mail{
-		SenderID:    s.charID,
-		RecipientID: pkt.CharID,
-		Subject:     s.server.i18n.guild.invite.title,
-		Body: fmt.Sprintf(
-			s.server.i18n.guild.invite.body,
-			guildInfo.Name,
-		),
-		IsGuildInvite: true,
-	}
-
-	err = mail.Send(s, transaction)
+	err = s.server.mailRepo.SendMailTx(transaction, s.charID, pkt.CharID,
+		s.server.i18n.guild.invite.title,
+		fmt.Sprintf(s.server.i18n.guild.invite.body, guildInfo.Name),
+		0, 0, true, false)
 
 	if err != nil {
 		_ = transaction.Rollback()
@@ -151,37 +143,25 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	var mail []Mail
+	type mailMsg struct {
+		senderID    uint32
+		recipientID uint32
+		subject     string
+		body        string
+	}
+	var msgs []mailMsg
 	if pkt.Answer {
 		err = s.server.guildRepo.AcceptApplication(guild.ID, s.charID)
-		mail = append(mail, Mail{
-			RecipientID:     s.charID,
-			Subject:         s.server.i18n.guild.invite.success.title,
-			Body:            fmt.Sprintf(s.server.i18n.guild.invite.success.body, guild.Name),
-			IsSystemMessage: true,
-		})
-		mail = append(mail, Mail{
-			SenderID:        s.charID,
-			RecipientID:     pkt.LeaderID,
-			Subject:         s.server.i18n.guild.invite.accepted.title,
-			Body:            fmt.Sprintf(s.server.i18n.guild.invite.accepted.body, guild.Name),
-			IsSystemMessage: true,
-		})
+		msgs = append(msgs,
+			mailMsg{0, s.charID, s.server.i18n.guild.invite.success.title, fmt.Sprintf(s.server.i18n.guild.invite.success.body, guild.Name)},
+			mailMsg{s.charID, pkt.LeaderID, s.server.i18n.guild.invite.accepted.title, fmt.Sprintf(s.server.i18n.guild.invite.accepted.body, guild.Name)},
+		)
 	} else {
 		err = s.server.guildRepo.RejectApplication(guild.ID, s.charID)
-		mail = append(mail, Mail{
-			RecipientID:     s.charID,
-			Subject:         s.server.i18n.guild.invite.rejected.title,
-			Body:            fmt.Sprintf(s.server.i18n.guild.invite.rejected.body, guild.Name),
-			IsSystemMessage: true,
-		})
-		mail = append(mail, Mail{
-			SenderID:        s.charID,
-			RecipientID:     pkt.LeaderID,
-			Subject:         s.server.i18n.guild.invite.declined.title,
-			Body:            fmt.Sprintf(s.server.i18n.guild.invite.declined.body, guild.Name),
-			IsSystemMessage: true,
-		})
+		msgs = append(msgs,
+			mailMsg{0, s.charID, s.server.i18n.guild.invite.rejected.title, fmt.Sprintf(s.server.i18n.guild.invite.rejected.body, guild.Name)},
+			mailMsg{s.charID, pkt.LeaderID, s.server.i18n.guild.invite.declined.title, fmt.Sprintf(s.server.i18n.guild.invite.declined.body, guild.Name)},
+		)
 	}
 	if err != nil {
 		bf.WriteUint32(7)
@@ -191,8 +171,8 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(0)
 		bf.WriteUint32(guild.ID)
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
-		for _, m := range mail {
-			_ = m.Send(s, nil)
+		for _, m := range msgs {
+			_ = s.server.mailRepo.SendMail(m.senderID, m.recipientID, m.subject, m.body, 0, 0, false, true)
 		}
 	}
 }

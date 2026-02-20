@@ -1,7 +1,6 @@
 package channelserver
 
 import (
-	"database/sql"
 	"erupe-ce/common/stringsupport"
 	"time"
 
@@ -28,146 +27,6 @@ type Mail struct {
 	IsGuildInvite        bool      `db:"is_guild_invite"`
 	IsSystemMessage      bool      `db:"is_sys_message"`
 	SenderName           string    `db:"sender_name"`
-}
-
-func (m *Mail) Send(s *Session, transaction *sql.Tx) error {
-	query := `
-		INSERT INTO mail (sender_id, recipient_id, subject, body, attached_item, attached_item_amount, is_guild_invite, is_sys_message)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`
-
-	var err error
-
-	if transaction == nil {
-		_, err = s.server.db.Exec(query, m.SenderID, m.RecipientID, m.Subject, m.Body, m.AttachedItemID, m.AttachedItemAmount, m.IsGuildInvite, m.IsSystemMessage)
-	} else {
-		_, err = transaction.Exec(query, m.SenderID, m.RecipientID, m.Subject, m.Body, m.AttachedItemID, m.AttachedItemAmount, m.IsGuildInvite, m.IsSystemMessage)
-	}
-
-	if err != nil {
-		s.logger.Error(
-			"failed to send mail",
-			zap.Error(err),
-			zap.Uint32("senderID", m.SenderID),
-			zap.Uint32("recipientID", m.RecipientID),
-			zap.String("subject", m.Subject),
-			zap.String("body", m.Body),
-			zap.Uint16("itemID", m.AttachedItemID),
-			zap.Uint16("itemAmount", m.AttachedItemAmount),
-			zap.Bool("isGuildInvite", m.IsGuildInvite),
-			zap.Bool("isSystemMessage", m.IsSystemMessage),
-		)
-		return err
-	}
-
-	return nil
-}
-
-func (m *Mail) MarkRead(s *Session) error {
-	_, err := s.server.db.Exec(`
-		UPDATE mail SET read = true WHERE id = $1
-	`, m.ID)
-
-	if err != nil {
-		s.logger.Error(
-			"failed to mark mail as read",
-			zap.Error(err),
-			zap.Int("mailID", m.ID),
-		)
-		return err
-	}
-
-	return nil
-}
-
-// GetMailListForCharacter loads all mail for a character.
-func GetMailListForCharacter(s *Session, charID uint32) ([]Mail, error) {
-	rows, err := s.server.db.Queryx(`
-		SELECT
-			m.id,
-			m.sender_id,
-			m.recipient_id,
-			m.subject,
-			m.read,
-			m.attached_item_received,
-			m.attached_item,
-			m.attached_item_amount,
-			m.created_at,
-			m.is_guild_invite,
-			m.is_sys_message,
-			m.deleted,
-			m.locked,
-			c.name as sender_name
-		FROM mail m
-			JOIN characters c ON c.id = m.sender_id
-		WHERE recipient_id = $1 AND m.deleted = false
-		ORDER BY m.created_at DESC, id DESC
-		LIMIT 32
-	`, charID)
-
-	if err != nil {
-		s.logger.Error("failed to get mail for character", zap.Error(err), zap.Uint32("charID", charID))
-		return nil, err
-	}
-
-	defer func() { _ = rows.Close() }()
-
-	allMail := make([]Mail, 0)
-
-	for rows.Next() {
-		mail := Mail{}
-
-		err := rows.StructScan(&mail)
-
-		if err != nil {
-			return nil, err
-		}
-
-		allMail = append(allMail, mail)
-	}
-
-	return allMail, nil
-}
-
-// GetMailByID loads a single mail by ID.
-func GetMailByID(s *Session, ID int) (*Mail, error) {
-	row := s.server.db.QueryRowx(`
-		SELECT
-			m.id,
-			m.sender_id,
-			m.recipient_id,
-			m.subject,
-			m.read,
-			m.body,
-			m.attached_item_received,
-			m.attached_item,
-			m.attached_item_amount,
-			m.created_at,
-			m.is_guild_invite,
-			m.is_sys_message,
-			m.deleted,
-			m.locked,
-			c.name as sender_name
-		FROM mail m
-			JOIN characters c ON c.id = m.sender_id
-		WHERE m.id = $1
-		LIMIT 1
-	`, ID)
-
-	mail := &Mail{}
-
-	err := row.StructScan(mail)
-
-	if err != nil {
-		s.logger.Error(
-			"failed to retrieve mail",
-			zap.Error(err),
-			zap.Int("mailID", ID),
-		)
-		return nil, err
-	}
-
-	return mail, nil
 }
 
 // SendMailNotification sends a new mail notification to a player.
@@ -213,13 +72,13 @@ func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	mail, err := GetMailByID(s, mailId)
+	mail, err := s.server.mailRepo.GetByID(mailId)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, []byte{0})
 		return
 	}
 
-	if _, err := s.server.db.Exec(`UPDATE mail SET read = true WHERE id = $1`, mail.ID); err != nil {
+	if err := s.server.mailRepo.MarkRead(mail.ID); err != nil {
 		s.logger.Error("Failed to mark mail as read", zap.Error(err))
 	}
 	bf := byteframe.NewByteFrame()
@@ -231,8 +90,9 @@ func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfListMail)
 
-	mail, err := GetMailListForCharacter(s, s.charID)
+	mail, err := s.server.mailRepo.GetListForCharacter(s.charID)
 	if err != nil {
+		s.logger.Error("failed to get mail for character", zap.Error(err), zap.Uint32("charID", s.charID))
 		doAckBufSucceed(s, pkt.AckHandle, []byte{0})
 		return
 	}
@@ -304,7 +164,7 @@ func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	mail, err := GetMailByID(s, s.mailList[pkt.AccIndex])
+	mail, err := s.server.mailRepo.GetByID(s.mailList[pkt.AccIndex])
 	if err != nil {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -312,19 +172,19 @@ func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 
 	switch pkt.Operation {
 	case mhfpacket.OperateMailDelete:
-		if _, err := s.server.db.Exec(`UPDATE mail SET deleted = true WHERE id = $1`, mail.ID); err != nil {
+		if err := s.server.mailRepo.MarkDeleted(mail.ID); err != nil {
 			s.logger.Error("Failed to delete mail", zap.Error(err))
 		}
 	case mhfpacket.OperateMailLock:
-		if _, err := s.server.db.Exec(`UPDATE mail SET locked = TRUE WHERE id = $1`, mail.ID); err != nil {
+		if err := s.server.mailRepo.SetLocked(mail.ID, true); err != nil {
 			s.logger.Error("Failed to lock mail", zap.Error(err))
 		}
 	case mhfpacket.OperateMailUnlock:
-		if _, err := s.server.db.Exec(`UPDATE mail SET locked = FALSE WHERE id = $1`, mail.ID); err != nil {
+		if err := s.server.mailRepo.SetLocked(mail.ID, false); err != nil {
 			s.logger.Error("Failed to unlock mail", zap.Error(err))
 		}
 	case mhfpacket.OperateMailAcquireItem:
-		if _, err := s.server.db.Exec(`UPDATE mail SET attached_item_received = TRUE WHERE id = $1`, mail.ID); err != nil {
+		if err := s.server.mailRepo.MarkItemReceived(mail.ID); err != nil {
 			s.logger.Error("Failed to mark mail item received", zap.Error(err))
 		}
 	}
@@ -333,10 +193,6 @@ func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSendMail(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSendMail)
-	query := `
-		INSERT INTO mail (sender_id, recipient_id, subject, body, attached_item, attached_item_amount, is_guild_invite)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`
 
 	if pkt.RecipientID == 0 { // Guild mail
 		g, err := s.server.guildRepo.GetByCharID(s.charID)
@@ -352,7 +208,7 @@ func handleMsgMhfSendMail(s *Session, p mhfpacket.MHFPacket) {
 			return
 		}
 		for i := 0; i < len(gm); i++ {
-			_, err := s.server.db.Exec(query, s.charID, gm[i].CharID, pkt.Subject, pkt.Body, 0, 0, false)
+			err := s.server.mailRepo.SendMail(s.charID, gm[i].CharID, pkt.Subject, pkt.Body, 0, 0, false, false)
 			if err != nil {
 				s.logger.Error("Failed to send mail")
 				doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -360,7 +216,7 @@ func handleMsgMhfSendMail(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	} else {
-		_, err := s.server.db.Exec(query, s.charID, pkt.RecipientID, pkt.Subject, pkt.Body, pkt.ItemID, pkt.Quantity, false)
+		err := s.server.mailRepo.SendMail(s.charID, pkt.RecipientID, pkt.Subject, pkt.Body, pkt.ItemID, pkt.Quantity, false, false)
 		if err != nil {
 			s.logger.Error("Failed to send mail")
 		}

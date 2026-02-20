@@ -605,6 +605,8 @@ func createTestServerWithDB(t *testing.T, db *sqlx.DB) *Server {
 	server.houseRepo = NewHouseRepository(db)
 	server.festaRepo = NewFestaRepository(db)
 	server.towerRepo = NewTowerRepository(db)
+	server.rengokuRepo = NewRengokuRepository(db)
+	server.mailRepo = NewMailRepository(db)
 
 	return server
 }

@@ -52,6 +52,8 @@ type Server struct {
 	houseRepo      *HouseRepository
 	festaRepo      *FestaRepository
 	towerRepo      *TowerRepository
+	rengokuRepo    *RengokuRepository
+	mailRepo       *MailRepository
 	erupeConfig    *_config.Config
 	acceptConns    chan net.Conn
 	deleteConns    chan net.Conn
@@ -129,6 +131,8 @@ func NewServer(config *Config) *Server {
 	s.houseRepo = NewHouseRepository(config.DB)
 	s.festaRepo = NewFestaRepository(config.DB)
 	s.towerRepo = NewTowerRepository(config.DB)
+	s.rengokuRepo = NewRengokuRepository(config.DB)
+	s.mailRepo = NewMailRepository(config.DB)
 
 	// Mezeporta
 	s.stages["sl1Ns200p0a0u0"] = NewStage("sl1Ns200p0a0u0")
