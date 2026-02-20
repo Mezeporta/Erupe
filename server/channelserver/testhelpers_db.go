@@ -378,4 +378,7 @@ func SetTestDB(s *Server, db *sqlx.DB) {
 	s.towerRepo = NewTowerRepository(db)
 	s.rengokuRepo = NewRengokuRepository(db)
 	s.mailRepo = NewMailRepository(db)
+	s.stampRepo = NewStampRepository(db)
+	s.distRepo = NewDistributionRepository(db)
+	s.sessionRepo = NewSessionRepository(db)
 }

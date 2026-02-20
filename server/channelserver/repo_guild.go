@@ -886,6 +886,18 @@ type ScoutedCharacter struct {
 	ActorID uint32 `db:"actor_id"`
 }
 
+// ClearTreasureHunt clears the treasure_hunt field for a character on logout.
+func (r *GuildRepository) ClearTreasureHunt(charID uint32) error {
+	_, err := r.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE character_id=$1`, charID)
+	return err
+}
+
+// InsertKillLog records a monster kill log entry for a character.
+func (r *GuildRepository) InsertKillLog(charID uint32, monster int, quantity uint8, timestamp time.Time) error {
+	_, err := r.db.Exec(`INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, $2, $3, $4)`, charID, monster, quantity, timestamp)
+	return err
+}
+
 // ListInvitedCharacters returns all characters with pending guild invitations.
 func (r *GuildRepository) ListInvitedCharacters(guildID uint32) ([]*ScoutedCharacter, error) {
 	rows, err := r.db.Queryx(`

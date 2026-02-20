@@ -31,32 +31,8 @@ type Distribution struct {
 func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateDistItem)
 
-	var itemDists []Distribution
 	bf := byteframe.NewByteFrame()
-	rows, err := s.server.db.Queryx(`
-		SELECT d.id, event_name, description, COALESCE(rights, 0) AS rights, COALESCE(selection, false) AS selection, times_acceptable,
-		COALESCE(min_hr, -1) AS min_hr, COALESCE(max_hr, -1) AS max_hr,
-		COALESCE(min_sr, -1) AS min_sr, COALESCE(max_sr, -1) AS max_sr,
-		COALESCE(min_gr, -1) AS min_gr, COALESCE(max_gr, -1) AS max_gr,
-		(
-    		SELECT count(*) FROM distributions_accepted da
-    		WHERE d.id = da.distribution_id AND da.character_id = $1
-		) AS times_accepted,
-		COALESCE(deadline, TO_TIMESTAMP(0)) AS deadline
-		FROM distribution d
-		WHERE character_id = $1 AND type = $2 OR character_id IS NULL AND type = $2 ORDER BY id DESC
-	`, s.charID, pkt.DistType)
-
-	if err == nil {
-		var itemDist Distribution
-		for rows.Next() {
-			err = rows.StructScan(&itemDist)
-			if err != nil {
-				continue
-			}
-			itemDists = append(itemDists, itemDist)
-		}
-	}
+	itemDists, _ := s.server.distRepo.List(s.charID, pkt.DistType)
 
 	bf.WriteUint16(uint16(len(itemDists)))
 	for _, dist := range itemDists {
@@ -128,27 +104,11 @@ type DistributionItem struct {
 	Quantity uint32 `db:"quantity"`
 }
 
-func getDistributionItems(s *Session, i uint32) []DistributionItem {
-	var distItems []DistributionItem
-	rows, err := s.server.db.Queryx(`SELECT id, item_type, COALESCE(item_id, 0) AS item_id, COALESCE(quantity, 0) AS quantity FROM distribution_items WHERE distribution_id=$1`, i)
-	if err == nil {
-		var distItem DistributionItem
-		for rows.Next() {
-			err = rows.StructScan(&distItem)
-			if err != nil {
-				continue
-			}
-			distItems = append(distItems, distItem)
-		}
-	}
-	return distItems
-}
-
 func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfApplyDistItem)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(pkt.DistributionID)
-	distItems := getDistributionItems(s, pkt.DistributionID)
+	distItems, _ := s.server.distRepo.GetItems(pkt.DistributionID)
 	bf.WriteUint16(uint16(len(distItems)))
 	for _, item := range distItems {
 		bf.WriteUint8(item.ItemType)
@@ -164,9 +124,9 @@ func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireDistItem)
 	if pkt.DistributionID > 0 {
-		_, err := s.server.db.Exec(`INSERT INTO public.distributions_accepted VALUES ($1, $2)`, pkt.DistributionID, s.charID)
+		err := s.server.distRepo.RecordAccepted(pkt.DistributionID, s.charID)
 		if err == nil {
-			distItems := getDistributionItems(s, pkt.DistributionID)
+			distItems, _ := s.server.distRepo.GetItems(pkt.DistributionID)
 			for _, item := range distItems {
 				switch item.ItemType {
 				case 17:
@@ -198,8 +158,7 @@ func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetDistDescription(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetDistDescription)
-	var desc string
-	err := s.server.db.QueryRow("SELECT description FROM distribution WHERE id = $1", pkt.DistributionID).Scan(&desc)
+	desc, err := s.server.distRepo.GetDescription(pkt.DistributionID)
 	if err != nil {
 		s.logger.Error("Error parsing item distribution description", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))

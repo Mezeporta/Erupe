@@ -57,9 +57,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysLogin)
 
 	if !s.server.erupeConfig.DebugOptions.DisableTokenCheck {
-		var token string
-		err := s.server.db.QueryRow("SELECT token FROM sign_sessions ss INNER JOIN public.users u on ss.user_id = u.id WHERE token=$1 AND ss.id=$2 AND u.id=(SELECT c.user_id FROM characters c WHERE c.id=$3)", pkt.LoginTokenString, pkt.LoginTokenNumber, pkt.CharID0).Scan(&token)
-		if err != nil {
+		if err := s.server.sessionRepo.ValidateLoginToken(pkt.LoginTokenString, pkt.LoginTokenNumber, pkt.CharID0); err != nil {
 			_ = s.rawConn.Close()
 			s.logger.Warn(fmt.Sprintf("Invalid login token, offending CID: (%d)", pkt.CharID0))
 			return
@@ -82,14 +80,14 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(TimeAdjusted().Unix())) // Unix timestamp
 
-	_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
+	err = s.server.sessionRepo.UpdatePlayerCount(s.server.ID, len(s.server.sessions))
 	if err != nil {
 		s.logger.Error("Failed to update current players", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
-	_, err = s.server.db.Exec("UPDATE sign_sessions SET server_id=$1, char_id=$2 WHERE token=$3", s.server.ID, s.charID, s.token)
+	err = s.server.sessionRepo.BindSession(s.token, s.server.ID, s.charID)
 	if err != nil {
 		s.logger.Error("Failed to update sign session", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -281,7 +279,7 @@ func logoutPlayer(s *Session) {
 		if err := s.server.charRepo.UpdateTimePlayed(s.charID, timePlayed); err != nil {
 			s.logger.Error("Failed to update time played", zap.Error(err))
 		}
-		if _, err := s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE character_id=$1`, s.charID); err != nil {
+		if err := s.server.guildRepo.ClearTreasureHunt(s.charID); err != nil {
 			s.logger.Error("Failed to clear treasure hunt", zap.Error(err))
 		}
 	}
@@ -324,13 +322,11 @@ func logoutPlayer(s *Session) {
 
 	// Update sign sessions and server player count
 	if s.server.db != nil {
-		_, err := s.server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.token)
-		if err != nil {
+		if err := s.server.sessionRepo.ClearSession(s.token); err != nil {
 			s.logger.Error("Failed to clear sign session", zap.Error(err))
 		}
 
-		_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
-		if err != nil {
+		if err := s.server.sessionRepo.UpdatePlayerCount(s.server.ID, len(s.server.sessions)); err != nil {
 			s.logger.Error("Failed to update player count", zap.Error(err))
 		}
 	}
@@ -433,7 +429,7 @@ func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 		for i := 0; i < killLogMonsterCount; i++ {
 			val = bf.ReadUint8()
 			if val > 0 && mhfmon.Monsters[i].Large {
-				if _, err := s.server.db.Exec(`INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, $2, $3, $4)`, s.charID, i, val, TimeAdjusted()); err != nil {
+				if err := s.server.guildRepo.InsertKillLog(s.charID, i, val, TimeAdjusted()); err != nil {
 					s.logger.Error("Failed to insert kill log", zap.Error(err))
 				}
 			}

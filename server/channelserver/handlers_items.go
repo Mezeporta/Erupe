@@ -6,8 +6,6 @@ import (
 	"erupe-ce/common/mhfmon"
 	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
-	"fmt"
-	"time"
 
 	"go.uber.org/zap"
 )
@@ -230,27 +228,26 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	var total, redeemed, updated uint16
-	var lastCheck time.Time
-	err := s.server.db.QueryRow(fmt.Sprintf("SELECT %s_checked FROM stamps WHERE character_id=$1", pkt.StampType), s.charID).Scan(&lastCheck)
+	lastCheck, err := s.server.stampRepo.GetChecked(s.charID, pkt.StampType)
 	if err != nil {
 		lastCheck = TimeAdjusted()
-		if _, err := s.server.db.Exec("INSERT INTO stamps (character_id, hl_checked, ex_checked) VALUES ($1, $2, $2)", s.charID, TimeAdjusted()); err != nil {
+		if err := s.server.stampRepo.Init(s.charID, TimeAdjusted()); err != nil {
 			s.logger.Error("Failed to insert stamps record", zap.Error(err))
 		}
 	} else {
-		if _, err := s.server.db.Exec(fmt.Sprintf(`UPDATE stamps SET %s_checked=$1 WHERE character_id=$2`, pkt.StampType), TimeAdjusted(), s.charID); err != nil {
+		if err := s.server.stampRepo.SetChecked(s.charID, pkt.StampType, TimeAdjusted()); err != nil {
 			s.logger.Error("Failed to update stamp check time", zap.Error(err))
 		}
 	}
 
 	if lastCheck.Before(TimeWeekStart()) {
-		if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE stamps SET %s_total=%s_total+1 WHERE character_id=$1", pkt.StampType, pkt.StampType), s.charID); err != nil {
+		if err := s.server.stampRepo.IncrementTotal(s.charID, pkt.StampType); err != nil {
 			s.logger.Error("Failed to increment stamp total", zap.Error(err))
 		}
 		updated = 1
 	}
 
-	_ = s.server.db.QueryRow(fmt.Sprintf("SELECT %s_total, %s_redeemed FROM stamps WHERE character_id=$1", pkt.StampType, pkt.StampType), s.charID).Scan(&total, &redeemed)
+	total, redeemed, _ = s.server.stampRepo.GetTotals(s.charID, pkt.StampType)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(total)
 	bf.WriteUint16(redeemed)
@@ -268,16 +265,17 @@ func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	var total, redeemed uint16
+	var err error
 	var tktStack mhfitem.MHFItemStack
 	if pkt.ExchangeType == 10 { // Yearly Sub Ex
-		if err := s.server.db.QueryRow("UPDATE stamps SET hl_total=hl_total-48, hl_redeemed=hl_redeemed-48 WHERE character_id=$1 RETURNING hl_total, hl_redeemed", s.charID).Scan(&total, &redeemed); err != nil {
+		if total, redeemed, err = s.server.stampRepo.ExchangeYearly(s.charID); err != nil {
 			s.logger.Error("Failed to update yearly stamp exchange", zap.Error(err))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
 		tktStack = mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: 2210}, Quantity: 1}
 	} else {
-		if err := s.server.db.QueryRow(fmt.Sprintf("UPDATE stamps SET %s_redeemed=%s_redeemed+8 WHERE character_id=$1 RETURNING %s_total, %s_redeemed", pkt.StampType, pkt.StampType, pkt.StampType, pkt.StampType), s.charID).Scan(&total, &redeemed); err != nil {
+		if total, redeemed, err = s.server.stampRepo.Exchange(s.charID, pkt.StampType); err != nil {
 			s.logger.Error("Failed to update stamp redemption", zap.Error(err))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
