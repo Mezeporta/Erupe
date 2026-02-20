@@ -32,7 +32,7 @@ func (m *MsgMhfOperateWarehouse) Parse(bf *byteframe.ByteFrame, ctx *clientctx.C
 	lenName := bf.ReadUint8()
 	bf.ReadUint16() // Zeroed
 	if lenName > 0 {
-		m.Name = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+		m.Name, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
 	}
 	return nil
 }

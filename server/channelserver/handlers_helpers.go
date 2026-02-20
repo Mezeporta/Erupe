@@ -4,6 +4,8 @@ import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/mhfcourse"
 	"erupe-ce/network/mhfpacket"
+
+	"go.uber.org/zap"
 )
 
 // Temporary function to just return no results for a MSG_MHF_ENUMERATE* packet
@@ -60,6 +62,36 @@ func doAckSimpleFail(s *Session, ackHandle uint32, data []byte) {
 		ErrorCode:        1,
 		AckData:          data,
 	})
+}
+
+// loadCharacterData loads a column from the characters table and sends it as
+// a buffered ack response. If the data is empty/nil, defaultData is sent instead.
+func loadCharacterData(s *Session, ackHandle uint32, column string, defaultData []byte) {
+	var data []byte
+	err := s.server.db.QueryRow("SELECT "+column+" FROM characters WHERE id = $1", s.charID).Scan(&data)
+	if err != nil {
+		s.logger.Error("Failed to load "+column, zap.Error(err))
+	}
+	if len(data) == 0 && defaultData != nil {
+		data = defaultData
+	}
+	doAckBufSucceed(s, ackHandle, data)
+}
+
+// saveCharacterData saves data to a column in the characters table with size
+// validation, optional save dump, and a simple ack response.
+func saveCharacterData(s *Session, ackHandle uint32, column string, data []byte, maxSize int) {
+	if maxSize > 0 && len(data) > maxSize {
+		s.logger.Warn("Payload too large for "+column, zap.Int("len", len(data)), zap.Int("max", maxSize))
+		doAckSimpleSucceed(s, ackHandle, make([]byte, 4))
+		return
+	}
+	dumpSaveData(s, data, column)
+	_, err := s.server.db.Exec("UPDATE characters SET "+column+"=$1 WHERE id=$2", data, s.charID)
+	if err != nil {
+		s.logger.Error("Failed to save "+column, zap.Error(err))
+	}
+	doAckSimpleSucceed(s, ackHandle, make([]byte, 4))
 }
 
 func updateRights(s *Session) {

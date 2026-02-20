@@ -76,22 +76,26 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 
 	_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("Failed to update current players", zap.Error(err))
+		return
 	}
 
 	_, err = s.server.db.Exec("UPDATE sign_sessions SET server_id=$1, char_id=$2 WHERE token=$3", s.server.ID, s.charID, s.token)
 	if err != nil {
-		panic(err)
+		s.logger.Error("Failed to update sign session", zap.Error(err))
+		return
 	}
 
 	_, err = s.server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", TimeAdjusted().Unix(), s.charID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("Failed to update last login", zap.Error(err))
+		return
 	}
 
 	_, err = s.server.db.Exec("UPDATE users u SET last_character=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)", s.charID)
 	if err != nil {
-		panic(err)
+		s.logger.Error("Failed to update last character", zap.Error(err))
+		return
 	}
 
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
@@ -361,7 +365,8 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 	logKey := make([]byte, 16)
 	_, err := rand.Read(logKey)
 	if err != nil {
-		panic(err)
+		s.logger.Error("Failed to generate log key", zap.Error(err))
+		return
 	}
 
 	// TODO(Andoryuuta): In the offical client, the log key index is off by one,
@@ -461,7 +466,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		bf.ReadUint16() // term length
 		maxResults = bf.ReadUint16()
 		bf.ReadUint8() // Unk
-		term = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+		term, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
 	case 3:
 		_ip := bf.ReadBytes(4)
 		ip = fmt.Sprintf("%d.%d.%d.%d", _ip[3], _ip[2], _ip[1], _ip[0])

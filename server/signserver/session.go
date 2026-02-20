@@ -157,7 +157,8 @@ func (s *Session) handlePSSGN(bf *byteframe.ByteFrame) {
 
 func (s *Session) handlePSNLink(bf *byteframe.ByteFrame) {
 	_ = bf.ReadNullTerminatedBytes() // Client ID
-	credentials := strings.Split(stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes()), "\n")
+	credStr, _ := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	credentials := strings.Split(credStr, "\n")
 	token := string(bf.ReadNullTerminatedBytes())
 	uid, resp := s.server.validateLogin(credentials[0], credentials[1])
 	if resp == SIGN_SUCCESS && uid > 0 {
@@ -199,8 +200,8 @@ func (s *Session) handlePSNLink(bf *byteframe.ByteFrame) {
 }
 
 func (s *Session) handleDSGN(bf *byteframe.ByteFrame) {
-	user := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
-	pass := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	user, _ := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	pass, _ := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
 	_ = string(bf.ReadNullTerminatedBytes()) // Unk
 	s.authenticate(user, pass)
 }

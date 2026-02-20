@@ -484,10 +484,6 @@ func CreateGuild(s *Session, guildName string) (int32, error) {
 		return 0, err
 	}
 
-	if err != nil {
-		panic(err)
-	}
-
 	guildResult, err := transaction.Query(
 		"INSERT INTO guilds (name, leader_id) VALUES ($1, $2) RETURNING id",
 		guildName, s.charID,

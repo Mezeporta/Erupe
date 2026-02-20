@@ -178,7 +178,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 	s.server.userBinaryPartsLock.Lock()
 	s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: 1}] = append(name, []byte{0x00}...)
 	s.server.userBinaryPartsLock.Unlock()
-	s.Name = stringsupport.SJISToUTF8(name)
+	s.Name, _ = stringsupport.SJISToUTF8(name)
 }
 
 func handleMsgMhfSaveScenarioData(s *Session, p mhfpacket.MHFPacket) {
@@ -200,16 +200,7 @@ func handleMsgMhfSaveScenarioData(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfLoadScenarioData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadScenarioData)
-	var scenarioData []byte
-	bf := byteframe.NewByteFrame()
-	err := s.server.db.QueryRow("SELECT scenariodata FROM characters WHERE id = $1", s.charID).Scan(&scenarioData)
-	if err != nil || len(scenarioData) < 10 {
-		s.logger.Error("Failed to load scenariodata", zap.Error(err))
-		bf.WriteBytes(make([]byte, 10))
-	} else {
-		bf.WriteBytes(scenarioData)
-	}
-	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+	loadCharacterData(s, pkt.AckHandle, "scenariodata", make([]byte, 10))
 }
 
 func handleMsgSysAuthData(s *Session, p mhfpacket.MHFPacket) {}

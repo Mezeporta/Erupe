@@ -92,7 +92,8 @@ func ApplyDataDiff(diff []byte, baseData []byte) []byte {
 		for i := 0; i < differentCount; i++ {
 			b, err := checkReadUint8(patch)
 			if err != nil {
-				panic("Invalid or misunderstood patch format!")
+				zap.L().Error("Invalid or misunderstood patch format", zap.Int("dataOffset", dataOffset))
+				return baseCopy
 			}
 
 			baseCopy[dataOffset+i] = b

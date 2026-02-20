@@ -154,7 +154,8 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		if guild.ID != alliance.ParentGuildID {
 			mems, err := GetGuildMembers(s, alliance.ParentGuildID, false)
 			if err != nil {
-				panic(err)
+				s.logger.Error("Failed to get parent guild members for alliance", zap.Error(err))
+				return
 			}
 			for _, m := range mems {
 				bf.WriteUint32(m.CharID)
@@ -163,7 +164,8 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		if guild.ID != alliance.SubGuild1ID {
 			mems, err := GetGuildMembers(s, alliance.SubGuild1ID, false)
 			if err != nil {
-				panic(err)
+				s.logger.Error("Failed to get sub guild 1 members for alliance", zap.Error(err))
+				return
 			}
 			for _, m := range mems {
 				bf.WriteUint32(m.CharID)
@@ -172,7 +174,8 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		if guild.ID != alliance.SubGuild2ID {
 			mems, err := GetGuildMembers(s, alliance.SubGuild2ID, false)
 			if err != nil {
-				panic(err)
+				s.logger.Error("Failed to get sub guild 2 members for alliance", zap.Error(err))
+				return
 			}
 			for _, m := range mems {
 				bf.WriteUint32(m.CharID)
@@ -267,13 +270,17 @@ func handleMsgMhfUpdateGuildIcon(s *Session, p mhfpacket.MHFPacket) {
 	guild, err := GetGuildInfoByID(s, pkt.GuildID)
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("Failed to get guild info for icon update", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	characterInfo, err := GetCharacterGuildData(s, s.charID)
 
 	if err != nil {
-		panic(err)
+		s.logger.Error("Failed to get character guild data for icon update", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	if !characterInfo.IsSubLeader() && !characterInfo.IsLeader {

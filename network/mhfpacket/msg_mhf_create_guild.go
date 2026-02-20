@@ -25,7 +25,7 @@ func (m *MsgMhfCreateGuild) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Client
 	m.AckHandle = bf.ReadUint32()
 	bf.ReadUint16() // Zeroed
 	bf.ReadUint16() // Name length
-	m.Name = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	m.Name, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
 	return nil
 }
 

@@ -14,28 +14,12 @@ import (
 
 func handleMsgMhfLoadPartner(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadPartner)
-	var data []byte
-	err := s.server.db.QueryRow("SELECT partner FROM characters WHERE id = $1", s.charID).Scan(&data)
-	if len(data) == 0 {
-		s.logger.Error("Failed to load partner", zap.Error(err))
-		data = make([]byte, 9)
-	}
-	doAckBufSucceed(s, pkt.AckHandle, data)
+	loadCharacterData(s, pkt.AckHandle, "partner", make([]byte, 9))
 }
 
 func handleMsgMhfSavePartner(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePartner)
-	if len(pkt.RawDataPayload) > 65536 {
-		s.logger.Warn("Partner payload too large", zap.Int("len", len(pkt.RawDataPayload)))
-		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-		return
-	}
-	dumpSaveData(s, pkt.RawDataPayload, "partner")
-	_, err := s.server.db.Exec("UPDATE characters SET partner=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
-	if err != nil {
-		s.logger.Error("Failed to save partner", zap.Error(err))
-	}
-	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+	saveCharacterData(s, pkt.AckHandle, "partner", pkt.RawDataPayload, 65536)
 }
 
 func handleMsgMhfLoadLegendDispatch(s *Session, p mhfpacket.MHFPacket) {
@@ -311,13 +295,7 @@ func handleMsgMhfContractMercenary(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfLoadOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadOtomoAirou)
-	var data []byte
-	err := s.server.db.QueryRow("SELECT otomoairou FROM characters WHERE id = $1", s.charID).Scan(&data)
-	if len(data) == 0 {
-		s.logger.Error("Failed to load otomoairou", zap.Error(err))
-		data = make([]byte, 10)
-	}
-	doAckBufSucceed(s, pkt.AckHandle, data)
+	loadCharacterData(s, pkt.AckHandle, "otomoairou", make([]byte, 10))
 }
 
 func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {

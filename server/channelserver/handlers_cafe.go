@@ -96,7 +96,8 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 	var cafeTime uint32
 	err = s.server.db.QueryRow("SELECT cafe_time FROM characters WHERE id = $1", s.charID).Scan(&cafeTime)
 	if err != nil {
-		panic(err)
+		s.logger.Error("Failed to get cafe time", zap.Error(err))
+		return
 	}
 	if mhfcourse.CourseExists(30, s.courses) {
 		cafeTime = uint32(TimeAdjusted().Unix()) - uint32(s.sessionStart) + cafeTime

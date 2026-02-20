@@ -30,9 +30,9 @@ func (m *MsgMhfApplyBbsArticle) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cl
 	m.AckHandle = bf.ReadUint32()
 	m.Unk0 = bf.ReadUint32()
 	m.Unk1 = bf.ReadBytes(16)
-	m.Name = stringsupport.SJISToUTF8(bfutil.UpToNull(bf.ReadBytes(32)))
-	m.Title = stringsupport.SJISToUTF8(bfutil.UpToNull(bf.ReadBytes(128)))
-	m.Description = stringsupport.SJISToUTF8(bfutil.UpToNull(bf.ReadBytes(256)))
+	m.Name, _ = stringsupport.SJISToUTF8(bfutil.UpToNull(bf.ReadBytes(32)))
+	m.Title, _ = stringsupport.SJISToUTF8(bfutil.UpToNull(bf.ReadBytes(128)))
+	m.Description, _ = stringsupport.SJISToUTF8(bfutil.UpToNull(bf.ReadBytes(256)))
 	return nil
 }
 

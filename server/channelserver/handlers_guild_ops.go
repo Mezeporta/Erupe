@@ -104,7 +104,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
-		guild.Comment = stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
+		guild.Comment, _ = stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
 		_ = guild.Save(s)
 	case mhfpacket.OperateGuildUpdateMotto:
 		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
@@ -149,7 +149,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		}
 		bf.WriteUint32(balance)
 	default:
-		panic(fmt.Sprintf("unhandled operate guild action '%d'", pkt.Action))
+		s.logger.Error("unhandled operate guild action", zap.Uint8("action", uint8(pkt.Action)))
 	}
 
 	if len(bf.Data()) > 0 {
@@ -160,7 +160,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleRenamePugi(s *Session, bf *byteframe.ByteFrame, guild *Guild, num int) {
-	name := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	name, _ := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
 	switch num {
 	case 1:
 		guild.PugiName1 = name

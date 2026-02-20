@@ -31,13 +31,13 @@ func UTF8ToSJIS(x string) []byte {
 }
 
 // SJISToUTF8 decodes Shift-JIS bytes to a UTF-8 string.
-func SJISToUTF8(b []byte) string {
+func SJISToUTF8(b []byte) (string, error) {
 	d := japanese.ShiftJIS.NewDecoder()
 	result, err := io.ReadAll(transform.NewReader(bytes.NewReader(b), d))
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("ShiftJIS decode: %w", err)
 	}
-	return string(result)
+	return string(result), nil
 }
 
 // ToNGWord converts a UTF-8 string into a slice of uint16 values in the

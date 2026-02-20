@@ -155,7 +155,7 @@ func (save *CharacterSaveData) updateSaveDataWithStruct() {
 
 // This will update the save struct with the values stored in the character save
 func (save *CharacterSaveData) updateStructWithSaveData() {
-	save.Name = stringsupport.SJISToUTF8(bfutil.UpToNull(save.decompSave[88:100]))
+	save.Name, _ = stringsupport.SJISToUTF8(bfutil.UpToNull(save.decompSave[88:100]))
 	if save.decompSave[save.Pointers[pGender]] == 1 {
 		save.Gender = true
 	} else {

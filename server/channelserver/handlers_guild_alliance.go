@@ -195,8 +195,8 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		}
 	default:
+		s.logger.Error("unhandled operate joint action", zap.Uint8("action", uint8(pkt.Action)))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-		panic(fmt.Sprintf("Unhandled operate joint action '%d'", pkt.Action))
 	}
 }
 

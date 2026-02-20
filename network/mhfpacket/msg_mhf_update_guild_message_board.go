@@ -38,8 +38,8 @@ func (m *MsgMhfUpdateGuildMessageBoard) Parse(bf *byteframe.ByteFrame, ctx *clie
 		m.StampID = bf.ReadUint32()
 		m.TitleLength = bf.ReadUint32()
 		m.BodyLength = bf.ReadUint32()
-		m.Title = stringsupport.SJISToUTF8(bf.ReadBytes(uint(m.TitleLength)))
-		m.Body = stringsupport.SJISToUTF8(bf.ReadBytes(uint(m.BodyLength)))
+		m.Title, _ = stringsupport.SJISToUTF8(bf.ReadBytes(uint(m.TitleLength)))
+		m.Body, _ = stringsupport.SJISToUTF8(bf.ReadBytes(uint(m.BodyLength)))
 	case 1:
 		m.PostID = bf.ReadUint32()
 	case 2:
@@ -47,8 +47,8 @@ func (m *MsgMhfUpdateGuildMessageBoard) Parse(bf *byteframe.ByteFrame, ctx *clie
 		bf.ReadBytes(8)
 		m.TitleLength = bf.ReadUint32()
 		m.BodyLength = bf.ReadUint32()
-		m.Title = stringsupport.SJISToUTF8(bf.ReadBytes(uint(m.TitleLength)))
-		m.Body = stringsupport.SJISToUTF8(bf.ReadBytes(uint(m.BodyLength)))
+		m.Title, _ = stringsupport.SJISToUTF8(bf.ReadBytes(uint(m.TitleLength)))
+		m.Body, _ = stringsupport.SJISToUTF8(bf.ReadBytes(uint(m.BodyLength)))
 	case 3:
 		m.PostID = bf.ReadUint32()
 		bf.ReadBytes(8)
