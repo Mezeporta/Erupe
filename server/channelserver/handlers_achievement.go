@@ -9,6 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// Achievement trophy tier thresholds (bitfield values)
+const (
+	AchievementTrophyBronze = uint8(0x40)
+	AchievementTrophySilver = uint8(0x60)
+	AchievementTrophyGold   = uint8(0x7F)
+)
+
 var achievementCurves = [][]int32{
 	// 0: HR weapon use, Class use, Tore dailies
 	{5, 15, 30, 50, 100, 150, 200, 300},
@@ -61,10 +68,10 @@ func GetAchData(id uint8, score int32) Achievement {
 				ach.NextValue = 15
 			case 6:
 				ach.NextValue = 15
-				ach.Trophy = 0x40
+				ach.Trophy = AchievementTrophyBronze
 			case 7:
 				ach.NextValue = 20
-				ach.Trophy = 0x60
+				ach.Trophy = AchievementTrophySilver
 			}
 			return ach
 		} else {
@@ -83,7 +90,7 @@ func GetAchData(id uint8, score int32) Achievement {
 		}
 	}
 	ach.Required = uint32(curve[7])
-	ach.Trophy = 0x7F
+	ach.Trophy = AchievementTrophyGold
 	ach.Progress = ach.Required
 	return ach
 }

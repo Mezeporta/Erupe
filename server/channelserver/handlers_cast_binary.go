@@ -34,7 +34,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCastBinary)
 	tmp := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
 
-	if pkt.BroadcastType == 0x03 && pkt.MessageType == 0x03 && len(pkt.RawDataPayload) == 0x10 {
+	if pkt.BroadcastType == BroadcastTypeStage && pkt.MessageType == BinaryMessageTypeData && len(pkt.RawDataPayload) == 0x10 {
 		if tmp.ReadUint16() == 0x0002 && tmp.ReadUint8() == 0x18 {
 			var timer bool
 			if err := s.server.db.QueryRow(`SELECT COALESCE(timer, false) FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&timer); err != nil {
@@ -50,7 +50,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	if s.server.erupeConfig.DebugOptions.QuestTools {
-		if pkt.BroadcastType == 0x03 && pkt.MessageType == 0x02 && len(pkt.RawDataPayload) > 32 {
+		if pkt.BroadcastType == BroadcastTypeStage && pkt.MessageType == BinaryMessageTypeQuest && len(pkt.RawDataPayload) > 32 {
 			// This is only correct most of the time
 			tmp.ReadBytes(20)
 			tmp.SetLE()
@@ -131,7 +131,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 			s.stage.BroadcastMHF(resp, s)
 		}
 	case BroadcastTypeServer:
-		if pkt.MessageType == 1 {
+		if pkt.MessageType == BinaryMessageTypeChat {
 			raviSema := s.server.getRaviSemaphore()
 			if raviSema != nil {
 				raviSema.BroadcastMHF(resp, s)

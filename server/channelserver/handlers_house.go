@@ -271,18 +271,11 @@ func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfLoadDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadDecoMyset)
-	var data []byte
-	err := s.server.db.QueryRow("SELECT decomyset FROM characters WHERE id = $1", s.charID).Scan(&data)
-	if err != nil {
-		s.logger.Error("Failed to load decomyset", zap.Error(err))
+	defaultData := []byte{0x01, 0x00}
+	if s.server.erupeConfig.RealClientMode < _config.G10 {
+		defaultData = []byte{0x00, 0x00}
 	}
-	if len(data) == 0 {
-		data = []byte{0x01, 0x00}
-		if s.server.erupeConfig.RealClientMode < _config.G10 {
-			data = []byte{0x00, 0x00}
-		}
-	}
-	doAckBufSucceed(s, pkt.AckHandle, data)
+	loadCharacterData(s, pkt.AckHandle, "decomyset", defaultData)
 }
 
 func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {

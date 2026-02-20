@@ -237,14 +237,14 @@ func logoutPlayer(s *Session) {
 		timePlayed += sessionTime
 
 		if mhfcourse.CourseExists(30, s.courses) {
-			rpGained = timePlayed / 900
-			timePlayed = timePlayed % 900
+			rpGained = timePlayed / rpAccrualCafe
+			timePlayed = timePlayed % rpAccrualCafe
 			if _, err := s.server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.charID); err != nil {
 				s.logger.Error("Failed to update cafe time", zap.Error(err))
 			}
 		} else {
-			rpGained = timePlayed / 1800
-			timePlayed = timePlayed % 1800
+			rpGained = timePlayed / rpAccrualNormal
+			timePlayed = timePlayed % rpAccrualNormal
 		}
 
 		s.logger.Debug("Session metrics calculated",
@@ -386,13 +386,25 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
+// Kill log binary layout constants
+const (
+	killLogHeaderSize   = 32  // bytes before monster kill count array
+	killLogMonsterCount = 176 // monster table entries
+)
+
+// RP accrual rate constants (seconds per RP point)
+const (
+	rpAccrualNormal = 1800 // 30 min per RP without cafe
+	rpAccrualCafe   = 900  // 15 min per RP with cafe course
+)
+
 func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysRecordLog)
 	if s.server.erupeConfig.RealClientMode == _config.ZZ {
 		bf := byteframe.NewByteFrameFromBytes(pkt.Data)
-		_, _ = bf.Seek(32, 0)
+		_, _ = bf.Seek(killLogHeaderSize, 0)
 		var val uint8
-		for i := 0; i < 176; i++ {
+		for i := 0; i < killLogMonsterCount; i++ {
 			val = bf.ReadUint8()
 			if val > 0 && mhfmon.Monsters[i].Large {
 				if _, err := s.server.db.Exec(`INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, $2, $3, $4)`, s.charID, i, val, TimeAdjusted()); err != nil {

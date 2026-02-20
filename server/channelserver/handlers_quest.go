@@ -50,7 +50,7 @@ func equal(a, b []byte) bool {
 
 // BackportQuest converts a quest binary to an older format.
 func BackportQuest(data []byte, mode _config.Mode) []byte {
-	wp := binary.LittleEndian.Uint32(data[0:4]) + 96
+	wp := binary.LittleEndian.Uint32(data[0:4]) + questRewardTableBase
 	rp := wp + 4
 	for i := uint32(0); i < 6; i++ {
 		if i != 0 {
@@ -60,13 +60,13 @@ func BackportQuest(data []byte, mode _config.Mode) []byte {
 		copy(data[wp:wp+4], data[rp:rp+4])
 	}
 
-	fillLength := uint32(108)
+	fillLength := questBackportFillZZ
 	if mode <= _config.S6 {
-		fillLength = 44
+		fillLength = questBackportFillS6
 	} else if mode <= _config.F5 {
-		fillLength = 52
+		fillLength = questBackportFillF5
 	} else if mode <= _config.G101 {
-		fillLength = 76
+		fillLength = questBackportFillG101
 	}
 
 	copy(data[wp:wp+fillLength], data[rp:rp+fillLength])
@@ -195,27 +195,13 @@ func seasonConversion(s *Session, questFile string) string {
 
 func handleMsgMhfLoadFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadFavoriteQuest)
-	var data []byte
-	err := s.server.db.QueryRow("SELECT savefavoritequest FROM characters WHERE id = $1", s.charID).Scan(&data)
-	if err == nil && len(data) > 0 {
-		doAckBufSucceed(s, pkt.AckHandle, data)
-	} else {
-		doAckBufSucceed(s, pkt.AckHandle, []byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-	}
+	loadCharacterData(s, pkt.AckHandle, "savefavoritequest",
+		[]byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfSaveFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveFavoriteQuest)
-	if len(pkt.Data) > 65536 {
-		s.logger.Warn("FavoriteQuest payload too large", zap.Int("len", len(pkt.Data)))
-		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-		return
-	}
-	dumpSaveData(s, pkt.Data, "favquest")
-	if _, err := s.server.db.Exec("UPDATE characters SET savefavoritequest=$1 WHERE id=$2", pkt.Data, s.charID); err != nil {
-		s.logger.Error("Failed to save favorite quest", zap.Error(err))
-	}
-	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+	saveCharacterData(s, pkt.AckHandle, "savefavoritequest", pkt.Data, 65536)
 }
 
 func loadQuestFile(s *Session, questId int) []byte {

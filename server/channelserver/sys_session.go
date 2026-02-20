@@ -327,12 +327,18 @@ func (s *Session) getObjectId() uint32 {
 	return uint32(s.objectID)<<16 | uint32(s.objectIndex)
 }
 
+// Semaphore ID base values
+const (
+	semaphoreBaseDefault = uint32(0x000F0000)
+	semaphoreBaseAlt     = uint32(0x000E0000)
+)
+
 // GetSemaphoreID returns the semaphore ID held by the session, varying by semaphore mode.
 func (s *Session) GetSemaphoreID() uint32 {
 	if s.semaphoreMode {
-		return 0x000E0000 + uint32(s.semaphoreID[1])
+		return semaphoreBaseAlt + uint32(s.semaphoreID[1])
 	} else {
-		return 0x000F0000 + uint32(s.semaphoreID[0])
+		return semaphoreBaseDefault + uint32(s.semaphoreID[0])
 	}
 }
 

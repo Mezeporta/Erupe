@@ -47,13 +47,7 @@ func handleMsgMhfLoadHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 	if s.server.erupeConfig.RealClientMode <= _config.G7 {
 		naviLength = 280
 	}
-	var data []byte
-	err := s.server.db.QueryRow("SELECT hunternavi FROM characters WHERE id = $1", s.charID).Scan(&data)
-	if len(data) == 0 {
-		s.logger.Error("Failed to load hunternavi", zap.Error(err))
-		data = make([]byte, naviLength)
-	}
-	doAckBufSucceed(s, pkt.AckHandle, data)
+	loadCharacterData(s, pkt.AckHandle, "hunternavi", make([]byte, naviLength))
 }
 
 func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {

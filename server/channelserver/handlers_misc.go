@@ -170,13 +170,7 @@ func equipSkinHistSize(mode _config.Mode) int {
 func handleMsgMhfGetEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetEquipSkinHist)
 	size := equipSkinHistSize(s.server.erupeConfig.RealClientMode)
-	var data []byte
-	err := s.server.db.QueryRow("SELECT COALESCE(skin_hist::bytea, $2::bytea) FROM characters WHERE id = $1", s.charID, make([]byte, size)).Scan(&data)
-	if err != nil {
-		s.logger.Error("Failed to load skin_hist", zap.Error(err))
-		data = make([]byte, size)
-	}
-	doAckBufSucceed(s, pkt.AckHandle, data)
+	loadCharacterData(s, pkt.AckHandle, "skin_hist", make([]byte, size))
 }
 
 func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {

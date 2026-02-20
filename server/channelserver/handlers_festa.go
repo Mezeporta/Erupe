@@ -22,21 +22,8 @@ func handleMsgMhfSaveMezfesData(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfLoadMezfesData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadMezfesData)
-	var data []byte
-	if err := s.server.db.QueryRow(`SELECT mezfes FROM characters WHERE id=$1`, s.charID).Scan(&data); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.logger.Error("Failed to load mezfes data", zap.Error(err))
-	}
-	bf := byteframe.NewByteFrame()
-	if len(data) > 0 {
-		bf.WriteBytes(data)
-	} else {
-		bf.WriteUint32(0)
-		bf.WriteUint8(2)
-		bf.WriteUint32(0)
-		bf.WriteUint32(0)
-		bf.WriteUint32(0)
-	}
-	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+	loadCharacterData(s, pkt.AckHandle, "mezfes",
+		[]byte{0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {

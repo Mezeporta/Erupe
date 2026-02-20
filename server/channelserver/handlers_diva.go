@@ -11,6 +11,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// Diva Defense event duration constants (all values in seconds)
+const (
+	divaPhaseDuration = 601200  // 6d 23h = first song phase
+	divaInterlude     = 3900    // 65 min = gap between phases
+	divaWeekDuration  = 604800  // 7 days = subsequent phase length
+	divaTotalLifespan = 2977200 // ~34.5 days = full event window
+)
+
 func cleanupDiva(s *Session) {
 	if _, err := s.server.db.Exec("DELETE FROM events WHERE event_type='diva'"); err != nil {
 		s.logger.Error("Failed to delete diva events", zap.Error(err))
@@ -25,29 +33,29 @@ func generateDivaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		switch start {
 		case 1:
 			timestamps[0] = midnight
-			timestamps[1] = timestamps[0] + 601200
-			timestamps[2] = timestamps[1] + 3900
-			timestamps[3] = timestamps[1] + 604800
-			timestamps[4] = timestamps[3] + 3900
-			timestamps[5] = timestamps[3] + 604800
+			timestamps[1] = timestamps[0] + divaPhaseDuration
+			timestamps[2] = timestamps[1] + divaInterlude
+			timestamps[3] = timestamps[1] + divaWeekDuration
+			timestamps[4] = timestamps[3] + divaInterlude
+			timestamps[5] = timestamps[3] + divaWeekDuration
 		case 2:
-			timestamps[0] = midnight - 605100
-			timestamps[1] = midnight - 3900
+			timestamps[0] = midnight - (divaPhaseDuration + divaInterlude)
+			timestamps[1] = midnight - divaInterlude
 			timestamps[2] = midnight
-			timestamps[3] = timestamps[1] + 604800
-			timestamps[4] = timestamps[3] + 3900
-			timestamps[5] = timestamps[3] + 604800
+			timestamps[3] = timestamps[1] + divaWeekDuration
+			timestamps[4] = timestamps[3] + divaInterlude
+			timestamps[5] = timestamps[3] + divaWeekDuration
 		case 3:
-			timestamps[0] = midnight - 1213800
-			timestamps[1] = midnight - 608700
-			timestamps[2] = midnight - 604800
-			timestamps[3] = midnight - 3900
+			timestamps[0] = midnight - (divaPhaseDuration + divaInterlude + divaWeekDuration + divaInterlude)
+			timestamps[1] = midnight - (divaWeekDuration + divaInterlude)
+			timestamps[2] = midnight - divaWeekDuration
+			timestamps[3] = midnight - divaInterlude
 			timestamps[4] = midnight
-			timestamps[5] = timestamps[3] + 604800
+			timestamps[5] = timestamps[3] + divaWeekDuration
 		}
 		return timestamps
 	}
-	if start == 0 || TimeAdjusted().Unix() > int64(start)+2977200 {
+	if start == 0 || TimeAdjusted().Unix() > int64(start)+divaTotalLifespan {
 		cleanupDiva(s)
 		// Generate a new diva defense, starting midnight tomorrow
 		start = uint32(midnight.Add(24 * time.Hour).Unix())
@@ -56,11 +64,11 @@ func generateDivaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		}
 	}
 	timestamps[0] = start
-	timestamps[1] = timestamps[0] + 601200
-	timestamps[2] = timestamps[1] + 3900
-	timestamps[3] = timestamps[1] + 604800
-	timestamps[4] = timestamps[3] + 3900
-	timestamps[5] = timestamps[3] + 604800
+	timestamps[1] = timestamps[0] + divaPhaseDuration
+	timestamps[2] = timestamps[1] + divaInterlude
+	timestamps[3] = timestamps[1] + divaWeekDuration
+	timestamps[4] = timestamps[3] + divaInterlude
+	timestamps[5] = timestamps[3] + divaWeekDuration
 	return timestamps
 }
 

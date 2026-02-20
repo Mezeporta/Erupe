@@ -23,37 +23,90 @@
 
 ## 1. God Files — Massive Handler Files
 
-The channel server has enormous files with thousands of lines, each mixing DB queries, business logic, binary serialization, and response writing with no layering.
+The channel server has large handler files, each mixing DB queries, business logic, binary serialization, and response writing with no layering. Actual line counts (non-test files):
 
-| File | Approx. Lines | Purpose |
-|------|---------------|---------|
-| `server/channelserver/handlers_guild.go` | ~2000+ | Guild operations |
-| `server/channelserver/handlers_mail.go` | ~1200+ | Mail system |
-| `server/channelserver/handlers_data.go` | ~800+ | Data save/load |
-| `server/channelserver/handlers_cast_binary.go` | ~500+ | Binary relay |
-| `server/channelserver/sys_session.go` | ~500+ | Session lifecycle |
+| File | Lines | Purpose |
+|------|-------|---------|
+| `server/channelserver/handlers_session.go` | 794 | Session setup/teardown |
+| `server/channelserver/handlers_data_paper_tables.go` | 765 | Paper table data |
+| `server/channelserver/handlers_quest.go` | 722 | Quest lifecycle |
+| `server/channelserver/handlers_house.go` | 638 | Housing system |
+| `server/channelserver/handlers_festa.go` | 637 | Festival events |
+| `server/channelserver/handlers_data_paper.go` | 621 | Paper/data system |
+| `server/channelserver/handlers_tower.go` | 529 | Tower gameplay |
+| `server/channelserver/handlers_mercenary.go` | 495 | Mercenary system |
+| `server/channelserver/handlers_stage.go` | 492 | Stage/lobby management |
+| `server/channelserver/handlers_guild_info.go` | 473 | Guild info queries |
 
-**Impact:** These files are difficult to navigate, review, and maintain. A change to guild mail logic requires working through a 2000-line file that also handles guild creation, management, and recruitment.
+These sizes (~500-800 lines) are not extreme by Go standards, but the files mix all architectural concerns. The bigger problem is the lack of layering within each file (see [#3](#3-no-architectural-layering--handlers-do-everything)), not the file sizes themselves.
+
+**Impact:** Each handler function is a monolith mixing data access, business logic, and protocol serialization. Testing or reusing any single concern is impossible.
 
 ---
 
-## 2. Silently Swallowed Errors
+## 2. Missing ACK Responses on Error Paths (Client Softlocks)
 
-This is the most pervasive anti-pattern. The dominant error handling pattern across nearly every `handlers_*.go` file is:
+Some handler error paths log the error and return without sending any ACK response to the client. The MHF client uses `MsgSysAck` with an `ErrorCode` field (0 = success, 1 = failure) to complete request/response cycles. When no ACK is sent at all, the client softlocks waiting for a response that never arrives.
+
+### The three error handling patterns in the codebase
+
+**Pattern A — Silent return (the bug):** Error logged, no ACK sent, client hangs.
 
 ```go
-rows, err := s.Server.DB.Query(...)
 if err != nil {
     s.logger.Error("Failed to get ...", zap.Error(err))
-    return  // client gets no response, silently fails
+    return  // BUG: client gets no response, softlocks
 }
 ```
 
-Errors are logged server-side but the client receives no error response. The client is left hanging or receives incomplete data with no indication of failure.
+**Pattern B — Log and continue (acceptable):** Error logged, handler continues and sends a success ACK with default/empty data. The client proceeds with fallback behavior.
 
-**Impact:** Client-side debugging is extremely difficult. Players experience mysterious failures with no feedback. Error recovery is impossible since the client doesn't know something went wrong.
+```go
+if err != nil {
+    s.logger.Error("Failed to load mezfes data", zap.Error(err))
+}
+// Falls through to doAckBufSucceed with empty data
+```
 
-**Recommendation:** Define error response packets or at least send a generic failure response to the client before returning.
+**Pattern C — Fail ACK (correct):** Error logged, explicit fail ACK sent. The client shows an appropriate error dialog and stays connected.
+
+```go
+if err != nil {
+    s.logger.Error("Failed to read rengoku_data.bin", zap.Error(err))
+    doAckBufFail(s, pkt.AckHandle, nil)
+    return
+}
+```
+
+### Evidence that fail ACKs are safe
+
+The codebase already sends ~70 `doAckSimpleFail`/`doAckBufFail` calls in production handler code across 15 files. The client handles them gracefully in all observed cases:
+
+| File | Fail ACKs | Client behavior |
+|------|-----------|-----------------|
+| `handlers_guild_scout.go` | 17 | Guild recruitment error dialogs |
+| `handlers_guild_ops.go` | 10 | Permission denied, guild not found dialogs |
+| `handlers_stage.go` | 8 | "Room is full", "wrong password", "stage locked" |
+| `handlers_house.go` | 6 | Wrong password, invalid box index |
+| `handlers_guild.go` | 9 | Guild icon update errors, unimplemented features |
+| `handlers_guild_alliance.go` | 4 | Alliance permission errors |
+| `handlers_data.go` | 4 | Decompression failures, oversized payloads |
+| `handlers_festa.go` | 4 | Festival entry errors |
+| `handlers_quest.go` | 3 | Missing quest/scenario files |
+
+A comment in `handlers_quest.go:188` explicitly documents the mechanism:
+
+> sends doAckBufFail, which triggers the client's error dialog (snj_questd_matching_fail → SetDialogData) instead of a softlock
+
+The original `mhfo-hd.dll` client reads the `ErrorCode` byte from `MsgSysAck` and dispatches to per-message error UI. A fail ACK causes the client to show an error dialog and remain functional. A missing ACK causes a softlock.
+
+### Scope
+
+A preliminary grep for `logger.Error` followed by bare `return` (no doAck call) found instances across ~25 handler files. The worst offenders are `handlers_festa.go`, `handlers_gacha.go`, `handlers_cafe.go`, and `handlers_house.go`. However, many of these are Pattern B (log-and-continue), not Pattern A. Each instance needs individual review to determine whether an ACK is already sent further down the function.
+
+**Impact:** Players experience softlocks on error paths that could instead show an error dialog and let them continue playing.
+
+**Recommendation:** Audit each silent-return error path. For handlers where the packet has an `AckHandle` and no ACK is sent on the error path, add `doAckSimpleFail`/`doAckBufFail` matching the ACK type used on the success path. This matches the existing pattern used in ~70 other error paths across the codebase.
 
 ---
 
@@ -300,9 +353,9 @@ Database operations use raw `database/sql` with PostgreSQL-specific syntax throu
 
 | Severity | Anti-patterns |
 |----------|--------------|
-| **High** | No architectural layering (#3), silently swallowed errors (#2), god files (#1), tight DB coupling (#13) |
-| **Medium** | Magic numbers (#4), inconsistent binary I/O (#5), Session god object (#6), copy-paste handlers (#8) |
-| **Low** | `init()` registration (#10), inconsistent logging (#12), mutex granularity (#7), panic-based flow (#11) |
+| **High** | Missing ACK responses / softlocks (#2), no architectural layering (#3), tight DB coupling (#13) |
+| **Medium** | Magic numbers (#4), inconsistent binary I/O (#5), Session god object (#6), copy-paste handlers (#8), raw SQL duplication (#9) |
+| **Low** | God files (#1), `init()` registration (#10), inconsistent logging (#12), mutex granularity (#7), panic-based flow (#11) |
 
 ### Root Cause
 
@@ -310,8 +363,9 @@ Most of these anti-patterns stem from a single root cause: **the codebase grew o
 
 ### Recommended Refactoring Priority
 
-1. **Introduce error responses to clients** — highest user-facing impact, can be done incrementally
-2. **Extract a repository layer** — decouple SQL from handlers, enable testing
-3. **Define protocol constants** — replace magic numbers, improve documentation
-4. **Standardize binary I/O** — pick one approach, migrate the rest
-5. **Split god files** — break handlers into sub-packages by domain (guild/, mail/, quest/)
+1. **Add fail ACKs to silent error paths** — prevents player softlocks, ~70 existing doAckFail calls prove safety, low risk, can be done handler-by-handler
+2. **Extract a character repository layer** — 152 queries across 26 files touch the `characters` table, highest SQL duplication
+3. **Extract load/save helpers** — 38 handlers repeat the same ~10-15 line template, mechanical extraction
+4. **Extract a guild repository layer** — 32 queries across 8-15 files, second-highest SQL duplication
+5. **Define protocol constants** — 1,052 hex literals with 174 unique values, improves documentation
+6. **Standardize binary I/O** — pick `byteframe` (already dominant), migrate remaining `binary.Write` and raw slice code
