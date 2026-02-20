@@ -91,10 +91,7 @@ func spendGachaCoin(s *Session, quantity uint16) {
 }
 
 func transactGacha(s *Session, gachaID uint32, rollID uint8) (int, error) {
-	var itemType uint8
-	var itemNumber uint16
-	var rolls int
-	err := s.server.db.QueryRowx(`SELECT item_type, item_number, rolls FROM gacha_entries WHERE gacha_id = $1 AND entry_type = $2`, gachaID, rollID).Scan(&itemType, &itemNumber, &rolls)
+	itemType, itemNumber, rolls, err := s.server.gachaRepo.GetEntryForTransaction(gachaID, rollID)
 	if err != nil {
 		return 0, err
 	}
@@ -123,15 +120,7 @@ func transactGacha(s *Session, gachaID uint32, rollID uint8) (int, error) {
 }
 
 func getGuaranteedItems(s *Session, gachaID uint32, rollID uint8) []GachaItem {
-	var rewards []GachaItem
-	var reward GachaItem
-	items, err := s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = (SELECT id FROM gacha_entries WHERE entry_type = $1 AND gacha_id = $2)`, rollID, gachaID)
-	if err == nil {
-		for items.Next() {
-			_ = items.StructScan(&reward)
-			rewards = append(rewards, reward)
-		}
-	}
+	rewards, _ := s.server.gachaRepo.GetGuaranteedItems(rollID, gachaID)
 	return rewards
 }
 
@@ -224,41 +213,27 @@ func handleMsgMhfReceiveGachaItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfPlayNormalGacha(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfPlayNormalGacha)
 	bf := byteframe.NewByteFrame()
-	var entries []GachaEntry
-	var entry GachaEntry
 	var rewards []GachaItem
-	var reward GachaItem
 	rolls, err := transactGacha(s, pkt.GachaID, pkt.RollType)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
 	}
 
-	rows, err := s.server.db.Queryx(`SELECT id, weight, rarity FROM gacha_entries WHERE gacha_id = $1 AND entry_type = 100 ORDER BY weight DESC`, pkt.GachaID)
+	entries, err := s.server.gachaRepo.GetRewardPool(pkt.GachaID)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
-	}
-	for rows.Next() {
-		err = rows.StructScan(&entry)
-		if err != nil {
-			continue
-		}
-		entries = append(entries, entry)
 	}
 
 	rewardEntries, _ := getRandomEntries(entries, rolls, false)
 	temp := byteframe.NewByteFrame()
 	for i := range rewardEntries {
-		rows, err := s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = $1`, rewardEntries[i].ID)
+		entryItems, err := s.server.gachaRepo.GetItemsForEntry(rewardEntries[i].ID)
 		if err != nil {
 			continue
 		}
-		for rows.Next() {
-			err = rows.StructScan(&reward)
-			if err != nil {
-				continue
-			}
+		for _, reward := range entryItems {
 			rewards = append(rewards, reward)
 			temp.WriteUint8(reward.ItemType)
 			temp.WriteUint16(reward.ItemID)
@@ -276,10 +251,7 @@ func handleMsgMhfPlayNormalGacha(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfPlayStepupGacha)
 	bf := byteframe.NewByteFrame()
-	var entries []GachaEntry
-	var entry GachaEntry
 	var rewards []GachaItem
-	var reward GachaItem
 	rolls, err := transactGacha(s, pkt.GachaID, pkt.RollType)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
@@ -288,39 +260,28 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 	if err := s.server.userRepo.AddFrontierPointsFromGacha(s.userID, pkt.GachaID, pkt.RollType); err != nil {
 		s.logger.Error("Failed to award stepup gacha frontier points", zap.Error(err))
 	}
-	if _, err := s.server.db.Exec(`DELETE FROM gacha_stepup WHERE gacha_id = $1 AND character_id = $2`, pkt.GachaID, s.charID); err != nil {
+	if err := s.server.gachaRepo.DeleteStepup(pkt.GachaID, s.charID); err != nil {
 		s.logger.Error("Failed to delete gacha stepup state", zap.Error(err))
 	}
-	if _, err := s.server.db.Exec(`INSERT INTO gacha_stepup (gacha_id, step, character_id) VALUES ($1, $2, $3)`, pkt.GachaID, pkt.RollType+1, s.charID); err != nil {
+	if err := s.server.gachaRepo.InsertStepup(pkt.GachaID, pkt.RollType+1, s.charID); err != nil {
 		s.logger.Error("Failed to insert gacha stepup state", zap.Error(err))
 	}
 
-	rows, err := s.server.db.Queryx(`SELECT id, weight, rarity FROM gacha_entries WHERE gacha_id = $1 AND entry_type = 100 ORDER BY weight DESC`, pkt.GachaID)
+	entries, err := s.server.gachaRepo.GetRewardPool(pkt.GachaID)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
-	}
-	for rows.Next() {
-		err = rows.StructScan(&entry)
-		if err != nil {
-			continue
-		}
-		entries = append(entries, entry)
 	}
 
 	guaranteedItems := getGuaranteedItems(s, pkt.GachaID, pkt.RollType)
 	rewardEntries, _ := getRandomEntries(entries, rolls, false)
 	temp := byteframe.NewByteFrame()
 	for i := range rewardEntries {
-		rows, err := s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = $1`, rewardEntries[i].ID)
+		entryItems, err := s.server.gachaRepo.GetItemsForEntry(rewardEntries[i].ID)
 		if err != nil {
 			continue
 		}
-		for rows.Next() {
-			err = rows.StructScan(&reward)
-			if err != nil {
-				continue
-			}
+		for _, reward := range entryItems {
 			rewards = append(rewards, reward)
 			temp.WriteUint8(reward.ItemType)
 			temp.WriteUint16(reward.ItemID)
@@ -346,12 +307,10 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetStepupStatus(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetStepupStatus)
 	// TODO: Reset daily (noon)
-	var step uint8
-	_ = s.server.db.QueryRow(`SELECT step FROM gacha_stepup WHERE gacha_id = $1 AND character_id = $2`, pkt.GachaID, s.charID).Scan(&step)
-	var stepCheck int
-	_ = s.server.db.QueryRow(`SELECT COUNT(1) FROM gacha_entries WHERE gacha_id = $1 AND entry_type = $2`, pkt.GachaID, step).Scan(&stepCheck)
-	if stepCheck == 0 {
-		if _, err := s.server.db.Exec(`DELETE FROM gacha_stepup WHERE gacha_id = $1 AND character_id = $2`, pkt.GachaID, s.charID); err != nil {
+	step, _ := s.server.gachaRepo.GetStepupStep(pkt.GachaID, s.charID)
+	hasEntry, _ := s.server.gachaRepo.HasEntryType(pkt.GachaID, step)
+	if !hasEntry {
+		if err := s.server.gachaRepo.DeleteStepup(pkt.GachaID, s.charID); err != nil {
 			s.logger.Error("Failed to reset gacha stepup state", zap.Error(err))
 		}
 		step = 0
@@ -364,16 +323,10 @@ func handleMsgMhfGetStepupStatus(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetBoxGachaInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetBoxGachaInfo)
-	entries, err := s.server.db.Queryx(`SELECT entry_id FROM gacha_box WHERE gacha_id = $1 AND character_id = $2`, pkt.GachaID, s.charID)
+	entryIDs, err := s.server.gachaRepo.GetBoxEntryIDs(pkt.GachaID, s.charID)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
-	}
-	var entryIDs []uint32
-	for entries.Next() {
-		var entryID uint32
-		_ = entries.Scan(&entryID)
-		entryIDs = append(entryIDs, entryID)
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint8(uint8(len(entryIDs)))
@@ -387,41 +340,27 @@ func handleMsgMhfGetBoxGachaInfo(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfPlayBoxGacha)
 	bf := byteframe.NewByteFrame()
-	var entries []GachaEntry
-	var entry GachaEntry
 	var rewards []GachaItem
-	var reward GachaItem
 	rolls, err := transactGacha(s, pkt.GachaID, pkt.RollType)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
 	}
-	rows, err := s.server.db.Queryx(`SELECT id, weight, rarity FROM gacha_entries WHERE gacha_id = $1 AND entry_type = 100 ORDER BY weight DESC`, pkt.GachaID)
+	entries, err := s.server.gachaRepo.GetRewardPool(pkt.GachaID)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
 	}
-	for rows.Next() {
-		err = rows.StructScan(&entry)
-		if err == nil {
-			entries = append(entries, entry)
-		}
-	}
 	rewardEntries, _ := getRandomEntries(entries, rolls, true)
 	for i := range rewardEntries {
-		items, err := s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id = $1`, rewardEntries[i].ID)
+		entryItems, err := s.server.gachaRepo.GetItemsForEntry(rewardEntries[i].ID)
 		if err != nil {
 			continue
 		}
-		if _, err := s.server.db.Exec(`INSERT INTO gacha_box (gacha_id, entry_id, character_id) VALUES ($1, $2, $3)`, pkt.GachaID, rewardEntries[i].ID, s.charID); err != nil {
+		if err := s.server.gachaRepo.InsertBoxEntry(pkt.GachaID, rewardEntries[i].ID, s.charID); err != nil {
 			s.logger.Error("Failed to insert gacha box entry", zap.Error(err))
 		}
-		for items.Next() {
-			err = items.StructScan(&reward)
-			if err == nil {
-				rewards = append(rewards, reward)
-			}
-		}
+		rewards = append(rewards, entryItems...)
 	}
 	bf.WriteUint8(uint8(len(rewards)))
 	for _, r := range rewards {
@@ -436,7 +375,7 @@ func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfResetBoxGachaInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfResetBoxGachaInfo)
-	if _, err := s.server.db.Exec("DELETE FROM gacha_box WHERE gacha_id = $1 AND character_id = $2", pkt.GachaID, s.charID); err != nil {
+	if err := s.server.gachaRepo.DeleteBoxEntries(pkt.GachaID, s.charID); err != nil {
 		s.logger.Error("Failed to reset gacha box", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

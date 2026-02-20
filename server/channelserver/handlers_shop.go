@@ -95,20 +95,12 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 			return
 		}
 
-		rows, err := s.server.db.Queryx("SELECT id, min_gr, min_hr, name, url_banner, url_feature, url_thumbnail, wide, recommended, gacha_type, hidden FROM gacha_shop")
+		gachas, err := s.server.gachaRepo.ListShop()
 		if err != nil {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 		bf := byteframe.NewByteFrame()
-		var gacha Gacha
-		var gachas []Gacha
-		for rows.Next() {
-			err = rows.StructScan(&gacha)
-			if err == nil {
-				gachas = append(gachas, gacha)
-			}
-		}
 		bf.WriteUint16(uint16(len(gachas)))
 		bf.WriteUint16(uint16(len(gachas)))
 		for _, g := range gachas {
@@ -141,25 +133,13 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 	case 2: // Actual gacha
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(pkt.ShopID)
-		var gachaType int
-		_ = s.server.db.QueryRow(`SELECT gacha_type FROM gacha_shop WHERE id = $1`, pkt.ShopID).Scan(&gachaType)
-		rows, err := s.server.db.Queryx(`SELECT entry_type, id, item_type, item_number, item_quantity, weight, rarity, rolls, daily_limit, frontier_points, COALESCE(name, '') AS name FROM gacha_entries WHERE gacha_id = $1 ORDER BY weight DESC`, pkt.ShopID)
+		gachaType, _ := s.server.gachaRepo.GetShopType(pkt.ShopID)
+		entries, err := s.server.gachaRepo.GetAllEntries(pkt.ShopID)
 		if err != nil {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
-		var divisor float64
-		_ = s.server.db.QueryRow(`SELECT COALESCE(SUM(weight) / 100000.0, 0) AS chance FROM gacha_entries WHERE gacha_id = $1`, pkt.ShopID).Scan(&divisor)
-
-		var entry GachaEntry
-		var entries []GachaEntry
-		var item GachaItem
-		for rows.Next() {
-			err = rows.StructScan(&entry)
-			if err == nil {
-				entries = append(entries, entry)
-			}
-		}
+		divisor, _ := s.server.gachaRepo.GetWeightDivisor(pkt.ShopID)
 		bf.WriteUint16(uint16(len(entries)))
 		for _, ge := range entries {
 			var items []GachaItem
@@ -176,16 +156,10 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint8(ge.Rarity)
 			bf.WriteUint8(ge.Rolls)
 
-			rows, err = s.server.db.Queryx(`SELECT item_type, item_id, quantity FROM gacha_items WHERE entry_id=$1`, ge.ID)
+			items, err := s.server.gachaRepo.GetItemsForEntry(ge.ID)
 			if err != nil {
 				bf.WriteUint8(0)
 			} else {
-				for rows.Next() {
-					err = rows.StructScan(&item)
-					if err == nil {
-						items = append(items, item)
-					}
-				}
 				bf.WriteUint8(uint8(len(items)))
 			}
 

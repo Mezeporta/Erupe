@@ -8,36 +8,10 @@ import (
 	"erupe-ce/common/token"
 	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
-	"fmt"
 	"go.uber.org/zap"
 	"io"
 	"time"
 )
-
-const warehouseNamesQuery = `
-SELECT
-COALESCE(item0name, ''),
-COALESCE(item1name, ''),
-COALESCE(item2name, ''),
-COALESCE(item3name, ''),
-COALESCE(item4name, ''),
-COALESCE(item5name, ''),
-COALESCE(item6name, ''),
-COALESCE(item7name, ''),
-COALESCE(item8name, ''),
-COALESCE(item9name, ''),
-COALESCE(equip0name, ''),
-COALESCE(equip1name, ''),
-COALESCE(equip2name, ''),
-COALESCE(equip3name, ''),
-COALESCE(equip4name, ''),
-COALESCE(equip5name, ''),
-COALESCE(equip6name, ''),
-COALESCE(equip7name, ''),
-COALESCE(equip8name, ''),
-COALESCE(equip9name, '')
-FROM warehouse
-`
 
 func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateInterior)
@@ -46,7 +20,7 @@ func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	if _, err := s.server.db.Exec(`UPDATE user_binary SET house_furniture=$1 WHERE id=$2`, pkt.InteriorData, s.charID); err != nil {
+	if err := s.server.houseRepo.UpdateInterior(s.charID, pkt.InteriorData); err != nil {
 		s.logger.Error("Failed to update house furniture", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -67,16 +41,12 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(0)
 	var houses []HouseData
-	houseQuery := `SELECT c.id, hr, gr, name, COALESCE(ub.house_state, 2) as house_state, COALESCE(ub.house_password, '') as house_password
-		FROM characters c LEFT JOIN user_binary ub ON ub.id = c.id WHERE c.id=$1`
 	switch pkt.Method {
 	case 1:
 		friendsList, _ := s.server.charRepo.ReadString(s.charID, "friends")
 		cids := stringsupport.CSVElems(friendsList)
 		for _, cid := range cids {
-			house := HouseData{}
-			row := s.server.db.QueryRowx(houseQuery, cid)
-			err := row.StructScan(&house)
+			house, err := s.server.houseRepo.GetHouseByCharID(uint32(cid))
 			if err == nil {
 				houses = append(houses, house)
 			}
@@ -91,32 +61,20 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 			break
 		}
 		for _, member := range guildMembers {
-			house := HouseData{}
-			row := s.server.db.QueryRowx(houseQuery, member.CharID)
-			err = row.StructScan(&house)
+			house, err := s.server.houseRepo.GetHouseByCharID(member.CharID)
 			if err == nil {
 				houses = append(houses, house)
 			}
 		}
 	case 3:
-		houseQuery = `SELECT c.id, hr, gr, name, COALESCE(ub.house_state, 2) as house_state, COALESCE(ub.house_password, '') as house_password
-			FROM characters c LEFT JOIN user_binary ub ON ub.id = c.id WHERE name ILIKE $1`
-		house := HouseData{}
-		rows, err := s.server.db.Queryx(houseQuery, fmt.Sprintf(`%%%s%%`, pkt.Name))
+		result, err := s.server.houseRepo.SearchHousesByName(pkt.Name)
 		if err != nil {
 			s.logger.Error("Failed to query houses by name", zap.Error(err))
 		} else {
-			defer func() { _ = rows.Close() }()
-			for rows.Next() {
-				if err := rows.StructScan(&house); err == nil {
-					houses = append(houses, house)
-				}
-			}
+			houses = result
 		}
 	case 4:
-		house := HouseData{}
-		row := s.server.db.QueryRowx(houseQuery, pkt.CharID)
-		err := row.StructScan(&house)
+		house, err := s.server.houseRepo.GetHouseByCharID(pkt.CharID)
 		if err == nil {
 			houses = append(houses, house)
 		}
@@ -149,7 +107,7 @@ func handleMsgMhfUpdateHouse(s *Session, p mhfpacket.MHFPacket) {
 	// 03 = open friends
 	// 04 = open guild
 	// 05 = open friends+guild
-	if _, err := s.server.db.Exec(`UPDATE user_binary SET house_state=$1, house_password=$2 WHERE id=$3`, pkt.State, pkt.Password, s.charID); err != nil {
+	if err := s.server.houseRepo.UpdateHouseState(s.charID, pkt.State, pkt.Password); err != nil {
 		s.logger.Error("Failed to update house state", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -159,10 +117,8 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadHouse)
 	bf := byteframe.NewByteFrame()
 
-	state := uint8(2) // Default to password-protected if DB fails
-	var password string
-	if err := s.server.db.QueryRow(`SELECT COALESCE(house_state, 2) as house_state, COALESCE(house_password, '') as house_password FROM user_binary WHERE id=$1
-	`, pkt.CharID).Scan(&state, &password); err != nil {
+	state, password, err := s.server.houseRepo.GetHouseAccess(pkt.CharID)
+	if err != nil {
 		s.logger.Error("Failed to read house state", zap.Error(err))
 	}
 
@@ -208,9 +164,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	var houseTier, houseData, houseFurniture, bookshelf, gallery, tore, garden []byte
-	_ = s.server.db.QueryRow(`SELECT house_tier, house_data, house_furniture, bookshelf, gallery, tore, garden FROM user_binary WHERE id=$1
-	`, pkt.CharID).Scan(&houseTier, &houseData, &houseFurniture, &bookshelf, &gallery, &tore, &garden)
+	houseTier, houseData, houseFurniture, bookshelf, gallery, tore, garden, _ := s.server.houseRepo.GetHouseContents(pkt.CharID)
 	if houseFurniture == nil {
 		houseFurniture = make([]byte, 20)
 	}
@@ -247,8 +201,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetMyhouseInfo)
-	var data []byte
-	_ = s.server.db.QueryRow(`SELECT mission FROM user_binary WHERE id=$1`, s.charID).Scan(&data)
+	data, _ := s.server.houseRepo.GetMission(s.charID)
 	if len(data) > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	} else {
@@ -263,7 +216,7 @@ func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	if _, err := s.server.db.Exec("UPDATE user_binary SET mission=$1 WHERE id=$2", pkt.Data, s.charID); err != nil {
+	if err := s.server.houseRepo.UpdateMission(s.charID, pkt.Data); err != nil {
 		s.logger.Error("Failed to update myhouse mission", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -345,45 +298,30 @@ type Title struct {
 
 func handleMsgMhfEnumerateTitle(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateTitle)
-	var count uint16
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(0)
 	bf.WriteUint16(0) // Unk
-	rows, err := s.server.db.Queryx("SELECT id, unlocked_at, updated_at FROM titles WHERE char_id=$1", s.charID)
+	titles, err := s.server.houseRepo.GetTitles(s.charID)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 		return
 	}
-	for rows.Next() {
-		title := &Title{}
-		err = rows.StructScan(&title)
-		if err != nil {
-			continue
-		}
-		count++
+	for _, title := range titles {
 		bf.WriteUint16(title.ID)
 		bf.WriteUint16(0) // Unk
 		bf.WriteUint32(uint32(title.Acquired.Unix()))
 		bf.WriteUint32(uint32(title.Updated.Unix()))
 	}
 	_, _ = bf.Seek(0, io.SeekStart)
-	bf.WriteUint16(count)
+	bf.WriteUint16(uint16(len(titles)))
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
 func handleMsgMhfAcquireTitle(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireTitle)
 	for _, title := range pkt.TitleIDs {
-		var exists int
-		err := s.server.db.QueryRow(`SELECT count(*) FROM titles WHERE id=$1 AND char_id=$2`, title, s.charID).Scan(&exists)
-		if err != nil || exists == 0 {
-			if _, err := s.server.db.Exec(`INSERT INTO titles VALUES ($1, $2, now(), now())`, title, s.charID); err != nil {
-				s.logger.Error("Failed to insert title", zap.Error(err))
-			}
-		} else {
-			if _, err := s.server.db.Exec(`UPDATE titles SET updated_at=now() WHERE id=$1 AND char_id=$2`, title, s.charID); err != nil {
-				s.logger.Error("Failed to update title", zap.Error(err))
-			}
+		if err := s.server.houseRepo.AcquireTitle(title, s.charID); err != nil {
+			s.logger.Error("Failed to acquire title", zap.Error(err))
 		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -392,13 +330,7 @@ func handleMsgMhfAcquireTitle(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfResetTitle(s *Session, p mhfpacket.MHFPacket) {}
 
 func initializeWarehouse(s *Session) {
-	var t int
-	err := s.server.db.QueryRow("SELECT character_id FROM warehouse WHERE character_id=$1", s.charID).Scan(&t)
-	if err != nil {
-		if _, err := s.server.db.Exec("INSERT INTO warehouse (character_id) VALUES ($1)", s.charID); err != nil {
-			s.logger.Error("Failed to initialize warehouse", zap.Error(err))
-		}
-	}
+	s.server.houseRepo.InitializeWarehouse(s.charID)
 }
 
 func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
@@ -409,11 +341,7 @@ func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 	switch pkt.Operation {
 	case 0:
 		var count uint8
-		itemNames := make([]string, 10)
-		equipNames := make([]string, 10)
-		_ = s.server.db.QueryRow(fmt.Sprintf("%s WHERE character_id=$1", warehouseNamesQuery), s.charID).Scan(&itemNames[0],
-			&itemNames[1], &itemNames[2], &itemNames[3], &itemNames[4], &itemNames[5], &itemNames[6], &itemNames[7], &itemNames[8], &itemNames[9], &equipNames[0],
-			&equipNames[1], &equipNames[2], &equipNames[3], &equipNames[4], &equipNames[5], &equipNames[6], &equipNames[7], &equipNames[8], &equipNames[9])
+		itemNames, equipNames, _ := s.server.houseRepo.GetWarehouseNames(s.charID)
 		bf.WriteUint32(0)
 		bf.WriteUint16(10000) // Usages
 		temp := byteframe.NewByteFrame()
@@ -441,15 +369,8 @@ func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 		if pkt.BoxIndex > 9 {
 			break
 		}
-		switch pkt.BoxType {
-		case 0:
-			if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE warehouse SET item%dname=$1 WHERE character_id=$2", pkt.BoxIndex), pkt.Name, s.charID); err != nil {
-				s.logger.Error("Failed to rename warehouse item box", zap.Error(err))
-			}
-		case 1:
-			if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE warehouse SET equip%dname=$1 WHERE character_id=$2", pkt.BoxIndex), pkt.Name, s.charID); err != nil {
-				s.logger.Error("Failed to rename warehouse equip box", zap.Error(err))
-			}
+		if err := s.server.houseRepo.RenameWarehouseBox(s.charID, pkt.BoxType, pkt.BoxIndex, pkt.Name); err != nil {
+			s.logger.Error("Failed to rename warehouse box", zap.Error(err))
 		}
 	case 3:
 		bf.WriteUint32(0)     // Usage renewal time, >1 = disabled
@@ -472,7 +393,7 @@ func addWarehouseItem(s *Session, item mhfitem.MHFItemStack) {
 	giftBox := warehouseGetItems(s, 10)
 	item.WarehouseID = token.RNG.Uint32()
 	giftBox = append(giftBox, item)
-	if _, err := s.server.db.Exec("UPDATE warehouse SET item10=$1 WHERE character_id=$2", mhfitem.SerializeWarehouseItems(giftBox), s.charID); err != nil {
+	if err := s.server.houseRepo.SetWarehouseItemData(s.charID, 10, mhfitem.SerializeWarehouseItems(giftBox)); err != nil {
 		s.logger.Error("Failed to update warehouse gift box", zap.Error(err))
 	}
 }
@@ -484,7 +405,7 @@ func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
 	if index > 10 {
 		return items
 	}
-	_ = s.server.db.QueryRow(fmt.Sprintf(`SELECT item%d FROM warehouse WHERE character_id=$1`, index), s.charID).Scan(&data)
+	data, _ = s.server.houseRepo.GetWarehouseItemData(s.charID, index)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()
@@ -502,7 +423,7 @@ func warehouseGetEquipment(s *Session, index uint8) []mhfitem.MHFEquipment {
 	if index > 10 {
 		return equipment
 	}
-	_ = s.server.db.QueryRow(fmt.Sprintf(`SELECT equip%d FROM warehouse WHERE character_id=$1`, index), s.charID).Scan(&data)
+	data, _ = s.server.houseRepo.GetWarehouseEquipData(s.charID, index)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()
@@ -559,7 +480,7 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 			zap.Int("data_size", dataSize),
 		)
 
-		_, err = s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET item%d=$1 WHERE character_id=$2`, pkt.BoxIndex), serialized, s.charID)
+		err = s.server.houseRepo.SetWarehouseItemData(s.charID, pkt.BoxIndex, serialized)
 		if err != nil {
 			s.logger.Error("Failed to update warehouse items",
 				zap.Error(err),
@@ -605,7 +526,7 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 			zap.Int("data_size", dataSize),
 		)
 
-		_, err = s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET equip%d=$1 WHERE character_id=$2`, pkt.BoxIndex), serialized, s.charID)
+		err = s.server.houseRepo.SetWarehouseEquipData(s.charID, pkt.BoxIndex, serialized)
 		if err != nil {
 			s.logger.Error("Failed to update warehouse equipment",
 				zap.Error(err),

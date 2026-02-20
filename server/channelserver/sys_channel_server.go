@@ -48,6 +48,8 @@ type Server struct {
 	charRepo       *CharacterRepository
 	guildRepo      *GuildRepository
 	userRepo       *UserRepository
+	gachaRepo      *GachaRepository
+	houseRepo      *HouseRepository
 	erupeConfig    *_config.Config
 	acceptConns    chan net.Conn
 	deleteConns    chan net.Conn
@@ -121,6 +123,8 @@ func NewServer(config *Config) *Server {
 	s.charRepo = NewCharacterRepository(config.DB)
 	s.guildRepo = NewGuildRepository(config.DB)
 	s.userRepo = NewUserRepository(config.DB)
+	s.gachaRepo = NewGachaRepository(config.DB)
+	s.houseRepo = NewHouseRepository(config.DB)
 
 	// Mezeporta
 	s.stages["sl1Ns200p0a0u0"] = NewStage("sl1Ns200p0a0u0")
