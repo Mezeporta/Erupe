@@ -184,19 +184,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveScenarioData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveScenarioData)
-	if len(pkt.RawDataPayload) > 65536 {
-		s.logger.Warn("Scenario payload too large", zap.Int("len", len(pkt.RawDataPayload)))
-		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-		return
-	}
-	dumpSaveData(s, pkt.RawDataPayload, "scenario")
-	_, err := s.server.db.Exec("UPDATE characters SET scenariodata = $1 WHERE id = $2", pkt.RawDataPayload, s.charID)
-	if err != nil {
-		s.logger.Error("Failed to update scenario data in db", zap.Error(err))
-		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-		return
-	}
-	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+	saveCharacterData(s, pkt.AckHandle, "scenariodata", pkt.RawDataPayload, 65536)
 }
 
 func handleMsgMhfLoadScenarioData(s *Session, p mhfpacket.MHFPacket) {

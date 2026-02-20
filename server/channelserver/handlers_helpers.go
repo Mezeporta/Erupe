@@ -83,13 +83,15 @@ func loadCharacterData(s *Session, ackHandle uint32, column string, defaultData 
 func saveCharacterData(s *Session, ackHandle uint32, column string, data []byte, maxSize int) {
 	if maxSize > 0 && len(data) > maxSize {
 		s.logger.Warn("Payload too large for "+column, zap.Int("len", len(data)), zap.Int("max", maxSize))
-		doAckSimpleSucceed(s, ackHandle, make([]byte, 4))
+		doAckSimpleFail(s, ackHandle, make([]byte, 4))
 		return
 	}
 	dumpSaveData(s, data, column)
 	_, err := s.server.db.Exec("UPDATE characters SET "+column+"=$1 WHERE id=$2", data, s.charID)
 	if err != nil {
 		s.logger.Error("Failed to save "+column, zap.Error(err))
+		doAckSimpleFail(s, ackHandle, make([]byte, 4))
+		return
 	}
 	doAckSimpleSucceed(s, ackHandle, make([]byte, 4))
 }

@@ -179,25 +179,16 @@ Packet field offsets, sizes, flags, and game constants appear as raw numbers thr
 
 ---
 
-## 5. Inconsistent Binary I/O Patterns
+## 5. ~~Inconsistent Binary I/O Patterns~~ (Resolved)
 
-Three different serialization approaches coexist within the same package:
+**Status:** Non-issue on closer inspection. The codebase has already standardized on `byteframe` for all sequential packet building and parsing.
 
-```go
-// Pattern A: byteframe (custom helper)
-bf := byteframe.NewByteFrame()
-bf.WriteUint32(value)
+The 12 remaining `encoding/binary` call sites (across `sys_session.go`, `handlers_session.go`, `model_character.go`, `handlers_quest.go`, `handlers_rengoku.go`) are all cases where `byteframe` is structurally wrong:
 
-// Pattern B: encoding/binary
-binary.Write(resp, binary.LittleEndian, value)
+- **Zero-allocation spot-reads on existing `[]byte`** — reading an opcode or ack handle from an already-serialized packet for logging, or sentinel guard checks on raw blobs. Allocating a byteframe for a 2-byte read in a log path would be wasteful.
+- **Random-access reads/writes at computed offsets** — patching fields in the decompressed game save blob (`model_character.go`) or copying fields within quest binaries during version backport (`handlers_quest.go`). Byteframe is a sequential cursor and cannot do `buf[offset:offset+4]` style access.
 
-// Pattern C: raw slice manipulation
-data[offset] = byte(value)
-```
-
-**Impact:** Developers must learn three different idioms. Endianness assumptions are implicit in Pattern C. Bug patterns differ across approaches.
-
-**Recommendation:** Standardize on a single binary serialization approach (likely `byteframe` since it's already the most common) and migrate remaining code.
+Pattern C (raw `data[i] = byte(...)` serialization) does not exist in production code — only in test fixtures as loop fills for dummy payloads.
 
 ---
 
@@ -243,32 +234,9 @@ The Raviente shared state uses a single mutex for all Raviente data fields.
 
 ## 8. Copy-Paste Handler Patterns
 
-Many handlers follow an identical template with minor variations but no shared abstraction. The "get X data / save X data" pairs in `handlers_data.go` are the clearest example:
+~~Many handlers follow an identical template with minor variations but no shared abstraction.~~ **Substantially fixed.** `loadCharacterData` and `saveCharacterData` helpers in `handlers_helpers.go` now cover all standard character blob load/save patterns (11 load handlers, 6 save handlers including `handleMsgMhfSaveScenarioData`). The `saveCharacterData` helper sends `doAckSimpleFail` on oversized payloads and DB errors, matching the correct error-handling pattern.
 
-```go
-// This pattern repeats ~20+ times with different table/column names
-func handleMsgMhfLoadFoo(s *Session, p mhfpacket.MHFPacket) {
-    pkt := p.(*mhfpacket.MsgMhfLoadFoo)
-    var data []byte
-    err := s.Server.DB.QueryRow("SELECT foo FROM characters WHERE id=$1", s.CharID).Scan(&data)
-    if err != nil {
-        s.logger.Error(...)
-        return
-    }
-    doAckBufSucceed(s, pkt.AckHandle, data)
-}
-
-func handleMsgMhfSaveFoo(s *Session, p mhfpacket.MHFPacket) {
-    pkt := p.(*mhfpacket.MsgMhfSaveFoo)
-    dumpSaveData(s, pkt.RawDataPayload, "foo")
-    _, err := s.Server.DB.Exec("UPDATE characters SET foo=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
-    // ...
-}
-```
-
-**Impact:** Bugs fixed in one copy aren't fixed in others. Adding cross-cutting concerns (logging, metrics, validation) requires editing every copy.
-
-**Recommendation:** Extract a generic `loadCharacterData(s, table, column, ackHandle)` / `saveCharacterData(s, table, column, data, ackHandle)` helper.
+Remaining inline DB patterns were audited and are genuinely different (non-blob types, wrong tables, diff compression, read-modify-write with bit ops, multi-column updates, or queries against other characters).
 
 ---
 
@@ -350,7 +318,7 @@ Database operations use raw `database/sql` with PostgreSQL-specific syntax throu
 | Severity | Anti-patterns |
 |----------|--------------|
 | **High** | ~~Missing ACK responses / softlocks (#2)~~ **Fixed**, no architectural layering (#3), tight DB coupling (#13) |
-| **Medium** | Magic numbers (#4), inconsistent binary I/O (#5), Session god object (#6), copy-paste handlers (#8), raw SQL duplication (#9) |
+| **Medium** | Magic numbers (#4), ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, raw SQL duplication (#9) |
 | **Low** | God files (#1), ~~`init()` registration (#10)~~ **Fixed**, ~~inconsistent logging (#12)~~ **Fixed**, mutex granularity (#7), ~~panic-based flow (#11)~~ **Fixed** |
 
 ### Root Cause
@@ -364,4 +332,4 @@ Most of these anti-patterns stem from a single root cause: **the codebase grew o
 3. **Extract load/save helpers** — 38 handlers repeat the same ~10-15 line template, mechanical extraction
 4. **Extract a guild repository layer** — 32 queries across 8-15 files, second-highest SQL duplication
 5. **Define protocol constants** — 1,052 hex literals with 174 unique values, improves documentation
-6. **Standardize binary I/O** — pick `byteframe` (already dominant), migrate remaining `binary.Write` and raw slice code
+6. ~~**Standardize binary I/O**~~ — already standardized on `byteframe`; remaining `encoding/binary` uses are correct (see #5)
