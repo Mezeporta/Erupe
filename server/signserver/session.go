@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"erupe-ce/common/stringsupport"
-	"fmt"
 	"net"
 	"strings"
 	"sync"
@@ -40,7 +39,7 @@ func (s *Session) work() {
 	pkt, err := s.cryptConn.ReadPacket()
 
 	if s.server.erupeConfig.DebugOptions.LogInboundMessages {
-		fmt.Printf("\n[Client] -> [Server]\nData [%d bytes]:\n%s\n", len(pkt), hex.Dump(pkt))
+		s.logger.Debug("Inbound packet", zap.Int("bytes", len(pkt)), zap.String("data", hex.Dump(pkt)))
 	}
 
 	if err != nil {
@@ -84,7 +83,7 @@ func (s *Session) handlePacket(pkt []byte) error {
 	default:
 		s.logger.Warn("Unknown request", zap.String("reqType", reqType))
 		if s.server.erupeConfig.DebugOptions.LogInboundMessages {
-			fmt.Printf("\n[Client] -> [Server]\nData [%d bytes]:\n%s\n", len(pkt), hex.Dump(pkt))
+			s.logger.Debug("Unknown inbound packet", zap.Int("bytes", len(pkt)), zap.String("data", hex.Dump(pkt)))
 		}
 	}
 	return nil
@@ -108,7 +107,7 @@ func (s *Session) authenticate(username string, password string) {
 		bf.WriteUint8(uint8(resp))
 	}
 	if s.server.erupeConfig.DebugOptions.LogOutboundMessages {
-		fmt.Printf("\n[Server] -> [Client]\nData [%d bytes]:\n%s\n", len(bf.Data()), hex.Dump(bf.Data()))
+		s.logger.Debug("Outbound packet", zap.Int("bytes", len(bf.Data())), zap.String("data", hex.Dump(bf.Data())))
 	}
 	_ = s.cryptConn.SendPacket(bf.Data())
 }

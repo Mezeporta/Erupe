@@ -104,7 +104,7 @@ func (s *Server) handleEntranceServerConnection(conn net.Conn) {
 	}
 
 	// Create a new encrypted connection handler and read a packet from it.
-	cc := network.NewCryptConn(conn, s.erupeConfig.RealClientMode)
+	cc := network.NewCryptConn(conn, s.erupeConfig.RealClientMode, s.logger)
 	pkt, err := cc.ReadPacket()
 	if err != nil {
 		s.logger.Warn("Error reading packet", zap.Error(err))
@@ -112,7 +112,7 @@ func (s *Server) handleEntranceServerConnection(conn net.Conn) {
 	}
 
 	if s.erupeConfig.DebugOptions.LogInboundMessages {
-		fmt.Printf("[Client] -> [Server]\nData [%d bytes]:\n%s\n", len(pkt), hex.Dump(pkt))
+		s.logger.Debug("Inbound packet", zap.Int("bytes", len(pkt)), zap.String("data", hex.Dump(pkt)))
 	}
 
 	local := strings.Split(conn.RemoteAddr().String(), ":")[0] == "127.0.0.1"

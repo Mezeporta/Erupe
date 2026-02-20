@@ -1,7 +1,7 @@
 package _config
 
 import (
-	"log"
+	"fmt"
 	"net"
 	"strings"
 
@@ -305,19 +305,18 @@ func (c *EntranceChannelInfo) IsEnabled() bool {
 	return *c.Enabled
 }
 
-
 // getOutboundIP4 gets the preferred outbound ip4 of this machine
 // From https://stackoverflow.com/a/37382208
-func getOutboundIP4() net.IP {
+func getOutboundIP4() (net.IP, error) {
 	conn, err := net.Dial("udp4", "8.8.8.8:80")
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("detecting outbound IP: %w", err)
 	}
 	defer func() { _ = conn.Close() }()
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 
-	return localAddr.IP.To4()
+	return localAddr.IP.To4(), nil
 }
 
 // LoadConfig loads the given config toml file.
@@ -342,7 +341,11 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if c.Host == "" {
-		c.Host = getOutboundIP4().To4().String()
+		ip, err := getOutboundIP4()
+		if err != nil {
+			return nil, fmt.Errorf("failed to detect host IP: %w", err)
+		}
+		c.Host = ip.To4().String()
 	}
 
 	for i := range versionStrings {
@@ -365,4 +368,3 @@ func LoadConfig() (*Config, error) {
 
 	return c, nil
 }
-

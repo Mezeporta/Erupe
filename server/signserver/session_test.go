@@ -64,8 +64,8 @@ func (m *mockConn) RemoteAddr() net.Addr {
 }
 
 func (m *mockConn) SetDeadline(t time.Time) error      { return nil }
-func (m *mockConn) SetReadDeadline(t time.Time) error   { return nil }
-func (m *mockConn) SetWriteDeadline(t time.Time) error  { return nil }
+func (m *mockConn) SetReadDeadline(t time.Time) error  { return nil }
+func (m *mockConn) SetWriteDeadline(t time.Time) error { return nil }
 
 func TestSessionStruct(t *testing.T) {
 	logger := zap.NewNop()
@@ -75,7 +75,7 @@ func TestSessionStruct(t *testing.T) {
 		logger:    logger,
 		server:    nil,
 		rawConn:   conn,
-		cryptConn: network.NewCryptConn(conn, _config.ZZ),
+		cryptConn: network.NewCryptConn(conn, _config.ZZ, nil),
 	}
 
 	if s.logger != logger {
@@ -132,8 +132,7 @@ func TestSessionMutex(t *testing.T) {
 
 func TestHandlePacketUnknownRequest(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-	}
+	erupeConfig := &_config.Config{}
 
 	server := &Server{
 		logger:      logger,
@@ -145,7 +144,7 @@ func TestHandlePacketUnknownRequest(t *testing.T) {
 		logger:    logger,
 		server:    server,
 		rawConn:   conn,
-		cryptConn: network.NewCryptConn(conn, _config.ZZ),
+		cryptConn: network.NewCryptConn(conn, _config.ZZ, nil),
 	}
 
 	bf := byteframe.NewByteFrame()
@@ -176,7 +175,7 @@ func TestHandlePacketWithDevModeLogging(t *testing.T) {
 		logger:    logger,
 		server:    server,
 		rawConn:   conn,
-		cryptConn: network.NewCryptConn(conn, _config.ZZ),
+		cryptConn: network.NewCryptConn(conn, _config.ZZ, nil),
 	}
 
 	bf := byteframe.NewByteFrame()
@@ -214,7 +213,7 @@ func TestHandlePacketRequestTypes(t *testing.T) {
 				logger:    logger,
 				server:    server,
 				rawConn:   conn,
-				cryptConn: network.NewCryptConn(conn, _config.ZZ),
+				cryptConn: network.NewCryptConn(conn, _config.ZZ, nil),
 			}
 
 			bf := byteframe.NewByteFrame()
@@ -324,7 +323,7 @@ func TestMockConnDeadlines(t *testing.T) {
 
 func TestSessionWithCryptConn(t *testing.T) {
 	conn := newMockConn()
-	cryptConn := network.NewCryptConn(conn, _config.ZZ)
+	cryptConn := network.NewCryptConn(conn, _config.ZZ, nil)
 
 	if cryptConn == nil {
 		t.Fatal("NewCryptConn() returned nil")
@@ -361,7 +360,7 @@ func TestSessionWorkWithDevModeLogging(t *testing.T) {
 		logger:    logger,
 		server:    server,
 		rawConn:   serverConn,
-		cryptConn: network.NewCryptConn(serverConn, _config.ZZ),
+		cryptConn: network.NewCryptConn(serverConn, _config.ZZ, nil),
 	}
 
 	_ = clientConn.Close()
@@ -371,8 +370,7 @@ func TestSessionWorkWithDevModeLogging(t *testing.T) {
 
 func TestSessionWorkWithEmptyRead(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-	}
+	erupeConfig := &_config.Config{}
 
 	server := &Server{
 		logger:      logger,
@@ -386,7 +384,7 @@ func TestSessionWorkWithEmptyRead(t *testing.T) {
 		logger:    logger,
 		server:    server,
 		rawConn:   serverConn,
-		cryptConn: network.NewCryptConn(serverConn, _config.ZZ),
+		cryptConn: network.NewCryptConn(serverConn, _config.ZZ, nil),
 	}
 
 	_ = clientConn.Close()

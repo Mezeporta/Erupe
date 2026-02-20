@@ -3,7 +3,8 @@ package deltacomp
 import (
 	"bytes"
 	"io"
-	"log"
+
+	"go.uber.org/zap"
 )
 
 func checkReadUint8(r *bytes.Reader) (uint8, error) {
@@ -77,7 +78,7 @@ func ApplyDataDiff(diff []byte, baseData []byte) []byte {
 
 		// Grow slice if it's required
 		if len(baseCopy) < dataOffset {
-			log.Printf("Slice smaller than data offset, growing slice...")
+			zap.L().Warn("Slice smaller than data offset, growing slice")
 			baseCopy = append(baseCopy, make([]byte, (dataOffset+differentCount)-len(baseData))...)
 		} else {
 			length := len(baseCopy[dataOffset:])

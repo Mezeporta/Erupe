@@ -2,8 +2,9 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 func inTrustedRoot(path string, trustedRoot string) error {
@@ -16,20 +17,20 @@ func inTrustedRoot(path string, trustedRoot string) error {
 	return errors.New("path is outside of trusted root")
 }
 
-func verifyPath(path string, trustedRoot string) (string, error) {
+func verifyPath(path string, trustedRoot string, logger *zap.Logger) (string, error) {
 
 	c := filepath.Clean(path)
-	fmt.Println("Cleaned path: " + c)
+	logger.Debug("Cleaned path", zap.String("path", c))
 
 	r, err := filepath.EvalSymlinks(c)
 	if err != nil {
-		fmt.Println("Error " + err.Error())
+		logger.Warn("Path verification failed", zap.Error(err))
 		return c, errors.New("unsafe or invalid path specified")
 	}
 
 	err = inTrustedRoot(r, trustedRoot)
 	if err != nil {
-		fmt.Println("Error " + err.Error())
+		logger.Warn("Path outside trusted root", zap.Error(err))
 		return r, errors.New("unsafe or invalid path specified")
 	} else {
 		return r, nil

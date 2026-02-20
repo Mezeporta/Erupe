@@ -72,7 +72,7 @@ func TestLoadConfigClientModeMapping(t *testing.T) {
 // TestLoadConfigFeatureWeaponConstraint tests MinFeatureWeapons > MaxFeatureWeapons constraint
 func TestLoadConfigFeatureWeaponConstraint(t *testing.T) {
 	tests := []struct {
-		name      string
+		name       string
 		minWeapons int
 		maxWeapons int
 		expected   int
@@ -107,7 +107,11 @@ func TestLoadConfigDefaultHost(t *testing.T) {
 	// When Host is empty, it should be set to the outbound IP
 	if cfg.Host == "" {
 		// Simulate the logic: if empty, set to outbound IP
-		cfg.Host = getOutboundIP4().To4().String()
+		ip, err := getOutboundIP4()
+		if err != nil {
+			t.Fatalf("getOutboundIP4() error: %v", err)
+		}
+		cfg.Host = ip.To4().String()
 		if cfg.Host == "" {
 			t.Error("Host should be set to outbound IP, got empty string")
 		}
@@ -271,12 +275,12 @@ func TestEntranceServerConfig(t *testing.T) {
 		Port:    10000,
 		Entries: []EntranceServerInfo{
 			{
-				IP:          "192.168.1.100",
-				Type:        1, // open
-				Season:      0, // green
-				Recommended: 1,
-				Name:        "Main Server",
-				Description: "Main hunting server",
+				IP:                 "192.168.1.100",
+				Type:               1, // open
+				Season:             0, // green
+				Recommended:        1,
+				Name:               "Main Server",
+				Description:        "Main hunting server",
 				AllowedClientFlags: 8192,
 				Channels: []EntranceChannelInfo{
 					{Port: 10001, MaxPlayers: 4, CurrentPlayers: 2},
@@ -486,9 +490,9 @@ func BenchmarkConfigCreation(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = &Config{
-			Host:     "localhost",
-			Language: "en",
-			ClientMode: "ZZ",
+			Host:           "localhost",
+			Language:       "en",
+			ClientMode:     "ZZ",
 			RealClientMode: ZZ,
 		}
 	}

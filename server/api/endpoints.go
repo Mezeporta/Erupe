@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
-	_config "erupe-ce/config"
 	"erupe-ce/common/gametime"
+	_config "erupe-ce/config"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -317,6 +317,7 @@ func (s *APIServer) ExportSave(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(save)
 }
+
 // ScreenShotGet handles GET /api/ss/bbs/{id}, serving a previously uploaded
 // screenshot image by its token ID.
 func (s *APIServer) ScreenShotGet(w http.ResponseWriter, r *http.Request) {
@@ -331,12 +332,12 @@ func (s *APIServer) ScreenShotGet(w http.ResponseWriter, r *http.Request) {
 	// Open the image file
 	safePath := s.erupeConfig.Screenshots.OutputDir
 	path := filepath.Join(safePath, fmt.Sprintf("%s.jpg", token))
-	result, err := verifyPath(path, safePath)
+	result, err := verifyPath(path, safePath, s.logger)
 
 	if err != nil {
-		fmt.Println("Error " + err.Error())
+		s.logger.Warn("Screenshot path verification failed", zap.Error(err))
 	} else {
-		fmt.Println("Canonical: " + result)
+		s.logger.Debug("Screenshot canonical path", zap.String("path", result))
 
 		file, err := os.Open(result)
 		if err != nil {
@@ -353,6 +354,7 @@ func (s *APIServer) ScreenShotGet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
 // ScreenShot handles POST /api/ss/bbs/upload.php, accepting a JPEG image
 // upload from the game client and saving it to the configured output directory.
 func (s *APIServer) ScreenShot(w http.ResponseWriter, r *http.Request) {
@@ -402,7 +404,7 @@ func (s *APIServer) ScreenShot(w http.ResponseWriter, r *http.Request) {
 
 	safePath := s.erupeConfig.Screenshots.OutputDir
 	path := filepath.Join(safePath, fmt.Sprintf("%s.jpg", token))
-	verified, err := verifyPath(path, safePath)
+	verified, err := verifyPath(path, safePath, s.logger)
 	if err != nil {
 		writeResult("500")
 		return

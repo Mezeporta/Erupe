@@ -3,8 +3,10 @@ package api
 import (
 	"os"
 	"path/filepath"
-	"testing"
 	"strings"
+	"testing"
+
+	"go.uber.org/zap"
 )
 
 func TestInTrustedRoot(t *testing.T) {
@@ -131,7 +133,7 @@ func TestVerifyPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := verifyPath(tt.path, tt.trustedRoot)
+			result, err := verifyPath(tt.path, tt.trustedRoot, zap.NewNop())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("verifyPath() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -171,7 +173,7 @@ func TestVerifyPathWithSymlinks(t *testing.T) {
 	}
 
 	// Verify that symlink pointing outside is detected
-	_, err := verifyPath(symlinkPath, safeDir)
+	_, err := verifyPath(symlinkPath, safeDir, zap.NewNop())
 	if err == nil {
 		t.Errorf("verifyPath() should reject symlink pointing outside trusted root")
 	}
@@ -188,7 +190,7 @@ func BenchmarkVerifyPath(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = verifyPath(testPath, safeDir)
+		_, _ = verifyPath(testPath, safeDir, zap.NewNop())
 	}
 }
 

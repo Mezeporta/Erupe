@@ -5,11 +5,11 @@ import (
 	"encoding/hex"
 	"erupe-ce/common/stringsupport"
 	_config "erupe-ce/config"
-	"fmt"
 	"net"
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/gametime"
+	"go.uber.org/zap"
 )
 
 func encodeServerInfo(config *_config.Config, s *Server, local bool) []byte {
@@ -142,7 +142,7 @@ func makeSv2Resp(config *_config.Config, s *Server, local bool) []byte {
 	rawServerData := encodeServerInfo(config, s, local)
 
 	if s.erupeConfig.DebugOptions.LogOutboundMessages {
-		fmt.Printf("[Server] -> [Client]\nData [%d bytes]:\n%s\n", len(rawServerData), hex.Dump(rawServerData))
+		s.logger.Debug("Outbound SV2 response", zap.Int("bytes", len(rawServerData)), zap.String("data", hex.Dump(rawServerData)))
 	}
 
 	respType := "SV2"
@@ -174,7 +174,7 @@ func makeUsrResp(pkt []byte, s *Server) []byte {
 	}
 
 	if s.erupeConfig.DebugOptions.LogOutboundMessages {
-		fmt.Printf("[Server] -> [Client]\nData [%d bytes]:\n%s\n", len(resp.Data()), hex.Dump(resp.Data()))
+		s.logger.Debug("Outbound USR response", zap.Int("bytes", len(resp.Data())), zap.String("data", hex.Dump(resp.Data())))
 	}
 
 	return makeHeader(resp.Data(), "USR", userEntries, 0x00)

@@ -35,13 +35,12 @@ func NewTestConfig() *_config.Config {
 			MaxLauncherHR: false,
 		},
 		GameplayOptions: _config.GameplayOptions{
-			MezFesSoloTickets:     100,
-			MezFesGroupTickets:    50,
-			MezFesDuration:        604800, // 1 week
-			MezFesSwitchMinigame:  false,
+			MezFesSoloTickets:    100,
+			MezFesGroupTickets:   50,
+			MezFesDuration:       604800, // 1 week
+			MezFesSwitchMinigame: false,
 		},
-		LoginNotices:   []string{"Welcome to Erupe!"},
+		LoginNotices:    []string{"Welcome to Erupe!"},
 		HideLoginNotice: false,
 	}
 }
-
