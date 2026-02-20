@@ -136,6 +136,13 @@ func main() {
 	if err != nil {
 		preventClose(config, fmt.Sprintf("Database: Failed to ping, %s", err.Error()))
 	}
+
+	// Configure connection pool to avoid exhausting PostgreSQL under load.
+	db.SetMaxOpenConns(50)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(2 * time.Minute)
+
 	logger.Info("Database: Started successfully")
 
 	// Pre-compute all server IDs this instance will own, so we only

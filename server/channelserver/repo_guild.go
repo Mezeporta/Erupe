@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -498,16 +499,24 @@ func (r *GuildRepository) ListPosts(guildID uint32, postType int) ([]*MessageBoa
 
 // CreatePost inserts a new guild post and soft-deletes excess posts beyond maxPosts.
 func (r *GuildRepository) CreatePost(guildID, authorID, stampID uint32, postType int, title, body string, maxPosts int) error {
-	if _, err := r.db.Exec(
+	tx, err := r.db.BeginTxx(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(
 		`INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)`,
 		guildID, authorID, stampID, postType, title, body); err != nil {
 		return err
 	}
-	_, err := r.db.Exec(`UPDATE guild_posts SET deleted = true WHERE id IN (
+	if _, err := tx.Exec(`UPDATE guild_posts SET deleted = true WHERE id IN (
 		SELECT id FROM guild_posts WHERE guild_id = $1 AND post_type = $2 AND deleted = false
 		ORDER BY created_at DESC OFFSET $3
-	)`, guildID, postType, maxPosts)
-	return err
+	)`, guildID, postType, maxPosts); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // DeletePost soft-deletes a guild post by ID.
@@ -698,15 +707,24 @@ func (r *GuildRepository) CreateAdventureWithCharge(guildID, destination, charge
 }
 
 // CollectAdventure marks an adventure as collected by the given character (CSV append).
+// Uses SELECT FOR UPDATE to prevent concurrent double-collect.
 func (r *GuildRepository) CollectAdventure(adventureID uint32, charID uint32) error {
+	tx, err := r.db.BeginTxx(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	var collectedBy string
-	err := r.db.QueryRow("SELECT collected_by FROM guild_adventures WHERE id = $1", adventureID).Scan(&collectedBy)
+	err = tx.QueryRow("SELECT collected_by FROM guild_adventures WHERE id = $1 FOR UPDATE", adventureID).Scan(&collectedBy)
 	if err != nil {
 		return err
 	}
 	collectedBy = stringsupport.CSVAdd(collectedBy, int(charID))
-	_, err = r.db.Exec("UPDATE guild_adventures SET collected_by = $1 WHERE id = $2", collectedBy, adventureID)
-	return err
+	if _, err = tx.Exec("UPDATE guild_adventures SET collected_by = $1 WHERE id = $2", collectedBy, adventureID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ChargeAdventure adds charge to a guild adventure.
