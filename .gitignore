@@ -14,10 +14,10 @@ savedata/*/
 screenshots/*
 
 # We don't need built files
-erupe-ce
-erupe
-protbot
-tools/loganalyzer/loganalyzer
+/erupe-ce
+/erupe
+/protbot
+/tools/loganalyzer/loganalyzer
 
 # config is install dependent
 config.json
