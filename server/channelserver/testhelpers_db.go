@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"erupe-ce/server/channelserver/compression/nullcomp"
 	"github.com/jmoiron/sqlx"
@@ -250,6 +251,8 @@ func findProjectRoot(t *testing.T) string {
 }
 
 // truncateAllTables truncates all tables in the public schema for test isolation.
+// It retries on deadlock, which can occur when a previous test's goroutines still
+// hold connections with in-flight DB operations.
 func truncateAllTables(t *testing.T, db *sqlx.DB) {
 	t.Helper()
 
@@ -268,11 +271,22 @@ func truncateAllTables(t *testing.T, db *sqlx.DB) {
 		tables = append(tables, name)
 	}
 
-	if len(tables) > 0 {
-		_, err := db.Exec("TRUNCATE " + strings.Join(tables, ", ") + " CASCADE")
-		if err != nil {
-			t.Fatalf("Failed to truncate tables: %v", err)
+	if len(tables) == 0 {
+		return
+	}
+
+	stmt := "TRUNCATE " + strings.Join(tables, ", ") + " CASCADE"
+	const maxRetries = 3
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		_, err := db.Exec(stmt)
+		if err == nil {
+			return
 		}
+		if attempt < maxRetries {
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		t.Fatalf("Failed to truncate tables after %d attempts: %v", maxRetries, err)
 	}
 }
 

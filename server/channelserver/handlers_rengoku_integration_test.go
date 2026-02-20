@@ -543,7 +543,17 @@ func TestRengokuData_SaveOnDBError(t *testing.T) {
 	server := createTestServerWithDB(t, db)
 	session := createTestSessionForServerWithChar(server, charID, "ErrChar")
 
-	// Drop the rengoku_score table to trigger error in score extraction
+	// Drop the rengoku_score table to trigger error in score extraction.
+	// Restore it afterward so subsequent tests aren't affected.
+	defer func() {
+		_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS rengoku_score (
+			character_id int PRIMARY KEY,
+			max_stages_mp int NOT NULL DEFAULT 0,
+			max_points_mp int NOT NULL DEFAULT 0,
+			max_stages_sp int NOT NULL DEFAULT 0,
+			max_points_sp int NOT NULL DEFAULT 0
+		)`)
+	}()
 	_, _ = db.Exec("DROP TABLE IF EXISTS rengoku_score")
 
 	payload := make([]byte, 100)
