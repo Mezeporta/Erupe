@@ -77,24 +77,28 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
 	if err != nil {
 		s.logger.Error("Failed to update current players", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
 	_, err = s.server.db.Exec("UPDATE sign_sessions SET server_id=$1, char_id=$2 WHERE token=$3", s.server.ID, s.charID, s.token)
 	if err != nil {
 		s.logger.Error("Failed to update sign session", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
 	_, err = s.server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", TimeAdjusted().Unix(), s.charID)
 	if err != nil {
 		s.logger.Error("Failed to update last login", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
 	_, err = s.server.db.Exec("UPDATE users u SET last_character=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)", s.charID)
 	if err != nil {
 		s.logger.Error("Failed to update last character", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
@@ -366,6 +370,7 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 	_, err := rand.Read(logKey)
 	if err != nil {
 		s.logger.Error("Failed to generate log key", zap.Error(err))
+		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 

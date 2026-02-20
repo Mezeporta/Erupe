@@ -44,6 +44,7 @@ func handleMsgMhfArrangeGuildMember(s *Session, p mhfpacket.MHFPacket) {
 			"failed to respond to ArrangeGuildMember message",
 			zap.Uint32("charID", s.charID),
 		)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
@@ -52,6 +53,7 @@ func handleMsgMhfArrangeGuildMember(s *Session, p mhfpacket.MHFPacket) {
 			zap.Uint32("charID", s.charID),
 			zap.Uint32("guildID", guild.ID),
 		)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
@@ -63,6 +65,7 @@ func handleMsgMhfArrangeGuildMember(s *Session, p mhfpacket.MHFPacket) {
 			zap.Uint32("charID", s.charID),
 			zap.Uint32("guildID", guild.ID),
 		)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
@@ -106,12 +109,14 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 
 	if err != nil {
 		s.logger.Error("failed to retrieve guild")
+		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
 	alliance, err := GetAllianceData(s, guild.AllianceID)
 	if err != nil {
 		s.logger.Error("Failed to get alliance data")
+		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
@@ -155,6 +160,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 			mems, err := GetGuildMembers(s, alliance.ParentGuildID, false)
 			if err != nil {
 				s.logger.Error("Failed to get parent guild members for alliance", zap.Error(err))
+				doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 				return
 			}
 			for _, m := range mems {
@@ -165,6 +171,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 			mems, err := GetGuildMembers(s, alliance.SubGuild1ID, false)
 			if err != nil {
 				s.logger.Error("Failed to get sub guild 1 members for alliance", zap.Error(err))
+				doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 				return
 			}
 			for _, m := range mems {
@@ -175,6 +182,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 			mems, err := GetGuildMembers(s, alliance.SubGuild2ID, false)
 			if err != nil {
 				s.logger.Error("Failed to get sub guild 2 members for alliance", zap.Error(err))
+				doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 				return
 			}
 			for _, m := range mems {

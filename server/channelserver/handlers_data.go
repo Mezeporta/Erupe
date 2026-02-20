@@ -22,6 +22,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	characterSaveData, err := GetCharacterSaveData(s, s.charID)
 	if err != nil {
 		s.logger.Error("failed to retrieve character save data from db", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 	// Var to hold the decompressed savedata for updating the launcher response fields.
