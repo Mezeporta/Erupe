@@ -1,20 +1,63 @@
 package channelserver
 
 import (
+	"encoding/binary"
 	ps "erupe-ce/common/pascalstring"
 	"fmt"
-	"github.com/jmoiron/sqlx"
 	"os"
 	"path/filepath"
+
+	"github.com/jmoiron/sqlx"
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
 	"go.uber.org/zap"
 )
 
+// rengokuSkillsZeroed checks if the skill slot IDs (offsets 0x1B-0x20) and
+// equipped skill values (offsets 0x2E-0x39) are all zero in a rengoku save blob.
+func rengokuSkillsZeroed(data []byte) bool {
+	if len(data) < 0x3A {
+		return true
+	}
+	for _, b := range data[0x1B:0x21] {
+		if b != 0 {
+			return false
+		}
+	}
+	for _, b := range data[0x2E:0x3A] {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// rengokuHasPoints checks if any skill point allocation (offsets 0x3B-0x46) is nonzero.
+func rengokuHasPoints(data []byte) bool {
+	if len(data) < 0x47 {
+		return false
+	}
+	for _, b := range data[0x3B:0x47] {
+		if b != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// rengokuMergeSkills copies skill slot IDs (0x1B-0x20) and equipped skill
+// values (0x2E-0x39) from existing data into the incoming save payload,
+// preserving the skills that the client failed to populate due to a race
+// condition during area transitions (see issue #85).
+func rengokuMergeSkills(dst, src []byte) {
+	copy(dst[0x1B:0x21], src[0x1B:0x21])
+	copy(dst[0x2E:0x3A], src[0x2E:0x3A])
+}
+
 func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
-	// saved every floor on road, holds values such as floors progressed, points etc.
-	// can be safely handled by the client
+	// Saved every floor on road, holds values such as floors progressed, points etc.
+	// Can be safely handled by the client.
 	pkt := p.(*mhfpacket.MsgMhfSaveRengokuData)
 	if len(pkt.RawDataPayload) < 91 || len(pkt.RawDataPayload) > 4096 {
 		s.logger.Warn("Rengoku payload size out of range", zap.Int("len", len(pkt.RawDataPayload)))
@@ -22,13 +65,47 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	dumpSaveData(s, pkt.RawDataPayload, "rengoku")
-	_, err := s.server.db.Exec("UPDATE characters SET rengokudata=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+
+	saveData := pkt.RawDataPayload
+
+	// Guard against a client race condition (issue #85): the Sky Corridor init
+	// path triggers a rengoku save BEFORE the load response has been parsed into
+	// the character data area. This produces a save with zeroed skill fields but
+	// preserved point totals. Detect this pattern and merge existing skill data.
+	if len(saveData) >= 0x47 && rengokuSkillsZeroed(saveData) && rengokuHasPoints(saveData) {
+		var existing []byte
+		if err := s.server.db.QueryRow("SELECT rengokudata FROM characters WHERE id=$1", s.charID).Scan(&existing); err == nil {
+			if len(existing) >= 0x47 && !rengokuSkillsZeroed(existing) {
+				s.logger.Info("Rengoku save has zeroed skills with invested points, preserving existing skills",
+					zap.Uint32("charID", s.charID))
+				merged := make([]byte, len(saveData))
+				copy(merged, saveData)
+				rengokuMergeSkills(merged, existing)
+				saveData = merged
+			}
+		}
+	}
+
+	// Also reject saves where the sentinel is 0 (no data) if valid data already exists.
+	if len(saveData) >= 4 && binary.BigEndian.Uint32(saveData[:4]) == 0 {
+		var existing []byte
+		if err := s.server.db.QueryRow("SELECT rengokudata FROM characters WHERE id=$1", s.charID).Scan(&existing); err == nil {
+			if len(existing) >= 4 && binary.BigEndian.Uint32(existing[:4]) != 0 {
+				s.logger.Warn("Refusing to overwrite valid rengoku data with empty sentinel",
+					zap.Uint32("charID", s.charID))
+				doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+				return
+			}
+		}
+	}
+
+	_, err := s.server.db.Exec("UPDATE characters SET rengokudata=$1 WHERE id=$2", saveData, s.charID)
 	if err != nil {
 		s.logger.Error("Failed to save rengokudata", zap.Error(err))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
+	bf := byteframe.NewByteFrameFromBytes(saveData)
 	_, _ = bf.Seek(71, 0)
 	maxStageMp := bf.ReadUint32()
 	maxScoreMp := bf.ReadUint32()
@@ -53,7 +130,8 @@ func handleMsgMhfLoadRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	var data []byte
 	err := s.server.db.QueryRow("SELECT rengokudata FROM characters WHERE id = $1", s.charID).Scan(&data)
 	if err != nil {
-		s.logger.Error("Failed to load rengokudata", zap.Error(err))
+		s.logger.Error("Failed to load rengokudata", zap.Error(err),
+			zap.Uint32("charID", s.charID))
 	}
 	if len(data) > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, data)
