@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- API: `GET /version` endpoint returning server name and client mode (`{"clientMode":"ZZ","name":"Erupe-CE"}`)
 - Rework object ID allocation: per-session IDs replace shared map, simplify stage entry notifications
 - Better config file handling and structure
 - Comprehensive production logging for save operations (warehouse, Koryo points, savedata, Hunter Navi, plate equipment)

@@ -123,6 +123,22 @@ func (s *APIServer) newAuthData(userID uint32, userRights uint32, userTokenID ui
 	return resp
 }
 
+// VersionResponse is the JSON payload returned by the /version endpoint.
+type VersionResponse struct {
+	ClientMode string `json:"clientMode"`
+	Name       string `json:"name"`
+}
+
+// Version handles GET /version and returns the server name and client mode.
+func (s *APIServer) Version(w http.ResponseWriter, r *http.Request) {
+	resp := VersionResponse{
+		ClientMode: s.erupeConfig.ClientMode,
+		Name:       "Erupe-CE",
+	}
+	w.Header().Add("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
 // Launcher handles GET /launcher and returns banners, messages, and links for the launcher UI.
 func (s *APIServer) Launcher(w http.ResponseWriter, r *http.Request) {
 	var respData LauncherResponse
