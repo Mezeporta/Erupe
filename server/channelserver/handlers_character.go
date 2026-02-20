@@ -48,6 +48,13 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 }
 
 func (save *CharacterSaveData) Save(s *Session) {
+	if save.decompSave == nil {
+		s.logger.Warn("No decompressed save data, skipping save",
+			zap.Uint32("charID", save.CharID),
+		)
+		return
+	}
+
 	if !s.kqfOverride {
 		s.kqf = save.KQF
 	} else {

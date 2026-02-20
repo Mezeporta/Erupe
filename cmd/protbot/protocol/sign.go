@@ -27,10 +27,11 @@ func DoSign(addr, username, password string) (*SignResult, error) {
 	}
 	defer c.Close()
 
-	// Build DSGN request: "DSGN:\x00" + SJIS(user) + "\x00" + SJIS(pass) + "\x00" + "\x00"
+	// Build DSGN request: "DSGN:041" + \x00 + SJIS(user) + \x00 + SJIS(pass) + \x00 + \x00
 	// The server reads: null-terminated request type, null-terminated user, null-terminated pass, null-terminated unk.
+	// The request type has a 3-char version suffix (e.g. "041" for ZZ client mode 41) that the server strips.
 	bf := byteframe.NewByteFrame()
-	bf.WriteNullTerminatedBytes([]byte("DSGN:\x00")) // reqType (server strips last 3 chars to get "DSGN:")
+	bf.WriteNullTerminatedBytes([]byte("DSGN:041")) // reqType with version suffix (server strips last 3 chars to get "DSGN:")
 	bf.WriteNullTerminatedBytes(stringsupport.UTF8ToSJIS(username))
 	bf.WriteNullTerminatedBytes(stringsupport.UTF8ToSJIS(password))
 	bf.WriteUint8(0) // Unk null-terminated empty string

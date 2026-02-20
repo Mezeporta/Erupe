@@ -115,13 +115,13 @@ func parseServerEntries(data []byte, entryCount uint16) ([]ServerEntry, error) {
 			name += string(nameBytes[j])
 		}
 
-		// Read channel entries
+		// Read channel entries (14 x uint16 = 28 bytes each)
 		for j := uint16(0); j < channelCount; j++ {
 			port := bf.ReadUint16()
 			_ = bf.ReadUint16() // channelIdx | 16
 			_ = bf.ReadUint16() // maxPlayers
 			_ = bf.ReadUint16() // currentPlayers
-			_ = bf.ReadBytes(14) // remaining channel fields (7 x uint16)
+			_ = bf.ReadBytes(18) // remaining channel fields (9 x uint16: 6 zeros + unk319 + unk254 + unk255)
 			_ = bf.ReadUint16() // 12345
 
 			serverIP := ip.String()
