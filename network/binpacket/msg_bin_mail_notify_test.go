@@ -102,19 +102,15 @@ func TestMsgBinMailNotify_Build(t *testing.T) {
 	}
 }
 
-func TestMsgBinMailNotify_Parse_Panics(t *testing.T) {
-	// Document that Parse() is not implemented and panics
+func TestMsgBinMailNotify_Parse_ReturnsError(t *testing.T) {
+	// Document that Parse() is not implemented and returns an error
 	msg := MsgBinMailNotify{}
 	bf := byteframe.NewByteFrame()
 
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Parse() did not panic, but should panic with 'implement me'")
-		}
-	}()
-
-	// This should panic
-	_ = msg.Parse(bf)
+	err := msg.Parse(bf)
+	if err == nil {
+		t.Error("Parse() should return an error (not implemented)")
+	}
 }
 
 func TestMsgBinMailNotify_BuildMultiple(t *testing.T) {

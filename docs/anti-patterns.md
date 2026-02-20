@@ -102,11 +102,9 @@ The original `mhfo-hd.dll` client reads the `ErrorCode` byte from `MsgSysAck` an
 
 ### Scope
 
-A preliminary grep for `logger.Error` followed by bare `return` (no doAck call) found instances across ~25 handler files. The worst offenders are `handlers_festa.go`, `handlers_gacha.go`, `handlers_cafe.go`, and `handlers_house.go`. However, many of these are Pattern B (log-and-continue), not Pattern A. Each instance needs individual review to determine whether an ACK is already sent further down the function.
+A preliminary grep for `logger.Error` followed by bare `return` (no doAck call) found instances across ~25 handler files. However, a thorough manual audit (2026-02-20) revealed that the vast majority are Pattern B (log-and-continue to a success ACK with empty data) or Pattern C (explicit fail ACK). Only one true Pattern A instance was found, in `handleMsgSysOperateRegister` (`handlers_register.go`), which has been fixed.
 
-**Impact:** Players experience softlocks on error paths that could instead show an error dialog and let them continue playing.
-
-**Recommendation:** Audit each silent-return error path. For handlers where the packet has an `AckHandle` and no ACK is sent on the error path, add `doAckSimpleFail`/`doAckBufFail` matching the ACK type used on the success path. This matches the existing pattern used in ~70 other error paths across the codebase.
+**Status:** ~~Players experience softlocks on error paths.~~ **Fixed.** The last Pattern A instance (`handlers_register.go:62`) now sends `doAckBufSucceed` with nil data before returning. The ~87 existing `doAckSimpleFail`/`doAckBufFail` calls and the helper functions (`loadCharacterData`, `saveCharacterData`, `stubEnumerateNoResults`) provide comprehensive ACK coverage across all handler error paths.
 
 ---
 
@@ -312,11 +310,9 @@ func init() {
 
 ## 11. Panic-Based Flow in Some Paths
 
-Some error paths use `panic()` or `log.Fatal()` (which calls `os.Exit`) instead of returning errors, particularly in initialization and configuration code.
+~~Some error paths use `panic()` or `log.Fatal()` (which calls `os.Exit`) instead of returning errors.~~ **Substantially fixed.** The 5 production `panic()` calls (4 in mhfpacket `Build()` stubs, 1 in binpacket `Parse()`) have been replaced with `fmt.Errorf` returns. The `byteframe.go` read-overflow panic has been replaced with a sticky error pattern (`ByteFrame.Err()`), and the packet dispatch loop in `sys_session.go` now checks `bf.Err()` after parsing to reject malformed packets cleanly.
 
-**Impact:** Prevents graceful shutdown. Makes the server harder to embed in tests. Crashes the entire process instead of allowing recovery.
-
-**Recommendation:** Replace `panic`/`log.Fatal` with error returns. Reserve `panic` for truly unrecoverable programmer errors (e.g., invalid constants in `init`).
+**Remaining:** The `recover()` in `handlePacketGroup` is retained as a safety net for any future unexpected panics.
 
 ---
 
@@ -353,9 +349,9 @@ Database operations use raw `database/sql` with PostgreSQL-specific syntax throu
 
 | Severity | Anti-patterns |
 |----------|--------------|
-| **High** | Missing ACK responses / softlocks (#2), no architectural layering (#3), tight DB coupling (#13) |
+| **High** | ~~Missing ACK responses / softlocks (#2)~~ **Fixed**, no architectural layering (#3), tight DB coupling (#13) |
 | **Medium** | Magic numbers (#4), inconsistent binary I/O (#5), Session god object (#6), copy-paste handlers (#8), raw SQL duplication (#9) |
-| **Low** | God files (#1), `init()` registration (#10), inconsistent logging (#12), mutex granularity (#7), panic-based flow (#11) |
+| **Low** | God files (#1), ~~`init()` registration (#10)~~ **Fixed**, ~~inconsistent logging (#12)~~ **Fixed**, mutex granularity (#7), ~~panic-based flow (#11)~~ **Fixed** |
 
 ### Root Cause
 

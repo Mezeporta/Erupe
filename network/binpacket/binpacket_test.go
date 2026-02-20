@@ -400,16 +400,13 @@ func TestMsgBinChatAllTypes(t *testing.T) {
 	}
 }
 
-func TestMsgBinMailNotifyParsePanics(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Parse() should panic with 'implement me'")
-		}
-	}()
-
+func TestMsgBinMailNotifyParseReturnsError(t *testing.T) {
 	m := MsgBinMailNotify{}
 	bf := byteframe.NewByteFrame()
-	_ = m.Parse(bf)
+	err := m.Parse(bf)
+	if err == nil {
+		t.Error("Parse() should return an error (not implemented)")
+	}
 }
 
 func TestMsgBinMailNotifyBuildLongName(t *testing.T) {

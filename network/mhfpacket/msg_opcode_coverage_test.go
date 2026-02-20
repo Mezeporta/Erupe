@@ -1,6 +1,7 @@
 package mhfpacket
 
 import (
+	"strings"
 	"testing"
 
 	"erupe-ce/common/byteframe"
@@ -261,7 +262,8 @@ func TestBuildCoverage_NotImplemented(t *testing.T) {
 				return
 			}
 			// Build returned an error, which is expected for NOT IMPLEMENTED stubs
-			if err.Error() != "NOT IMPLEMENTED" {
+			errMsg := err.Error()
+			if errMsg != "NOT IMPLEMENTED" && !strings.Contains(errMsg, "not implemented") {
 				t.Errorf("Build() returned unexpected error: %v", err)
 			}
 		})

@@ -59,6 +59,7 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysOperateRegister)
 
 	if len(pkt.RawDataPayload) == 0 {
+		doAckBufSucceed(s, pkt.AckHandle, nil)
 		return
 	}
 
