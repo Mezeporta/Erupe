@@ -15,7 +15,7 @@ on:
       - 'go.mod'
       - 'go.sum'
       - 'main.go'
-      - '.github/workflows/go-improved.yml'
+      - '.github/workflows/go.yml'
   pull_request:
     branches:
       - main
@@ -40,14 +40,8 @@ jobs:
     - name: Download dependencies
       run: go mod download
 
-    - name: Run Tests
-      run: go test -v ./... -timeout=10m
-
-    - name: Run Tests with Race Detector
-      run: go test -race ./... -timeout=10m
-
-    - name: Generate Coverage Report
-      run: go test -coverprofile=coverage.out ./...
+    - name: Run Tests with Race Detector and Coverage
+      run: go test -race -coverprofile=coverage.out ./... -timeout=10m
 
     - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -58,7 +52,7 @@ jobs:
 
   build:
     name: Build
-    needs: test
+    needs: [test, lint]
     runs-on: ubuntu-latest
 
     steps:
@@ -119,5 +113,5 @@ jobs:
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v7
       with:
-        version: latest
+        version: v2.1.6
         args: --timeout=5m
