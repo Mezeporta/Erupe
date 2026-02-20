@@ -306,8 +306,7 @@ func TestObjectHandlers_SequentialCreateObject(t *testing.T) {
 	stage := NewStage("test_stage")
 
 	// Create objects sequentially from multiple sessions
-	// Note: handleMsgSysCreateObject has a race condition in NextObjectID
-	// so we test sequential creation instead
+	// Test sequential object creation across multiple sessions
 	for i := 0; i < 10; i++ {
 		session := createMockSession(uint32(i), server)
 		session.stage = stage

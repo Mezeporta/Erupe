@@ -141,7 +141,7 @@ This version focused on making the server accessible to the broader community an
 * Transmog/plate data persistence fixes
 * Logout flow improvements preventing data loss
 * Config file handling improvements
-* Alpelo object system backport
+* Object ID allocation rework (per-session IDs, stage entry notification cleanup)
 * Security updates (golang dependencies)
 
 **Technical Details:**
