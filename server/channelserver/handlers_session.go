@@ -293,14 +293,16 @@ func logoutPlayer(s *Session) {
 	}
 
 	// Update sign sessions and server player count
-	_, err := s.server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.token)
-	if err != nil {
-		panic(err)
-	}
+	if s.server.db != nil {
+		_, err := s.server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.token)
+		if err != nil {
+			s.logger.Error("Failed to clear sign session", zap.Error(err))
+		}
 
-	_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
-	if err != nil {
-		panic(err)
+		_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
+		if err != nil {
+			s.logger.Error("Failed to update player count", zap.Error(err))
+		}
 	}
 
 	if s.stage == nil {

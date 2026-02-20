@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"erupe-ce/common/mhfcourse"
-	_config "erupe-ce/config"
 	"fmt"
 	"io"
 	"net"
@@ -172,7 +171,7 @@ func (s *Session) sendLoop() {
 				s.logger.Warn("Failed to send packet", zap.Error(err))
 			}
 		}
-		time.Sleep(time.Duration(_config.ErupeConfig.LoopDelay) * time.Millisecond)
+		time.Sleep(time.Duration(s.server.erupeConfig.LoopDelay) * time.Millisecond)
 	}
 }
 
@@ -215,7 +214,7 @@ func (s *Session) recvLoop() {
 			return
 		}
 		s.handlePacketGroup(pkt)
-		time.Sleep(time.Duration(_config.ErupeConfig.LoopDelay) * time.Millisecond)
+		time.Sleep(time.Duration(s.server.erupeConfig.LoopDelay) * time.Millisecond)
 	}
 }
 

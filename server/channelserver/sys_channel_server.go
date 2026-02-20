@@ -50,6 +50,7 @@ type Server struct {
 	sessions       map[net.Conn]*Session
 	listener       net.Listener // Listener that is created when Server.Start is called.
 	isShuttingDown bool
+	done           chan struct{} // Closed on Shutdown to wake background goroutines.
 
 	stagesLock sync.RWMutex
 	stages     map[string]*Stage
@@ -91,6 +92,7 @@ func NewServer(config *Config) *Server {
 		erupeConfig:     config.ErupeConfig,
 		acceptConns:     make(chan net.Conn),
 		deleteConns:     make(chan net.Conn),
+		done:            make(chan struct{}),
 		sessions:        make(map[net.Conn]*Session),
 		stages:          make(map[string]*Stage),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
@@ -156,19 +158,23 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Shutdown tries to shut down the server gracefully.
+// Shutdown tries to shut down the server gracefully. Safe to call multiple times.
 func (s *Server) Shutdown() {
 	s.Lock()
+	alreadyShutDown := s.isShuttingDown
 	s.isShuttingDown = true
 	s.Unlock()
+
+	if alreadyShutDown {
+		return
+	}
+
+	close(s.done)
 
 	if s.listener != nil {
 		_ = s.listener.Close()
 	}
 
-	if s.acceptConns != nil {
-		close(s.acceptConns)
-	}
 }
 
 func (s *Server) acceptClients() {
@@ -186,25 +192,21 @@ func (s *Server) acceptClients() {
 				continue
 			}
 		}
-		s.acceptConns <- conn
+		select {
+		case s.acceptConns <- conn:
+		case <-s.done:
+			_ = conn.Close()
+			return
+		}
 	}
 }
 
 func (s *Server) manageSessions() {
 	for {
 		select {
+		case <-s.done:
+			return
 		case newConn := <-s.acceptConns:
-			// Gracefully handle acceptConns channel closing.
-			if newConn == nil {
-				s.Lock()
-				shutdown := s.isShuttingDown
-				s.Unlock()
-
-				if shutdown {
-					return
-				}
-			}
-
 			session := NewSession(s, newConn)
 
 			s.Lock()
@@ -236,15 +238,28 @@ func (s *Server) getObjectId() uint16 {
 }
 
 func (s *Server) invalidateSessions() {
-	for !s.isShuttingDown {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.done:
+			return
+		case <-ticker.C:
+		}
 
+		s.Lock()
+		var timedOut []*Session
 		for _, sess := range s.sessions {
 			if time.Since(sess.lastPacket) > time.Second*time.Duration(30) {
-				s.logger.Info("session timeout", zap.String("Name", sess.Name))
-				logoutPlayer(sess)
+				timedOut = append(timedOut, sess)
 			}
 		}
-		time.Sleep(time.Second * 10)
+		s.Unlock()
+
+		for _, sess := range timedOut {
+			s.logger.Info("session timeout", zap.String("Name", sess.Name))
+			logoutPlayer(sess)
+		}
 	}
 }
 
