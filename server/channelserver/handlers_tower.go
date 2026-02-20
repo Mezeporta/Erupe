@@ -2,7 +2,6 @@ package channelserver
 
 import (
 	_config "erupe-ce/config"
-	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -66,20 +65,22 @@ func handleMsgMhfGetTowerInfo(s *Session, p mhfpacket.MHFPacket) {
 		Level:   []TowerInfoLevel{{0, 0, 0, 0}, {0, 0, 0, 0}},
 	}
 
-	var tempSkills string
-	err := s.server.db.QueryRow(`SELECT COALESCE(tr, 0),  COALESCE(trp, 0),  COALESCE(tsp, 0), COALESCE(block1, 0), COALESCE(block2, 0), COALESCE(skills, $1) FROM tower WHERE char_id=$2
-		`, EmptyTowerCSV(64), s.charID).Scan(&towerInfo.TRP[0].TR, &towerInfo.TRP[0].TRP, &towerInfo.Skill[0].TSP, &towerInfo.Level[0].Floors, &towerInfo.Level[1].Floors, &tempSkills)
+	td, err := s.server.towerRepo.GetTowerData(s.charID)
 	if err != nil {
-		if _, err := s.server.db.Exec(`INSERT INTO tower (char_id) VALUES ($1)`, s.charID); err != nil {
-			s.logger.Error("Failed to initialize tower data", zap.Error(err))
-		}
+		s.logger.Error("Failed to initialize tower data", zap.Error(err))
+	} else {
+		towerInfo.TRP[0].TR = td.TR
+		towerInfo.TRP[0].TRP = td.TRP
+		towerInfo.Skill[0].TSP = td.TSP
+		towerInfo.Level[0].Floors = td.Block1
+		towerInfo.Level[1].Floors = td.Block2
 	}
 
 	if s.server.erupeConfig.RealClientMode <= _config.G7 {
 		towerInfo.Level = towerInfo.Level[:1]
 	}
 
-	for i, skill := range stringsupport.CSVElems(tempSkills) {
+	for i, skill := range stringsupport.CSVElems(td.Skills) {
 		if skill < math.MinInt16 || skill > math.MaxInt16 {
 			continue
 		}
@@ -148,14 +149,14 @@ func handleMsgMhfPostTowerInfo(s *Session, p mhfpacket.MHFPacket) {
 
 	switch pkt.InfoType {
 	case 2:
-		var skills string
-		_ = s.server.db.QueryRow(`SELECT COALESCE(skills, $1) FROM tower WHERE char_id=$2`, EmptyTowerCSV(64), s.charID).Scan(&skills)
-		if _, err := s.server.db.Exec(`UPDATE tower SET skills=$1, tsp=tsp-$2 WHERE char_id=$3`, stringsupport.CSVSetIndex(skills, int(pkt.Skill), stringsupport.CSVGetIndex(skills, int(pkt.Skill))+1), pkt.Cost, s.charID); err != nil {
+		skills, _ := s.server.towerRepo.GetSkills(s.charID)
+		newSkills := stringsupport.CSVSetIndex(skills, int(pkt.Skill), stringsupport.CSVGetIndex(skills, int(pkt.Skill))+1)
+		if err := s.server.towerRepo.UpdateSkills(s.charID, newSkills, pkt.Cost); err != nil {
 			s.logger.Error("Failed to update tower skills", zap.Error(err))
 		}
 	case 1, 7:
 		// This might give too much TSP? No idea what the rate is supposed to be
-		if _, err := s.server.db.Exec(`UPDATE tower SET tr=$1, trp=COALESCE(trp, 0)+$2, tsp=COALESCE(tsp, 0)+$3, block1=COALESCE(block1, 0)+$4 WHERE char_id=$5`, pkt.TR, pkt.TRP, pkt.Cost, pkt.Block1, s.charID); err != nil {
+		if err := s.server.towerRepo.UpdateProgress(s.charID, pkt.TR, pkt.TRP, pkt.Cost, pkt.Block1); err != nil {
 			s.logger.Error("Failed to update tower progress", zap.Error(err))
 		}
 	}
@@ -306,11 +307,15 @@ func handleMsgMhfGetTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 			data = append(data, bf)
 		}
 	case 4:
-		if err := s.server.db.QueryRow(`SELECT tower_mission_page FROM guilds WHERE id=$1`, pkt.GuildID).Scan(&tenrouirai.Progress[0].Page); err != nil {
+		progress, err := s.server.towerRepo.GetTenrouiraiProgress(pkt.GuildID)
+		if err != nil {
 			s.logger.Error("Failed to read tower mission page", zap.Error(err))
+		} else {
+			tenrouirai.Progress[0].Page = progress.Page
+			tenrouirai.Progress[0].Mission1 = progress.Mission1
+			tenrouirai.Progress[0].Mission2 = progress.Mission2
+			tenrouirai.Progress[0].Mission3 = progress.Mission3
 		}
-		_ = s.server.db.QueryRow(`SELECT SUM(tower_mission_1) AS _, SUM(tower_mission_2) AS _, SUM(tower_mission_3) AS _ FROM guild_characters WHERE guild_id=$1
-				`, pkt.GuildID).Scan(&tenrouirai.Progress[0].Mission1, &tenrouirai.Progress[0].Mission2, &tenrouirai.Progress[0].Mission3)
 
 		if tenrouirai.Progress[0].Page < 1 {
 			tenrouirai.Progress[0].Page = 1
@@ -334,28 +339,19 @@ func handleMsgMhfGetTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 			data = append(data, bf)
 		}
 	case 5:
-		if pkt.MissionIndex < 1 || pkt.MissionIndex > 3 {
-			pkt.MissionIndex = (pkt.MissionIndex % 3) + 1
-		}
-		rows, err := s.server.db.Query(fmt.Sprintf(`SELECT name, tower_mission_%d FROM guild_characters gc INNER JOIN characters c ON gc.character_id = c.id WHERE guild_id=$1 AND tower_mission_%d IS NOT NULL ORDER BY tower_mission_%d DESC`, pkt.MissionIndex, pkt.MissionIndex, pkt.MissionIndex), pkt.GuildID)
+		scores, err := s.server.towerRepo.GetTenrouiraiMissionScores(pkt.GuildID, pkt.MissionIndex)
 		if err != nil {
 			s.logger.Error("Failed to query tower mission scores", zap.Error(err))
-		} else {
-			defer func() { _ = rows.Close() }()
-			for rows.Next() {
-				temp := TenrouiraiCharScore{}
-				_ = rows.Scan(&temp.Name, &temp.Score)
-				tenrouirai.CharScore = append(tenrouirai.CharScore, temp)
-			}
 		}
-		for _, charScore := range tenrouirai.CharScore {
+		for _, charScore := range scores {
 			bf := byteframe.NewByteFrame()
 			bf.WriteInt32(charScore.Score)
 			bf.WriteBytes(stringsupport.PaddedString(charScore.Name, 14, true))
 			data = append(data, bf)
 		}
 	case 6:
-		_ = s.server.db.QueryRow(`SELECT tower_rp FROM guilds WHERE id=$1`, pkt.GuildID).Scan(&tenrouirai.Ticket[0].RP)
+		rp, _ := s.server.towerRepo.GetGuildTowerRP(pkt.GuildID)
+		tenrouirai.Ticket[0].RP = rp
 		for _, ticket := range tenrouirai.Ticket {
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint8(ticket.Unk0)
@@ -388,13 +384,14 @@ func handleMsgMhfPostTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	if pkt.Op == 2 {
-		var page, requirement, donated int
-		if err := s.server.db.QueryRow(`SELECT tower_mission_page, tower_rp FROM guilds WHERE id=$1`, pkt.GuildID).Scan(&page, &donated); err != nil {
+		page, donated, err := s.server.towerRepo.GetGuildTowerPageAndRP(pkt.GuildID)
+		if err != nil {
 			s.logger.Error("Failed to read guild tower state for donation", zap.Error(err))
 			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 
+		var requirement int
 		for i := 0; i < (page*3)+1; i++ {
 			requirement += int(tenrouiraiData[i].Cost)
 		}
@@ -406,16 +403,13 @@ func handleMsgMhfPostTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 			sd.RP -= pkt.DonatedRP
 			sd.Save(s)
 			if donated+int(pkt.DonatedRP) >= requirement {
-				if _, err := s.server.db.Exec(`UPDATE guilds SET tower_mission_page=tower_mission_page+1 WHERE id=$1`, pkt.GuildID); err != nil {
+				if err := s.server.towerRepo.AdvanceTenrouiraiPage(pkt.GuildID); err != nil {
 					s.logger.Error("Failed to advance tower mission page", zap.Error(err))
-				}
-				if _, err := s.server.db.Exec(`UPDATE guild_characters SET tower_mission_1=NULL, tower_mission_2=NULL, tower_mission_3=NULL WHERE guild_id=$1`, pkt.GuildID); err != nil {
-					s.logger.Error("Failed to reset tower mission progress", zap.Error(err))
 				}
 				pkt.DonatedRP = uint16(requirement - donated)
 			}
 			bf.WriteUint32(uint32(pkt.DonatedRP))
-			if _, err := s.server.db.Exec(`UPDATE guilds SET tower_rp=tower_rp+$1 WHERE id=$2`, pkt.DonatedRP, pkt.GuildID); err != nil {
+			if err := s.server.towerRepo.DonateGuildTowerRP(pkt.GuildID, pkt.DonatedRP); err != nil {
 				s.logger.Error("Failed to update guild tower RP", zap.Error(err))
 			}
 		} else {
@@ -467,8 +461,7 @@ func handleMsgMhfGetGemInfo(s *Session, p mhfpacket.MHFPacket) {
 	gemInfo := []GemInfo{}
 	gemHistory := []GemHistory{}
 
-	var tempGems string
-	_ = s.server.db.QueryRow(`SELECT COALESCE(gems, $1) FROM tower WHERE char_id=$2`, EmptyTowerCSV(30), s.charID).Scan(&tempGems)
+	tempGems, _ := s.server.towerRepo.GetGems(s.charID)
 	for i, v := range stringsupport.CSVElems(tempGems) {
 		if v < 0 || v > math.MaxUint16 {
 			continue
@@ -513,12 +506,10 @@ func handleMsgMhfPostGemInfo(s *Session, p mhfpacket.MHFPacket) {
 		)
 	}
 
-	var gems string
-	_ = s.server.db.QueryRow(`SELECT COALESCE(gems, $1) FROM tower WHERE char_id=$2`, EmptyTowerCSV(30), s.charID).Scan(&gems)
 	switch pkt.Op {
 	case 1: // Add gem
 		i := int((pkt.Gem >> 8 * 5) + (pkt.Gem - pkt.Gem&0xFF00 - 1%5))
-		if _, err := s.server.db.Exec(`UPDATE tower SET gems=$1 WHERE char_id=$2`, stringsupport.CSVSetIndex(gems, i, stringsupport.CSVGetIndex(gems, i)+int(pkt.Quantity)), s.charID); err != nil {
+		if err := s.server.towerRepo.AddGem(s.charID, i, int(pkt.Quantity)); err != nil {
 			s.logger.Error("Failed to update tower gems", zap.Error(err))
 		}
 	case 2: // Transfer gem

@@ -206,7 +206,7 @@ func TestHandleMsgMhfListMember_Integration(t *testing.T) {
 			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 			s := createTestSession(mock)
 			s.charID = charID
-			s.server.db = db
+			SetTestDB(s.server, db)
 
 			pkt := &mhfpacket.MsgMhfListMember{
 				AckHandle: 5678,
@@ -313,7 +313,7 @@ func TestHandleMsgMhfOprMember_Integration(t *testing.T) {
 			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 			s := createTestSession(mock)
 			s.charID = charID
-			s.server.db = db
+			SetTestDB(s.server, db)
 
 			pkt := &mhfpacket.MsgMhfOprMember{
 				AckHandle: 9999,
@@ -452,7 +452,7 @@ func TestListMember_EmptyDatabase_Integration(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
 	s.charID = charID
-	s.server.db = db
+	SetTestDB(s.server, db)
 
 	pkt := &mhfpacket.MsgMhfListMember{
 		AckHandle: 4444,
@@ -528,7 +528,7 @@ func TestOprMember_EdgeCases_Integration(t *testing.T) {
 			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 			s := createTestSession(mock)
 			s.charID = charID
-			s.server.db = db
+			SetTestDB(s.server, db)
 
 			pkt := &mhfpacket.MsgMhfOprMember{
 				AckHandle: 7777,

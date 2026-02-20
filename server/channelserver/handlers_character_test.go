@@ -413,7 +413,7 @@ func TestGetCharacterSaveData_Integration(t *testing.T) {
 			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 			s := createTestSession(mock)
 			s.charID = charID
-			s.server.db = db
+			SetTestDB(s.server, db)
 			s.server.erupeConfig.RealClientMode = _config.Z2
 
 			// Get character save data
@@ -457,7 +457,7 @@ func TestCharacterSaveData_Save_Integration(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
 	s.charID = charID
-	s.server.db = db
+	SetTestDB(s.server, db)
 	s.server.erupeConfig.RealClientMode = _config.Z2
 
 	// Load character save data

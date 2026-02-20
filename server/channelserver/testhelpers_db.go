@@ -329,3 +329,16 @@ func CreateTestGuild(t *testing.T, db *sqlx.DB, leaderCharID uint32, name string
 
 	return guildID
 }
+
+// SetTestDB assigns a database to a Server and initializes all repositories.
+// Use this in integration tests instead of setting s.server.db directly.
+func SetTestDB(s *Server, db *sqlx.DB) {
+	s.db = db
+	s.charRepo = NewCharacterRepository(db)
+	s.guildRepo = NewGuildRepository(db)
+	s.userRepo = NewUserRepository(db)
+	s.gachaRepo = NewGachaRepository(db)
+	s.houseRepo = NewHouseRepository(db)
+	s.festaRepo = NewFestaRepository(db)
+	s.towerRepo = NewTowerRepository(db)
+}

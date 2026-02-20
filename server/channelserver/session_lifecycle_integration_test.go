@@ -590,11 +590,21 @@ func createTestServerWithDB(t *testing.T, db *sqlx.DB) *Server {
 			RealClientMode: _config.ZZ,
 		},
 		isShuttingDown:  false,
+		done:            make(chan struct{}),
 	}
 
 	// Create logger
 	logger, _ := zap.NewDevelopment()
 	server.logger = logger
+
+	// Initialize repositories
+	server.charRepo = NewCharacterRepository(db)
+	server.guildRepo = NewGuildRepository(db)
+	server.userRepo = NewUserRepository(db)
+	server.gachaRepo = NewGachaRepository(db)
+	server.houseRepo = NewHouseRepository(db)
+	server.festaRepo = NewFestaRepository(db)
+	server.towerRepo = NewTowerRepository(db)
 
 	return server
 }

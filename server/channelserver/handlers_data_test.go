@@ -357,7 +357,7 @@ func TestHandleMsgMhfSavedata_Integration(t *testing.T) {
 	s := createTestSession(mock)
 	s.charID = charID
 	s.Name = "TestChar"
-	s.server.db = db
+	SetTestDB(s.server, db)
 
 	tests := []struct {
 		name        string
@@ -442,7 +442,7 @@ func TestHandleMsgMhfLoaddata_Integration(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
 	s.charID = charID
-	s.server.db = db
+	SetTestDB(s.server, db)
 	s.server.userBinaryParts = make(map[userBinaryPartID][]byte)
 
 	pkt := &mhfpacket.MsgMhfLoaddata{
@@ -475,7 +475,7 @@ func TestHandleMsgMhfSaveScenarioData_Integration(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
 	s.charID = charID
-	s.server.db = db
+	SetTestDB(s.server, db)
 
 	scenarioData := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A}
 
@@ -530,7 +530,7 @@ func TestHandleMsgMhfLoadScenarioData_Integration(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
 	s.charID = charID
-	s.server.db = db
+	SetTestDB(s.server, db)
 
 	pkt := &mhfpacket.MsgMhfLoadScenarioData{
 		AckHandle: 1111,
@@ -564,7 +564,7 @@ func TestSaveDataCorruptionDetection_Integration(t *testing.T) {
 	s := createTestSession(mock)
 	s.charID = charID
 	s.Name = "OriginalName"
-	s.server.db = db
+	SetTestDB(s.server, db)
 	s.server.erupeConfig.DeleteOnSaveCorruption = false
 
 	// Create save data with a DIFFERENT name (corruption)
@@ -615,7 +615,7 @@ func TestConcurrentSaveData_Integration(t *testing.T) {
 			s := createTestSession(mock)
 			s.charID = charIDs[index]
 			s.Name = fmt.Sprintf("Char%d", index)
-			s.server.db = db
+			SetTestDB(s.server, db)
 
 			saveData := make([]byte, 150000)
 			copy(saveData[88:], []byte(fmt.Sprintf("Char%d\x00", index)))

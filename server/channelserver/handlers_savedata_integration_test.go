@@ -71,7 +71,7 @@ func TestSaveLoad_HunterNavi(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
 	s.charID = charID
-	s.server.db = db
+	SetTestDB(s.server, db)
 
 	// Create Hunter Navi data
 	naviData := make([]byte, 552) // G8+ size
@@ -117,7 +117,7 @@ func TestSaveLoad_MonsterKillCounter(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
 	s.charID = charID
-	s.server.db = db
+	SetTestDB(s.server, db)
 
 	// Initial Koryo points
 	initialPoints := uint32(0)
@@ -255,7 +255,7 @@ func TestSaveLoad_CurrentEquipment(t *testing.T) {
 	s := createTestSession(mock)
 	s.charID = charID
 	s.Name = "TestChar"
-	s.server.db = db
+	SetTestDB(s.server, db)
 
 	// Create savedata with equipped gear
 	// Equipment data is embedded in the main savedata blob
@@ -369,7 +369,7 @@ func TestSaveLoad_Transmog(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
 	s.charID = charID
-	s.server.db = db
+	SetTestDB(s.server, db)
 
 	// Create valid transmog/decoration set data
 	// Format: [version byte][count byte][count * (uint16 index + setSize bytes)]
@@ -466,7 +466,7 @@ func TestSaveLoad_CompleteSaveLoadCycle(t *testing.T) {
 	s := createTestSession(mock)
 	s.charID = charID
 	s.Name = "SaveLoadTest"
-	s.server.db = db
+	SetTestDB(s.server, db)
 
 	// 1. Set Road Points
 	rdpPoints := uint32(5000)
