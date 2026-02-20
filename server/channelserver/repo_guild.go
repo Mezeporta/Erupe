@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"erupe-ce/common/stringsupport"
+
 	"github.com/jmoiron/sqlx"
 )
 
@@ -469,4 +471,440 @@ func (r *GuildRepository) AddRoomRP(guildID uint32, amount uint16) error {
 func (r *GuildRepository) SetRoomExpiry(guildID uint32, expiry time.Time) error {
 	_, err := r.db.Exec(`UPDATE guilds SET room_expiry = $1 WHERE id = $2`, expiry, guildID)
 	return err
+}
+
+// --- Guild Posts ---
+
+// ListPosts returns active guild posts of the given type, ordered by newest first.
+func (r *GuildRepository) ListPosts(guildID uint32, postType int) ([]*MessageBoardPost, error) {
+	rows, err := r.db.Queryx(
+		`SELECT id, stamp_id, title, body, author_id, created_at, liked_by
+		 FROM guild_posts WHERE guild_id = $1 AND post_type = $2 AND deleted = false
+		 ORDER BY created_at DESC`, guildID, postType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var posts []*MessageBoardPost
+	for rows.Next() {
+		post := &MessageBoardPost{}
+		if err := rows.StructScan(post); err != nil {
+			continue
+		}
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
+// CreatePost inserts a new guild post and soft-deletes excess posts beyond maxPosts.
+func (r *GuildRepository) CreatePost(guildID, authorID, stampID uint32, postType int, title, body string, maxPosts int) error {
+	if _, err := r.db.Exec(
+		`INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)`,
+		guildID, authorID, stampID, postType, title, body); err != nil {
+		return err
+	}
+	_, err := r.db.Exec(`UPDATE guild_posts SET deleted = true WHERE id IN (
+		SELECT id FROM guild_posts WHERE guild_id = $1 AND post_type = $2 AND deleted = false
+		ORDER BY created_at DESC OFFSET $3
+	)`, guildID, postType, maxPosts)
+	return err
+}
+
+// DeletePost soft-deletes a guild post by ID.
+func (r *GuildRepository) DeletePost(postID uint32) error {
+	_, err := r.db.Exec("UPDATE guild_posts SET deleted = true WHERE id = $1", postID)
+	return err
+}
+
+// UpdatePost updates the title and body of a guild post.
+func (r *GuildRepository) UpdatePost(postID uint32, title, body string) error {
+	_, err := r.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE id = $3", title, body, postID)
+	return err
+}
+
+// UpdatePostStamp updates the stamp of a guild post.
+func (r *GuildRepository) UpdatePostStamp(postID, stampID uint32) error {
+	_, err := r.db.Exec("UPDATE guild_posts SET stamp_id = $1 WHERE id = $2", stampID, postID)
+	return err
+}
+
+// GetPostLikedBy returns the liked_by CSV string for a guild post.
+func (r *GuildRepository) GetPostLikedBy(postID uint32) (string, error) {
+	var likedBy string
+	err := r.db.QueryRow("SELECT liked_by FROM guild_posts WHERE id = $1", postID).Scan(&likedBy)
+	return likedBy, err
+}
+
+// SetPostLikedBy updates the liked_by CSV string for a guild post.
+func (r *GuildRepository) SetPostLikedBy(postID uint32, likedBy string) error {
+	_, err := r.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, postID)
+	return err
+}
+
+// CountNewPosts returns the count of non-deleted posts created after the given time.
+func (r *GuildRepository) CountNewPosts(guildID uint32, since time.Time) (int, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND deleted = false AND (EXTRACT(epoch FROM created_at)::int) > $2`,
+		guildID, since.Unix()).Scan(&count)
+	return count, err
+}
+
+// --- Guild Alliances ---
+
+const allianceInfoSelectSQL = `
+SELECT
+ga.id,
+ga.name,
+created_at,
+parent_id,
+CASE
+	WHEN sub1_id IS NULL THEN 0
+	ELSE sub1_id
+END,
+CASE
+	WHEN sub2_id IS NULL THEN 0
+	ELSE sub2_id
+END
+FROM guild_alliances ga
+`
+
+// GetAllianceByID loads alliance data including parent and sub guilds.
+func (r *GuildRepository) GetAllianceByID(allianceID uint32) (*GuildAlliance, error) {
+	rows, err := r.db.Queryx(fmt.Sprintf(`%s WHERE ga.id = $1`, allianceInfoSelectSQL), allianceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return nil, nil
+	}
+	return r.scanAllianceWithGuilds(rows)
+}
+
+// ListAlliances returns all alliances with their guild data populated.
+func (r *GuildRepository) ListAlliances() ([]*GuildAlliance, error) {
+	rows, err := r.db.Queryx(allianceInfoSelectSQL)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var alliances []*GuildAlliance
+	for rows.Next() {
+		alliance, err := r.scanAllianceWithGuilds(rows)
+		if err != nil {
+			continue
+		}
+		alliances = append(alliances, alliance)
+	}
+	return alliances, nil
+}
+
+// CreateAlliance creates a new guild alliance with the given parent guild.
+func (r *GuildRepository) CreateAlliance(name string, parentGuildID uint32) error {
+	_, err := r.db.Exec("INSERT INTO guild_alliances (name, parent_id) VALUES ($1, $2)", name, parentGuildID)
+	return err
+}
+
+// DeleteAlliance removes an alliance by ID.
+func (r *GuildRepository) DeleteAlliance(allianceID uint32) error {
+	_, err := r.db.Exec("DELETE FROM guild_alliances WHERE id=$1", allianceID)
+	return err
+}
+
+// RemoveGuildFromAlliance removes a guild from its alliance, shifting sub2 into sub1's slot if needed.
+func (r *GuildRepository) RemoveGuildFromAlliance(allianceID, guildID, subGuild1ID, subGuild2ID uint32) error {
+	if guildID == subGuild1ID && subGuild2ID > 0 {
+		_, err := r.db.Exec(`UPDATE guild_alliances SET sub1_id = sub2_id, sub2_id = NULL WHERE id = $1`, allianceID)
+		return err
+	} else if guildID == subGuild1ID {
+		_, err := r.db.Exec(`UPDATE guild_alliances SET sub1_id = NULL WHERE id = $1`, allianceID)
+		return err
+	}
+	_, err := r.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, allianceID)
+	return err
+}
+
+// scanAllianceWithGuilds scans an alliance row and populates its guild data.
+func (r *GuildRepository) scanAllianceWithGuilds(rows *sqlx.Rows) (*GuildAlliance, error) {
+	alliance := &GuildAlliance{}
+	if err := rows.StructScan(alliance); err != nil {
+		return nil, err
+	}
+
+	parentGuild, err := r.GetByID(alliance.ParentGuildID)
+	if err != nil {
+		return nil, err
+	}
+	alliance.ParentGuild = *parentGuild
+	alliance.TotalMembers += parentGuild.MemberCount
+
+	if alliance.SubGuild1ID > 0 {
+		subGuild1, err := r.GetByID(alliance.SubGuild1ID)
+		if err != nil {
+			return nil, err
+		}
+		alliance.SubGuild1 = *subGuild1
+		alliance.TotalMembers += subGuild1.MemberCount
+	}
+
+	if alliance.SubGuild2ID > 0 {
+		subGuild2, err := r.GetByID(alliance.SubGuild2ID)
+		if err != nil {
+			return nil, err
+		}
+		alliance.SubGuild2 = *subGuild2
+		alliance.TotalMembers += subGuild2.MemberCount
+	}
+
+	return alliance, nil
+}
+
+// --- Guild Adventures ---
+
+// ListAdventures returns all adventures for a guild.
+func (r *GuildRepository) ListAdventures(guildID uint32) ([]*GuildAdventure, error) {
+	rows, err := r.db.Queryx(
+		"SELECT id, destination, charge, depart, return, collected_by FROM guild_adventures WHERE guild_id = $1", guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var adventures []*GuildAdventure
+	for rows.Next() {
+		adv := &GuildAdventure{}
+		if err := rows.StructScan(adv); err != nil {
+			continue
+		}
+		adventures = append(adventures, adv)
+	}
+	return adventures, nil
+}
+
+// CreateAdventure inserts a new guild adventure.
+func (r *GuildRepository) CreateAdventure(guildID, destination uint32, depart, returnTime int64) error {
+	_, err := r.db.Exec(
+		"INSERT INTO guild_adventures (guild_id, destination, depart, return) VALUES ($1, $2, $3, $4)",
+		guildID, destination, depart, returnTime)
+	return err
+}
+
+// CreateAdventureWithCharge inserts a new guild adventure with an initial charge (Diva variant).
+func (r *GuildRepository) CreateAdventureWithCharge(guildID, destination, charge uint32, depart, returnTime int64) error {
+	_, err := r.db.Exec(
+		"INSERT INTO guild_adventures (guild_id, destination, charge, depart, return) VALUES ($1, $2, $3, $4, $5)",
+		guildID, destination, charge, depart, returnTime)
+	return err
+}
+
+// CollectAdventure marks an adventure as collected by the given character (CSV append).
+func (r *GuildRepository) CollectAdventure(adventureID uint32, charID uint32) error {
+	var collectedBy string
+	err := r.db.QueryRow("SELECT collected_by FROM guild_adventures WHERE id = $1", adventureID).Scan(&collectedBy)
+	if err != nil {
+		return err
+	}
+	collectedBy = stringsupport.CSVAdd(collectedBy, int(charID))
+	_, err = r.db.Exec("UPDATE guild_adventures SET collected_by = $1 WHERE id = $2", collectedBy, adventureID)
+	return err
+}
+
+// ChargeAdventure adds charge to a guild adventure.
+func (r *GuildRepository) ChargeAdventure(adventureID uint32, amount uint32) error {
+	_, err := r.db.Exec("UPDATE guild_adventures SET charge = charge + $1 WHERE id = $2", amount, adventureID)
+	return err
+}
+
+// --- Guild Treasure Hunts ---
+
+// GetPendingHunt returns the pending (unacquired) hunt for a character, or nil if none.
+func (r *GuildRepository) GetPendingHunt(charID uint32) (*TreasureHunt, error) {
+	hunt := &TreasureHunt{}
+	err := r.db.QueryRowx(
+		`SELECT id, host_id, destination, level, start, hunt_data FROM guild_hunts WHERE host_id=$1 AND acquired=FALSE`,
+		charID).StructScan(hunt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return hunt, nil
+}
+
+// ListGuildHunts returns acquired level-2 hunts for a guild, with hunter counts and claim status.
+func (r *GuildRepository) ListGuildHunts(guildID, charID uint32) ([]*TreasureHunt, error) {
+	rows, err := r.db.Queryx(`SELECT gh.id, gh.host_id, gh.destination, gh.level, gh.start, gh.collected, gh.hunt_data,
+		(SELECT COUNT(*) FROM guild_characters gc WHERE gc.treasure_hunt = gh.id AND gc.character_id <> $1) AS hunters,
+		CASE
+			WHEN ghc.character_id IS NOT NULL THEN true
+			ELSE false
+		END AS claimed
+		FROM guild_hunts gh
+		LEFT JOIN guild_hunts_claimed ghc ON gh.id = ghc.hunt_id AND ghc.character_id = $1
+		WHERE gh.guild_id=$2 AND gh.level=2 AND gh.acquired=TRUE
+	`, charID, guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var hunts []*TreasureHunt
+	for rows.Next() {
+		hunt := &TreasureHunt{}
+		if err := rows.StructScan(hunt); err != nil {
+			continue
+		}
+		hunts = append(hunts, hunt)
+	}
+	return hunts, nil
+}
+
+// CreateHunt inserts a new guild treasure hunt.
+func (r *GuildRepository) CreateHunt(guildID, hostID, destination, level uint32, huntData []byte, catsUsed string) error {
+	_, err := r.db.Exec(
+		`INSERT INTO guild_hunts (guild_id, host_id, destination, level, hunt_data, cats_used) VALUES ($1, $2, $3, $4, $5, $6)`,
+		guildID, hostID, destination, level, huntData, catsUsed)
+	return err
+}
+
+// AcquireHunt marks a treasure hunt as acquired.
+func (r *GuildRepository) AcquireHunt(huntID uint32) error {
+	_, err := r.db.Exec(`UPDATE guild_hunts SET acquired=true WHERE id=$1`, huntID)
+	return err
+}
+
+// RegisterHuntReport sets a character's active treasure hunt.
+func (r *GuildRepository) RegisterHuntReport(huntID, charID uint32) error {
+	_, err := r.db.Exec(`UPDATE guild_characters SET treasure_hunt=$1 WHERE character_id=$2`, huntID, charID)
+	return err
+}
+
+// CollectHunt marks a hunt as collected and clears all characters' treasure_hunt references.
+func (r *GuildRepository) CollectHunt(huntID uint32) error {
+	if _, err := r.db.Exec(`UPDATE guild_hunts SET collected=true WHERE id=$1`, huntID); err != nil {
+		return err
+	}
+	_, err := r.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE treasure_hunt=$1`, huntID)
+	return err
+}
+
+// ClaimHuntReward records that a character has claimed a treasure hunt reward.
+func (r *GuildRepository) ClaimHuntReward(huntID, charID uint32) error {
+	_, err := r.db.Exec(`INSERT INTO guild_hunts_claimed VALUES ($1, $2)`, huntID, charID)
+	return err
+}
+
+// --- Guild Cooking/Meals ---
+
+// ListMeals returns all meals for a guild.
+func (r *GuildRepository) ListMeals(guildID uint32) ([]*GuildMeal, error) {
+	rows, err := r.db.Queryx("SELECT id, meal_id, level, created_at FROM guild_meals WHERE guild_id = $1", guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var meals []*GuildMeal
+	for rows.Next() {
+		meal := &GuildMeal{}
+		if err := rows.StructScan(meal); err != nil {
+			continue
+		}
+		meals = append(meals, meal)
+	}
+	return meals, nil
+}
+
+// CreateMeal inserts a new guild meal and returns the new ID.
+func (r *GuildRepository) CreateMeal(guildID, mealID, level uint32, createdAt time.Time) (uint32, error) {
+	var id uint32
+	err := r.db.QueryRow(
+		"INSERT INTO guild_meals (guild_id, meal_id, level, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
+		guildID, mealID, level, createdAt).Scan(&id)
+	return id, err
+}
+
+// UpdateMeal updates an existing guild meal's fields.
+func (r *GuildRepository) UpdateMeal(mealID, newMealID, level uint32, createdAt time.Time) error {
+	_, err := r.db.Exec("UPDATE guild_meals SET meal_id = $1, level = $2, created_at = $3 WHERE id = $4",
+		newMealID, level, createdAt, mealID)
+	return err
+}
+
+// ClaimHuntBox updates the box_claimed timestamp for a guild character.
+func (r *GuildRepository) ClaimHuntBox(charID uint32, claimedAt time.Time) error {
+	_, err := r.db.Exec(`UPDATE guild_characters SET box_claimed=$1 WHERE character_id=$2`, claimedAt, charID)
+	return err
+}
+
+// GuildKill represents a kill log entry for guild hunt data.
+type GuildKill struct {
+	ID      uint32 `db:"id"`
+	Monster uint32 `db:"monster"`
+}
+
+// ListGuildKills returns kill log entries for guild members since the character's last box claim.
+func (r *GuildRepository) ListGuildKills(guildID, charID uint32) ([]*GuildKill, error) {
+	rows, err := r.db.Queryx(`SELECT kl.id, kl.monster FROM kill_logs kl
+		INNER JOIN guild_characters gc ON kl.character_id = gc.character_id
+		WHERE gc.guild_id=$1
+		AND kl.timestamp >= (SELECT box_claimed FROM guild_characters WHERE character_id=$2)
+	`, guildID, charID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var kills []*GuildKill
+	for rows.Next() {
+		kill := &GuildKill{}
+		if err := rows.StructScan(kill); err != nil {
+			continue
+		}
+		kills = append(kills, kill)
+	}
+	return kills, nil
+}
+
+// CountGuildKills returns the count of kill log entries for guild members since the character's last box claim.
+func (r *GuildRepository) CountGuildKills(guildID, charID uint32) (int, error) {
+	var count int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM kill_logs kl
+		INNER JOIN guild_characters gc ON kl.character_id = gc.character_id
+		WHERE gc.guild_id=$1
+		AND kl.timestamp >= (SELECT box_claimed FROM guild_characters WHERE character_id=$2)
+	`, guildID, charID).Scan(&count)
+	return count, err
+}
+
+// --- Guild Scouts ---
+
+// ScoutedCharacter represents an invited character in the scout list.
+type ScoutedCharacter struct {
+	CharID  uint32 `db:"id"`
+	Name    string `db:"name"`
+	HR      uint16 `db:"hr"`
+	GR      uint16 `db:"gr"`
+	ActorID uint32 `db:"actor_id"`
+}
+
+// ListInvitedCharacters returns all characters with pending guild invitations.
+func (r *GuildRepository) ListInvitedCharacters(guildID uint32) ([]*ScoutedCharacter, error) {
+	rows, err := r.db.Queryx(`
+		SELECT c.id, c.name, c.hr, c.gr, ga.actor_id
+			FROM guild_applications ga
+			JOIN characters c ON c.id = ga.character_id
+		WHERE ga.guild_id = $1 AND ga.application_type = 'invited'
+	`, guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var chars []*ScoutedCharacter
+	for rows.Next() {
+		sc := &ScoutedCharacter{}
+		if err := rows.StructScan(sc); err != nil {
+			continue
+		}
+		chars = append(chars, sc)
+	}
+	return chars, nil
 }

@@ -22,21 +22,14 @@ type GuildAdventure struct {
 func handleMsgMhfLoadGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadGuildAdventure)
 	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
-	data, err := s.server.db.Queryx("SELECT id, destination, charge, depart, return, collected_by FROM guild_adventures WHERE guild_id = $1", guild.ID)
+	adventures, err := s.server.guildRepo.ListAdventures(guild.ID)
 	if err != nil {
 		s.logger.Error("Failed to get guild adventures from db", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
 	}
 	temp := byteframe.NewByteFrame()
-	count := 0
-	for data.Next() {
-		count++
-		adventureData := &GuildAdventure{}
-		err = data.StructScan(&adventureData)
-		if err != nil {
-			continue
-		}
+	for _, adventureData := range adventures {
 		temp.WriteUint32(adventureData.ID)
 		temp.WriteUint32(adventureData.Destination)
 		temp.WriteUint32(adventureData.Charge)
@@ -45,7 +38,7 @@ func handleMsgMhfLoadGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 		temp.WriteBool(stringsupport.CSVContains(adventureData.CollectedBy, int(s.charID)))
 	}
 	bf := byteframe.NewByteFrame()
-	bf.WriteUint8(uint8(count))
+	bf.WriteUint8(uint8(len(adventures)))
 	bf.WriteBytes(temp.Data())
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
@@ -53,8 +46,7 @@ func handleMsgMhfLoadGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfRegistGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfRegistGuildAdventure)
 	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
-	_, err := s.server.db.Exec("INSERT INTO guild_adventures (guild_id, destination, depart, return) VALUES ($1, $2, $3, $4)", guild.ID, pkt.Destination, TimeAdjusted().Unix(), TimeAdjusted().Add(6*time.Hour).Unix())
-	if err != nil {
+	if err := s.server.guildRepo.CreateAdventure(guild.ID, pkt.Destination, TimeAdjusted().Unix(), TimeAdjusted().Add(6*time.Hour).Unix()); err != nil {
 		s.logger.Error("Failed to register guild adventure", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -62,24 +54,15 @@ func handleMsgMhfRegistGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAcquireGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireGuildAdventure)
-	var collectedBy string
-	err := s.server.db.QueryRow("SELECT collected_by FROM guild_adventures WHERE id = $1", pkt.ID).Scan(&collectedBy)
-	if err != nil {
-		s.logger.Error("Error parsing adventure collected by", zap.Error(err))
-	} else {
-		collectedBy = stringsupport.CSVAdd(collectedBy, int(s.charID))
-		_, err := s.server.db.Exec("UPDATE guild_adventures SET collected_by = $1 WHERE id = $2", collectedBy, pkt.ID)
-		if err != nil {
-			s.logger.Error("Failed to collect adventure in db", zap.Error(err))
-		}
+	if err := s.server.guildRepo.CollectAdventure(pkt.ID, s.charID); err != nil {
+		s.logger.Error("Failed to collect adventure", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfChargeGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfChargeGuildAdventure)
-	_, err := s.server.db.Exec("UPDATE guild_adventures SET charge = charge + $1 WHERE id = $2", pkt.Amount, pkt.ID)
-	if err != nil {
+	if err := s.server.guildRepo.ChargeAdventure(pkt.ID, pkt.Amount); err != nil {
 		s.logger.Error("Failed to charge guild adventure", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -88,8 +71,7 @@ func handleMsgMhfChargeGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfRegistGuildAdventureDiva(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfRegistGuildAdventureDiva)
 	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
-	_, err := s.server.db.Exec("INSERT INTO guild_adventures (guild_id, destination, charge, depart, return) VALUES ($1, $2, $3, $4, $5)", guild.ID, pkt.Destination, pkt.Charge, TimeAdjusted().Unix(), TimeAdjusted().Add(1*time.Hour).Unix())
-	if err != nil {
+	if err := s.server.guildRepo.CreateAdventureWithCharge(guild.ID, pkt.Destination, pkt.Charge, TimeAdjusted().Unix(), TimeAdjusted().Add(1*time.Hour).Unix()); err != nil {
 		s.logger.Error("Failed to register guild adventure", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

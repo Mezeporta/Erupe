@@ -31,35 +31,22 @@ func handleMsgMhfEnumerateGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	var hunts []TreasureHunt
-	var hunt TreasureHunt
 
 	switch pkt.MaxHunts {
 	case 1:
-		err = s.server.db.QueryRowx(`SELECT id, host_id, destination, level, start, hunt_data FROM guild_hunts WHERE host_id=$1 AND acquired=FALSE`, s.charID).StructScan(&hunt)
-		if err == nil {
-			hunts = append(hunts, hunt)
+		hunt, err := s.server.guildRepo.GetPendingHunt(s.charID)
+		if err == nil && hunt != nil {
+			hunts = append(hunts, *hunt)
 		}
 	case 30:
-		rows, err := s.server.db.Queryx(`SELECT gh.id, gh.host_id, gh.destination, gh.level, gh.start, gh.collected, gh.hunt_data,
-			(SELECT COUNT(*) FROM guild_characters gc WHERE gc.treasure_hunt = gh.id AND gc.character_id <> $1) AS hunters,
-			CASE
-				WHEN ghc.character_id IS NOT NULL THEN true
-				ELSE false
-			END AS claimed
-			FROM guild_hunts gh
-			LEFT JOIN guild_hunts_claimed ghc ON gh.id = ghc.hunt_id AND ghc.character_id = $1
-			WHERE gh.guild_id=$2 AND gh.level=2 AND gh.acquired=TRUE
-		`, s.charID, guild.ID)
+		guildHunts, err := s.server.guildRepo.ListGuildHunts(guild.ID, s.charID)
 		if err != nil {
-			_ = rows.Close()
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
-		} else {
-			for rows.Next() {
-				err = rows.StructScan(&hunt)
-				if err == nil && hunt.Start.Add(time.Second*time.Duration(s.server.erupeConfig.GameplayOptions.TreasureHuntExpiry)).After(TimeAdjusted()) {
-					hunts = append(hunts, hunt)
-				}
+		}
+		for _, hunt := range guildHunts {
+			if hunt.Start.Add(time.Second * time.Duration(s.server.erupeConfig.GameplayOptions.TreasureHuntExpiry)).After(TimeAdjusted()) {
+				hunts = append(hunts, *hunt)
 			}
 		}
 		if len(hunts) > 30 {
@@ -111,8 +98,7 @@ func handleMsgMhfRegistGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 			huntData.WriteBytes(bf.ReadBytes(9))
 		}
 	}
-	if _, err := s.server.db.Exec(`INSERT INTO guild_hunts (guild_id, host_id, destination, level, hunt_data, cats_used) VALUES ($1, $2, $3, $4, $5, $6)
-		`, guild.ID, s.charID, destination, level, huntData.Data(), catsUsed); err != nil {
+	if err := s.server.guildRepo.CreateHunt(guild.ID, s.charID, destination, level, huntData.Data(), catsUsed); err != nil {
 		s.logger.Error("Failed to register guild treasure hunt", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -120,7 +106,7 @@ func handleMsgMhfRegistGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAcquireGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireGuildTresure)
-	if _, err := s.server.db.Exec(`UPDATE guild_hunts SET acquired=true WHERE id=$1`, pkt.HuntID); err != nil {
+	if err := s.server.guildRepo.AcquireHunt(pkt.HuntID); err != nil {
 		s.logger.Error("Failed to acquire guild treasure hunt", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -130,18 +116,15 @@ func handleMsgMhfOperateGuildTresureReport(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOperateGuildTresureReport)
 	switch pkt.State {
 	case 0: // Report registration
-		if _, err := s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=$1 WHERE character_id=$2`, pkt.HuntID, s.charID); err != nil {
+		if err := s.server.guildRepo.RegisterHuntReport(pkt.HuntID, s.charID); err != nil {
 			s.logger.Error("Failed to register treasure hunt report", zap.Error(err))
 		}
 	case 1: // Collected by hunter
-		if _, err := s.server.db.Exec(`UPDATE guild_hunts SET collected=true WHERE id=$1`, pkt.HuntID); err != nil {
-			s.logger.Error("Failed to mark treasure hunt collected", zap.Error(err))
-		}
-		if _, err := s.server.db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL WHERE treasure_hunt=$1`, pkt.HuntID); err != nil {
-			s.logger.Error("Failed to clear treasure hunt from guild characters", zap.Error(err))
+		if err := s.server.guildRepo.CollectHunt(pkt.HuntID); err != nil {
+			s.logger.Error("Failed to collect treasure hunt", zap.Error(err))
 		}
 	case 2: // Claim treasure
-		if _, err := s.server.db.Exec(`INSERT INTO guild_hunts_claimed VALUES ($1, $2)`, pkt.HuntID, s.charID); err != nil {
+		if err := s.server.guildRepo.ClaimHuntReward(pkt.HuntID, s.charID); err != nil {
 			s.logger.Error("Failed to claim treasure hunt reward", zap.Error(err))
 		}
 	}

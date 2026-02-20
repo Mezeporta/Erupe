@@ -27,7 +27,7 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	if pkt.BoardType == 1 {
 		pkt.MaxPosts = 4
 	}
-	msgs, err := s.server.db.Queryx("SELECT id, stamp_id, title, body, author_id, created_at, liked_by FROM guild_posts WHERE guild_id = $1 AND post_type = $2 AND deleted = false ORDER BY created_at DESC", guild.ID, int(pkt.BoardType))
+	posts, err := s.server.guildRepo.ListPosts(guild.ID, int(pkt.BoardType))
 	if err != nil {
 		s.logger.Error("Failed to get guild messages from db", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -37,14 +37,7 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error("Failed to update guild post checked time", zap.Error(err))
 	}
 	bf := byteframe.NewByteFrame()
-	var postCount uint32
-	for msgs.Next() {
-		postData := &MessageBoardPost{}
-		err = msgs.StructScan(&postData)
-		if err != nil {
-			continue
-		}
-		postCount++
+	for _, postData := range posts {
 		bf.WriteUint32(postData.ID)
 		bf.WriteUint32(postData.AuthorID)
 		bf.WriteUint32(0)
@@ -56,7 +49,7 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		ps.Uint32(bf, postData.Body, true)
 	}
 	data := byteframe.NewByteFrame()
-	data.WriteUint32(postCount)
+	data.WriteUint32(uint32(len(posts)))
 	data.WriteBytes(bf.Data())
 	doAckBufSucceed(s, pkt.AckHandle, data.Data())
 }
@@ -74,54 +67,43 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	}
 	switch pkt.MessageOp {
 	case 0: // Create message
-		if _, err := s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, s.charID, pkt.StampID, pkt.PostType, pkt.Title, pkt.Body); err != nil {
-			s.logger.Error("Failed to insert guild post", zap.Error(err))
-		}
 		maxPosts := 100
 		if pkt.PostType == 1 {
 			maxPosts = 4
 		}
-		if _, err := s.server.db.Exec(`UPDATE guild_posts SET deleted = true WHERE id IN (
-			SELECT id FROM guild_posts WHERE guild_id = $1 AND post_type = $2 AND deleted = false
-			ORDER BY created_at DESC OFFSET $3
-		)`, guild.ID, pkt.PostType, maxPosts); err != nil {
-			s.logger.Error("Failed to soft-delete excess guild posts", zap.Error(err))
+		if err := s.server.guildRepo.CreatePost(guild.ID, s.charID, pkt.StampID, int(pkt.PostType), pkt.Title, pkt.Body, maxPosts); err != nil {
+			s.logger.Error("Failed to create guild post", zap.Error(err))
 		}
 	case 1: // Delete message
-		if _, err := s.server.db.Exec("UPDATE guild_posts SET deleted = true WHERE id = $1", pkt.PostID); err != nil {
+		if err := s.server.guildRepo.DeletePost(pkt.PostID); err != nil {
 			s.logger.Error("Failed to soft-delete guild post", zap.Error(err))
 		}
 	case 2: // Update message
-		if _, err := s.server.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE id = $3", pkt.Title, pkt.Body, pkt.PostID); err != nil {
+		if err := s.server.guildRepo.UpdatePost(pkt.PostID, pkt.Title, pkt.Body); err != nil {
 			s.logger.Error("Failed to update guild post", zap.Error(err))
 		}
 	case 3: // Update stamp
-		if _, err := s.server.db.Exec("UPDATE guild_posts SET stamp_id = $1 WHERE id = $2", pkt.StampID, pkt.PostID); err != nil {
+		if err := s.server.guildRepo.UpdatePostStamp(pkt.PostID, pkt.StampID); err != nil {
 			s.logger.Error("Failed to update guild post stamp", zap.Error(err))
 		}
 	case 4: // Like message
-		var likedBy string
-		err := s.server.db.QueryRow("SELECT liked_by FROM guild_posts WHERE id = $1", pkt.PostID).Scan(&likedBy)
+		likedBy, err := s.server.guildRepo.GetPostLikedBy(pkt.PostID)
 		if err != nil {
 			s.logger.Error("Failed to get guild message like data from db", zap.Error(err))
 		} else {
 			if pkt.LikeState {
 				likedBy = stringsupport.CSVAdd(likedBy, int(s.charID))
-				if _, err := s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID); err != nil {
-					s.logger.Error("Failed to update guild post likes", zap.Error(err))
-				}
 			} else {
 				likedBy = stringsupport.CSVRemove(likedBy, int(s.charID))
-				if _, err := s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE id = $2", likedBy, pkt.PostID); err != nil {
-					s.logger.Error("Failed to update guild post likes", zap.Error(err))
-				}
+			}
+			if err := s.server.guildRepo.SetPostLikedBy(pkt.PostID, likedBy); err != nil {
+				s.logger.Error("Failed to update guild post likes", zap.Error(err))
 			}
 		}
 	case 5: // Check for new messages
-		var newPosts int
 		timeChecked, err := s.server.charRepo.ReadGuildPostChecked(s.charID)
 		if err == nil {
-			_ = s.server.db.QueryRow("SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND deleted = false AND (EXTRACT(epoch FROM created_at)::int) > $2", guild.ID, timeChecked.Unix()).Scan(&newPosts)
+			newPosts, _ := s.server.guildRepo.CountNewPosts(guild.ID, timeChecked)
 			if newPosts > 0 {
 				doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
 				return

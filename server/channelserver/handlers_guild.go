@@ -113,7 +113,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	alliance, err := GetAllianceData(s, guild.AllianceID)
+	alliance, err := s.server.guildRepo.GetAllianceByID(guild.AllianceID)
 	if err != nil {
 		s.logger.Error("Failed to get alliance data")
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))

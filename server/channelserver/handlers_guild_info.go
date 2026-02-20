@@ -134,7 +134,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(0) // Ignored
 
 		if guild.AllianceID > 0 {
-			alliance, err := GetAllianceData(s, guild.AllianceID)
+			alliance, err := s.server.guildRepo.GetAllianceByID(guild.AllianceID)
 			if err != nil {
 				bf.WriteUint32(0) // Error, no alliance
 			} else {
@@ -361,15 +361,7 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 
 	if pkt.Type > 8 {
 		var tempAlliances []*GuildAlliance
-		rows, queryErr := s.server.db.Queryx(allianceInfoSelectQuery)
-		if queryErr != nil {
-			err = queryErr
-		} else {
-			for rows.Next() {
-				alliance, _ := buildAllianceObjectFromDbResult(rows, queryErr, s)
-				tempAlliances = append(tempAlliances, alliance)
-			}
-		}
+		tempAlliances, err = s.server.guildRepo.ListAlliances()
 		switch pkt.Type {
 		case mhfpacket.ENUMERATE_ALLIANCE_TYPE_ALLIANCE_NAME:
 			searchName, _ := stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())

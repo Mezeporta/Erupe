@@ -19,21 +19,16 @@ type GuildMeal struct {
 func handleMsgMhfLoadGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadGuildCooking)
 	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
-	data, err := s.server.db.Queryx("SELECT id, meal_id, level, created_at FROM guild_meals WHERE guild_id = $1", guild.ID)
+	allMeals, err := s.server.guildRepo.ListMeals(guild.ID)
 	if err != nil {
 		s.logger.Error("Failed to get guild meals from db", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 2))
 		return
 	}
-	var meals []GuildMeal
-	var temp GuildMeal
-	for data.Next() {
-		err = data.StructScan(&temp)
-		if err != nil {
-			continue
-		}
-		if temp.CreatedAt.Add(60 * time.Minute).After(TimeAdjusted()) {
-			meals = append(meals, temp)
+	var meals []*GuildMeal
+	for _, meal := range allMeals {
+		if meal.CreatedAt.Add(60 * time.Minute).After(TimeAdjusted()) {
+			meals = append(meals, meal)
 		}
 	}
 	bf := byteframe.NewByteFrame()
@@ -52,15 +47,17 @@ func handleMsgMhfRegistGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	startTime := TimeAdjusted().Add(time.Duration(s.server.erupeConfig.GameplayOptions.ClanMealDuration-3600) * time.Second)
 	if pkt.OverwriteID != 0 {
-		if _, err := s.server.db.Exec("UPDATE guild_meals SET meal_id = $1, level = $2, created_at = $3 WHERE id = $4", pkt.MealID, pkt.Success, startTime, pkt.OverwriteID); err != nil {
+		if err := s.server.guildRepo.UpdateMeal(pkt.OverwriteID, uint32(pkt.MealID), uint32(pkt.Success), startTime); err != nil {
 			s.logger.Error("Failed to update guild meal", zap.Error(err))
 		}
 	} else {
-		if err := s.server.db.QueryRow("INSERT INTO guild_meals (guild_id, meal_id, level, created_at) VALUES ($1, $2, $3, $4) RETURNING id", guild.ID, pkt.MealID, pkt.Success, startTime).Scan(&pkt.OverwriteID); err != nil {
+		id, err := s.server.guildRepo.CreateMeal(guild.ID, uint32(pkt.MealID), uint32(pkt.Success), startTime)
+		if err != nil {
 			s.logger.Error("Failed to insert guild meal", zap.Error(err))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
+		pkt.OverwriteID = id
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(1)
@@ -91,31 +88,21 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	switch pkt.Operation {
 	case 0: // Acquire
-		if _, err := s.server.db.Exec(`UPDATE guild_characters SET box_claimed=$1 WHERE character_id=$2`, TimeAdjusted(), s.charID); err != nil {
+		if err := s.server.guildRepo.ClaimHuntBox(s.charID, TimeAdjusted()); err != nil {
 			s.logger.Error("Failed to update guild hunt box claimed time", zap.Error(err))
 		}
 	case 1: // Enumerate
 		bf.WriteUint8(0) // Entries
-		rows, err := s.server.db.Query(`SELECT kl.id, kl.monster FROM kill_logs kl
-			INNER JOIN guild_characters gc ON kl.character_id = gc.character_id
-			WHERE gc.guild_id=$1
-			AND kl.timestamp >= (SELECT box_claimed FROM guild_characters WHERE character_id=$2)
-		`, pkt.GuildID, s.charID)
+		kills, err := s.server.guildRepo.ListGuildKills(pkt.GuildID, s.charID)
 		if err == nil {
 			var count uint8
-			var huntID, monID uint32
-			for rows.Next() {
-				err = rows.Scan(&huntID, &monID)
-				if err != nil {
-					continue
-				}
+			for _, kill := range kills {
 				if count == 255 {
-					_ = rows.Close()
 					break
 				}
 				count++
-				bf.WriteUint32(huntID)
-				bf.WriteUint32(monID)
+				bf.WriteUint32(kill.ID)
+				bf.WriteUint32(kill.Monster)
 			}
 			_, _ = bf.Seek(0, 0)
 			bf.WriteUint8(count)
@@ -123,12 +110,7 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	case 2: // Check
 		guild, err := s.server.guildRepo.GetByCharID(s.charID)
 		if err == nil {
-			var count uint8
-			err = s.server.db.QueryRow(`SELECT COUNT(*) FROM kill_logs kl
-				INNER JOIN guild_characters gc ON kl.character_id = gc.character_id
-				WHERE gc.guild_id=$1
-				AND kl.timestamp >= (SELECT box_claimed FROM guild_characters WHERE character_id=$2)
-			`, guild.ID, s.charID).Scan(&count)
+			count, err := s.server.guildRepo.CountGuildKills(guild.ID, s.charID)
 			if err == nil && count > 0 {
 				bf.WriteBool(true)
 			} else {

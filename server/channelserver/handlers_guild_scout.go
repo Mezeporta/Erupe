@@ -6,7 +6,6 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"fmt"
 	"go.uber.org/zap"
-	"io"
 )
 
 func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
@@ -214,64 +213,29 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	rows, err := s.server.db.Queryx(`
-		SELECT c.id, c.name, c.hr, c.gr, ga.actor_id
-			FROM guild_applications ga
-			JOIN characters c ON c.id = ga.character_id
-		WHERE ga.guild_id = $1 AND ga.application_type = 'invited'
-	`, guildInfo.ID)
-
+	chars, err := s.server.guildRepo.ListInvitedCharacters(guildInfo.ID)
 	if err != nil {
 		s.logger.Error("failed to retrieve scouted characters", zap.Error(err))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
-	defer func() { _ = rows.Close() }()
-
 	bf := byteframe.NewByteFrame()
-
 	bf.SetBE()
+	bf.WriteUint32(uint32(len(chars)))
 
-	// Result count, we will overwrite this later
-	bf.WriteUint32(0x00)
-
-	count := uint32(0)
-
-	for rows.Next() {
-		var charName string
-		var charID, actorID uint32
-		var HR, GR uint16
-
-		err = rows.Scan(&charID, &charName, &HR, &GR, &actorID)
-
-		if err != nil {
-			doAckSimpleFail(s, pkt.AckHandle, nil)
-			continue
-		}
-
+	for _, sc := range chars {
 		// This seems to be used as a unique ID for the invitation sent
 		// we can just use the charID and then filter on guild_id+charID when performing operations
 		// this might be a problem later with mails sent referencing IDs but we'll see.
-		bf.WriteUint32(charID)
-		bf.WriteUint32(actorID)
-		bf.WriteUint32(charID)
+		bf.WriteUint32(sc.CharID)
+		bf.WriteUint32(sc.ActorID)
+		bf.WriteUint32(sc.CharID)
 		bf.WriteUint32(uint32(TimeAdjusted().Unix()))
-		bf.WriteUint16(HR) // HR?
-		bf.WriteUint16(GR) // GR?
-		bf.WriteBytes(stringsupport.PaddedString(charName, 32, true))
-		count++
+		bf.WriteUint16(sc.HR)
+		bf.WriteUint16(sc.GR)
+		bf.WriteBytes(stringsupport.PaddedString(sc.Name, 32, true))
 	}
-
-	_, err = bf.Seek(0, io.SeekStart)
-
-	if err != nil {
-		s.logger.Error("Failed to seek in guild scout list buffer", zap.Error(err))
-		doAckBufFail(s, pkt.AckHandle, nil)
-		return
-	}
-
-	bf.WriteUint32(count)
 
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
