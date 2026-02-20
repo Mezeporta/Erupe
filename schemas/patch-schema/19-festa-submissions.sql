@@ -1,6 +1,4 @@
-BEGIN;
-
-CREATE TABLE festa_submissions (
+CREATE TABLE IF NOT EXISTS festa_submissions (
     character_id int NOT NULL,
     guild_id int NOT NULL,
     trial_type int NOT NULL,
@@ -8,8 +6,11 @@ CREATE TABLE festa_submissions (
     timestamp timestamp with time zone NOT NULL
 );
 
-ALTER TABLE guild_characters DROP COLUMN souls;
+ALTER TABLE guild_characters DROP COLUMN IF EXISTS souls;
 
-ALTER TYPE festival_colour RENAME TO festival_color;
-
-END;
+DO $$ BEGIN
+    ALTER TYPE festival_colour RENAME TO festival_color;
+EXCEPTION
+    WHEN undefined_object THEN NULL;
+    WHEN duplicate_object THEN NULL;
+END $$;
