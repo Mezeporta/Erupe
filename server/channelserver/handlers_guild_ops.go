@@ -304,11 +304,26 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 	} else {
 		_ = mail.Send(s, nil)
-		for _, channel := range s.server.Channels {
-			for _, session := range channel.sessions {
-				if session.charID == pkt.CharID {
-					SendMailNotification(s, &mail, session)
+		if s.server.Registry != nil {
+			s.server.Registry.NotifyMailToCharID(pkt.CharID, s, &mail)
+		} else {
+			// Fallback: find the target session under lock, then notify outside the lock.
+			var targetSession *Session
+			for _, channel := range s.server.Channels {
+				channel.Lock()
+				for _, session := range channel.sessions {
+					if session.charID == pkt.CharID {
+						targetSession = session
+						break
+					}
 				}
+				channel.Unlock()
+				if targetSession != nil {
+					break
+				}
+			}
+			if targetSession != nil {
+				SendMailNotification(s, &mail, targetSession)
 			}
 		}
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

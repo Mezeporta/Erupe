@@ -297,6 +297,15 @@ type EntranceChannelInfo struct {
 	Port           uint16
 	MaxPlayers     uint16
 	CurrentPlayers uint16
+	Enabled        *bool // nil defaults to true for backward compatibility
+}
+
+// IsEnabled returns whether this channel is enabled. Defaults to true if Enabled is nil.
+func (c *EntranceChannelInfo) IsEnabled() bool {
+	if c.Enabled == nil {
+		return true
+	}
+	return *c.Enabled
 }
 
 var ErupeConfig *Config
