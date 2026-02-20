@@ -82,11 +82,11 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	case 2:
-		guild, err := GetGuildInfoByCharacterId(s, s.charID)
+		guild, err := s.server.guildRepo.GetByCharID(s.charID)
 		if err != nil || guild == nil {
 			break
 		}
-		guildMembers, err := GetGuildMembers(s, guild.ID, false)
+		guildMembers, err := s.server.guildRepo.GetMembers(guild.ID, false)
 		if err != nil {
 			break
 		}
@@ -190,10 +190,10 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 
 		// Guild verification
 		if state > 3 {
-			ownGuild, err := GetGuildInfoByCharacterId(s, s.charID)
-			isApplicant, _ := ownGuild.HasApplicationForCharID(s, s.charID)
+			ownGuild, err := s.server.guildRepo.GetByCharID(s.charID)
+			isApplicant, _ := s.server.guildRepo.HasApplication(ownGuild.ID, s.charID)
 			if err == nil && ownGuild != nil {
-				othersGuild, err := GetGuildInfoByCharacterId(s, pkt.CharID)
+				othersGuild, err := s.server.guildRepo.GetByCharID(pkt.CharID)
 				if err == nil && othersGuild != nil {
 					if othersGuild.ID == ownGuild.ID && !isApplicant {
 						allowed = true

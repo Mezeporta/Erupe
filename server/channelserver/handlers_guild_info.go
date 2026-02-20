@@ -9,7 +9,6 @@ import (
 	"erupe-ce/common/stringsupport"
 	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
-	"github.com/jmoiron/sqlx"
 )
 
 // Guild sentinel and cost constants
@@ -25,9 +24,9 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 	var err error
 
 	if pkt.GuildID > 0 {
-		guild, err = GetGuildInfoByID(s, pkt.GuildID)
+		guild, err = s.server.guildRepo.GetByID(pkt.GuildID)
 	} else {
-		guild, err = GetGuildInfoByCharacterId(s, s.charID)
+		guild, err = s.server.guildRepo.GetByCharID(s.charID)
 	}
 
 	if err == nil && guild != nil {
@@ -37,7 +36,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		guildComment := stringsupport.UTF8ToSJIS(guild.Comment)
 		guildLeaderName := stringsupport.UTF8ToSJIS(guild.LeaderName)
 
-		characterGuildData, err := GetCharacterGuildData(s, s.charID)
+		characterGuildData, err := s.server.guildRepo.GetCharacterMembership(s.charID)
 		characterJoinedAt := guildNotJoinedSentinel
 
 		if characterGuildData != nil && characterGuildData.JoinedAt != nil {
@@ -196,7 +195,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint32(0) // No alliance
 		}
 
-		applicants, err := GetGuildMembers(s, guild.ID, true)
+		applicants, err := s.server.guildRepo.GetMembers(guild.ID, true)
 		if err != nil || (characterGuildData != nil && !characterGuildData.CanRecruit()) {
 			bf.WriteUint16(0)
 		} else {
@@ -280,89 +279,81 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 
 	var guilds []*Guild
 	var alliances []*GuildAlliance
-	var rows *sqlx.Rows
 	var err error
 
 	if pkt.Type <= 8 {
 		var tempGuilds []*Guild
-		rows, err = s.server.db.Queryx(guildInfoSelectQuery)
+		tempGuilds, err = s.server.guildRepo.ListAll()
 		if err == nil {
-			for rows.Next() {
-				guild, err := buildGuildObjectFromDbResult(rows, err, s)
-				if err != nil {
-					continue
+			switch pkt.Type {
+			case mhfpacket.ENUMERATE_GUILD_TYPE_GUILD_NAME:
+				searchName, _ := stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
+				for _, guild := range tempGuilds {
+					if strings.Contains(guild.Name, searchName) {
+						guilds = append(guilds, guild)
+					}
 				}
-				tempGuilds = append(tempGuilds, guild)
-			}
-		}
-		switch pkt.Type {
-		case mhfpacket.ENUMERATE_GUILD_TYPE_GUILD_NAME:
-			searchName, _ := stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
-			for _, guild := range tempGuilds {
-				if strings.Contains(guild.Name, searchName) {
-					guilds = append(guilds, guild)
+			case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_NAME:
+				searchName, _ := stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
+				for _, guild := range tempGuilds {
+					if strings.Contains(guild.LeaderName, searchName) {
+						guilds = append(guilds, guild)
+					}
 				}
-			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_NAME:
-			searchName, _ := stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
-			for _, guild := range tempGuilds {
-				if strings.Contains(guild.LeaderName, searchName) {
-					guilds = append(guilds, guild)
+			case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_ID:
+				CID := pkt.Data1.ReadUint32()
+				for _, guild := range tempGuilds {
+					if guild.LeaderCharID == CID {
+						guilds = append(guilds, guild)
+					}
 				}
-			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_ID:
-			CID := pkt.Data1.ReadUint32()
-			for _, guild := range tempGuilds {
-				if guild.LeaderCharID == CID {
-					guilds = append(guilds, guild)
+			case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_MEMBERS:
+				if pkt.Sorting {
+					sort.Slice(tempGuilds, func(i, j int) bool {
+						return tempGuilds[i].MemberCount > tempGuilds[j].MemberCount
+					})
+				} else {
+					sort.Slice(tempGuilds, func(i, j int) bool {
+						return tempGuilds[i].MemberCount < tempGuilds[j].MemberCount
+					})
 				}
-			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_MEMBERS:
-			if pkt.Sorting {
-				sort.Slice(tempGuilds, func(i, j int) bool {
-					return tempGuilds[i].MemberCount > tempGuilds[j].MemberCount
-				})
-			} else {
-				sort.Slice(tempGuilds, func(i, j int) bool {
-					return tempGuilds[i].MemberCount < tempGuilds[j].MemberCount
-				})
-			}
-			guilds = tempGuilds
-		case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_REGISTRATION:
-			if pkt.Sorting {
-				sort.Slice(tempGuilds, func(i, j int) bool {
-					return tempGuilds[i].CreatedAt.Unix() > tempGuilds[j].CreatedAt.Unix()
-				})
-			} else {
-				sort.Slice(tempGuilds, func(i, j int) bool {
-					return tempGuilds[i].CreatedAt.Unix() < tempGuilds[j].CreatedAt.Unix()
-				})
-			}
-			guilds = tempGuilds
-		case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_RANK:
-			if pkt.Sorting {
-				sort.Slice(tempGuilds, func(i, j int) bool {
-					return tempGuilds[i].RankRP > tempGuilds[j].RankRP
-				})
-			} else {
-				sort.Slice(tempGuilds, func(i, j int) bool {
-					return tempGuilds[i].RankRP < tempGuilds[j].RankRP
-				})
-			}
-			guilds = tempGuilds
-		case mhfpacket.ENUMERATE_GUILD_TYPE_MOTTO:
-			mainMotto := uint8(pkt.Data1.ReadUint16())
-			subMotto := uint8(pkt.Data1.ReadUint16())
-			for _, guild := range tempGuilds {
-				if guild.MainMotto == mainMotto && guild.SubMotto == subMotto {
-					guilds = append(guilds, guild)
+				guilds = tempGuilds
+			case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_REGISTRATION:
+				if pkt.Sorting {
+					sort.Slice(tempGuilds, func(i, j int) bool {
+						return tempGuilds[i].CreatedAt.Unix() > tempGuilds[j].CreatedAt.Unix()
+					})
+				} else {
+					sort.Slice(tempGuilds, func(i, j int) bool {
+						return tempGuilds[i].CreatedAt.Unix() < tempGuilds[j].CreatedAt.Unix()
+					})
 				}
-			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_RECRUITING:
-			recruitingMotto := uint8(pkt.Data1.ReadUint16())
-			for _, guild := range tempGuilds {
-				if guild.MainMotto == recruitingMotto {
-					guilds = append(guilds, guild)
+				guilds = tempGuilds
+			case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_RANK:
+				if pkt.Sorting {
+					sort.Slice(tempGuilds, func(i, j int) bool {
+						return tempGuilds[i].RankRP > tempGuilds[j].RankRP
+					})
+				} else {
+					sort.Slice(tempGuilds, func(i, j int) bool {
+						return tempGuilds[i].RankRP < tempGuilds[j].RankRP
+					})
+				}
+				guilds = tempGuilds
+			case mhfpacket.ENUMERATE_GUILD_TYPE_MOTTO:
+				mainMotto := uint8(pkt.Data1.ReadUint16())
+				subMotto := uint8(pkt.Data1.ReadUint16())
+				for _, guild := range tempGuilds {
+					if guild.MainMotto == mainMotto && guild.SubMotto == subMotto {
+						guilds = append(guilds, guild)
+					}
+				}
+			case mhfpacket.ENUMERATE_GUILD_TYPE_RECRUITING:
+				recruitingMotto := uint8(pkt.Data1.ReadUint16())
+				for _, guild := range tempGuilds {
+					if guild.MainMotto == recruitingMotto {
+						guilds = append(guilds, guild)
+					}
 				}
 			}
 		}
@@ -370,10 +361,12 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 
 	if pkt.Type > 8 {
 		var tempAlliances []*GuildAlliance
-		rows, err = s.server.db.Queryx(allianceInfoSelectQuery)
-		if err == nil {
+		rows, queryErr := s.server.db.Queryx(allianceInfoSelectQuery)
+		if queryErr != nil {
+			err = queryErr
+		} else {
 			for rows.Next() {
-				alliance, _ := buildAllianceObjectFromDbResult(rows, err, s)
+				alliance, _ := buildAllianceObjectFromDbResult(rows, queryErr, s)
 				tempAlliances = append(tempAlliances, alliance)
 			}
 		}

@@ -25,7 +25,7 @@ type TreasureHunt struct {
 
 func handleMsgMhfEnumerateGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildTresure)
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	if err != nil || guild == nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -86,7 +86,7 @@ func handleMsgMhfRegistGuildTresure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfRegistGuildTresure)
 	bf := byteframe.NewByteFrameFromBytes(pkt.Data)
 	huntData := byteframe.NewByteFrame()
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	if err != nil || guild == nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return

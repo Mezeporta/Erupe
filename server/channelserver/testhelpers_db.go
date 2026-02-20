@@ -258,3 +258,38 @@ func CreateTestCharacter(t *testing.T, db *sqlx.DB, userID uint32, name string) 
 
 	return charID
 }
+
+// CreateTestGuild creates a test guild with the given leader and returns the guild ID
+func CreateTestGuild(t *testing.T, db *sqlx.DB, leaderCharID uint32, name string) uint32 {
+	t.Helper()
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatalf("Failed to begin transaction: %v", err)
+	}
+
+	var guildID uint32
+	err = tx.QueryRow(
+		"INSERT INTO guilds (name, leader_id) VALUES ($1, $2) RETURNING id",
+		name, leaderCharID,
+	).Scan(&guildID)
+	if err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("Failed to create test guild: %v", err)
+	}
+
+	_, err = tx.Exec(
+		"INSERT INTO guild_characters (guild_id, character_id) VALUES ($1, $2)",
+		guildID, leaderCharID,
+	)
+	if err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("Failed to add leader to guild: %v", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("Failed to commit guild creation: %v", err)
+	}
+
+	return guildID
+}

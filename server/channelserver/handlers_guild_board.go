@@ -23,7 +23,7 @@ type MessageBoardPost struct {
 
 func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildMessageBoard)
-	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
+	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	if pkt.BoardType == 1 {
 		pkt.MaxPosts = 4
 	}
@@ -63,10 +63,10 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuildMessageBoard)
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	applicant := false
 	if guild != nil {
-		applicant, _ = guild.HasApplicationForCharID(s, s.charID)
+		applicant, _ = s.server.guildRepo.HasApplication(guild.ID, s.charID)
 	}
 	if err != nil || guild == nil || applicant {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

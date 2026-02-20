@@ -389,10 +389,10 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 // state festa (U)ser
 func handleMsgMhfStateFestaU(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfStateFestaU)
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	applicant := false
 	if guild != nil {
-		applicant, _ = guild.HasApplicationForCharID(s, s.charID)
+		applicant, _ = s.server.guildRepo.HasApplication(guild.ID, s.charID)
 	}
 	if err != nil || guild == nil || applicant {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -418,10 +418,10 @@ func handleMsgMhfStateFestaU(s *Session, p mhfpacket.MHFPacket) {
 // state festa (G)uild
 func handleMsgMhfStateFestaG(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfStateFestaG)
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	applicant := false
 	if guild != nil {
-		applicant, _ = guild.HasApplicationForCharID(s, s.charID)
+		applicant, _ = s.server.guildRepo.HasApplication(guild.ID, s.charID)
 	}
 	resp := byteframe.NewByteFrame()
 	if err != nil || guild == nil || applicant {
@@ -443,12 +443,12 @@ func handleMsgMhfStateFestaG(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfEnumerateFestaMember(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateFestaMember)
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	if err != nil || guild == nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	members, err := GetGuildMembers(s, guild.ID, false)
+	members, err := s.server.guildRepo.GetMembers(guild.ID, false)
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -487,7 +487,7 @@ func handleMsgMhfVoteFesta(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfEntryFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEntryFesta)
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	if err != nil || guild == nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return

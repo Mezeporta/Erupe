@@ -73,7 +73,7 @@ func buildAllianceObjectFromDbResult(result *sqlx.Rows, _ error, s *Session) (*G
 		return nil, err
 	}
 
-	parentGuild, err := GetGuildInfoByID(s, alliance.ParentGuildID)
+	parentGuild, err := s.server.guildRepo.GetByID(alliance.ParentGuildID)
 	if err != nil {
 		s.logger.Error("Failed to get parent guild info", zap.Error(err))
 		return nil, err
@@ -83,7 +83,7 @@ func buildAllianceObjectFromDbResult(result *sqlx.Rows, _ error, s *Session) (*G
 	}
 
 	if alliance.SubGuild1ID > 0 {
-		subGuild1, err := GetGuildInfoByID(s, alliance.SubGuild1ID)
+		subGuild1, err := s.server.guildRepo.GetByID(alliance.SubGuild1ID)
 		if err != nil {
 			s.logger.Error("Failed to get sub guild 1 info", zap.Error(err))
 			return nil, err
@@ -94,7 +94,7 @@ func buildAllianceObjectFromDbResult(result *sqlx.Rows, _ error, s *Session) (*G
 	}
 
 	if alliance.SubGuild2ID > 0 {
-		subGuild2, err := GetGuildInfoByID(s, alliance.SubGuild2ID)
+		subGuild2, err := s.server.guildRepo.GetByID(alliance.SubGuild2ID)
 		if err != nil {
 			s.logger.Error("Failed to get sub guild 2 info", zap.Error(err))
 			return nil, err
@@ -119,7 +119,7 @@ func handleMsgMhfCreateJoint(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOperateJoint)
 
-	guild, err := GetGuildInfoByID(s, pkt.GuildID)
+	guild, err := s.server.guildRepo.GetByID(pkt.GuildID)
 	if err != nil {
 		s.logger.Error("Failed to get guild info", zap.Error(err))
 	}

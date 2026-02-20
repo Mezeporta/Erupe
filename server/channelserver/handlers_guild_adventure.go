@@ -21,7 +21,7 @@ type GuildAdventure struct {
 
 func handleMsgMhfLoadGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadGuildAdventure)
-	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
+	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	data, err := s.server.db.Queryx("SELECT id, destination, charge, depart, return, collected_by FROM guild_adventures WHERE guild_id = $1", guild.ID)
 	if err != nil {
 		s.logger.Error("Failed to get guild adventures from db", zap.Error(err))
@@ -52,7 +52,7 @@ func handleMsgMhfLoadGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfRegistGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfRegistGuildAdventure)
-	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
+	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	_, err := s.server.db.Exec("INSERT INTO guild_adventures (guild_id, destination, depart, return) VALUES ($1, $2, $3, $4)", guild.ID, pkt.Destination, TimeAdjusted().Unix(), TimeAdjusted().Add(6*time.Hour).Unix())
 	if err != nil {
 		s.logger.Error("Failed to register guild adventure", zap.Error(err))
@@ -87,7 +87,7 @@ func handleMsgMhfChargeGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfRegistGuildAdventureDiva(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfRegistGuildAdventureDiva)
-	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
+	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	_, err := s.server.db.Exec("INSERT INTO guild_adventures (guild_id, destination, charge, depart, return) VALUES ($1, $2, $3, $4, $5)", guild.ID, pkt.Destination, pkt.Charge, TimeAdjusted().Unix(), TimeAdjusted().Add(1*time.Hour).Unix())
 	if err != nil {
 		s.logger.Error("Failed to register guild adventure", zap.Error(err))

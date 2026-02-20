@@ -18,7 +18,7 @@ type GuildMeal struct {
 
 func handleMsgMhfLoadGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadGuildCooking)
-	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
+	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	data, err := s.server.db.Queryx("SELECT id, meal_id, level, created_at FROM guild_meals WHERE guild_id = $1", guild.ID)
 	if err != nil {
 		s.logger.Error("Failed to get guild meals from db", zap.Error(err))
@@ -49,7 +49,7 @@ func handleMsgMhfLoadGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfRegistGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfRegistGuildCooking)
-	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
+	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	startTime := TimeAdjusted().Add(time.Duration(s.server.erupeConfig.GameplayOptions.ClanMealDuration-3600) * time.Second)
 	if pkt.OverwriteID != 0 {
 		if _, err := s.server.db.Exec("UPDATE guild_meals SET meal_id = $1, level = $2, created_at = $3 WHERE id = $4", pkt.MealID, pkt.Success, startTime, pkt.OverwriteID); err != nil {
@@ -121,7 +121,7 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint8(count)
 		}
 	case 2: // Check
-		guild, err := GetGuildInfoByCharacterId(s, s.charID)
+		guild, err := s.server.guildRepo.GetByCharID(s.charID)
 		if err == nil {
 			var count uint8
 			err = s.server.db.QueryRow(`SELECT COUNT(*) FROM kill_logs kl

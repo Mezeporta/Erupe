@@ -388,7 +388,7 @@ type Airou struct {
 func getGuildAirouList(s *Session) []Airou {
 	var guildCats []Airou
 	bannedCats := make(map[uint32]int)
-	guild, err := GetGuildInfoByCharacterId(s, s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	if err != nil {
 		return guildCats
 	}

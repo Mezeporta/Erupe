@@ -14,7 +14,7 @@ import (
 func handleMsgMhfCreateGuild(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCreateGuild)
 
-	guildId, err := CreateGuild(s, pkt.Name)
+	guildId, err := s.server.guildRepo.Create(s.charID, pkt.Name)
 
 	if err != nil {
 		bf := byteframe.NewByteFrame()
@@ -37,7 +37,7 @@ func handleMsgMhfCreateGuild(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfArrangeGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfArrangeGuildMember)
 
-	guild, err := GetGuildInfoByID(s, pkt.GuildID)
+	guild, err := s.server.guildRepo.GetByID(pkt.GuildID)
 
 	if err != nil {
 		s.logger.Error(
@@ -57,7 +57,7 @@ func handleMsgMhfArrangeGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	err = guild.ArrangeCharacters(s, pkt.CharIDs)
+	err = s.server.guildRepo.ArrangeCharacters(pkt.CharIDs)
 
 	if err != nil {
 		s.logger.Error(
@@ -79,13 +79,13 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	var err error
 
 	if pkt.GuildID > 0 {
-		guild, err = GetGuildInfoByID(s, pkt.GuildID)
+		guild, err = s.server.guildRepo.GetByID(pkt.GuildID)
 	} else {
-		guild, err = GetGuildInfoByCharacterId(s, s.charID)
+		guild, err = s.server.guildRepo.GetByCharID(s.charID)
 	}
 
 	if guild != nil {
-		isApplicant, _ := guild.HasApplicationForCharID(s, s.charID)
+		isApplicant, _ := s.server.guildRepo.HasApplication(guild.ID, s.charID)
 		if isApplicant {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 2))
 			return
@@ -93,7 +93,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	if guild == nil && s.prevGuildID > 0 {
-		guild, err = GetGuildInfoByID(s, s.prevGuildID)
+		guild, err = s.server.guildRepo.GetByID(s.prevGuildID)
 	}
 
 	if err != nil {
@@ -105,7 +105,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	guildMembers, err := GetGuildMembers(s, guild.ID, false)
+	guildMembers, err := s.server.guildRepo.GetMembers(guild.ID, false)
 
 	if err != nil {
 		s.logger.Error("failed to retrieve guild")
@@ -157,7 +157,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	if guild.AllianceID > 0 {
 		bf.WriteUint16(alliance.TotalMembers - uint16(len(guildMembers)))
 		if guild.ID != alliance.ParentGuildID {
-			mems, err := GetGuildMembers(s, alliance.ParentGuildID, false)
+			mems, err := s.server.guildRepo.GetMembers(alliance.ParentGuildID, false)
 			if err != nil {
 				s.logger.Error("Failed to get parent guild members for alliance", zap.Error(err))
 				doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
@@ -168,7 +168,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 		if guild.ID != alliance.SubGuild1ID {
-			mems, err := GetGuildMembers(s, alliance.SubGuild1ID, false)
+			mems, err := s.server.guildRepo.GetMembers(alliance.SubGuild1ID, false)
 			if err != nil {
 				s.logger.Error("Failed to get sub guild 1 members for alliance", zap.Error(err))
 				doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
@@ -179,7 +179,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 		if guild.ID != alliance.SubGuild2ID {
-			mems, err := GetGuildMembers(s, alliance.SubGuild2ID, false)
+			mems, err := s.server.guildRepo.GetMembers(alliance.SubGuild2ID, false)
 			if err != nil {
 				s.logger.Error("Failed to get sub guild 2 members for alliance", zap.Error(err))
 				doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
@@ -204,9 +204,9 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildManageRight)
 
-	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
+	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	if guild == nil || s.prevGuildID != 0 {
-		guild, err := GetGuildInfoByID(s, s.prevGuildID)
+		guild, err := s.server.guildRepo.GetByID(s.prevGuildID)
 		s.prevGuildID = 0
 		if guild == nil || err != nil {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -216,7 +216,7 @@ func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(guild.MemberCount))
-	members, _ := GetGuildMembers(s, guild.ID, false)
+	members, _ := s.server.guildRepo.GetMembers(guild.ID, false)
 	for _, member := range members {
 		bf.WriteUint32(member.CharID)
 		bf.WriteBool(member.Recruiter)
@@ -237,9 +237,9 @@ func handleMsgMhfGetGuildTargetMemberNum(s *Session, p mhfpacket.MHFPacket) {
 	var err error
 
 	if pkt.GuildID == 0x0 {
-		guild, err = GetGuildInfoByCharacterId(s, s.charID)
+		guild, err = s.server.guildRepo.GetByCharID(s.charID)
 	} else {
-		guild, err = GetGuildInfoByID(s, pkt.GuildID)
+		guild, err = s.server.guildRepo.GetByID(pkt.GuildID)
 	}
 
 	if err != nil || guild == nil {
@@ -266,7 +266,7 @@ func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuildItem)
 	newStacks := mhfitem.DiffItemStacks(guildGetItems(s, pkt.GuildID), pkt.UpdatedItems)
-	if _, err := s.server.db.Exec(`UPDATE guilds SET item_box=$1 WHERE id=$2`, mhfitem.SerializeWarehouseItems(newStacks), pkt.GuildID); err != nil {
+	if err := s.server.guildRepo.SaveItemBox(pkt.GuildID, mhfitem.SerializeWarehouseItems(newStacks)); err != nil {
 		s.logger.Error("Failed to update guild item box", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -275,7 +275,7 @@ func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateGuildIcon(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuildIcon)
 
-	guild, err := GetGuildInfoByID(s, pkt.GuildID)
+	guild, err := s.server.guildRepo.GetByID(pkt.GuildID)
 
 	if err != nil {
 		s.logger.Error("Failed to get guild info for icon update", zap.Error(err))
@@ -283,7 +283,7 @@ func handleMsgMhfUpdateGuildIcon(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	characterInfo, err := GetCharacterGuildData(s, s.charID)
+	characterInfo, err := s.server.guildRepo.GetCharacterMembership(s.charID)
 
 	if err != nil {
 		s.logger.Error("Failed to get character guild data for icon update", zap.Error(err))
@@ -322,7 +322,7 @@ func handleMsgMhfUpdateGuildIcon(s *Session, p mhfpacket.MHFPacket) {
 
 	guild.Icon = icon
 
-	err = guild.Save(s)
+	err = s.server.guildRepo.Save(guild)
 
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -364,7 +364,7 @@ func handleMsgMhfUpdateGuild(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfSetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetGuildManageRight)
-	if _, err := s.server.db.Exec("UPDATE guild_characters SET recruiter=$1 WHERE character_id=$2", pkt.Allowed, pkt.CharID); err != nil {
+	if err := s.server.guildRepo.SetRecruiter(pkt.CharID, pkt.Allowed); err != nil {
 		s.logger.Error("Failed to update guild manage right", zap.Error(err))
 	}
 	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -393,3 +393,22 @@ func handleMsgMhfOperationInvGuild(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfUpdateGuildcard(s *Session, p mhfpacket.MHFPacket) {}
+
+// guildGetItems reads and parses the guild item box.
+func guildGetItems(s *Session, guildID uint32) []mhfitem.MHFItemStack {
+	data, err := s.server.guildRepo.GetItemBox(guildID)
+	if err != nil {
+		s.logger.Error("Failed to get guild item box", zap.Error(err))
+		return nil
+	}
+	var items []mhfitem.MHFItemStack
+	if len(data) > 0 {
+		box := byteframe.NewByteFrameFromBytes(data)
+		numStacks := box.ReadUint16()
+		box.ReadUint16() // Unused
+		for i := 0; i < int(numStacks); i++ {
+			items = append(items, mhfitem.ReadWarehouseItem(box))
+		}
+	}
+	return items
+}

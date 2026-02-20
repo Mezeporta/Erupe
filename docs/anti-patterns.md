@@ -240,7 +240,9 @@ The same table is queried in different handlers with slightly different column s
 
 **Recommendation:** At minimum, define query constants. Ideally, introduce a repository layer that encapsulates all queries for a given entity.
 
-**Status (substantial):** A `CharacterRepository` layer in `repo_character.go` now centralizes nearly all `characters` table access (27 methods). The initial PR introduced 9 core methods and rewired the 4 helpers + 6 direct queries (~70%). A second pass migrated ~56 additional inline queries across 13 handler files (cafe, misc, clients, plate, rengoku, mercenary, gacha, guild_board, guild_scout, data, items, house, session), bringing coverage to ~95% of character queries. Remaining unmigrated queries are cross-table JOINs (house+user_binary, mercenary+guild_characters, session auth), the bulk `CharacterSaveData` read/write, and a `handlers_commands.go` subquery through `users`. Next steps: guild repository (second-highest duplication) and column allowlist for SQL injection hardening.
+**Status (substantial):** A `CharacterRepository` layer in `repo_character.go` now centralizes nearly all `characters` table access (27 methods). The initial PR introduced 9 core methods and rewired the 4 helpers + 6 direct queries (~70%). A second pass migrated ~56 additional inline queries across 13 handler files (cafe, misc, clients, plate, rengoku, mercenary, gacha, guild_board, guild_scout, data, items, house, session), bringing coverage to ~95% of character queries. Remaining unmigrated queries are cross-table JOINs (house+user_binary, mercenary+guild_characters, session auth), the bulk `CharacterSaveData` read/write, and a `handlers_commands.go` subquery through `users`.
+
+A `GuildRepository` layer in `repo_guild.go` now centralizes all `guilds`, `guild_characters`, and `guild_applications` table access (~30 methods). All guild handler files plus cross-cutting callers (`handlers_festa.go`, `handlers_mail.go`, `handlers_house.go`, `handlers_mercenary.go`, `handlers_rengoku.go`) have been migrated. Remaining unmigrated guild subsystem tables: `guild_posts`, `guild_adventures`, `guild_meals`, `guild_hunts`, `guild_hunts_claimed`, `guild_alliances`. Next steps: column allowlist for SQL injection hardening.
 
 ---
 
@@ -304,7 +306,7 @@ Database operations use raw `database/sql` with PostgreSQL-specific syntax throu
 | Severity | Anti-patterns |
 |----------|--------------|
 | **High** | ~~Missing ACK responses / softlocks (#2)~~ **Fixed**, no architectural layering (#3), tight DB coupling (#13) |
-| **Medium** | ~~Magic numbers (#4)~~ **Fixed**, ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, ~~raw SQL duplication (#9)~~ **Substantially fixed** (characters table ~95% migrated) |
+| **Medium** | ~~Magic numbers (#4)~~ **Fixed**, ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, ~~raw SQL duplication (#9)~~ **Substantially fixed** (characters ~95%, guild core tables 100% migrated) |
 | **Low** | God files (#1), ~~`init()` registration (#10)~~ **Fixed**, ~~inconsistent logging (#12)~~ **Fixed**, mutex granularity (#7), ~~panic-based flow (#11)~~ **Fixed** |
 
 ### Root Cause
@@ -316,6 +318,6 @@ Most of these anti-patterns stem from a single root cause: **the codebase grew o
 1. **Add fail ACKs to silent error paths** — prevents player softlocks, ~70 existing doAckFail calls prove safety, low risk, can be done handler-by-handler
 2. **Extract a character repository layer** — 152 queries across 26 files touch the `characters` table, highest SQL duplication
 3. **Extract load/save helpers** — 38 handlers repeat the same ~10-15 line template, mechanical extraction
-4. **Extract a guild repository layer** — 32 queries across 8-15 files, second-highest SQL duplication
+4. ~~**Extract a guild repository layer**~~ — **Done.** `repo_guild.go` with ~30 methods covers `guilds`, `guild_characters`, `guild_applications` tables
 5. **Define protocol constants** — 1,052 hex literals with 174 unique values, improves documentation
 6. ~~**Standardize binary I/O**~~ — already standardized on `byteframe`; remaining `encoding/binary` uses are correct (see #5)
