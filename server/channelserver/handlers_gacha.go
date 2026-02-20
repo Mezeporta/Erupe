@@ -327,14 +327,15 @@ func handleMsgMhfGetStepupStatus(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Error("Failed to reset stale gacha stepup", zap.Error(err))
 		}
 		step = 0
-	}
-
-	hasEntry, _ := s.server.gachaRepo.HasEntryType(pkt.GachaID, step)
-	if !hasEntry {
-		if err := s.server.gachaRepo.DeleteStepup(pkt.GachaID, s.charID); err != nil {
-			s.logger.Error("Failed to reset gacha stepup state", zap.Error(err))
+	} else if err == nil {
+		// Only check for valid entry type if the stepup is fresh
+		hasEntry, _ := s.server.gachaRepo.HasEntryType(pkt.GachaID, step)
+		if !hasEntry {
+			if err := s.server.gachaRepo.DeleteStepup(pkt.GachaID, s.charID); err != nil {
+				s.logger.Error("Failed to reset gacha stepup state", zap.Error(err))
+			}
+			step = 0
 		}
-		step = 0
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint8(step)

@@ -942,10 +942,25 @@ func (r *GuildRepository) ListInvitedCharacters(guildID uint32) ([]*ScoutedChara
 
 // RolloverDailyRP moves rp_today into rp_yesterday for all members of a guild,
 // then updates the guild's rp_reset_at timestamp.
+// Uses SELECT FOR UPDATE to prevent concurrent rollovers from racing.
 func (r *GuildRepository) RolloverDailyRP(guildID uint32, noon time.Time) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
+	}
+	// Lock the guild row and re-check whether rollover is still needed.
+	var rpResetAt time.Time
+	if err := tx.QueryRow(
+		`SELECT COALESCE(rp_reset_at, '2000-01-01'::timestamptz) FROM guilds WHERE id = $1 FOR UPDATE`,
+		guildID,
+	).Scan(&rpResetAt); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if !rpResetAt.Before(noon) {
+		// Another goroutine already rolled over; nothing to do.
+		_ = tx.Rollback()
+		return nil
 	}
 	if _, err := tx.Exec(
 		`UPDATE guild_characters SET rp_yesterday = rp_today, rp_today = 0 WHERE guild_id = $1`,
