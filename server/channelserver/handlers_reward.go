@@ -12,7 +12,8 @@ func handleMsgMhfGetAdditionalBeatReward(s *Session, p mhfpacket.MHFPacket) {
 	// Actual response in packet captures are all just giant batches of null bytes
 	// I'm assuming this is because it used to be tied to an actual event and
 	// they never bothered killing off the packet when they made it static
-	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0x104))
+	const beatRewardResponseSize = 0x104
+	doAckBufSucceed(s, pkt.AckHandle, make([]byte, beatRewardResponseSize))
 }
 
 func handleMsgMhfGetUdRankingRewardList(s *Session, p mhfpacket.MHFPacket) {

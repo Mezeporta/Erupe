@@ -19,6 +19,9 @@ func handleMsgMhfRegisterEvent(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 }
 
+// ACK error codes from the MHF client
+const ackEFailed = uint8(0x41) // _ACK_EFAILED = 65
+
 func handleMsgMhfReleaseEvent(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReleaseEvent)
 
@@ -43,7 +46,7 @@ func handleMsgMhfReleaseEvent(s *Session, p mhfpacket.MHFPacket) {
 	s.QueueSendMHF(&mhfpacket.MsgSysAck{
 		AckHandle:        pkt.AckHandle,
 		IsBufferResponse: false,
-		ErrorCode:        0x41,
+		ErrorCode:        ackEFailed,
 		AckData:          []byte{0x00, 0x00, 0x00, 0x00},
 	})
 }
@@ -104,11 +107,11 @@ func handleMsgSysLoadRegister(s *Session, p mhfpacket.MHFPacket) {
 	bf.WriteUint8(pkt.Values)
 	for i := uint8(0); i < pkt.Values; i++ {
 		switch pkt.RegisterID {
-		case 0x40000:
+		case raviRegisterState:
 			bf.WriteUint32(s.server.raviente.state[i])
-		case 0x50000:
+		case raviRegisterSupport:
 			bf.WriteUint32(s.server.raviente.support[i])
-		case 0x60000:
+		case raviRegisterGeneral:
 			bf.WriteUint32(s.server.raviente.register[i])
 		}
 	}
@@ -122,13 +125,13 @@ func (s *Session) notifyRavi() {
 	}
 	var temp mhfpacket.MHFPacket
 	raviNotif := byteframe.NewByteFrame()
-	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: 0x40000}
+	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: raviRegisterState}
 	raviNotif.WriteUint16(uint16(temp.Opcode()))
 	_ = temp.Build(raviNotif, s.clientContext)
-	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: 0x50000}
+	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: raviRegisterSupport}
 	raviNotif.WriteUint16(uint16(temp.Opcode()))
 	_ = temp.Build(raviNotif, s.clientContext)
-	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: 0x60000}
+	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: raviRegisterGeneral}
 	raviNotif.WriteUint16(uint16(temp.Opcode()))
 	_ = temp.Build(raviNotif, s.clientContext)
 	raviNotif.WriteUint16(0x0010) // End it.

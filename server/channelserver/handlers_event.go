@@ -175,7 +175,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 
-		boost.WeekCount = uint8((TimeAdjusted().Unix()-boost.Expiration.Unix())/604800 + 1)
+		boost.WeekCount = uint8((TimeAdjusted().Unix()-boost.Expiration.Unix())/secsPerWeek + 1)
 
 		if boost.WeekCount >= boost.WeekReq {
 			boost.Active = true

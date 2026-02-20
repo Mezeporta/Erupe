@@ -312,7 +312,7 @@ func (s *Server) BroadcastChatMessage(message string) {
 	msgBinChat := &binpacket.MsgBinChat{
 		Unk0:       0,
 		Type:       5,
-		Flags:      0x80,
+		Flags:      chatFlagServer,
 		Message:    message,
 		SenderName: s.name,
 	}
@@ -420,8 +420,15 @@ func (s *Server) HasSemaphore(ses *Session) bool {
 	return false
 }
 
+// Server ID arithmetic constants
+const (
+	serverIDHighMask = uint16(0xFF00)
+	serverIDBase     = 0x1000 // first server ID offset
+	serverIDStride   = 0x100  // spacing between server IDs
+)
+
 // Season returns the current in-game season (0-2) based on server ID and time.
 func (s *Server) Season() uint8 {
-	sid := int64(((s.ID & 0xFF00) - 4096) / 256)
-	return uint8(((TimeAdjusted().Unix() / 86400) + sid) % 3)
+	sid := int64(((s.ID & serverIDHighMask) - serverIDBase) / serverIDStride)
+	return uint8(((TimeAdjusted().Unix() / secsPerDay) + sid) % 3)
 }

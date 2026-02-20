@@ -96,6 +96,22 @@ func saveCharacterData(s *Session, ackHandle uint32, column string, data []byte,
 	doAckSimpleSucceed(s, ackHandle, make([]byte, 4))
 }
 
+// readCharacterInt reads a single integer column from the characters table.
+// Returns 0 for NULL columns via COALESCE.
+func readCharacterInt(s *Session, column string) (int, error) {
+	var value int
+	err := s.server.db.QueryRow("SELECT COALESCE("+column+", 0) FROM characters WHERE id=$1", s.charID).Scan(&value)
+	return value, err
+}
+
+// adjustCharacterInt atomically adds delta to an integer column and returns the new value.
+// Handles NULL columns via COALESCE (NULL + delta = delta).
+func adjustCharacterInt(s *Session, column string, delta int) (int, error) {
+	var value int
+	err := s.server.db.QueryRow("UPDATE characters SET "+column+"=COALESCE("+column+", 0)+$1 WHERE id=$2 RETURNING "+column, delta, s.charID).Scan(&value)
+	return value, err
+}
+
 func updateRights(s *Session) {
 	rightsInt := uint32(2)
 	_ = s.server.db.QueryRow("SELECT rights FROM users WHERE id=$1", s.userID).Scan(&rightsInt)

@@ -15,7 +15,7 @@ import (
 const (
 	divaPhaseDuration = 601200  // 6d 23h = first song phase
 	divaInterlude     = 3900    // 65 min = gap between phases
-	divaWeekDuration  = 604800  // 7 days = subsequent phase length
+	divaWeekDuration  = secsPerWeek // 7 days = subsequent phase length
 	divaTotalLifespan = 2977200 // ~34.5 days = full event window
 )
 
@@ -76,7 +76,8 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
 	bf := byteframe.NewByteFrame()
 
-	id, start := uint32(0xCAFEBEEF), uint32(0)
+	const divaIDSentinel = uint32(0xCAFEBEEF)
+	id, start := divaIDSentinel, uint32(0)
 	rows, err := s.server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='diva'")
 	if err != nil {
 		s.logger.Error("Failed to query diva schedule", zap.Error(err))

@@ -4,7 +4,6 @@ import (
 	"erupe-ce/common/byteframe"
 	_config "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
-	"fmt"
 	"math/bits"
 	"time"
 
@@ -23,7 +22,9 @@ func handleMsgMhfGetEtcPoints(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	var bonusQuests, dailyQuests, promoPoints uint32
-	_ = s.server.db.QueryRow(`SELECT bonus_quests, daily_quests, promo_points FROM characters WHERE id = $1`, s.charID).Scan(&bonusQuests, &dailyQuests, &promoPoints)
+	if err := s.server.db.QueryRow(`SELECT bonus_quests, daily_quests, promo_points FROM characters WHERE id = $1`, s.charID).Scan(&bonusQuests, &dailyQuests, &promoPoints); err != nil {
+		s.logger.Error("Failed to get etc points", zap.Error(err))
+	}
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint8(3) // Maybe a count of uint32(s)?
 	resp.WriteUint32(bonusQuests)
@@ -48,17 +49,11 @@ func handleMsgMhfUpdateEtcPoint(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	var value int16
-	err := s.server.db.QueryRow(fmt.Sprintf(`SELECT %s FROM characters WHERE id = $1`, column), s.charID).Scan(&value)
+	value, err := readCharacterInt(s, column)
 	if err == nil {
-		if value+pkt.Delta < 0 {
-			if _, err := s.server.db.Exec(fmt.Sprintf(`UPDATE characters SET %s = 0 WHERE id = $1`, column), s.charID); err != nil {
-				s.logger.Error("Failed to reset etc point", zap.Error(err))
-			}
-		} else {
-			if _, err := s.server.db.Exec(fmt.Sprintf(`UPDATE characters SET %s = %s + $1 WHERE id = $2`, column, column), pkt.Delta, s.charID); err != nil {
-				s.logger.Error("Failed to update etc point", zap.Error(err))
-			}
+		newVal := max(value+int(pkt.Delta), 0)
+		if _, err := s.server.db.Exec("UPDATE characters SET "+column+"=$1 WHERE id=$2", newVal, s.charID); err != nil {
+			s.logger.Error("Failed to update etc point", zap.Error(err))
 		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -156,13 +151,20 @@ func handleMsgMhfGetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfSetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {}
 
+// Equip skin history buffer sizes per game version
+const (
+	skinHistSizeZZ = 3200 // ZZ and newer
+	skinHistSizeZ2 = 2560 // Z2 and older
+	skinHistSizeZ1 = 1280 // Z1 and older
+)
+
 func equipSkinHistSize(mode _config.Mode) int {
-	size := 3200
+	size := skinHistSizeZZ
 	if mode <= _config.Z2 {
-		size = 2560
+		size = skinHistSizeZ2
 	}
 	if mode <= _config.Z1 {
-		size = 1280
+		size = skinHistSizeZ1
 	}
 	return size
 }
@@ -245,7 +247,8 @@ func handleMsgMhfGetLobbyCrowd(s *Session, p mhfpacket.MHFPacket) {
 	// It can be worried about later if we ever get to the point where there are
 	// full servers to actually need to migrate people from and empty ones to
 	pkt := p.(*mhfpacket.MsgMhfGetLobbyCrowd)
-	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0x320))
+	const lobbyCrowdResponseSize = 0x320
+	doAckBufSucceed(s, pkt.AckHandle, make([]byte, lobbyCrowdResponseSize))
 }
 
 // TrendWeapon represents trending weapon usage data.

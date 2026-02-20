@@ -56,8 +56,9 @@ func handleMsgMhfGetGuildMissionList(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetGuildMissionRecord(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildMissionRecord)
 
-	// No guild mission records = 0x190 empty bytes
-	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0x190))
+	const guildMissionRecordSize = 0x190
+	// No guild mission records = empty buffer
+	doAckBufSucceed(s, pkt.AckHandle, make([]byte, guildMissionRecordSize))
 }
 
 func handleMsgMhfAddGuildMissionCount(s *Session, p mhfpacket.MHFPacket) {

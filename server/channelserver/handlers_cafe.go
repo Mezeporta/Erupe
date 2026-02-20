@@ -14,25 +14,23 @@ import (
 
 func handleMsgMhfAcquireCafeItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireCafeItem)
-	var netcafePoints uint32
-	err := s.server.db.QueryRow("UPDATE characters SET netcafe_points = netcafe_points - $1 WHERE id = $2 RETURNING netcafe_points", pkt.PointCost, s.charID).Scan(&netcafePoints)
+	netcafePoints, err := adjustCharacterInt(s, "netcafe_points", -int(pkt.PointCost))
 	if err != nil {
-		s.logger.Error("Failed to get netcafe points from db", zap.Error(err))
+		s.logger.Error("Failed to deduct netcafe points", zap.Error(err))
 	}
 	resp := byteframe.NewByteFrame()
-	resp.WriteUint32(netcafePoints)
+	resp.WriteUint32(uint32(netcafePoints))
 	doAckSimpleSucceed(s, pkt.AckHandle, resp.Data())
 }
 
 func handleMsgMhfUpdateCafepoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateCafepoint)
-	var netcafePoints uint32
-	err := s.server.db.QueryRow("SELECT COALESCE(netcafe_points, 0) FROM characters WHERE id = $1", s.charID).Scan(&netcafePoints)
+	netcafePoints, err := readCharacterInt(s, "netcafe_points")
 	if err != nil {
-		s.logger.Error("Failed to get netcate points from db", zap.Error(err))
+		s.logger.Error("Failed to get netcafe points", zap.Error(err))
 	}
 	resp := byteframe.NewByteFrame()
-	resp.WriteUint32(netcafePoints)
+	resp.WriteUint32(uint32(netcafePoints))
 	doAckSimpleSucceed(s, pkt.AckHandle, resp.Data())
 }
 
@@ -93,17 +91,16 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	var cafeTime uint32
-	err = s.server.db.QueryRow("SELECT cafe_time FROM characters WHERE id = $1", s.charID).Scan(&cafeTime)
+	cafeTime, err := readCharacterInt(s, "cafe_time")
 	if err != nil {
 		s.logger.Error("Failed to get cafe time", zap.Error(err))
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 	if mhfcourse.CourseExists(30, s.courses) {
-		cafeTime = uint32(TimeAdjusted().Unix()) - uint32(s.sessionStart) + cafeTime
+		cafeTime = int(TimeAdjusted().Unix()) - int(s.sessionStart) + cafeTime
 	}
-	bf.WriteUint32(cafeTime)
+	bf.WriteUint32(uint32(cafeTime))
 	if s.server.erupeConfig.RealClientMode >= _config.ZZ {
 		bf.WriteUint16(0)
 		ps.Uint16(bf, fmt.Sprintf(s.server.i18n.cafe.reset, int(cafeReset.Month()), cafeReset.Day()), true)
@@ -218,16 +215,11 @@ func handleMsgMhfPostCafeDurationBonusReceived(s *Session, p mhfpacket.MHFPacket
 }
 
 func addPointNetcafe(s *Session, p int) error {
-	var points int
-	err := s.server.db.QueryRow("SELECT netcafe_points FROM characters WHERE id = $1", s.charID).Scan(&points)
+	points, err := readCharacterInt(s, "netcafe_points")
 	if err != nil {
 		return err
 	}
-	if points+p > s.server.erupeConfig.GameplayOptions.MaximumNP {
-		points = s.server.erupeConfig.GameplayOptions.MaximumNP
-	} else {
-		points += p
-	}
+	points = min(points+p, s.server.erupeConfig.GameplayOptions.MaximumNP)
 	if _, err := s.server.db.Exec("UPDATE characters SET netcafe_points=$1 WHERE id=$2", points, s.charID); err != nil {
 		s.logger.Error("Failed to update netcafe points", zap.Error(err))
 	}

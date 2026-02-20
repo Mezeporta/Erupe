@@ -34,9 +34,19 @@ func handleMsgMhfLoadPlateData(s *Session, p mhfpacket.MHFPacket) {
 	loadCharacterData(s, pkt.AckHandle, "platedata", nil)
 }
 
+// Plate data size constants
+const (
+	plateDataMaxPayload  = 262144 // max compressed platedata size
+	plateDataEmptySize   = 140000 // empty platedata buffer
+	plateBoxMaxPayload   = 32768  // max compressed platebox size
+	plateBoxEmptySize    = 4800   // empty platebox buffer
+	plateMysetDefaultLen = 1920   // default platemyset buffer
+	plateMysetMaxPayload = 4096   // max platemyset payload size
+)
+
 func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateData)
-	if len(pkt.RawDataPayload) > 262144 {
+	if len(pkt.RawDataPayload) > plateDataMaxPayload {
 		s.logger.Warn("PlateData payload too large", zap.Int("len", len(pkt.RawDataPayload)))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -78,7 +88,7 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 			}
 		} else {
 			// create empty save if absent
-			data = make([]byte, 140000)
+			data = make([]byte, plateDataEmptySize)
 		}
 
 		// Perform diff and compress it to write back to db
@@ -144,7 +154,7 @@ func handleMsgMhfLoadPlateBox(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateBox)
-	if len(pkt.RawDataPayload) > 32768 {
+	if len(pkt.RawDataPayload) > plateBoxMaxPayload {
 		s.logger.Warn("PlateBox payload too large", zap.Int("len", len(pkt.RawDataPayload)))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -173,7 +183,7 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 			}
 		} else {
 			// create empty save if absent
-			data = make([]byte, 4800)
+			data = make([]byte, plateBoxEmptySize)
 		}
 
 		// Perform diff and compress it to write back to db
@@ -213,12 +223,12 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfLoadPlateMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadPlateMyset)
-	loadCharacterData(s, pkt.AckHandle, "platemyset", make([]byte, 1920))
+	loadCharacterData(s, pkt.AckHandle, "platemyset", make([]byte, plateMysetDefaultLen))
 }
 
 func handleMsgMhfSavePlateMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateMyset)
-	if len(pkt.RawDataPayload) > 4096 {
+	if len(pkt.RawDataPayload) > plateMysetMaxPayload {
 		s.logger.Warn("PlateMyset payload too large", zap.Int("len", len(pkt.RawDataPayload)))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return

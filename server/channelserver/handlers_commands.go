@@ -44,6 +44,8 @@ func sendDisabledCommandMessage(s *Session, cmd _config.Command) {
 	sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.disabled, cmd.Name))
 }
 
+const chatFlagServer = 0x80 // marks a message as server-originated
+
 func sendServerChatMessage(s *Session, message string) {
 	// Make the inside of the casted binary
 	bf := byteframe.NewByteFrame()
@@ -51,7 +53,7 @@ func sendServerChatMessage(s *Session, message string) {
 	msgBinChat := &binpacket.MsgBinChat{
 		Unk0:       0,
 		Type:       5,
-		Flags:      0x80,
+		Flags:      chatFlagServer,
 		Message:    message,
 		SenderName: "Erupe",
 	}

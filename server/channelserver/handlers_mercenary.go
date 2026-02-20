@@ -41,11 +41,17 @@ func handleMsgMhfLoadLegendDispatch(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
+// Hunter Navi buffer sizes per game version
+const (
+	hunterNaviSizeG8 = 552 // G8+ navi buffer size
+	hunterNaviSizeG7 = 280 // G7 and older navi buffer size
+)
+
 func handleMsgMhfLoadHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadHunterNavi)
-	naviLength := 552
+	naviLength := hunterNaviSizeG8
 	if s.server.erupeConfig.RealClientMode <= _config.G7 {
-		naviLength = 280
+		naviLength = hunterNaviSizeG7
 	}
 	loadCharacterData(s, pkt.AckHandle, "hunternavi", make([]byte, naviLength))
 }
@@ -67,9 +73,9 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 
 	var dataSize int
 	if pkt.IsDataDiff {
-		naviLength := 552
+		naviLength := hunterNaviSizeG8
 		if s.server.erupeConfig.RealClientMode <= _config.G7 {
-			naviLength = 280
+			naviLength = hunterNaviSizeG7
 		}
 		var data []byte
 		// Load existing save
@@ -203,13 +209,13 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryW)
 	bf := byteframe.NewByteFrame()
 
-	var pactID, cid uint32
+	var cid uint32
 	var name string
-	_ = s.server.db.QueryRow("SELECT pact_id FROM characters WHERE id=$1", s.charID).Scan(&pactID)
+	pactID, _ := readCharacterInt(s, "pact_id")
 	if pactID > 0 {
 		_ = s.server.db.QueryRow("SELECT name, id FROM characters WHERE rasta_id = $1", pactID).Scan(&name, &cid)
 		bf.WriteUint8(1) // numLends
-		bf.WriteUint32(pactID)
+		bf.WriteUint32(uint32(pactID))
 		bf.WriteUint32(cid)
 		bf.WriteBool(true) // Escort enabled
 		bf.WriteUint32(uint32(TimeAdjusted().Unix()))
@@ -232,7 +238,7 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 					continue
 				}
 				loans++
-				temp.WriteUint32(pactID)
+				temp.WriteUint32(uint32(pactID))
 				temp.WriteUint32(cid)
 				temp.WriteUint32(uint32(TimeAdjusted().Unix()))
 				temp.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * 7).Unix()))
@@ -244,9 +250,8 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 
 		if pkt.Op != 1 && pkt.Op != 4 {
 			var data []byte
-			var gcp uint32
 			_ = s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id=$1", s.charID).Scan(&data)
-			_ = s.server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id=$1", s.charID).Scan(&gcp)
+			gcp, _ := readCharacterInt(s, "gcp")
 
 			if len(data) == 0 {
 				bf.WriteBool(false)
@@ -254,7 +259,7 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteBool(true)
 				bf.WriteBytes(data)
 			}
-			bf.WriteUint32(gcp)
+			bf.WriteUint32(uint32(gcp))
 		}
 	}
 

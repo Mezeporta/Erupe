@@ -150,32 +150,16 @@ There is no repository layer, no service layer — just handlers.
 
 ---
 
-## 4. Magic Numbers Everywhere
+## 4. ~~Magic Numbers Everywhere~~ (Substantially Fixed)
 
-Binary protocol code is full of unexplained numeric literals with no named constants or comments:
+**Status:** Two rounds of extraction have replaced the highest-impact magic numbers with named constants:
 
-```go
-// handlers_cast_binary.go
-bf.WriteUint8(0x02)
-bf.WriteUint16(0x00)
-bf.Seek(4, io.SeekStart)
-```
+- **Round 1** (commit `7c444b0`): `constants_quest.go`, `handlers_guild_info.go`, `handlers_quest.go`, `handlers_rengoku.go`, `handlers_session.go`, `model_character.go`
+- **Round 2**: `constants_time.go` (shared `secsPerDay`, `secsPerWeek`), `constants_raviente.go` (register IDs, semaphore constants), plus constants in `handlers_register.go`, `handlers_semaphore.go`, `handlers_session.go`, `handlers_festa.go`, `handlers_diva.go`, `handlers_event.go`, `handlers_mercenary.go`, `handlers_misc.go`, `handlers_plate.go`, `handlers_cast_binary.go`, `handlers_commands.go`, `handlers_reward.go`, `handlers_guild_mission.go`, `sys_channel_server.go`
 
-```go
-// handlers_data.go
-if dataLen > 0x20000 { ... }
-```
+**Remaining:** Unknown protocol fields (e.g., `handlers_diva.go:112-115` `0x19, 0x2D, 0x02, 0x02`) are intentionally left as literals until their meaning is understood. Data tables (monster point tables, item IDs) are data, not protocol constants. Standard empty ACK payloads (`make([]byte, 4)`) are idiomatic Go.
 
-```go
-// Various handlers
-bf.WriteUint32(0x0A218EAD)  // What is this?
-```
-
-Packet field offsets, sizes, flags, and game constants appear as raw numbers throughout.
-
-**Impact:** New contributors can't understand what these values mean. Protocol documentation exists only in the developer's memory. Bugs from using the wrong constant are hard to catch.
-
-**Recommendation:** Define named constants in relevant packages (e.g., `const MaxDataChunkSize = 0x20000`, `const CastBinaryTypePosition = 0x02`).
+**Impact:** ~~New contributors can't understand what these values mean.~~ Most protocol-meaningful constants now have names and comments.
 
 ---
 
@@ -318,7 +302,7 @@ Database operations use raw `database/sql` with PostgreSQL-specific syntax throu
 | Severity | Anti-patterns |
 |----------|--------------|
 | **High** | ~~Missing ACK responses / softlocks (#2)~~ **Fixed**, no architectural layering (#3), tight DB coupling (#13) |
-| **Medium** | Magic numbers (#4), ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, raw SQL duplication (#9) |
+| **Medium** | ~~Magic numbers (#4)~~ **Fixed**, ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, raw SQL duplication (#9) |
 | **Low** | God files (#1), ~~`init()` registration (#10)~~ **Fixed**, ~~inconsistent logging (#12)~~ **Fixed**, mutex granularity (#7), ~~panic-based flow (#11)~~ **Fixed** |
 
 ### Root Cause

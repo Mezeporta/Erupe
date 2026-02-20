@@ -34,8 +34,13 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCastBinary)
 	tmp := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
 
-	if pkt.BroadcastType == BroadcastTypeStage && pkt.MessageType == BinaryMessageTypeData && len(pkt.RawDataPayload) == 0x10 {
-		if tmp.ReadUint16() == 0x0002 && tmp.ReadUint8() == 0x18 {
+	const (
+		timerPayloadSize = 0x10         // expected payload length for timer packets
+		timerSubtype     = uint16(0x0002) // timer data subtype identifier
+		timerFlag        = uint8(0x18)   // timer flag byte
+	)
+	if pkt.BroadcastType == BroadcastTypeStage && pkt.MessageType == BinaryMessageTypeData && len(pkt.RawDataPayload) == timerPayloadSize {
+		if tmp.ReadUint16() == timerSubtype && tmp.ReadUint8() == timerFlag {
 			var timer bool
 			if err := s.server.db.QueryRow(`SELECT COALESCE(timer, false) FROM users WHERE id=$1`, s.userID).Scan(&timer); err != nil {
 				s.logger.Error("Failed to get timer setting", zap.Error(err))

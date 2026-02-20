@@ -103,6 +103,13 @@ func cleanupFesta(s *Session) {
 	}
 }
 
+// Festa timing constants (all values in seconds)
+const (
+	festaVotingDuration = 9000    // 150 min voting window
+	festaRewardDuration = 1240200 // ~14.35 days reward period
+	festaEventLifespan  = 2977200 // ~34.5 days total event window
+)
+
 func generateFestaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 	timestamps := make([]uint32, 5)
 	midnight := TimeMidnight()
@@ -111,26 +118,26 @@ func generateFestaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		switch start {
 		case 1:
 			timestamps[0] = midnight
-			timestamps[1] = timestamps[0] + 604800
-			timestamps[2] = timestamps[1] + 604800
-			timestamps[3] = timestamps[2] + 9000
-			timestamps[4] = timestamps[3] + 1240200
+			timestamps[1] = timestamps[0] + secsPerWeek
+			timestamps[2] = timestamps[1] + secsPerWeek
+			timestamps[3] = timestamps[2] + festaVotingDuration
+			timestamps[4] = timestamps[3] + festaRewardDuration
 		case 2:
-			timestamps[0] = midnight - 604800
+			timestamps[0] = midnight - secsPerWeek
 			timestamps[1] = midnight
-			timestamps[2] = timestamps[1] + 604800
-			timestamps[3] = timestamps[2] + 9000
-			timestamps[4] = timestamps[3] + 1240200
+			timestamps[2] = timestamps[1] + secsPerWeek
+			timestamps[3] = timestamps[2] + festaVotingDuration
+			timestamps[4] = timestamps[3] + festaRewardDuration
 		case 3:
-			timestamps[0] = midnight - 1209600
-			timestamps[1] = midnight - 604800
+			timestamps[0] = midnight - 2*secsPerWeek
+			timestamps[1] = midnight - secsPerWeek
 			timestamps[2] = midnight
-			timestamps[3] = timestamps[2] + 9000
-			timestamps[4] = timestamps[3] + 1240200
+			timestamps[3] = timestamps[2] + festaVotingDuration
+			timestamps[4] = timestamps[3] + festaRewardDuration
 		}
 		return timestamps
 	}
-	if start == 0 || TimeAdjusted().Unix() > int64(start)+2977200 {
+	if start == 0 || TimeAdjusted().Unix() > int64(start)+festaEventLifespan {
 		cleanupFesta(s)
 		// Generate a new festa, starting midnight tomorrow
 		start = uint32(midnight.Add(24 * time.Hour).Unix())
@@ -139,10 +146,10 @@ func generateFestaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		}
 	}
 	timestamps[0] = start
-	timestamps[1] = timestamps[0] + 604800
-	timestamps[2] = timestamps[1] + 604800
-	timestamps[3] = timestamps[2] + 9000
-	timestamps[4] = timestamps[3] + 1240200
+	timestamps[1] = timestamps[0] + secsPerWeek
+	timestamps[2] = timestamps[1] + secsPerWeek
+	timestamps[3] = timestamps[2] + festaVotingDuration
+	timestamps[4] = timestamps[3] + festaRewardDuration
 	return timestamps
 }
 
@@ -174,7 +181,8 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfInfoFesta)
 	bf := byteframe.NewByteFrame()
 
-	id, start := uint32(0xDEADBEEF), uint32(0)
+	const festaIDSentinel = uint32(0xDEADBEEF)
+	id, start := festaIDSentinel, uint32(0)
 	rows, err := s.server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='festa'")
 	if err != nil {
 		s.logger.Error("Failed to query festa schedule", zap.Error(err))
@@ -342,7 +350,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 		var guildID uint32
 		var guildName string
 		var guildTeam = FestivalColorNone
-		offset := 86400 * uint32(i)
+		offset := secsPerDay * uint32(i)
 		if err := s.server.db.QueryRow(`
 				SELECT fs.guild_id, g.name, fr.team, SUM(fs.souls) as _
 				FROM festa_submissions fs
@@ -351,7 +359,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 				WHERE EXTRACT(EPOCH FROM fs.timestamp)::int > $1 AND EXTRACT(EPOCH FROM fs.timestamp)::int < $2
 				GROUP BY fs.guild_id, g.name, fr.team
 				ORDER BY _ DESC LIMIT 1
-			`, timestamps[1]+offset, timestamps[1]+offset+86400).Scan(&guildID, &guildName, &guildTeam, &temp); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			`, timestamps[1]+offset, timestamps[1]+offset+secsPerDay).Scan(&guildID, &guildName, &guildTeam, &temp); err != nil && !errors.Is(err, sql.ErrNoRows) {
 			s.logger.Error("Failed to get festa daily ranking", zap.Error(err))
 		}
 		bf.WriteUint32(guildID)

@@ -79,9 +79,9 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 			suffix, _ := strconv.Atoi(pkt.SemaphoreID[len(pkt.SemaphoreID)-1:])
 			s.server.semaphore[SemaphoreID] = &Semaphore{
 				name:       pkt.SemaphoreID,
-				id:         uint32((suffix + 1) * 0x10000),
+				id:         uint32((suffix + 1) * raviSemaphoreStride),
 				clients:    make(map[*Session]uint32),
-				maxPlayers: 127,
+				maxPlayers: raviSemaphoreMax,
 			}
 		} else {
 			s.server.semaphore[SemaphoreID] = NewSemaphore(s, SemaphoreID, 1)

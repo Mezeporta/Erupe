@@ -394,6 +394,8 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
+const localhostAddrLE = uint32(0x0100007F) // 127.0.0.1 in little-endian
+
 // Kill log binary layout constants
 const (
 	killLogHeaderSize   = 32  // bytes before monster kill count array
@@ -557,7 +559,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			if !local {
 				resp.WriteUint32(binary.LittleEndian.Uint32(r.ip))
 			} else {
-				resp.WriteUint32(0x0100007F)
+				resp.WriteUint32(localhostAddrLE)
 			}
 			resp.WriteUint16(r.port)
 			resp.WriteUint32(r.charID)
@@ -757,7 +759,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			if !local {
 				resp.WriteUint32(binary.LittleEndian.Uint32(sr.ip))
 			} else {
-				resp.WriteUint32(0x0100007F)
+				resp.WriteUint32(localhostAddrLE)
 			}
 			resp.WriteUint16(sr.port)
 
