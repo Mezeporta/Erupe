@@ -163,12 +163,18 @@ func handleMsgMhfEnumerateMercenaryLog(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCreateMercenary)
-	bf := byteframe.NewByteFrame()
 	var nextID uint32
-	_ = s.server.db.QueryRow("SELECT nextval('rasta_id_seq')").Scan(&nextID)
+	if err := s.server.db.QueryRow("SELECT nextval('rasta_id_seq')").Scan(&nextID); err != nil {
+		s.logger.Error("Failed to get next rasta ID", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
+	}
 	if _, err := s.server.db.Exec("UPDATE characters SET rasta_id=$1 WHERE id=$2", nextID, s.charID); err != nil {
 		s.logger.Error("Failed to set rasta ID", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
 	}
+	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(nextID)
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 }
@@ -315,7 +321,11 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		dataLen := bf.ReadUint32()
 		catID := bf.ReadUint32()
 		if catID == 0 {
-			_ = s.server.db.QueryRow("SELECT nextval('airou_id_seq')").Scan(&catID)
+			if err := s.server.db.QueryRow("SELECT nextval('airou_id_seq')").Scan(&catID); err != nil {
+				s.logger.Error("Failed to get next airou ID", zap.Error(err))
+				doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+				return
+			}
 		}
 		exists := bf.ReadBool()
 		data := bf.ReadBytes(uint(dataLen) - 5)

@@ -55,7 +55,7 @@ func handleMsgMhfGetGachaPlayHistory(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetGachaPoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGachaPoint)
 	var fp, gp, gt uint32
-	_ = s.server.db.QueryRow("SELECT COALESCE(frontier_points, 0), COALESCE(gacha_premium, 0), COALESCE(gacha_trial, 0) FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)", s.charID).Scan(&fp, &gp, &gt)
+	_ = s.server.db.QueryRow("SELECT COALESCE(frontier_points, 0), COALESCE(gacha_premium, 0), COALESCE(gacha_trial, 0) FROM users WHERE id=$1", s.userID).Scan(&fp, &gp, &gt)
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint32(gp)
 	resp.WriteUint32(gt)
@@ -66,12 +66,12 @@ func handleMsgMhfGetGachaPoint(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUseGachaPoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUseGachaPoint)
 	if pkt.TrialCoins > 0 {
-		if _, err := s.server.db.Exec(`UPDATE users u SET gacha_trial=gacha_trial-$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, pkt.TrialCoins, s.charID); err != nil {
+		if _, err := s.server.db.Exec(`UPDATE users SET gacha_trial=gacha_trial-$1 WHERE id=$2`, pkt.TrialCoins, s.userID); err != nil {
 			s.logger.Error("Failed to deduct gacha trial coins", zap.Error(err))
 		}
 	}
 	if pkt.PremiumCoins > 0 {
-		if _, err := s.server.db.Exec(`UPDATE users u SET gacha_premium=gacha_premium-$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, pkt.PremiumCoins, s.charID); err != nil {
+		if _, err := s.server.db.Exec(`UPDATE users SET gacha_premium=gacha_premium-$1 WHERE id=$2`, pkt.PremiumCoins, s.userID); err != nil {
 			s.logger.Error("Failed to deduct gacha premium coins", zap.Error(err))
 		}
 	}
@@ -80,13 +80,13 @@ func handleMsgMhfUseGachaPoint(s *Session, p mhfpacket.MHFPacket) {
 
 func spendGachaCoin(s *Session, quantity uint16) {
 	var gt uint16
-	_ = s.server.db.QueryRow(`SELECT COALESCE(gacha_trial, 0) FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&gt)
+	_ = s.server.db.QueryRow(`SELECT COALESCE(gacha_trial, 0) FROM users WHERE id=$1`, s.userID).Scan(&gt)
 	if quantity <= gt {
-		if _, err := s.server.db.Exec(`UPDATE users u SET gacha_trial=gacha_trial-$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, quantity, s.charID); err != nil {
+		if _, err := s.server.db.Exec(`UPDATE users SET gacha_trial=gacha_trial-$1 WHERE id=$2`, quantity, s.userID); err != nil {
 			s.logger.Error("Failed to deduct gacha trial coins", zap.Error(err))
 		}
 	} else {
-		if _, err := s.server.db.Exec(`UPDATE users u SET gacha_premium=gacha_premium-$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, quantity, s.charID); err != nil {
+		if _, err := s.server.db.Exec(`UPDATE users SET gacha_premium=gacha_premium-$1 WHERE id=$2`, quantity, s.userID); err != nil {
 			s.logger.Error("Failed to deduct gacha premium coins", zap.Error(err))
 		}
 	}
@@ -117,7 +117,7 @@ func transactGacha(s *Session, gachaID uint32, rollID uint8) (int, error) {
 	case 20:
 		spendGachaCoin(s, itemNumber)
 	case 21:
-		if _, err := s.server.db.Exec("UPDATE users u SET frontier_points=frontier_points-$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", itemNumber, s.charID); err != nil {
+		if _, err := s.server.db.Exec("UPDATE users SET frontier_points=frontier_points-$1 WHERE id=$2", itemNumber, s.userID); err != nil {
 			s.logger.Error("Failed to deduct frontier points for gacha", zap.Error(err))
 		}
 	}
@@ -289,7 +289,7 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
 		return
 	}
-	if _, err := s.server.db.Exec("UPDATE users u SET frontier_points=frontier_points+(SELECT frontier_points FROM gacha_entries WHERE gacha_id = $1 AND entry_type = $2) WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$3)", pkt.GachaID, pkt.RollType, s.charID); err != nil {
+	if _, err := s.server.db.Exec("UPDATE users SET frontier_points=frontier_points+(SELECT frontier_points FROM gacha_entries WHERE gacha_id = $1 AND entry_type = $2) WHERE id=$3", pkt.GachaID, pkt.RollType, s.userID); err != nil {
 		s.logger.Error("Failed to award stepup gacha frontier points", zap.Error(err))
 	}
 	if _, err := s.server.db.Exec(`DELETE FROM gacha_stepup WHERE gacha_id = $1 AND character_id = $2`, pkt.GachaID, s.charID); err != nil {

@@ -56,7 +56,11 @@ func handleMsgMhfRegistGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Error("Failed to update guild meal", zap.Error(err))
 		}
 	} else {
-		_ = s.server.db.QueryRow("INSERT INTO guild_meals (guild_id, meal_id, level, created_at) VALUES ($1, $2, $3, $4) RETURNING id", guild.ID, pkt.MealID, pkt.Success, startTime).Scan(&pkt.OverwriteID)
+		if err := s.server.db.QueryRow("INSERT INTO guild_meals (guild_id, meal_id, level, created_at) VALUES ($1, $2, $3, $4) RETURNING id", guild.ID, pkt.MealID, pkt.Success, startTime).Scan(&pkt.OverwriteID); err != nil {
+			s.logger.Error("Failed to insert guild meal", zap.Error(err))
+			doAckBufFail(s, pkt.AckHandle, nil)
+			return
+		}
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(1)

@@ -160,10 +160,12 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadHouse)
 	bf := byteframe.NewByteFrame()
 
-	var state uint8
+	state := uint8(2) // Default to password-protected if DB fails
 	var password string
-	_ = s.server.db.QueryRow(`SELECT COALESCE(house_state, 2) as house_state, COALESCE(house_password, '') as house_password FROM user_binary WHERE id=$1
-	`, pkt.CharID).Scan(&state, &password)
+	if err := s.server.db.QueryRow(`SELECT COALESCE(house_state, 2) as house_state, COALESCE(house_password, '') as house_password FROM user_binary WHERE id=$1
+	`, pkt.CharID).Scan(&state, &password); err != nil {
+		s.logger.Error("Failed to read house state", zap.Error(err))
+	}
 
 	if pkt.Destination != 9 && len(pkt.Password) > 0 && pkt.CheckPass {
 		if pkt.Password != password {

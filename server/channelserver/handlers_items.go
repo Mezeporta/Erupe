@@ -192,7 +192,7 @@ func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {}
 func userGetItems(s *Session) []mhfitem.MHFItemStack {
 	var data []byte
 	var items []mhfitem.MHFItemStack
-	_ = s.server.db.QueryRow(`SELECT item_box FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&data)
+	_ = s.server.db.QueryRow(`SELECT item_box FROM users WHERE id=$1`, s.userID).Scan(&data)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()
@@ -215,7 +215,7 @@ func handleMsgMhfEnumerateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateUnionItem)
 	newStacks := mhfitem.DiffItemStacks(userGetItems(s), pkt.UpdatedItems)
-	if _, err := s.server.db.Exec(`UPDATE users u SET item_box=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)`, mhfitem.SerializeWarehouseItems(newStacks), s.charID); err != nil {
+	if _, err := s.server.db.Exec(`UPDATE users SET item_box=$1 WHERE id=$2`, mhfitem.SerializeWarehouseItems(newStacks), s.userID); err != nil {
 		s.logger.Error("Failed to update union item box", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -270,10 +270,18 @@ func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	var total, redeemed uint16
 	var tktStack mhfitem.MHFItemStack
 	if pkt.ExchangeType == 10 { // Yearly Sub Ex
-		_ = s.server.db.QueryRow("UPDATE stamps SET hl_total=hl_total-48, hl_redeemed=hl_redeemed-48 WHERE character_id=$1 RETURNING hl_total, hl_redeemed", s.charID).Scan(&total, &redeemed)
+		if err := s.server.db.QueryRow("UPDATE stamps SET hl_total=hl_total-48, hl_redeemed=hl_redeemed-48 WHERE character_id=$1 RETURNING hl_total, hl_redeemed", s.charID).Scan(&total, &redeemed); err != nil {
+			s.logger.Error("Failed to update yearly stamp exchange", zap.Error(err))
+			doAckBufFail(s, pkt.AckHandle, nil)
+			return
+		}
 		tktStack = mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: 2210}, Quantity: 1}
 	} else {
-		_ = s.server.db.QueryRow(fmt.Sprintf("UPDATE stamps SET %s_redeemed=%s_redeemed+8 WHERE character_id=$1 RETURNING %s_total, %s_redeemed", pkt.StampType, pkt.StampType, pkt.StampType, pkt.StampType), s.charID).Scan(&total, &redeemed)
+		if err := s.server.db.QueryRow(fmt.Sprintf("UPDATE stamps SET %s_redeemed=%s_redeemed+8 WHERE character_id=$1 RETURNING %s_total, %s_redeemed", pkt.StampType, pkt.StampType, pkt.StampType, pkt.StampType), s.charID).Scan(&total, &redeemed); err != nil {
+			s.logger.Error("Failed to update stamp redemption", zap.Error(err))
+			doAckBufFail(s, pkt.AckHandle, nil)
+			return
+		}
 		if pkt.StampType == "hl" {
 			tktStack = mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: 1630}, Quantity: 5}
 		} else {
@@ -325,7 +333,11 @@ func handleMsgMhfStampcardStamp(s *Session, p mhfpacket.MHFPacket) {
 	}
 	var stamps, rewardTier, rewardUnk uint16
 	reward := mhfitem.MHFItemStack{Item: mhfitem.MHFItem{}}
-	_ = s.server.db.QueryRow(`UPDATE characters SET stampcard = stampcard + $1 WHERE id = $2 RETURNING stampcard`, pkt.Stamps, s.charID).Scan(&stamps)
+	if err := s.server.db.QueryRow(`UPDATE characters SET stampcard = stampcard + $1 WHERE id = $2 RETURNING stampcard`, pkt.Stamps, s.charID).Scan(&stamps); err != nil {
+		s.logger.Error("Failed to update stampcard", zap.Error(err))
+		doAckBufFail(s, pkt.AckHandle, nil)
+		return
+	}
 	bf.WriteUint16(stamps - pkt.Stamps)
 	bf.WriteUint16(stamps)
 

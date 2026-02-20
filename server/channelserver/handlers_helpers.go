@@ -98,7 +98,7 @@ func saveCharacterData(s *Session, ackHandle uint32, column string, data []byte,
 
 func updateRights(s *Session) {
 	rightsInt := uint32(2)
-	_ = s.server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", s.charID).Scan(&rightsInt)
+	_ = s.server.db.QueryRow("SELECT rights FROM users WHERE id=$1", s.userID).Scan(&rightsInt)
 	s.courses, rightsInt = mhfcourse.GetCourseStruct(rightsInt, s.server.erupeConfig.DefaultCourses)
 	update := &mhfpacket.MsgSysUpdateRight{
 		ClientRespAckHandle: 0,

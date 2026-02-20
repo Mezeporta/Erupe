@@ -263,9 +263,17 @@ func handleMsgMhfExchangeFpoint2Item(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeFpoint2Item)
 	var balance uint32
 	var itemValue, quantity int
-	_ = s.server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue)
+	if err := s.server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue); err != nil {
+		s.logger.Error("Failed to read fpoint item cost", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
+	}
 	cost := (int(pkt.Quantity) * quantity) * itemValue
-	_ = s.server.db.QueryRow("UPDATE users u SET frontier_points=frontier_points::int - $1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2) RETURNING frontier_points", cost, s.charID).Scan(&balance)
+	if err := s.server.db.QueryRow("UPDATE users SET frontier_points=frontier_points::int - $1 WHERE id=$2 RETURNING frontier_points", cost, s.userID).Scan(&balance); err != nil {
+		s.logger.Error("Failed to deduct frontier points", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
+	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(balance)
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
@@ -275,9 +283,17 @@ func handleMsgMhfExchangeItem2Fpoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeItem2Fpoint)
 	var balance uint32
 	var itemValue, quantity int
-	_ = s.server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue)
+	if err := s.server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue); err != nil {
+		s.logger.Error("Failed to read fpoint item value", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
+	}
 	cost := (int(pkt.Quantity) / quantity) * itemValue
-	_ = s.server.db.QueryRow("UPDATE users u SET frontier_points=COALESCE(frontier_points::int + $1, $1) WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2) RETURNING frontier_points", cost, s.charID).Scan(&balance)
+	if err := s.server.db.QueryRow("UPDATE users SET frontier_points=COALESCE(frontier_points::int + $1, $1) WHERE id=$2 RETURNING frontier_points", cost, s.userID).Scan(&balance); err != nil {
+		s.logger.Error("Failed to credit frontier points", zap.Error(err))
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
+	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(balance)
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())

@@ -45,6 +45,7 @@ type Session struct {
 	stagePass        string // Temporary storage
 	prevGuildID      uint32 // Stores the last GuildID used in InfoGuild
 	charID           uint32
+	userID           uint32
 	logKey           []byte
 	sessionStart     int64
 	courses          []mhfcourse.Course
@@ -352,7 +353,7 @@ func (s *Session) GetSemaphoreID() uint32 {
 
 func (s *Session) isOp() bool {
 	var op bool
-	err := s.server.db.QueryRow(`SELECT op FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&op)
+	err := s.server.db.QueryRow(`SELECT op FROM users WHERE id=$1`, s.userID).Scan(&op)
 	if err == nil && op {
 		return true
 	}

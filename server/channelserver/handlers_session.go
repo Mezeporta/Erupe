@@ -71,6 +71,12 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	s.token = pkt.LoginTokenString
 	s.Unlock()
 
+	if err := s.server.db.QueryRow("SELECT user_id FROM characters WHERE id=$1", s.charID).Scan(&s.userID); err != nil {
+		s.logger.Error("Failed to resolve user ID for character", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
+
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(TimeAdjusted().Unix())) // Unix timestamp
 
@@ -95,7 +101,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	_, err = s.server.db.Exec("UPDATE users u SET last_character=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)", s.charID)
+	_, err = s.server.db.Exec("UPDATE users SET last_character=$1 WHERE id=$2", s.charID, s.userID)
 	if err != nil {
 		s.logger.Error("Failed to update last character", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -232,7 +238,9 @@ func logoutPlayer(s *Session) {
 	var rpGained int
 
 	if s.charID != 0 {
-		_ = s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed)
+		if err := s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed); err != nil {
+			s.logger.Error("Failed to read time_played, RP accrual may be inaccurate", zap.Error(err))
+		}
 		sessionTime = int(TimeAdjusted().Unix()) - int(s.sessionStart)
 		timePlayed += sessionTime
 
