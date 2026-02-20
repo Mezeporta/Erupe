@@ -3,6 +3,7 @@ package byteframe
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
 	"math"
 	"testing"
@@ -430,18 +431,33 @@ func TestByteFrame_BufferGrowth(t *testing.T) {
 	}
 }
 
-func TestByteFrame_ReadPanic(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Reading beyond buffer should panic")
-		}
-	}()
-
+func TestByteFrame_ReadOverflowSetsError(t *testing.T) {
 	bf := NewByteFrame()
 	bf.WriteUint8(0x01)
 	_, _ = bf.Seek(0, io.SeekStart)
 	bf.ReadUint8()
-	bf.ReadUint16() // Should panic - trying to read 2 bytes when only 1 was written
+
+	if bf.Err() != nil {
+		t.Fatal("Err() should be nil before overflow")
+	}
+
+	// Should set sticky error - trying to read 2 bytes when only 1 was written
+	got := bf.ReadUint16()
+	if got != 0 {
+		t.Errorf("ReadUint16() after overflow = %d, want 0", got)
+	}
+	if bf.Err() == nil {
+		t.Error("Err() should be non-nil after read overflow")
+	}
+	if !errors.Is(bf.Err(), ErrReadOverflow) {
+		t.Errorf("Err() = %v, want ErrReadOverflow", bf.Err())
+	}
+
+	// Subsequent reads should also return zero without changing the error
+	got32 := bf.ReadUint32()
+	if got32 != 0 {
+		t.Errorf("ReadUint32() after overflow = %d, want 0", got32)
+	}
 }
 
 func TestByteFrame_SequentialWrites(t *testing.T) {

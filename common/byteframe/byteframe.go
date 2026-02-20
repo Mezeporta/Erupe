@@ -9,9 +9,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 )
+
+// ErrReadOverflow is returned when a read exceeds the buffer bounds.
+var ErrReadOverflow = errors.New("byteframe: read beyond buffer bounds")
 
 // ByteFrame is a struct for reading and writing raw byte data.
 type ByteFrame struct {
@@ -19,6 +23,7 @@ type ByteFrame struct {
 	usedSize  uint
 	buf       []byte
 	byteOrder binary.ByteOrder
+	err       error // sticky error set on read overflow
 }
 
 // NewByteFrame creates a new ByteFrame with valid default values.
@@ -92,7 +97,14 @@ func (b *ByteFrame) rprologue(size uint) {
 }
 
 func (b *ByteFrame) rerr() {
-	panic("Error while reading!")
+	if b.err == nil {
+		b.err = fmt.Errorf("%w: at index %d, usedSize %d", ErrReadOverflow, b.index, b.usedSize)
+	}
+}
+
+// Err returns the first read error encountered, if any.
+func (b *ByteFrame) Err() error {
+	return b.err
 }
 
 // Seek (implements the io.Seeker interface)
@@ -247,8 +259,12 @@ func (b *ByteFrame) WriteNullTerminatedBytes(x []byte) {
 
 // ReadUint8 reads a uint8 at the current index.
 func (b *ByteFrame) ReadUint8() (x uint8) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(1) {
 		b.rerr()
+		return 0
 	}
 	x = uint8(b.buf[b.index])
 	b.rprologue(1)
@@ -265,8 +281,12 @@ func (b *ByteFrame) ReadBool() (x bool) {
 
 // ReadUint16 reads a uint16 at the current index.
 func (b *ByteFrame) ReadUint16() (x uint16) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(2) {
 		b.rerr()
+		return 0
 	}
 	x = b.byteOrder.Uint16(b.buf[b.index:])
 	b.rprologue(2)
@@ -275,8 +295,12 @@ func (b *ByteFrame) ReadUint16() (x uint16) {
 
 // ReadUint32 reads a uint32 at the current index.
 func (b *ByteFrame) ReadUint32() (x uint32) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(4) {
 		b.rerr()
+		return 0
 	}
 	x = b.byteOrder.Uint32(b.buf[b.index:])
 	b.rprologue(4)
@@ -285,8 +309,12 @@ func (b *ByteFrame) ReadUint32() (x uint32) {
 
 // ReadUint64 reads a uint64 at the current index.
 func (b *ByteFrame) ReadUint64() (x uint64) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(8) {
 		b.rerr()
+		return 0
 	}
 	x = b.byteOrder.Uint64(b.buf[b.index:])
 	b.rprologue(8)
@@ -295,8 +323,12 @@ func (b *ByteFrame) ReadUint64() (x uint64) {
 
 // ReadInt8 reads a int8 at the current index.
 func (b *ByteFrame) ReadInt8() (x int8) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(1) {
 		b.rerr()
+		return 0
 	}
 	x = int8(b.buf[b.index])
 	b.rprologue(1)
@@ -305,8 +337,12 @@ func (b *ByteFrame) ReadInt8() (x int8) {
 
 // ReadInt16 reads a int16 at the current index.
 func (b *ByteFrame) ReadInt16() (x int16) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(2) {
 		b.rerr()
+		return 0
 	}
 	x = int16(b.byteOrder.Uint16(b.buf[b.index:]))
 	b.rprologue(2)
@@ -315,8 +351,12 @@ func (b *ByteFrame) ReadInt16() (x int16) {
 
 // ReadInt32 reads a int32 at the current index.
 func (b *ByteFrame) ReadInt32() (x int32) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(4) {
 		b.rerr()
+		return 0
 	}
 	x = int32(b.byteOrder.Uint32(b.buf[b.index:]))
 	b.rprologue(4)
@@ -325,8 +365,12 @@ func (b *ByteFrame) ReadInt32() (x int32) {
 
 // ReadInt64 reads a int64 at the current index.
 func (b *ByteFrame) ReadInt64() (x int64) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(8) {
 		b.rerr()
+		return 0
 	}
 	x = int64(b.byteOrder.Uint64(b.buf[b.index:]))
 	b.rprologue(8)
@@ -335,8 +379,12 @@ func (b *ByteFrame) ReadInt64() (x int64) {
 
 // ReadFloat32 reads a float32 at the current index.
 func (b *ByteFrame) ReadFloat32() (x float32) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(4) {
 		b.rerr()
+		return 0
 	}
 	x = math.Float32frombits(b.byteOrder.Uint32(b.buf[b.index:]))
 	b.rprologue(4)
@@ -345,8 +393,12 @@ func (b *ByteFrame) ReadFloat32() (x float32) {
 
 // ReadFloat64 reads a float64 at the current index.
 func (b *ByteFrame) ReadFloat64() (x float64) {
+	if b.err != nil {
+		return 0
+	}
 	if !b.rcheck(8) {
 		b.rerr()
+		return 0
 	}
 	x = math.Float64frombits(b.byteOrder.Uint64(b.buf[b.index:]))
 	b.rprologue(8)
@@ -355,8 +407,12 @@ func (b *ByteFrame) ReadFloat64() (x float64) {
 
 // ReadBytes reads `size` many bytes at the current index.
 func (b *ByteFrame) ReadBytes(size uint) (x []byte) {
+	if b.err != nil {
+		return nil
+	}
 	if !b.rcheck(size) {
 		b.rerr()
+		return nil
 	}
 	x = b.buf[b.index : b.index+size]
 	b.rprologue(size)

@@ -1,8 +1,10 @@
 package mhfpacket
 
 import (
-	"erupe-ce/common/byteframe"
+	"fmt"
+
 	"erupe-ce/common/bfutil"
+	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -31,5 +33,5 @@ func (m *MsgSysMoveStage) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientCo
 
 // Build builds a binary packet from the current data.
 func (m *MsgSysMoveStage) Build(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	panic("Not implemented")
+	return fmt.Errorf("MsgSysMoveStage.Build: not implemented")
 }

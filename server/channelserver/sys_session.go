@@ -256,6 +256,14 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 		)
 		return
 	}
+	if bf.Err() != nil {
+		s.logger.Warn("Malformed packet (read overflow during parse)",
+			zap.String("name", s.Name),
+			zap.Stringer("opcode", opcode),
+			zap.Error(bf.Err()),
+		)
+		return
+	}
 	// Handle the packet.
 	handler, ok := s.server.handlerTable[opcode]
 	if !ok {

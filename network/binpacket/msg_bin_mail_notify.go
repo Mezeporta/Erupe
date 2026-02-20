@@ -1,6 +1,8 @@
 package binpacket
 
 import (
+	"fmt"
+
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/stringsupport"
 	"erupe-ce/network"
@@ -13,7 +15,7 @@ type MsgBinMailNotify struct {
 
 // Parse parses the packet from binary.
 func (m MsgBinMailNotify) Parse(bf *byteframe.ByteFrame) error {
-	panic("implement me")
+	return fmt.Errorf("MsgBinMailNotify.Parse: not implemented")
 }
 
 // Build builds a binary packet from the current data.
