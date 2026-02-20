@@ -81,7 +81,7 @@ func NewSession(server *Server, conn net.Conn) *Session {
 		logger:         server.logger.Named(conn.RemoteAddr().String()),
 		server:         server,
 		rawConn:        conn,
-		cryptConn:      network.NewCryptConn(conn, server.erupeConfig.RealClientMode),
+		cryptConn:      network.NewCryptConn(conn, server.erupeConfig.RealClientMode, server.logger.Named(conn.RemoteAddr().String())),
 		sendPackets:    make(chan packet, 20),
 		clientContext:  &clientctx.ClientContext{RealClientMode: server.erupeConfig.RealClientMode},
 		lastPacket:     time.Now(),
@@ -257,7 +257,12 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 		return
 	}
 	// Handle the packet.
-	handlerTable[opcode](s, mhfPkt)
+	handler, ok := s.server.handlerTable[opcode]
+	if !ok {
+		s.logger.Warn("No handler for opcode", zap.Stringer("opcode", opcode))
+		return
+	}
+	handler(s, mhfPkt)
 	// If there is more data on the stream that the .Parse method didn't read, then read another packet off it.
 	remainingData := bf.DataFromCurrent()
 	if len(remainingData) >= 2 {

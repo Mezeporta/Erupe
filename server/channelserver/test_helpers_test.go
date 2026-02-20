@@ -38,10 +38,11 @@ func (m *mockPacket) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext
 func createMockServer() *Server {
 	logger, _ := zap.NewDevelopment()
 	s := &Server{
-		logger:      logger,
-		erupeConfig: &_config.Config{},
-		stages:      make(map[string]*Stage),
-		sessions:    make(map[net.Conn]*Session),
+		logger:       logger,
+		erupeConfig:  &_config.Config{},
+		stages:       make(map[string]*Stage),
+		sessions:     make(map[net.Conn]*Session),
+		handlerTable: buildHandlerTable(),
 		raviente: &Raviente{
 			register: make([]uint32, 30),
 			state:    make([]uint32, 30),

@@ -8,6 +8,7 @@ import (
 
 	"erupe-ce/common/byteframe"
 	_config "erupe-ce/config"
+	"erupe-ce/network"
 	"erupe-ce/network/binpacket"
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/discordbot"
@@ -81,6 +82,8 @@ type Server struct {
 	questCacheLock sync.RWMutex
 	questCacheData map[int][]byte
 	questCacheTime map[int]time.Time
+
+	handlerTable map[network.PacketID]handlerFunc
 }
 
 // NewServer creates a new Server type.
@@ -109,6 +112,7 @@ func NewServer(config *Config) *Server {
 		},
 		questCacheData: make(map[int][]byte),
 		questCacheTime: make(map[int]time.Time),
+		handlerTable:   buildHandlerTable(),
 	}
 
 	// Mezeporta

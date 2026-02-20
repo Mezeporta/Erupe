@@ -7,10 +7,10 @@ import (
 
 type handlerFunc func(s *Session, p mhfpacket.MHFPacket)
 
-var handlerTable map[network.PacketID]handlerFunc
-
-func init() {
-	handlerTable = make(map[network.PacketID]handlerFunc)
+// buildHandlerTable constructs and returns the handler table mapping packet IDs
+// to their handler functions. Called once during server construction.
+func buildHandlerTable() map[network.PacketID]handlerFunc {
+	handlerTable := make(map[network.PacketID]handlerFunc)
 	handlerTable[network.MSG_HEAD] = handleMsgHead
 	handlerTable[network.MSG_SYS_reserve01] = handleMsgSysReserve01
 	handlerTable[network.MSG_SYS_reserve02] = handleMsgSysReserve02
@@ -443,4 +443,5 @@ func init() {
 	handlerTable[network.MSG_SYS_reserve1AD] = handleMsgSysReserve1AD
 	handlerTable[network.MSG_SYS_reserve1AE] = handleMsgSysReserve1AE
 	handlerTable[network.MSG_SYS_reserve1AF] = handleMsgSysReserve1AF
+	return handlerTable
 }
