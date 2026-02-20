@@ -108,8 +108,10 @@ func adjustCharacterInt(s *Session, column string, delta int) (int, error) {
 }
 
 func updateRights(s *Session) {
-	rightsInt := uint32(2)
-	_ = s.server.db.QueryRow("SELECT rights FROM users WHERE id=$1", s.userID).Scan(&rightsInt)
+	rightsInt, err := s.server.userRepo.GetRights(s.userID)
+	if err != nil {
+		rightsInt = 2
+	}
 	s.courses, rightsInt = mhfcourse.GetCourseStruct(rightsInt, s.server.erupeConfig.DefaultCourses)
 	update := &mhfpacket.MsgSysUpdateRight{
 		ClientRespAckHandle: 0,

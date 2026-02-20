@@ -192,7 +192,7 @@ func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {}
 func userGetItems(s *Session) []mhfitem.MHFItemStack {
 	var data []byte
 	var items []mhfitem.MHFItemStack
-	_ = s.server.db.QueryRow(`SELECT item_box FROM users WHERE id=$1`, s.userID).Scan(&data)
+	data, _ = s.server.userRepo.GetItemBox(s.userID)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()
@@ -215,7 +215,7 @@ func handleMsgMhfEnumerateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateUnionItem)
 	newStacks := mhfitem.DiffItemStacks(userGetItems(s), pkt.UpdatedItems)
-	if _, err := s.server.db.Exec(`UPDATE users SET item_box=$1 WHERE id=$2`, mhfitem.SerializeWarehouseItems(newStacks), s.userID); err != nil {
+	if err := s.server.userRepo.SetItemBox(s.userID, mhfitem.SerializeWarehouseItems(newStacks)); err != nil {
 		s.logger.Error("Failed to update union item box", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

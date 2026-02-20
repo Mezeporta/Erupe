@@ -352,10 +352,9 @@ func (s *Session) GetSemaphoreID() uint32 {
 }
 
 func (s *Session) isOp() bool {
-	var op bool
-	err := s.server.db.QueryRow(`SELECT op FROM users WHERE id=$1`, s.userID).Scan(&op)
-	if err == nil && op {
-		return true
+	op, err := s.server.userRepo.IsOp(s.userID)
+	if err != nil {
+		return false
 	}
-	return false
+	return op
 }

@@ -261,7 +261,6 @@ type FPointExchange struct {
 
 func handleMsgMhfExchangeFpoint2Item(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeFpoint2Item)
-	var balance uint32
 	var itemValue, quantity int
 	if err := s.server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue); err != nil {
 		s.logger.Error("Failed to read fpoint item cost", zap.Error(err))
@@ -269,7 +268,8 @@ func handleMsgMhfExchangeFpoint2Item(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	cost := (int(pkt.Quantity) * quantity) * itemValue
-	if err := s.server.db.QueryRow("UPDATE users SET frontier_points=frontier_points::int - $1 WHERE id=$2 RETURNING frontier_points", cost, s.userID).Scan(&balance); err != nil {
+	balance, err := s.server.userRepo.AdjustFrontierPointsDeduct(s.userID, cost)
+	if err != nil {
 		s.logger.Error("Failed to deduct frontier points", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return
@@ -281,7 +281,6 @@ func handleMsgMhfExchangeFpoint2Item(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfExchangeItem2Fpoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeItem2Fpoint)
-	var balance uint32
 	var itemValue, quantity int
 	if err := s.server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue); err != nil {
 		s.logger.Error("Failed to read fpoint item value", zap.Error(err))
@@ -289,7 +288,8 @@ func handleMsgMhfExchangeItem2Fpoint(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	cost := (int(pkt.Quantity) / quantity) * itemValue
-	if err := s.server.db.QueryRow("UPDATE users SET frontier_points=COALESCE(frontier_points::int + $1, $1) WHERE id=$2 RETURNING frontier_points", cost, s.userID).Scan(&balance); err != nil {
+	balance, err := s.server.userRepo.AdjustFrontierPointsCredit(s.userID, cost)
+	if err != nil {
 		s.logger.Error("Failed to credit frontier points", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return

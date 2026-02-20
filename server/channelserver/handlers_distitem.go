@@ -172,15 +172,15 @@ func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 				case 17:
 					_ = addPointNetcafe(s, int(item.Quantity))
 				case 19:
-					if _, err := s.server.db.Exec("UPDATE users SET gacha_premium=gacha_premium+$1 WHERE id=$2", item.Quantity, s.userID); err != nil {
+					if err := s.server.userRepo.AddPremiumCoins(s.userID, item.Quantity); err != nil {
 						s.logger.Error("Failed to update gacha premium", zap.Error(err))
 					}
 				case 20:
-					if _, err := s.server.db.Exec("UPDATE users SET gacha_trial=gacha_trial+$1 WHERE id=$2", item.Quantity, s.userID); err != nil {
+					if err := s.server.userRepo.AddTrialCoins(s.userID, item.Quantity); err != nil {
 						s.logger.Error("Failed to update gacha trial", zap.Error(err))
 					}
 				case 21:
-					if _, err := s.server.db.Exec("UPDATE users SET frontier_points=frontier_points+$1 WHERE id=$2", item.Quantity, s.userID); err != nil {
+					if err := s.server.userRepo.AddFrontierPoints(s.userID, item.Quantity); err != nil {
 						s.logger.Error("Failed to update frontier points", zap.Error(err))
 					}
 				case 23:

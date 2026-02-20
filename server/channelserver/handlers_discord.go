@@ -12,8 +12,7 @@ import (
 func (s *Server) onInteraction(ds *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Interaction.ApplicationCommandData().Name {
 	case "link":
-		var temp string
-		err := s.db.QueryRow(`UPDATE users SET discord_id = $1 WHERE discord_token = $2 RETURNING discord_id`, i.Member.User.ID, i.ApplicationCommandData().Options[0].StringValue()).Scan(&temp)
+		_, err := s.userRepo.LinkDiscord(i.Member.User.ID, i.ApplicationCommandData().Options[0].StringValue())
 		if err == nil {
 			_ = ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -33,7 +32,7 @@ func (s *Server) onInteraction(ds *discordgo.Session, i *discordgo.InteractionCr
 		}
 	case "password":
 		password, _ := bcrypt.GenerateFromPassword([]byte(i.ApplicationCommandData().Options[0].StringValue()), 10)
-		_, err := s.db.Exec(`UPDATE users SET password = $1 WHERE discord_id = $2`, password, i.Member.User.ID)
+		err := s.userRepo.SetPasswordByDiscordID(i.Member.User.ID, password)
 		if err == nil {
 			_ = ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,

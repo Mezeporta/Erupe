@@ -102,7 +102,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	_, err = s.server.db.Exec("UPDATE users SET last_character=$1 WHERE id=$2", s.charID, s.userID)
+	err = s.server.userRepo.SetLastCharacter(s.userID, s.charID)
 	if err != nil {
 		s.logger.Error("Failed to update last character", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))

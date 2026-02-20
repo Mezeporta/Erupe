@@ -101,9 +101,7 @@ func parseChatCommand(s *Session, command string) {
 				}
 				cid := mhfcid.ConvertCID(args[1])
 				if cid > 0 {
-					var uid uint32
-					var uname string
-					err := s.server.db.QueryRow(`SELECT id, username FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, cid).Scan(&uid, &uname)
+					uid, uname, err := s.server.userRepo.GetByIDAndUsername(cid)
 					if err == nil {
 						if expiry.IsZero() {
 							if _, err := s.server.db.Exec(`INSERT INTO bans VALUES ($1)
@@ -133,11 +131,11 @@ func parseChatCommand(s *Session, command string) {
 		}
 	case commands["Timer"].Prefix:
 		if commands["Timer"].Enabled || s.isOp() {
-			var state bool
-			if err := s.server.db.QueryRow(`SELECT COALESCE(timer, false) FROM users WHERE id=$1`, s.userID).Scan(&state); err != nil {
+			state, err := s.server.userRepo.GetTimer(s.userID)
+			if err != nil {
 				s.logger.Error("Failed to get timer state", zap.Error(err))
 			}
-			if _, err := s.server.db.Exec(`UPDATE users SET timer=$1 WHERE id=$2`, !state, s.userID); err != nil {
+			if err := s.server.userRepo.SetTimer(s.userID, !state); err != nil {
 				s.logger.Error("Failed to update timer setting", zap.Error(err))
 			}
 			if state {
@@ -151,12 +149,12 @@ func parseChatCommand(s *Session, command string) {
 	case commands["PSN"].Prefix:
 		if commands["PSN"].Enabled || s.isOp() {
 			if len(args) > 1 {
-				var exists int
-				if err := s.server.db.QueryRow(`SELECT count(*) FROM users WHERE psn_id = $1`, args[1]).Scan(&exists); err != nil {
+				exists, err := s.server.userRepo.CountByPSNID(args[1])
+				if err != nil {
 					s.logger.Error("Failed to check PSN ID existence", zap.Error(err))
 				}
 				if exists == 0 {
-					_, err := s.server.db.Exec(`UPDATE users SET psn_id=$1 WHERE id=$2`, args[1], s.userID)
+					err := s.server.userRepo.SetPSNID(s.userID, args[1])
 					if err == nil {
 						sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.psn.success, args[1]))
 					}
@@ -258,7 +256,7 @@ func parseChatCommand(s *Session, command string) {
 		if commands["Rights"].Enabled || s.isOp() {
 			if len(args) > 1 {
 				v, _ := strconv.Atoi(args[1])
-				_, err := s.server.db.Exec("UPDATE users SET rights=$1 WHERE id=$2", v, s.userID)
+				err := s.server.userRepo.SetRights(s.userID, uint32(v))
 				if err == nil {
 					sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.rights.success, v))
 				} else {
@@ -277,7 +275,7 @@ func parseChatCommand(s *Session, command string) {
 					for _, alias := range course.Aliases() {
 						if strings.EqualFold(args[1], alias) {
 							if slices.Contains(s.server.erupeConfig.Courses, _config.Course{Name: course.Aliases()[0], Enabled: true}) {
-								var delta, rightsInt uint32
+								var delta uint32
 								if mhfcourse.CourseExists(course.ID, s.courses) {
 									ei := slices.IndexFunc(s.courses, func(c mhfcourse.Course) bool {
 										for _, alias := range c.Aliases() {
@@ -295,9 +293,9 @@ func parseChatCommand(s *Session, command string) {
 									delta = uint32(math.Pow(2, float64(course.ID)))
 									sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.course.enabled, course.Aliases()[0]))
 								}
-								err := s.server.db.QueryRow("SELECT rights FROM users WHERE id=$1", s.userID).Scan(&rightsInt)
+								rightsInt, err := s.server.userRepo.GetRights(s.userID)
 								if err == nil {
-									if _, err := s.server.db.Exec("UPDATE users SET rights=$1 WHERE id=$2", rightsInt+delta, s.userID); err != nil {
+									if err := s.server.userRepo.SetRights(s.userID, rightsInt+delta); err != nil {
 										s.logger.Error("Failed to update user rights", zap.Error(err))
 									}
 								}
@@ -391,13 +389,12 @@ func parseChatCommand(s *Session, command string) {
 		}
 	case commands["Discord"].Prefix:
 		if commands["Discord"].Enabled || s.isOp() {
-			var _token string
-			err := s.server.db.QueryRow(`SELECT discord_token FROM users WHERE id=$1`, s.userID).Scan(&_token)
+			_token, err := s.server.userRepo.GetDiscordToken(s.userID)
 			if err != nil {
 				randToken := make([]byte, 4)
 				_, _ = rand.Read(randToken)
 				_token = fmt.Sprintf("%x-%x", randToken[:2], randToken[2:])
-				if _, err := s.server.db.Exec(`UPDATE users SET discord_token = $1 WHERE id=$2`, _token, s.userID); err != nil {
+				if err := s.server.userRepo.SetDiscordToken(s.userID, _token); err != nil {
 					s.logger.Error("Failed to update discord token", zap.Error(err))
 				}
 			}
