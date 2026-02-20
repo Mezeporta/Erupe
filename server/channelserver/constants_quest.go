@@ -12,8 +12,8 @@ const (
 
 // Event quest binary frame offsets
 const (
-	questFrameTimeFlagOffset  = 25
-	questFrameVariant3Offset  = 175
+	questFrameTimeFlagOffset = 25
+	questFrameVariant3Offset = 175
 )
 
 // Quest body lengths per game version

@@ -12,6 +12,12 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// Guild sentinel and cost constants
+const (
+	guildNotJoinedSentinel = uint32(0xFFFFFFFF)
+	guildRoomMaxRP         = uint32(55000)
+)
+
 func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfInfoGuild)
 
@@ -32,7 +38,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		guildLeaderName := stringsupport.UTF8ToSJIS(guild.LeaderName)
 
 		characterGuildData, err := GetCharacterGuildData(s, s.charID)
-		characterJoinedAt := uint32(0xFFFFFFFF)
+		characterJoinedAt := guildNotJoinedSentinel
 
 		if characterGuildData != nil && characterGuildData.JoinedAt != nil {
 			characterJoinedAt = uint32(characterGuildData.JoinedAt.Unix())
@@ -123,7 +129,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		}
 		bf.WriteUint8(limit)
 
-		bf.WriteUint32(55000)
+		bf.WriteUint32(guildRoomMaxRP)
 		bf.WriteUint32(uint32(guild.RoomExpiry.Unix()))
 		bf.WriteUint16(guild.RoomRP)
 		bf.WriteUint16(0) // Ignored

@@ -500,12 +500,12 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 	case 1, 2, 3: // usersearchidx, usersearchname, lobbysearchname
 		// Snapshot matching sessions under lock, then build response outside locks.
 		type sessionResult struct {
-			charID    uint32
-			name      []byte
-			stageID   []byte
-			ip        net.IP
-			port      uint16
-			userBin3  []byte
+			charID   uint32
+			name     []byte
+			stageID  []byte
+			ip       net.IP
+			port     uint16
+			userBin3 []byte
 		}
 		var results []sessionResult
 
@@ -656,15 +656,15 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		}
 		// Snapshot matching stages under lock, then build response outside locks.
 		type stageResult struct {
-			ip           net.IP
-			port         uint16
-			clientCount  int
-			reserved     int
-			maxPlayers   uint16
-			stageID      string
-			stageData    []int16
-			rawBinData0  []byte
-			rawBinData1  []byte
+			ip          net.IP
+			port        uint16
+			clientCount int
+			reserved    int
+			maxPlayers  uint16
+			stageID     string
+			stageData   []int16
+			rawBinData0 []byte
+			rawBinData1 []byte
 		}
 		var stageResults []stageResult
 

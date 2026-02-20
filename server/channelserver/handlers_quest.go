@@ -223,24 +223,24 @@ func loadQuestFile(s *Session, questId int) []byte {
 	fileBytes.SetLE()
 	_, _ = fileBytes.Seek(int64(fileBytes.ReadUint32()), 0)
 
-	bodyLength := 320
+	bodyLength := questBodyLenZZ
 	if s.server.erupeConfig.RealClientMode <= _config.S6 {
-		bodyLength = 160
+		bodyLength = questBodyLenS6
 	} else if s.server.erupeConfig.RealClientMode <= _config.F5 {
-		bodyLength = 168
+		bodyLength = questBodyLenF5
 	} else if s.server.erupeConfig.RealClientMode <= _config.G101 {
-		bodyLength = 192
+		bodyLength = questBodyLenG101
 	} else if s.server.erupeConfig.RealClientMode <= _config.Z1 {
-		bodyLength = 224
+		bodyLength = questBodyLenZ1
 	}
 
 	// The n bytes directly following the data pointer must go directly into the event's body, after the header and before the string pointers.
 	questBody := byteframe.NewByteFrameFromBytes(fileBytes.ReadBytes(uint(bodyLength)))
 	questBody.SetLE()
 	// Find the master quest string pointer
-	_, _ = questBody.Seek(40, 0)
+	_, _ = questBody.Seek(questStringPointerOff, 0)
 	_, _ = fileBytes.Seek(int64(questBody.ReadUint32()), 0)
-	_, _ = questBody.Seek(40, 0)
+	_, _ = questBody.Seek(questStringPointerOff, 0)
 	// Overwrite it
 	questBody.WriteUint32(uint32(bodyLength))
 	_, _ = questBody.Seek(0, 2)
@@ -248,8 +248,8 @@ func loadQuestFile(s *Session, questId int) []byte {
 	// Rewrite the quest strings and their pointers
 	var tempString []byte
 	newStrings := byteframe.NewByteFrame()
-	tempPointer := bodyLength + 32
-	for i := 0; i < 8; i++ {
+	tempPointer := bodyLength + questStringTablePadding
+	for i := 0; i < questStringCount; i++ {
 		questBody.WriteUint32(uint32(tempPointer))
 		temp := int64(fileBytes.Index())
 		_, _ = fileBytes.Seek(int64(fileBytes.ReadUint32()), 0)
@@ -284,21 +284,21 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 	bf.WriteUint32(0) // Unk
 	bf.WriteUint8(0)  // Unk
 	switch questType {
-	case 16:
+	case QuestTypeRegularRaviente:
 		bf.WriteUint8(s.server.erupeConfig.GameplayOptions.RegularRavienteMaxPlayers)
-	case 22:
+	case QuestTypeViolentRaviente:
 		bf.WriteUint8(s.server.erupeConfig.GameplayOptions.ViolentRavienteMaxPlayers)
-	case 40:
+	case QuestTypeBerserkRaviente:
 		bf.WriteUint8(s.server.erupeConfig.GameplayOptions.BerserkRavienteMaxPlayers)
-	case 50:
+	case QuestTypeExtremeRaviente:
 		bf.WriteUint8(s.server.erupeConfig.GameplayOptions.ExtremeRavienteMaxPlayers)
-	case 51:
+	case QuestTypeSmallBerserkRavi:
 		bf.WriteUint8(s.server.erupeConfig.GameplayOptions.SmallBerserkRavienteMaxPlayers)
 	default:
 		bf.WriteUint8(maxPlayers)
 	}
 	bf.WriteUint8(questType)
-	if questType == 9 {
+	if questType == QuestTypeSpecialTool {
 		bf.WriteBool(false)
 	} else {
 		bf.WriteBool(true)
@@ -314,9 +314,9 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 	// Time Flag Replacement
 	// Bitset Structure: b8 UNK, b7 Required Objective, b6 UNK, b5 Night, b4 Day, b3 Cold, b2 Warm, b1 Spring
 	// if the byte is set to 0 the game choses the quest file corresponding to whatever season the game is on
-	_, _ = bf.Seek(25, 0)
+	_, _ = bf.Seek(questFrameTimeFlagOffset, 0)
 	flagByte := bf.ReadUint8()
-	_, _ = bf.Seek(25, 0)
+	_, _ = bf.Seek(questFrameTimeFlagOffset, 0)
 	if s.server.erupeConfig.GameplayOptions.SeasonOverride {
 		bf.WriteUint8(flagByte & 0b11100000)
 	} else {
@@ -332,10 +332,10 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 	// Bitset Structure Quest Variant 2: b8 Road, b7 High Conquest, b6 Fixed Difficulty, b5 No Active Feature, b4 Timer, b3 No Cuff, b2 No Halk Pots, b1 Low Conquest
 	// Bitset Structure Quest Variant 3: b8 No Sigils, b7 UNK, b6 Interception, b5 Zenith, b4 No GP Skills, b3 No Simple Mode?, b2 GSR to GR, b1 No Reward Skills
 
-	_, _ = bf.Seek(175, 0)
+	_, _ = bf.Seek(questFrameVariant3Offset, 0)
 	questVariant3 := bf.ReadUint8()
 	questVariant3 &= 0b11011111 // disable Interception flag
-	_, _ = bf.Seek(175, 0)
+	_, _ = bf.Seek(questFrameVariant3Offset, 0)
 	bf.WriteUint8(questVariant3)
 
 	_, _ = bf.Seek(0, 2)
@@ -400,7 +400,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 				s.logger.Error("Failed to make event quest", zap.Error(err))
 				continue
 			} else {
-				if len(data) > 896 || len(data) < 352 {
+				if len(data) > questDataMaxLen || len(data) < questDataMinLen {
 					s.logger.Error("Invalid quest data length", zap.Int("len", len(data)))
 					continue
 				} else {
@@ -601,25 +601,25 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	}
 	tuneValues = temp
 
-	tuneLimit := 770
+	tuneLimit := tuneLimitZZ
 	if s.server.erupeConfig.RealClientMode <= _config.G1 {
-		tuneLimit = 256
+		tuneLimit = tuneLimitG1
 	} else if s.server.erupeConfig.RealClientMode <= _config.G3 {
-		tuneLimit = 283
+		tuneLimit = tuneLimitG3
 	} else if s.server.erupeConfig.RealClientMode <= _config.GG {
-		tuneLimit = 315
+		tuneLimit = tuneLimitGG
 	} else if s.server.erupeConfig.RealClientMode <= _config.G61 {
-		tuneLimit = 332
+		tuneLimit = tuneLimitG61
 	} else if s.server.erupeConfig.RealClientMode <= _config.G7 {
-		tuneLimit = 339
+		tuneLimit = tuneLimitG7
 	} else if s.server.erupeConfig.RealClientMode <= _config.G81 {
-		tuneLimit = 396
+		tuneLimit = tuneLimitG81
 	} else if s.server.erupeConfig.RealClientMode <= _config.G91 {
-		tuneLimit = 694
+		tuneLimit = tuneLimitG91
 	} else if s.server.erupeConfig.RealClientMode <= _config.G101 {
-		tuneLimit = 704
+		tuneLimit = tuneLimitG101
 	} else if s.server.erupeConfig.RealClientMode <= _config.Z2 {
-		tuneLimit = 750
+		tuneLimit = tuneLimitZ2
 	}
 	if len(tuneValues) > tuneLimit {
 		tuneValues = tuneValues[:tuneLimit]

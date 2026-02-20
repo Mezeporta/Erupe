@@ -14,18 +14,31 @@ import (
 	"go.uber.org/zap"
 )
 
+// Rengoku save blob layout offsets
+const (
+	rengokuSkillSlotsStart  = 0x1B
+	rengokuSkillSlotsEnd    = 0x21
+	rengokuSkillValuesStart = 0x2E
+	rengokuSkillValuesEnd   = 0x3A
+	rengokuPointsStart      = 0x3B
+	rengokuPointsEnd        = 0x47
+	rengokuMaxStageMpOffset = 71
+	rengokuMinPayloadSize   = 91
+	rengokuMaxPayloadSize   = 4096
+)
+
 // rengokuSkillsZeroed checks if the skill slot IDs (offsets 0x1B-0x20) and
 // equipped skill values (offsets 0x2E-0x39) are all zero in a rengoku save blob.
 func rengokuSkillsZeroed(data []byte) bool {
-	if len(data) < 0x3A {
+	if len(data) < rengokuSkillValuesEnd {
 		return true
 	}
-	for _, b := range data[0x1B:0x21] {
+	for _, b := range data[rengokuSkillSlotsStart:rengokuSkillSlotsEnd] {
 		if b != 0 {
 			return false
 		}
 	}
-	for _, b := range data[0x2E:0x3A] {
+	for _, b := range data[rengokuSkillValuesStart:rengokuSkillValuesEnd] {
 		if b != 0 {
 			return false
 		}
@@ -35,10 +48,10 @@ func rengokuSkillsZeroed(data []byte) bool {
 
 // rengokuHasPoints checks if any skill point allocation (offsets 0x3B-0x46) is nonzero.
 func rengokuHasPoints(data []byte) bool {
-	if len(data) < 0x47 {
+	if len(data) < rengokuPointsEnd {
 		return false
 	}
-	for _, b := range data[0x3B:0x47] {
+	for _, b := range data[rengokuPointsStart:rengokuPointsEnd] {
 		if b != 0 {
 			return true
 		}
@@ -51,15 +64,15 @@ func rengokuHasPoints(data []byte) bool {
 // preserving the skills that the client failed to populate due to a race
 // condition during area transitions (see issue #85).
 func rengokuMergeSkills(dst, src []byte) {
-	copy(dst[0x1B:0x21], src[0x1B:0x21])
-	copy(dst[0x2E:0x3A], src[0x2E:0x3A])
+	copy(dst[rengokuSkillSlotsStart:rengokuSkillSlotsEnd], src[rengokuSkillSlotsStart:rengokuSkillSlotsEnd])
+	copy(dst[rengokuSkillValuesStart:rengokuSkillValuesEnd], src[rengokuSkillValuesStart:rengokuSkillValuesEnd])
 }
 
 func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	// Saved every floor on road, holds values such as floors progressed, points etc.
 	// Can be safely handled by the client.
 	pkt := p.(*mhfpacket.MsgMhfSaveRengokuData)
-	if len(pkt.RawDataPayload) < 91 || len(pkt.RawDataPayload) > 4096 {
+	if len(pkt.RawDataPayload) < rengokuMinPayloadSize || len(pkt.RawDataPayload) > rengokuMaxPayloadSize {
 		s.logger.Warn("Rengoku payload size out of range", zap.Int("len", len(pkt.RawDataPayload)))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -72,10 +85,10 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	// path triggers a rengoku save BEFORE the load response has been parsed into
 	// the character data area. This produces a save with zeroed skill fields but
 	// preserved point totals. Detect this pattern and merge existing skill data.
-	if len(saveData) >= 0x47 && rengokuSkillsZeroed(saveData) && rengokuHasPoints(saveData) {
+	if len(saveData) >= rengokuPointsEnd && rengokuSkillsZeroed(saveData) && rengokuHasPoints(saveData) {
 		var existing []byte
 		if err := s.server.db.QueryRow("SELECT rengokudata FROM characters WHERE id=$1", s.charID).Scan(&existing); err == nil {
-			if len(existing) >= 0x47 && !rengokuSkillsZeroed(existing) {
+			if len(existing) >= rengokuPointsEnd && !rengokuSkillsZeroed(existing) {
 				s.logger.Info("Rengoku save has zeroed skills with invested points, preserving existing skills",
 					zap.Uint32("charID", s.charID))
 				merged := make([]byte, len(saveData))
@@ -106,7 +119,7 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	bf := byteframe.NewByteFrameFromBytes(saveData)
-	_, _ = bf.Seek(71, 0)
+	_, _ = bf.Seek(rengokuMaxStageMpOffset, 0)
 	maxStageMp := bf.ReadUint32()
 	maxScoreMp := bf.ReadUint32()
 	_, _ = bf.Seek(4, 1)

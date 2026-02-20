@@ -13,20 +13,20 @@ import (
 type SavePointer int
 
 const (
-	pGender        = iota // +1
-	pRP                   // +2
-	pHouseTier            // +5
-	pHouseData            // +195
-	pBookshelfData        // +lBookshelfData
-	pGalleryData          // +1748
-	pToreData             // +240
-	pGardenData           // +68
-	pPlaytime             // +4
-	pWeaponType           // +1
-	pWeaponID             // +2
-	pHR                   // +2
-	pGRP                  // +4
-	pKQF                  // +8
+	pGender = iota
+	pRP
+	pHouseTier
+	pHouseData
+	pBookshelfData
+	pGalleryData
+	pToreData
+	pGardenData
+	pPlaytime
+	pWeaponType
+	pWeaponID
+	pHR
+	pGRP
+	pKQF
 	lBookshelfData
 )
 
@@ -146,16 +146,33 @@ func (save *CharacterSaveData) updateSaveDataWithStruct() {
 	rpBytes := make([]byte, 2)
 	binary.LittleEndian.PutUint16(rpBytes, save.RP)
 	if save.Mode >= _config.F4 {
-		copy(save.decompSave[save.Pointers[pRP]:save.Pointers[pRP]+2], rpBytes)
+		copy(save.decompSave[save.Pointers[pRP]:save.Pointers[pRP]+saveFieldRP], rpBytes)
 	}
 	if save.Mode >= _config.G10 {
-		copy(save.decompSave[save.Pointers[pKQF]:save.Pointers[pKQF]+8], save.KQF)
+		copy(save.decompSave[save.Pointers[pKQF]:save.Pointers[pKQF]+saveFieldKQF], save.KQF)
 	}
 }
 
 // This will update the save struct with the values stored in the character save
+// Save data field sizes
+const (
+	saveFieldRP         = 2
+	saveFieldHouseTier  = 5
+	saveFieldHouseData  = 195
+	saveFieldGallery    = 1748
+	saveFieldTore       = 240
+	saveFieldGarden     = 68
+	saveFieldPlaytime   = 4
+	saveFieldWeaponID   = 2
+	saveFieldHR         = 2
+	saveFieldGRP        = 4
+	saveFieldKQF        = 8
+	saveFieldNameOffset = 88
+	saveFieldNameLen    = 12
+)
+
 func (save *CharacterSaveData) updateStructWithSaveData() {
-	save.Name, _ = stringsupport.SJISToUTF8(bfutil.UpToNull(save.decompSave[88:100]))
+	save.Name, _ = stringsupport.SJISToUTF8(bfutil.UpToNull(save.decompSave[saveFieldNameOffset : saveFieldNameOffset+saveFieldNameLen]))
 	if save.decompSave[save.Pointers[pGender]] == 1 {
 		save.Gender = true
 	} else {
@@ -163,24 +180,24 @@ func (save *CharacterSaveData) updateStructWithSaveData() {
 	}
 	if !save.IsNewCharacter {
 		if save.Mode >= _config.S6 {
-			save.RP = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pRP] : save.Pointers[pRP]+2])
-			save.HouseTier = save.decompSave[save.Pointers[pHouseTier] : save.Pointers[pHouseTier]+5]
-			save.HouseData = save.decompSave[save.Pointers[pHouseData] : save.Pointers[pHouseData]+195]
+			save.RP = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pRP] : save.Pointers[pRP]+saveFieldRP])
+			save.HouseTier = save.decompSave[save.Pointers[pHouseTier] : save.Pointers[pHouseTier]+saveFieldHouseTier]
+			save.HouseData = save.decompSave[save.Pointers[pHouseData] : save.Pointers[pHouseData]+saveFieldHouseData]
 			save.BookshelfData = save.decompSave[save.Pointers[pBookshelfData] : save.Pointers[pBookshelfData]+save.Pointers[lBookshelfData]]
-			save.GalleryData = save.decompSave[save.Pointers[pGalleryData] : save.Pointers[pGalleryData]+1748]
-			save.ToreData = save.decompSave[save.Pointers[pToreData] : save.Pointers[pToreData]+240]
-			save.GardenData = save.decompSave[save.Pointers[pGardenData] : save.Pointers[pGardenData]+68]
-			save.Playtime = binary.LittleEndian.Uint32(save.decompSave[save.Pointers[pPlaytime] : save.Pointers[pPlaytime]+4])
+			save.GalleryData = save.decompSave[save.Pointers[pGalleryData] : save.Pointers[pGalleryData]+saveFieldGallery]
+			save.ToreData = save.decompSave[save.Pointers[pToreData] : save.Pointers[pToreData]+saveFieldTore]
+			save.GardenData = save.decompSave[save.Pointers[pGardenData] : save.Pointers[pGardenData]+saveFieldGarden]
+			save.Playtime = binary.LittleEndian.Uint32(save.decompSave[save.Pointers[pPlaytime] : save.Pointers[pPlaytime]+saveFieldPlaytime])
 			save.WeaponType = save.decompSave[save.Pointers[pWeaponType]]
-			save.WeaponID = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pWeaponID] : save.Pointers[pWeaponID]+2])
-			save.HR = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pHR] : save.Pointers[pHR]+2])
+			save.WeaponID = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pWeaponID] : save.Pointers[pWeaponID]+saveFieldWeaponID])
+			save.HR = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pHR] : save.Pointers[pHR]+saveFieldHR])
 			if save.Mode >= _config.G1 {
 				if save.HR == uint16(999) {
-					save.GR = grpToGR(int(binary.LittleEndian.Uint32(save.decompSave[save.Pointers[pGRP] : save.Pointers[pGRP]+4])))
+					save.GR = grpToGR(int(binary.LittleEndian.Uint32(save.decompSave[save.Pointers[pGRP] : save.Pointers[pGRP]+saveFieldGRP])))
 				}
 			}
 			if save.Mode >= _config.G10 {
-				save.KQF = save.decompSave[save.Pointers[pKQF] : save.Pointers[pKQF]+8]
+				save.KQF = save.decompSave[save.Pointers[pKQF] : save.Pointers[pKQF]+saveFieldKQF]
 			}
 		}
 	}
