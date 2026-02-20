@@ -58,17 +58,17 @@ func Login(signAddr, username, password string) (*LoginResult, error) {
 	loginPkt := protocol.BuildLoginPacket(ack, charID, sign.TokenID, sign.TokenString)
 	fmt.Printf("[channel] Sending MSG_SYS_LOGIN (charID=%d, ackHandle=%d)...\n", charID, ack)
 	if err := ch.SendPacket(loginPkt); err != nil {
-		ch.Close()
+		_ = ch.Close()
 		return nil, fmt.Errorf("channel send login: %w", err)
 	}
 
 	resp, err := ch.WaitForAck(ack, 10*time.Second)
 	if err != nil {
-		ch.Close()
+		_ = ch.Close()
 		return nil, fmt.Errorf("channel login ack: %w", err)
 	}
 	if resp.ErrorCode != 0 {
-		ch.Close()
+		_ = ch.Close()
 		return nil, fmt.Errorf("channel login failed: error code %d", resp.ErrorCode)
 	}
 	fmt.Printf("[channel] Login ACK received (error=%d, %d bytes data)\n",

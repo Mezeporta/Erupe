@@ -10,7 +10,7 @@ import (
 func Logout(ch *protocol.ChannelConn) error {
 	fmt.Println("[logout] Sending MSG_SYS_LOGOUT...")
 	if err := ch.SendPacket(protocol.BuildLogoutPacket()); err != nil {
-		ch.Close()
+		_ = ch.Close()
 		return fmt.Errorf("logout send: %w", err)
 	}
 	return ch.Close()

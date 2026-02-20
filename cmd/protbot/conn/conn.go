@@ -22,7 +22,7 @@ func DialWithInit(addr string) (*MHFConn, error) {
 	// Sign and entrance servers expect 8 NULL bytes to initialize the connection.
 	_, err = conn.Write(make([]byte, 8))
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("write init bytes to %s: %w", addr, err)
 	}
 

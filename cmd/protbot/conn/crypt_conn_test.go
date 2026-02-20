@@ -11,8 +11,8 @@ import (
 func TestCryptConnRoundTrip(t *testing.T) {
 	// Create an in-process TCP pipe.
 	server, client := net.Pipe()
-	defer server.Close()
-	defer client.Close()
+	defer func() { _ = server.Close() }()
+	defer func() { _ = client.Close() }()
 
 	sender := NewCryptConn(client)
 	receiver := NewCryptConn(server)
@@ -86,8 +86,8 @@ func TestCryptPacketHeaderRoundTrip(t *testing.T) {
 // multiple sequential packets.
 func TestMultiPacketSequence(t *testing.T) {
 	server, client := net.Pipe()
-	defer server.Close()
-	defer client.Close()
+	defer func() { _ = server.Close() }()
+	defer func() { _ = client.Close() }()
 
 	sender := NewCryptConn(client)
 	receiver := NewCryptConn(server)
@@ -123,7 +123,7 @@ func TestDialWithInit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	done := make(chan []byte, 1)
 	go func() {
@@ -131,7 +131,7 @@ func TestDialWithInit(t *testing.T) {
 		if err != nil {
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		buf := make([]byte, 8)
 		_, _ = io.ReadFull(conn, buf)
 		done <- buf
@@ -141,7 +141,7 @@ func TestDialWithInit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	initBytes := <-done
 	for i, b := range initBytes {

@@ -41,7 +41,7 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println("[done] Login successful!")
-		result.Channel.Close()
+		_ = result.Channel.Close()
 
 	case "lobby":
 		result, err := scenario.Login(*signAddr, *user, *pass)
@@ -51,11 +51,11 @@ func main() {
 		}
 		if err := scenario.EnterLobby(result.Channel); err != nil {
 			fmt.Fprintf(os.Stderr, "enter lobby failed: %v\n", err)
-			result.Channel.Close()
+			_ = result.Channel.Close()
 			os.Exit(1)
 		}
 		fmt.Println("[done] Lobby entry successful!")
-		result.Channel.Close()
+		_ = result.Channel.Close()
 
 	case "session":
 		result, err := scenario.Login(*signAddr, *user, *pass)
@@ -66,17 +66,17 @@ func main() {
 		charID := result.Sign.CharIDs[0]
 		if _, err := scenario.SetupSession(result.Channel, charID); err != nil {
 			fmt.Fprintf(os.Stderr, "session setup failed: %v\n", err)
-			result.Channel.Close()
+			_ = result.Channel.Close()
 			os.Exit(1)
 		}
 		if err := scenario.EnterLobby(result.Channel); err != nil {
 			fmt.Fprintf(os.Stderr, "enter lobby failed: %v\n", err)
-			result.Channel.Close()
+			_ = result.Channel.Close()
 			os.Exit(1)
 		}
 		fmt.Println("[session] Connected. Press Ctrl+C to disconnect.")
 		waitForSignal()
-		scenario.Logout(result.Channel)
+		_ = scenario.Logout(result.Channel)
 
 	case "chat":
 		result, err := scenario.Login(*signAddr, *user, *pass)
@@ -87,12 +87,12 @@ func main() {
 		charID := result.Sign.CharIDs[0]
 		if _, err := scenario.SetupSession(result.Channel, charID); err != nil {
 			fmt.Fprintf(os.Stderr, "session setup failed: %v\n", err)
-			result.Channel.Close()
+			_ = result.Channel.Close()
 			os.Exit(1)
 		}
 		if err := scenario.EnterLobby(result.Channel); err != nil {
 			fmt.Fprintf(os.Stderr, "enter lobby failed: %v\n", err)
-			result.Channel.Close()
+			_ = result.Channel.Close()
 			os.Exit(1)
 		}
 
@@ -110,7 +110,7 @@ func main() {
 
 		fmt.Println("[chat] Listening for chat messages. Press Ctrl+C to disconnect.")
 		waitForSignal()
-		scenario.Logout(result.Channel)
+		_ = scenario.Logout(result.Channel)
 
 	case "quests":
 		result, err := scenario.Login(*signAddr, *user, *pass)
@@ -121,23 +121,23 @@ func main() {
 		charID := result.Sign.CharIDs[0]
 		if _, err := scenario.SetupSession(result.Channel, charID); err != nil {
 			fmt.Fprintf(os.Stderr, "session setup failed: %v\n", err)
-			result.Channel.Close()
+			_ = result.Channel.Close()
 			os.Exit(1)
 		}
 		if err := scenario.EnterLobby(result.Channel); err != nil {
 			fmt.Fprintf(os.Stderr, "enter lobby failed: %v\n", err)
-			result.Channel.Close()
+			_ = result.Channel.Close()
 			os.Exit(1)
 		}
 
 		data, err := scenario.EnumerateQuests(result.Channel, 0, 0)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "enumerate quests failed: %v\n", err)
-			scenario.Logout(result.Channel)
+			_ = scenario.Logout(result.Channel)
 			os.Exit(1)
 		}
 		fmt.Printf("[quests] Received %d bytes of quest data\n", len(data))
-		scenario.Logout(result.Channel)
+		_ = scenario.Logout(result.Channel)
 
 	default:
 		fmt.Fprintf(os.Stderr, "unknown action: %s (supported: login, lobby, session, chat, quests)\n", *action)

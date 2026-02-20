@@ -24,7 +24,7 @@ func DoEntrance(addr string) ([]ServerEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("entrance connect: %w", err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	// Send a minimal packet (the entrance server reads it, checks len > 5 for USR data).
 	// An empty/short packet triggers only SV2 response.

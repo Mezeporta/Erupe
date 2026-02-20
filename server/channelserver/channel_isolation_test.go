@@ -59,7 +59,7 @@ func TestChannelIsolation_ShutdownDoesNotAffectOthers(t *testing.T) {
 		if err != nil {
 			t.Fatalf("initial connection to %s failed: %v", addr, err)
 		}
-		conn.Close()
+		_ = conn.Close()
 	}
 
 	// Shut down channel 1.
@@ -84,7 +84,7 @@ func TestChannelIsolation_ShutdownDoesNotAffectOthers(t *testing.T) {
 		if err != nil {
 			t.Errorf("%s should still accept connections after channel 1 shutdown, got: %v", tc.name, err)
 		} else {
-			conn.Close()
+			_ = conn.Close()
 		}
 	}
 }
@@ -99,7 +99,7 @@ func TestChannelIsolation_ListenerCloseDoesNotAffectOthers(t *testing.T) {
 	addr2 := listenerAddr(ch2)
 
 	// Forcibly close channel 1's listener (simulating unexpected failure).
-	ch1.listener.Close()
+	_ = ch1.listener.Close()
 	time.Sleep(50 * time.Millisecond)
 
 	// Channel 2 must still work.
@@ -107,7 +107,7 @@ func TestChannelIsolation_ListenerCloseDoesNotAffectOthers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("channel 2 should still accept connections after channel 1 listener closed: %v", err)
 	}
-	conn.Close()
+	_ = conn.Close()
 }
 
 // TestChannelIsolation_SessionPanicDoesNotAffectChannel verifies that a panic
@@ -124,9 +124,9 @@ func TestChannelIsolation_SessionPanicDoesNotAffectChannel(t *testing.T) {
 
 	// Send garbage data that will cause handlePacketGroup to hit the panic recovery.
 	// The session's defer/recover should catch it without killing the channel.
-	conn1.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
+	_, _ = conn1.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 	time.Sleep(100 * time.Millisecond)
-	conn1.Close()
+	_ = conn1.Close()
 	time.Sleep(100 * time.Millisecond)
 
 	// The channel should still accept new connections after the panic.
@@ -134,7 +134,7 @@ func TestChannelIsolation_SessionPanicDoesNotAffectChannel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("channel should still accept connections after session panic: %v", err)
 	}
-	conn2.Close()
+	_ = conn2.Close()
 }
 
 // TestChannelIsolation_CrossChannelRegistryAfterShutdown verifies that the

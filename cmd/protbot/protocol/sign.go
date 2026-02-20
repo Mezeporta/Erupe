@@ -25,7 +25,7 @@ func DoSign(addr, username, password string) (*SignResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sign connect: %w", err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	// Build DSGN request: "DSGN:041" + \x00 + SJIS(user) + \x00 + SJIS(pass) + \x00 + \x00
 	// The server reads: null-terminated request type, null-terminated user, null-terminated pass, null-terminated unk.
