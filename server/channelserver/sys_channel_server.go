@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -210,7 +211,7 @@ func (s *Server) acceptClients() {
 			shutdown := s.isShuttingDown
 			s.Unlock()
 
-			if shutdown {
+			if shutdown || errors.Is(err, net.ErrClosed) {
 				break
 			} else {
 				s.logger.Warn("Error accepting client", zap.Error(err))

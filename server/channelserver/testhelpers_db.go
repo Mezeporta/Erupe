@@ -7,11 +7,18 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"erupe-ce/server/channelserver/compression/nullcomp"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+)
+
+var (
+	testDBOnce        sync.Once
+	testDB            *sqlx.DB
+	testDBSetupFailed bool
 )
 
 // TestDBConfig holds the configuration for the test database
@@ -42,52 +49,55 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-// SetupTestDB creates a connection to the test database and applies the schema
+// SetupTestDB creates a connection to the test database and applies the schema.
+// The schema is applied only once per test binary via sync.Once. Subsequent calls
+// only TRUNCATE data for test isolation, avoiding expensive pg_restore + patch cycles.
 func SetupTestDB(t *testing.T) *sqlx.DB {
 	t.Helper()
 
-	config := DefaultTestDBConfig()
-	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		config.Host, config.Port, config.User, config.Password, config.DBName,
-	)
+	testDBOnce.Do(func() {
+		config := DefaultTestDBConfig()
+		connStr := fmt.Sprintf(
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+			config.Host, config.Port, config.User, config.Password, config.DBName,
+		)
 
-	db, err := sqlx.Open("postgres", connStr)
-	if err != nil {
-		t.Skipf("Failed to connect to test database: %v. Run: docker compose -f docker/docker-compose.test.yml up -d", err)
+		db, err := sqlx.Open("postgres", connStr)
+		if err != nil {
+			testDBSetupFailed = true
+			return
+		}
+
+		if err := db.Ping(); err != nil {
+			_ = db.Close()
+			testDBSetupFailed = true
+			return
+		}
+
+		// Clean the database and apply schema once
+		CleanTestDB(t, db)
+		ApplyTestSchema(t, db)
+
+		testDB = db
+	})
+
+	if testDBSetupFailed || testDB == nil {
+		t.Skipf("Test database not available. Run: docker compose -f docker/docker-compose.test.yml up -d")
 		return nil
 	}
 
-	// Test connection
-	if err := db.Ping(); err != nil {
-		_ = db.Close()
-		t.Skipf("Test database not available: %v. Run: docker compose -f docker/docker-compose.test.yml up -d", err)
-		return nil
-	}
+	// Truncate all data for test isolation (schema stays intact)
+	truncateAllTables(t, testDB)
 
-	// Clean the database before tests
-	CleanTestDB(t, db)
-
-	// Apply schema
-	ApplyTestSchema(t, db)
-
-	return db
+	return testDB
 }
 
-// CleanTestDB drops all tables to ensure a clean state
+// CleanTestDB drops all objects in the public schema to ensure a clean state
 func CleanTestDB(t *testing.T, db *sqlx.DB) {
 	t.Helper()
 
-	// Drop all tables in the public schema
-	_, err := db.Exec(`
-		DO $$ DECLARE
-			r RECORD;
-		BEGIN
-			FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-				EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
-			END LOOP;
-		END $$;
-	`)
+	// Drop and recreate the public schema to remove all objects (tables, types, sequences, etc.)
+	_, err := db.Exec(`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`)
 	if err != nil {
 		t.Logf("Warning: Failed to clean database: %v", err)
 	}
@@ -113,19 +123,19 @@ func ApplyTestSchema(t *testing.T, db *sqlx.DB) {
 		"-d", config.DBName,
 		"--no-owner",
 		"--no-acl",
-		"-c", // clean (drop) before recreating
 		schemaPath,
 	)
 	cmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", config.Password))
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// pg_restore may error on first run (no tables to drop), that's usually ok
-		t.Logf("pg_restore output: %s", string(output))
-		// Check if it's a fatal error
-		if !strings.Contains(string(output), "does not exist") {
-			t.Logf("pg_restore error (may be non-fatal): %v", err)
+		out := string(output)
+		// pg_restore reports non-fatal warnings (version mismatches, already exists) as errors.
+		// Only fail if we see no "errors ignored on restore" summary, which means a real failure.
+		if !strings.Contains(out, "errors ignored on restore") {
+			t.Fatalf("pg_restore failed: %v\n%s", err, out)
 		}
+		t.Logf("pg_restore completed with non-fatal warnings (ignored)")
 	}
 
 	// Apply the 9.2 update schema (init.sql bootstraps to 9.1.0)
@@ -239,12 +249,37 @@ func findProjectRoot(t *testing.T) string {
 	}
 }
 
-// TeardownTestDB closes the database connection
+// truncateAllTables truncates all tables in the public schema for test isolation.
+func truncateAllTables(t *testing.T, db *sqlx.DB) {
+	t.Helper()
+
+	rows, err := db.Query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+	if err != nil {
+		t.Fatalf("Failed to list tables for truncation: %v", err)
+	}
+	defer rows.Close()
+
+	var tables []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			t.Fatalf("Failed to scan table name: %v", err)
+		}
+		tables = append(tables, name)
+	}
+
+	if len(tables) > 0 {
+		_, err := db.Exec("TRUNCATE " + strings.Join(tables, ", ") + " CASCADE")
+		if err != nil {
+			t.Fatalf("Failed to truncate tables: %v", err)
+		}
+	}
+}
+
+// TeardownTestDB is a no-op. The shared DB connection is reused across tests
+// and closed automatically at process exit.
 func TeardownTestDB(t *testing.T, db *sqlx.DB) {
 	t.Helper()
-	if db != nil {
-		_ = db.Close()
-	}
 }
 
 // CreateTestUser creates a test user and returns the user ID
