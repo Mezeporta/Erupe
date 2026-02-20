@@ -938,3 +938,12 @@ func (r *GuildRepository) ListInvitedCharacters(guildID uint32) ([]*ScoutedChara
 	}
 	return chars, nil
 }
+
+// AddWeeklyBonusUsers atomically adds numUsers to the guild's weekly bonus exceptional user count.
+func (r *GuildRepository) AddWeeklyBonusUsers(guildID uint32, numUsers uint8) error {
+	_, err := r.db.Exec(
+		"UPDATE guilds SET weekly_bonus_users = weekly_bonus_users + $1 WHERE id = $2",
+		numUsers, guildID,
+	)
+	return err
+}

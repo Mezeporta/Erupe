@@ -125,7 +125,13 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAddGuildWeeklyBonusExceptionalUser(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAddGuildWeeklyBonusExceptionalUser)
-	// TODO: record pkt.NumUsers to DB
-	// must use addition
+	if s.server.guildRepo != nil {
+		guild, err := s.server.guildRepo.GetByCharID(s.charID)
+		if err == nil && guild != nil {
+			if err := s.server.guildRepo.AddWeeklyBonusUsers(guild.ID, pkt.NumUsers); err != nil {
+				s.logger.Error("Failed to add weekly bonus users", zap.Error(err))
+			}
+		}
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
