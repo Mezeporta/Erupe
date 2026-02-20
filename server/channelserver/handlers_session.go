@@ -250,7 +250,7 @@ func logoutPlayer(s *Session) {
 		if mhfcourse.CourseExists(30, s.courses) {
 			rpGained = timePlayed / rpAccrualCafe
 			timePlayed = timePlayed % rpAccrualCafe
-			if _, err := s.server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.charID); err != nil {
+			if _, err := s.server.charRepo.AdjustInt(s.charID, "cafe_time", sessionTime); err != nil {
 				s.logger.Error("Failed to update cafe time", zap.Error(err))
 			}
 		} else {

@@ -86,8 +86,8 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	// the character data area. This produces a save with zeroed skill fields but
 	// preserved point totals. Detect this pattern and merge existing skill data.
 	if len(saveData) >= rengokuPointsEnd && rengokuSkillsZeroed(saveData) && rengokuHasPoints(saveData) {
-		var existing []byte
-		if err := s.server.db.QueryRow("SELECT rengokudata FROM characters WHERE id=$1", s.charID).Scan(&existing); err == nil {
+		existing, err := s.server.charRepo.LoadColumn(s.charID, "rengokudata")
+		if err == nil {
 			if len(existing) >= rengokuPointsEnd && !rengokuSkillsZeroed(existing) {
 				s.logger.Info("Rengoku save has zeroed skills with invested points, preserving existing skills",
 					zap.Uint32("charID", s.charID))
@@ -101,8 +101,8 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 
 	// Also reject saves where the sentinel is 0 (no data) if valid data already exists.
 	if len(saveData) >= 4 && binary.BigEndian.Uint32(saveData[:4]) == 0 {
-		var existing []byte
-		if err := s.server.db.QueryRow("SELECT rengokudata FROM characters WHERE id=$1", s.charID).Scan(&existing); err == nil {
+		existing, err := s.server.charRepo.LoadColumn(s.charID, "rengokudata")
+		if err == nil {
 			if len(existing) >= 4 && binary.BigEndian.Uint32(existing[:4]) != 0 {
 				s.logger.Warn("Refusing to overwrite valid rengoku data with empty sentinel",
 					zap.Uint32("charID", s.charID))
@@ -112,7 +112,7 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	_, err := s.server.db.Exec("UPDATE characters SET rengokudata=$1 WHERE id=$2", saveData, s.charID)
+	err := s.server.charRepo.SaveColumn(s.charID, "rengokudata", saveData)
 	if err != nil {
 		s.logger.Error("Failed to save rengokudata", zap.Error(err))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -140,8 +140,7 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfLoadRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadRengokuData)
-	var data []byte
-	err := s.server.db.QueryRow("SELECT rengokudata FROM characters WHERE id = $1", s.charID).Scan(&data)
+	data, err := s.server.charRepo.LoadColumn(s.charID, "rengokudata")
 	if err != nil {
 		s.logger.Error("Failed to load rengokudata", zap.Error(err),
 			zap.Uint32("charID", s.charID))

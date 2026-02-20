@@ -240,7 +240,7 @@ The same table is queried in different handlers with slightly different column s
 
 **Recommendation:** At minimum, define query constants. Ideally, introduce a repository layer that encapsulates all queries for a given entity.
 
-**Status (partial):** A `CharacterRepository` layer has been introduced in `repo_character.go`, centralizing all `characters` table access behind a concrete struct. The 4 existing helpers (`loadCharacterData`, `saveCharacterData`, `readCharacterInt`, `adjustCharacterInt`) now delegate to the repository, covering ~70% of character queries. Direct queries in `handlers_session.go` (login/logout), `sys_channel_server.go` (`DisconnectUser`), and `handlers_mail.go` (name lookup) have also been migrated. Remaining work: guild repository (second-highest duplication), per-handler migration of remaining inline character queries (plate, mercenary, rengoku, cafe, clients), and column allowlist for SQL injection hardening.
+**Status (substantial):** A `CharacterRepository` layer in `repo_character.go` now centralizes nearly all `characters` table access (27 methods). The initial PR introduced 9 core methods and rewired the 4 helpers + 6 direct queries (~70%). A second pass migrated ~56 additional inline queries across 13 handler files (cafe, misc, clients, plate, rengoku, mercenary, gacha, guild_board, guild_scout, data, items, house, session), bringing coverage to ~95% of character queries. Remaining unmigrated queries are cross-table JOINs (house+user_binary, mercenary+guild_characters, session auth), the bulk `CharacterSaveData` read/write, and a `handlers_commands.go` subquery through `users`. Next steps: guild repository (second-highest duplication) and column allowlist for SQL injection hardening.
 
 ---
 
@@ -304,7 +304,7 @@ Database operations use raw `database/sql` with PostgreSQL-specific syntax throu
 | Severity | Anti-patterns |
 |----------|--------------|
 | **High** | ~~Missing ACK responses / softlocks (#2)~~ **Fixed**, no architectural layering (#3), tight DB coupling (#13) |
-| **Medium** | ~~Magic numbers (#4)~~ **Fixed**, ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, raw SQL duplication (#9) |
+| **Medium** | ~~Magic numbers (#4)~~ **Fixed**, ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, ~~raw SQL duplication (#9)~~ **Substantially fixed** (characters table ~95% migrated) |
 | **Low** | God files (#1), ~~`init()` registration (#10)~~ **Fixed**, ~~inconsistent logging (#12)~~ **Fixed**, mutex granularity (#7), ~~panic-based flow (#11)~~ **Fixed** |
 
 ### Root Cause

@@ -71,8 +71,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 		FROM characters c LEFT JOIN user_binary ub ON ub.id = c.id WHERE c.id=$1`
 	switch pkt.Method {
 	case 1:
-		var friendsList string
-		_ = s.server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.charID).Scan(&friendsList)
+		friendsList, _ := s.server.charRepo.ReadString(s.charID, "friends")
 		cids := stringsupport.CSVElems(friendsList)
 		for _, cid := range cids {
 			house := HouseData{}
@@ -179,8 +178,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 
 		// Friends list verification
 		if state == 3 || state == 5 {
-			var friendsList string
-			_ = s.server.db.QueryRow(`SELECT friends FROM characters WHERE id=$1`, pkt.CharID).Scan(&friendsList)
+			friendsList, _ := s.server.charRepo.ReadString(pkt.CharID, "friends")
 			cids := stringsupport.CSVElems(friendsList)
 			for _, cid := range cids {
 				if uint32(cid) == s.charID {
@@ -286,8 +284,7 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	var temp []byte
-	err := s.server.db.QueryRow("SELECT decomyset FROM characters WHERE id = $1", s.charID).Scan(&temp)
+	temp, err := s.server.charRepo.LoadColumn(s.charID, "decomyset")
 	if err != nil {
 		s.logger.Error("Failed to load decomyset", zap.Error(err))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -333,7 +330,7 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	dumpSaveData(s, bf.Data(), "decomyset")
-	if _, err := s.server.db.Exec("UPDATE characters SET decomyset=$1 WHERE id=$2", bf.Data(), s.charID); err != nil {
+	if err := s.server.charRepo.SaveColumn(s.charID, "decomyset", bf.Data()); err != nil {
 		s.logger.Error("Failed to save decomyset", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

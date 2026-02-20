@@ -13,16 +13,15 @@ import (
 func handleMsgMhfGetEtcPoints(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetEtcPoints)
 
-	var dailyTime time.Time
-	_ = s.server.db.QueryRow("SELECT COALESCE(daily_time, $2) FROM characters WHERE id = $1", s.charID, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)).Scan(&dailyTime)
+	dailyTime, _ := s.server.charRepo.ReadTime(s.charID, "daily_time", time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))
 	if TimeAdjusted().After(dailyTime) {
-		if _, err := s.server.db.Exec("UPDATE characters SET bonus_quests = 0, daily_quests = 0 WHERE id=$1", s.charID); err != nil {
+		if err := s.server.charRepo.ResetDailyQuests(s.charID); err != nil {
 			s.logger.Error("Failed to reset daily quests", zap.Error(err))
 		}
 	}
 
-	var bonusQuests, dailyQuests, promoPoints uint32
-	if err := s.server.db.QueryRow(`SELECT bonus_quests, daily_quests, promo_points FROM characters WHERE id = $1`, s.charID).Scan(&bonusQuests, &dailyQuests, &promoPoints); err != nil {
+	bonusQuests, dailyQuests, promoPoints, err := s.server.charRepo.ReadEtcPoints(s.charID)
+	if err != nil {
 		s.logger.Error("Failed to get etc points", zap.Error(err))
 	}
 	resp := byteframe.NewByteFrame()
@@ -52,7 +51,7 @@ func handleMsgMhfUpdateEtcPoint(s *Session, p mhfpacket.MHFPacket) {
 	value, err := readCharacterInt(s, column)
 	if err == nil {
 		newVal := max(value+int(pkt.Delta), 0)
-		if _, err := s.server.db.Exec("UPDATE characters SET "+column+"=$1 WHERE id=$2", newVal, s.charID); err != nil {
+		if err := s.server.charRepo.SaveInt(s.charID, column, newVal); err != nil {
 			s.logger.Error("Failed to update etc point", zap.Error(err))
 		}
 	}
@@ -178,8 +177,7 @@ func handleMsgMhfGetEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateEquipSkinHist)
 	size := equipSkinHistSize(s.server.erupeConfig.RealClientMode)
-	var data []byte
-	err := s.server.db.QueryRow("SELECT COALESCE(skin_hist, $2) FROM characters WHERE id = $1", s.charID, make([]byte, size)).Scan(&data)
+	data, err := s.server.charRepo.LoadColumnWithDefault(s.charID, "skin_hist", make([]byte, size))
 	if err != nil {
 		s.logger.Error("Failed to get skin_hist", zap.Error(err))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -201,7 +199,7 @@ func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 	bitInByte := bit % 8
 	data[startByte+byteInd] |= bits.Reverse8(1 << uint(bitInByte))
 	dumpSaveData(s, data, "skinhist")
-	if _, err := s.server.db.Exec("UPDATE characters SET skin_hist=$1 WHERE id=$2", data, s.charID); err != nil {
+	if err := s.server.charRepo.SaveColumn(s.charID, "skin_hist", data); err != nil {
 		s.logger.Error("Failed to update skin history", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

@@ -78,14 +78,13 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		_ = s.rawConn.Close()
 		s.logger.Warn("Save cancelled due to corruption.")
 		if s.server.erupeConfig.DeleteOnSaveCorruption {
-			if _, err := s.server.db.Exec("UPDATE characters SET deleted=true WHERE id=$1", s.charID); err != nil {
+			if err := s.server.charRepo.SetDeleted(s.charID); err != nil {
 				s.logger.Error("Failed to mark character as deleted", zap.Error(err))
 			}
 		}
 		return
 	}
-	_, err = s.server.db.Exec("UPDATE characters SET name=$1 WHERE id=$2", characterSaveData.Name, s.charID)
-	if err != nil {
+	if err := s.server.charRepo.SaveString(s.charID, "name", characterSaveData.Name); err != nil {
 		s.logger.Error("Failed to update character name in db", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -160,8 +159,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	var data []byte
-	err := s.server.db.QueryRow("SELECT savedata FROM characters WHERE id = $1", s.charID).Scan(&data)
+	data, err := s.server.charRepo.LoadColumn(s.charID, "savedata")
 	if err != nil || len(data) == 0 {
 		s.logger.Warn(fmt.Sprintf("Failed to load savedata (CID: %d)", s.charID), zap.Error(err))
 		_ = s.rawConn.Close() // Terminate the connection

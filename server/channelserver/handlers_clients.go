@@ -58,16 +58,14 @@ func handleMsgSysEnumerateClient(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfListMember(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfListMember)
 
-	var csv string
 	var count uint32
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint32(0) // Blacklist count
-	err := s.server.db.QueryRow("SELECT blocked FROM characters WHERE id=$1", s.charID).Scan(&csv)
+	csv, err := s.server.charRepo.ReadString(s.charID, "blocked")
 	if err == nil {
 		cids := stringsupport.CSVElems(csv)
 		for _, cid := range cids {
-			var name string
-			err = s.server.db.QueryRow("SELECT name FROM characters WHERE id=$1", cid).Scan(&name)
+			name, err := s.server.charRepo.GetName(uint32(cid))
 			if err != nil {
 				continue
 			}
@@ -84,29 +82,28 @@ func handleMsgMhfListMember(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOprMember)
-	var csv string
 	for _, cid := range pkt.CharIDs {
 		if pkt.Blacklist {
-			err := s.server.db.QueryRow("SELECT blocked FROM characters WHERE id=$1", s.charID).Scan(&csv)
+			csv, err := s.server.charRepo.ReadString(s.charID, "blocked")
 			if err == nil {
 				if pkt.Operation {
 					csv = stringsupport.CSVRemove(csv, int(cid))
 				} else {
 					csv = stringsupport.CSVAdd(csv, int(cid))
 				}
-				if _, err := s.server.db.Exec("UPDATE characters SET blocked=$1 WHERE id=$2", csv, s.charID); err != nil {
+				if err := s.server.charRepo.SaveString(s.charID, "blocked", csv); err != nil {
 					s.logger.Error("Failed to update blocked list", zap.Error(err))
 				}
 			}
 		} else { // Friendlist
-			err := s.server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.charID).Scan(&csv)
+			csv, err := s.server.charRepo.ReadString(s.charID, "friends")
 			if err == nil {
 				if pkt.Operation {
 					csv = stringsupport.CSVRemove(csv, int(cid))
 				} else {
 					csv = stringsupport.CSVAdd(csv, int(cid))
 				}
-				if _, err := s.server.db.Exec("UPDATE characters SET friends=$1 WHERE id=$2", csv, s.charID); err != nil {
+				if err := s.server.charRepo.SaveString(s.charID, "friends", csv); err != nil {
 					s.logger.Error("Failed to update friends list", zap.Error(err))
 				}
 			}

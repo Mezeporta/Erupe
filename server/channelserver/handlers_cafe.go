@@ -43,8 +43,7 @@ func handleMsgMhfCheckDailyCafepoint(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	// get time after which daily claiming would be valid from db
-	var dailyTime time.Time
-	err := s.server.db.QueryRow("SELECT COALESCE(daily_time, $2) FROM characters WHERE id = $1", s.charID, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)).Scan(&dailyTime)
+	dailyTime, err := s.server.charRepo.ReadTime(s.charID, "daily_time", time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		s.logger.Error("Failed to get daily_time savedata from db", zap.Error(err))
 	}
@@ -56,7 +55,7 @@ func handleMsgMhfCheckDailyCafepoint(s *Session, p mhfpacket.MHFPacket) {
 		bondBonus = 5 // Bond point bonus quests
 		bonusQuests = s.server.erupeConfig.GameplayOptions.BonusQuestAllowance
 		dailyQuests = s.server.erupeConfig.GameplayOptions.DailyQuestAllowance
-		if _, err := s.server.db.Exec("UPDATE characters SET daily_time=$1, bonus_quests = $2, daily_quests = $3 WHERE id=$4", midday, bonusQuests, dailyQuests, s.charID); err != nil {
+		if err := s.server.charRepo.UpdateDailyCafe(s.charID, midday, bonusQuests, dailyQuests); err != nil {
 			s.logger.Error("Failed to update daily cafe data", zap.Error(err))
 		}
 		bf.WriteBool(true) // Success?
@@ -73,17 +72,16 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetCafeDuration)
 	bf := byteframe.NewByteFrame()
 
-	var cafeReset time.Time
-	err := s.server.db.QueryRow(`SELECT cafe_reset FROM characters WHERE id=$1`, s.charID).Scan(&cafeReset)
+	cafeReset, err := s.server.charRepo.ReadTime(s.charID, "cafe_reset", time.Time{})
 	if err != nil {
 		cafeReset = TimeWeekNext()
-		if _, err := s.server.db.Exec(`UPDATE characters SET cafe_reset=$1 WHERE id=$2`, cafeReset, s.charID); err != nil {
+		if err := s.server.charRepo.SaveTime(s.charID, "cafe_reset", cafeReset); err != nil {
 			s.logger.Error("Failed to set cafe reset time", zap.Error(err))
 		}
 	}
 	if TimeAdjusted().After(cafeReset) {
 		cafeReset = TimeWeekNext()
-		if _, err := s.server.db.Exec(`UPDATE characters SET cafe_time=0, cafe_reset=$1 WHERE id=$2`, cafeReset, s.charID); err != nil {
+		if err := s.server.charRepo.ResetCafeTime(s.charID, cafeReset); err != nil {
 			s.logger.Error("Failed to reset cafe time", zap.Error(err))
 		}
 		if _, err := s.server.db.Exec(`DELETE FROM cafe_accepted WHERE character_id=$1`, s.charID); err != nil {
@@ -220,7 +218,7 @@ func addPointNetcafe(s *Session, p int) error {
 		return err
 	}
 	points = min(points+p, s.server.erupeConfig.GameplayOptions.MaximumNP)
-	if _, err := s.server.db.Exec("UPDATE characters SET netcafe_points=$1 WHERE id=$2", points, s.charID); err != nil {
+	if err := s.server.charRepo.SaveInt(s.charID, "netcafe_points", points); err != nil {
 		s.logger.Error("Failed to update netcafe points", zap.Error(err))
 	}
 	return nil
@@ -235,7 +233,7 @@ func handleMsgMhfStartBoostTime(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 		return
 	}
-	if _, err := s.server.db.Exec("UPDATE characters SET boost_time=$1 WHERE id=$2", boostLimit, s.charID); err != nil {
+	if err := s.server.charRepo.SaveTime(s.charID, "boost_time", boostLimit); err != nil {
 		s.logger.Error("Failed to update boost time", zap.Error(err))
 	}
 	bf.WriteUint32(uint32(boostLimit.Unix()))
@@ -250,8 +248,7 @@ func handleMsgMhfGetBoostTime(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetBoostTimeLimit(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetBoostTimeLimit)
 	bf := byteframe.NewByteFrame()
-	var boostLimit time.Time
-	err := s.server.db.QueryRow("SELECT boost_time FROM characters WHERE id=$1", s.charID).Scan(&boostLimit)
+	boostLimit, err := s.server.charRepo.ReadTime(s.charID, "boost_time", time.Time{})
 	if err != nil {
 		bf.WriteUint32(0)
 	} else {
@@ -263,8 +260,7 @@ func handleMsgMhfGetBoostTimeLimit(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetBoostRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetBoostRight)
-	var boostLimit time.Time
-	err := s.server.db.QueryRow("SELECT boost_time FROM characters WHERE id=$1", s.charID).Scan(&boostLimit)
+	boostLimit, err := s.server.charRepo.ReadTime(s.charID, "boost_time", time.Time{})
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 		return

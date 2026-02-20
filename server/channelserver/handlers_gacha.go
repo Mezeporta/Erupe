@@ -138,8 +138,7 @@ func getGuaranteedItems(s *Session, gachaID uint32, rollID uint8) []GachaItem {
 }
 
 func addGachaItem(s *Session, items []GachaItem) {
-	var data []byte
-	_ = s.server.db.QueryRow(`SELECT gacha_items FROM characters WHERE id = $1`, s.charID).Scan(&data)
+	data, _ := s.server.charRepo.LoadColumn(s.charID, "gacha_items")
 	if len(data) > 0 {
 		numItems := int(data[0])
 		data = data[1:]
@@ -159,7 +158,7 @@ func addGachaItem(s *Session, items []GachaItem) {
 		newItem.WriteUint16(items[i].ItemID)
 		newItem.WriteUint16(items[i].Quantity)
 	}
-	if _, err := s.server.db.Exec(`UPDATE characters SET gacha_items = $1 WHERE id = $2`, newItem.Data(), s.charID); err != nil {
+	if err := s.server.charRepo.SaveColumn(s.charID, "gacha_items", newItem.Data()); err != nil {
 		s.logger.Error("Failed to update gacha items", zap.Error(err))
 	}
 }
@@ -193,8 +192,7 @@ func getRandomEntries(entries []GachaEntry, rolls int, isBox bool) ([]GachaEntry
 
 func handleMsgMhfReceiveGachaItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReceiveGachaItem)
-	var data []byte
-	err := s.server.db.QueryRow("SELECT COALESCE(gacha_items, $2) FROM characters WHERE id = $1", s.charID, []byte{0x00}).Scan(&data)
+	data, err := s.server.charRepo.LoadColumnWithDefault(s.charID, "gacha_items", []byte{0x00})
 	if err != nil {
 		data = []byte{0x00}
 	}
@@ -214,11 +212,11 @@ func handleMsgMhfReceiveGachaItem(s *Session, p mhfpacket.MHFPacket) {
 			update := byteframe.NewByteFrame()
 			update.WriteUint8(uint8(len(data[181:]) / 5))
 			update.WriteBytes(data[181:])
-			if _, err := s.server.db.Exec("UPDATE characters SET gacha_items = $1 WHERE id = $2", update.Data(), s.charID); err != nil {
+			if err := s.server.charRepo.SaveColumn(s.charID, "gacha_items", update.Data()); err != nil {
 				s.logger.Error("Failed to update gacha items overflow", zap.Error(err))
 			}
 		} else {
-			if _, err := s.server.db.Exec("UPDATE characters SET gacha_items = null WHERE id = $1", s.charID); err != nil {
+			if err := s.server.charRepo.SaveColumn(s.charID, "gacha_items", nil); err != nil {
 				s.logger.Error("Failed to clear gacha items", zap.Error(err))
 			}
 		}

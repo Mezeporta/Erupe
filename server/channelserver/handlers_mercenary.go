@@ -77,9 +77,8 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 		if s.server.erupeConfig.RealClientMode <= _config.G7 {
 			naviLength = hunterNaviSizeG7
 		}
-		var data []byte
 		// Load existing save
-		err := s.server.db.QueryRow("SELECT hunternavi FROM characters WHERE id = $1", s.charID).Scan(&data)
+		data, err := s.server.charRepo.LoadColumn(s.charID, "hunternavi")
 		if err != nil {
 			s.logger.Error("Failed to load hunternavi",
 				zap.Error(err),
@@ -102,7 +101,7 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 		saveOutput := deltacomp.ApplyDataDiff(pkt.RawDataPayload, data)
 		dataSize = len(saveOutput)
 
-		_, err = s.server.db.Exec("UPDATE characters SET hunternavi=$1 WHERE id=$2", saveOutput, s.charID)
+		err = s.server.charRepo.SaveColumn(s.charID, "hunternavi", saveOutput)
 		if err != nil {
 			s.logger.Error("Failed to save hunternavi",
 				zap.Error(err),
@@ -117,7 +116,7 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 		dataSize = len(pkt.RawDataPayload)
 
 		// simply update database, no extra processing
-		_, err := s.server.db.Exec("UPDATE characters SET hunternavi=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+		err := s.server.charRepo.SaveColumn(s.charID, "hunternavi", pkt.RawDataPayload)
 		if err != nil {
 			s.logger.Error("Failed to save hunternavi",
 				zap.Error(err),
@@ -175,7 +174,7 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return
 	}
-	if _, err := s.server.db.Exec("UPDATE characters SET rasta_id=$1 WHERE id=$2", nextID, s.charID); err != nil {
+	if err := s.server.charRepo.SaveInt(s.charID, "rasta_id", int(nextID)); err != nil {
 		s.logger.Error("Failed to set rasta ID", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return
@@ -195,11 +194,11 @@ func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	dumpSaveData(s, pkt.MercData, "mercenary")
 	if len(pkt.MercData) >= 4 {
 		temp := byteframe.NewByteFrameFromBytes(pkt.MercData)
-		if _, err := s.server.db.Exec("UPDATE characters SET savemercenary=$1, rasta_id=$2 WHERE id=$3", pkt.MercData, temp.ReadUint32(), s.charID); err != nil {
+		if err := s.server.charRepo.SaveMercenary(s.charID, pkt.MercData, temp.ReadUint32()); err != nil {
 			s.logger.Error("Failed to save mercenary data", zap.Error(err))
 		}
 	}
-	if _, err := s.server.db.Exec("UPDATE characters SET gcp=$1, pact_id=$2 WHERE id=$3", pkt.GCP, pkt.PactMercID, s.charID); err != nil {
+	if err := s.server.charRepo.UpdateGCPAndPact(s.charID, pkt.GCP, pkt.PactMercID); err != nil {
 		s.logger.Error("Failed to update GCP and pact ID", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -209,11 +208,11 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryW)
 	bf := byteframe.NewByteFrame()
 
+	pactID, _ := readCharacterInt(s, "pact_id")
 	var cid uint32
 	var name string
-	pactID, _ := readCharacterInt(s, "pact_id")
 	if pactID > 0 {
-		_ = s.server.db.QueryRow("SELECT name, id FROM characters WHERE rasta_id = $1", pactID).Scan(&name, &cid)
+		cid, name, _ = s.server.charRepo.FindByRastaID(pactID)
 		bf.WriteUint8(1) // numLends
 		bf.WriteUint32(uint32(pactID))
 		bf.WriteUint32(cid)
@@ -249,8 +248,7 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteBytes(temp.Data())
 
 		if pkt.Op != 1 && pkt.Op != 4 {
-			var data []byte
-			_ = s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id=$1", s.charID).Scan(&data)
+			data, _ := s.server.charRepo.LoadColumn(s.charID, "savemercenary")
 			gcp, _ := readCharacterInt(s, "gcp")
 
 			if len(data) == 0 {
@@ -268,8 +266,7 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfReadMercenaryM(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryM)
-	var data []byte
-	_ = s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", pkt.CharID).Scan(&data)
+	data, _ := s.server.charRepo.LoadColumn(pkt.CharID, "savemercenary")
 	resp := byteframe.NewByteFrame()
 	if len(data) == 0 {
 		resp.WriteBool(false)
@@ -283,15 +280,15 @@ func handleMsgMhfContractMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfContractMercenary)
 	switch pkt.Op {
 	case 0: // Form loan
-		if _, err := s.server.db.Exec("UPDATE characters SET pact_id=$1 WHERE id=$2", pkt.PactMercID, pkt.CID); err != nil {
+		if err := s.server.charRepo.SaveInt(pkt.CID, "pact_id", int(pkt.PactMercID)); err != nil {
 			s.logger.Error("Failed to form mercenary loan", zap.Error(err))
 		}
 	case 1: // Cancel lend
-		if _, err := s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", s.charID); err != nil {
+		if err := s.server.charRepo.SaveInt(s.charID, "pact_id", 0); err != nil {
 			s.logger.Error("Failed to cancel mercenary lend", zap.Error(err))
 		}
 	case 2: // Cancel loan
-		if _, err := s.server.db.Exec("UPDATE characters SET pact_id=0 WHERE id=$1", pkt.CID); err != nil {
+		if err := s.server.charRepo.SaveInt(pkt.CID, "pact_id", 0); err != nil {
 			s.logger.Error("Failed to cancel mercenary loan", zap.Error(err))
 		}
 	}
@@ -350,7 +347,7 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error("Failed to compress airou", zap.Error(err))
 	} else {
 		comp = append([]byte{0x01}, comp...)
-		if _, err := s.server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", comp, s.charID); err != nil {
+		if err := s.server.charRepo.SaveColumn(s.charID, "otomoairou", comp); err != nil {
 			s.logger.Error("Failed to save otomoairou", zap.Error(err))
 		}
 	}

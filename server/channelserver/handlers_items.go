@@ -333,7 +333,9 @@ func handleMsgMhfStampcardStamp(s *Session, p mhfpacket.MHFPacket) {
 	}
 	var stamps, rewardTier, rewardUnk uint16
 	reward := mhfitem.MHFItemStack{Item: mhfitem.MHFItem{}}
-	if err := s.server.db.QueryRow(`UPDATE characters SET stampcard = stampcard + $1 WHERE id = $2 RETURNING stampcard`, pkt.Stamps, s.charID).Scan(&stamps); err != nil {
+	stamps32, err := s.server.charRepo.AdjustInt(s.charID, "stampcard", int(pkt.Stamps))
+	stamps = uint16(stamps32)
+	if err != nil {
 		s.logger.Error("Failed to update stampcard", zap.Error(err))
 		doAckBufFail(s, pkt.AckHandle, nil)
 		return

@@ -279,11 +279,7 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetRejectGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetRejectGuildScout)
 
-	row := s.server.db.QueryRow("SELECT restrict_guild_scout FROM characters WHERE id=$1", s.charID)
-
-	var currentStatus bool
-
-	err := row.Scan(&currentStatus)
+	currentStatus, err := s.server.charRepo.ReadBool(s.charID, "restrict_guild_scout")
 
 	if err != nil {
 		s.logger.Error(
@@ -307,7 +303,7 @@ func handleMsgMhfGetRejectGuildScout(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSetRejectGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetRejectGuildScout)
 
-	_, err := s.server.db.Exec("UPDATE characters SET restrict_guild_scout=$1 WHERE id=$2", pkt.Reject, s.charID)
+	err := s.server.charRepo.SaveBool(s.charID, "restrict_guild_scout", pkt.Reject)
 
 	if err != nil {
 		s.logger.Error(

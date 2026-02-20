@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"testing"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -219,5 +220,362 @@ func TestGetCharIDsByUserIDEmpty(t *testing.T) {
 	}
 	if len(ids) != 0 {
 		t.Errorf("Expected 0 character IDs for user with no chars, got: %d", len(ids))
+	}
+}
+
+func TestReadTimeNull(t *testing.T) {
+	repo, _, charID := setupCharRepo(t)
+
+	defaultTime := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+	got, err := repo.ReadTime(charID, "daily_time", defaultTime)
+	if err != nil {
+		t.Fatalf("ReadTime failed: %v", err)
+	}
+	if !got.Equal(defaultTime) {
+		t.Errorf("Expected default time %v, got: %v", defaultTime, got)
+	}
+}
+
+func TestReadTimeWithValue(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	expected := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
+	if _, err := db.Exec("UPDATE characters SET daily_time=$1 WHERE id=$2", expected, charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	got, err := repo.ReadTime(charID, "daily_time", time.Time{})
+	if err != nil {
+		t.Fatalf("ReadTime failed: %v", err)
+	}
+	if !got.Equal(expected) {
+		t.Errorf("Expected %v, got: %v", expected, got)
+	}
+}
+
+func TestSaveTime(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	expected := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
+	if err := repo.SaveTime(charID, "daily_time", expected); err != nil {
+		t.Fatalf("SaveTime failed: %v", err)
+	}
+
+	var got time.Time
+	if err := db.QueryRow("SELECT daily_time FROM characters WHERE id=$1", charID).Scan(&got); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if !got.Equal(expected) {
+		t.Errorf("Expected %v, got: %v", expected, got)
+	}
+}
+
+func TestSaveInt(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if err := repo.SaveInt(charID, "netcafe_points", 500); err != nil {
+		t.Fatalf("SaveInt failed: %v", err)
+	}
+
+	var got int
+	if err := db.QueryRow("SELECT netcafe_points FROM characters WHERE id=$1", charID).Scan(&got); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if got != 500 {
+		t.Errorf("Expected 500, got: %d", got)
+	}
+}
+
+func TestSaveBool(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if err := repo.SaveBool(charID, "restrict_guild_scout", true); err != nil {
+		t.Fatalf("SaveBool failed: %v", err)
+	}
+
+	var got bool
+	if err := db.QueryRow("SELECT restrict_guild_scout FROM characters WHERE id=$1", charID).Scan(&got); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if !got {
+		t.Errorf("Expected true, got false")
+	}
+}
+
+func TestReadBool(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if _, err := db.Exec("UPDATE characters SET restrict_guild_scout=true WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	got, err := repo.ReadBool(charID, "restrict_guild_scout")
+	if err != nil {
+		t.Fatalf("ReadBool failed: %v", err)
+	}
+	if !got {
+		t.Errorf("Expected true, got false")
+	}
+}
+
+func TestSaveString(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if err := repo.SaveString(charID, "friends", "1,2,3"); err != nil {
+		t.Fatalf("SaveString failed: %v", err)
+	}
+
+	var got string
+	if err := db.QueryRow("SELECT friends FROM characters WHERE id=$1", charID).Scan(&got); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if got != "1,2,3" {
+		t.Errorf("Expected '1,2,3', got: %q", got)
+	}
+}
+
+func TestReadString(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if _, err := db.Exec("UPDATE characters SET friends='4,5,6' WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	got, err := repo.ReadString(charID, "friends")
+	if err != nil {
+		t.Fatalf("ReadString failed: %v", err)
+	}
+	if got != "4,5,6" {
+		t.Errorf("Expected '4,5,6', got: %q", got)
+	}
+}
+
+func TestReadStringNull(t *testing.T) {
+	repo, _, charID := setupCharRepo(t)
+
+	got, err := repo.ReadString(charID, "friends")
+	if err != nil {
+		t.Fatalf("ReadString failed: %v", err)
+	}
+	if got != "" {
+		t.Errorf("Expected empty string for NULL, got: %q", got)
+	}
+}
+
+func TestLoadColumnWithDefault(t *testing.T) {
+	repo, _, charID := setupCharRepo(t)
+
+	defaultVal := []byte{0x00, 0x01, 0x02}
+	got, err := repo.LoadColumnWithDefault(charID, "skin_hist", defaultVal)
+	if err != nil {
+		t.Fatalf("LoadColumnWithDefault failed: %v", err)
+	}
+	if len(got) != 3 || got[0] != 0x00 || got[2] != 0x02 {
+		t.Errorf("Expected default value, got: %x", got)
+	}
+}
+
+func TestLoadColumnWithDefaultExistingData(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	blob := []byte{0xAA, 0xBB}
+	if _, err := db.Exec("UPDATE characters SET skin_hist=$1 WHERE id=$2", blob, charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	got, err := repo.LoadColumnWithDefault(charID, "skin_hist", []byte{0x00})
+	if err != nil {
+		t.Fatalf("LoadColumnWithDefault failed: %v", err)
+	}
+	if len(got) != 2 || got[0] != 0xAA || got[1] != 0xBB {
+		t.Errorf("Expected stored data, got: %x", got)
+	}
+}
+
+func TestSetDeleted(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if err := repo.SetDeleted(charID); err != nil {
+		t.Fatalf("SetDeleted failed: %v", err)
+	}
+
+	var deleted bool
+	if err := db.QueryRow("SELECT deleted FROM characters WHERE id=$1", charID).Scan(&deleted); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if !deleted {
+		t.Errorf("Expected deleted=true")
+	}
+}
+
+func TestUpdateDailyCafe(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	dailyTime := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
+	if err := repo.UpdateDailyCafe(charID, dailyTime, 5, 10); err != nil {
+		t.Fatalf("UpdateDailyCafe failed: %v", err)
+	}
+
+	var gotTime time.Time
+	var bonus, daily uint32
+	if err := db.QueryRow("SELECT daily_time, bonus_quests, daily_quests FROM characters WHERE id=$1", charID).Scan(&gotTime, &bonus, &daily); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if !gotTime.Equal(dailyTime) {
+		t.Errorf("Expected daily_time %v, got: %v", dailyTime, gotTime)
+	}
+	if bonus != 5 || daily != 10 {
+		t.Errorf("Expected bonus=5 daily=10, got bonus=%d daily=%d", bonus, daily)
+	}
+}
+
+func TestResetDailyQuests(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if _, err := db.Exec("UPDATE characters SET bonus_quests=5, daily_quests=10 WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	if err := repo.ResetDailyQuests(charID); err != nil {
+		t.Fatalf("ResetDailyQuests failed: %v", err)
+	}
+
+	var bonus, daily uint32
+	if err := db.QueryRow("SELECT bonus_quests, daily_quests FROM characters WHERE id=$1", charID).Scan(&bonus, &daily); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if bonus != 0 || daily != 0 {
+		t.Errorf("Expected bonus=0 daily=0, got bonus=%d daily=%d", bonus, daily)
+	}
+}
+
+func TestReadEtcPoints(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if _, err := db.Exec("UPDATE characters SET bonus_quests=3, daily_quests=7, promo_points=100 WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	bonus, daily, promo, err := repo.ReadEtcPoints(charID)
+	if err != nil {
+		t.Fatalf("ReadEtcPoints failed: %v", err)
+	}
+	if bonus != 3 || daily != 7 || promo != 100 {
+		t.Errorf("Expected 3/7/100, got %d/%d/%d", bonus, daily, promo)
+	}
+}
+
+func TestResetCafeTime(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if _, err := db.Exec("UPDATE characters SET cafe_time=999 WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	cafeReset := time.Date(2025, 6, 22, 0, 0, 0, 0, time.UTC)
+	if err := repo.ResetCafeTime(charID, cafeReset); err != nil {
+		t.Fatalf("ResetCafeTime failed: %v", err)
+	}
+
+	var cafeTime int
+	var gotReset time.Time
+	if err := db.QueryRow("SELECT cafe_time, cafe_reset FROM characters WHERE id=$1", charID).Scan(&cafeTime, &gotReset); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if cafeTime != 0 {
+		t.Errorf("Expected cafe_time=0, got: %d", cafeTime)
+	}
+	if !gotReset.Equal(cafeReset) {
+		t.Errorf("Expected cafe_reset %v, got: %v", cafeReset, gotReset)
+	}
+}
+
+func TestUpdateGuildPostChecked(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	before := time.Now().Add(-time.Second)
+	if err := repo.UpdateGuildPostChecked(charID); err != nil {
+		t.Fatalf("UpdateGuildPostChecked failed: %v", err)
+	}
+
+	var got time.Time
+	if err := db.QueryRow("SELECT guild_post_checked FROM characters WHERE id=$1", charID).Scan(&got); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if got.Before(before) {
+		t.Errorf("Expected guild_post_checked to be recent, got: %v", got)
+	}
+}
+
+func TestReadGuildPostChecked(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	expected := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
+	if _, err := db.Exec("UPDATE characters SET guild_post_checked=$1 WHERE id=$2", expected, charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	got, err := repo.ReadGuildPostChecked(charID)
+	if err != nil {
+		t.Fatalf("ReadGuildPostChecked failed: %v", err)
+	}
+	if !got.Equal(expected) {
+		t.Errorf("Expected %v, got: %v", expected, got)
+	}
+}
+
+func TestSaveMercenary(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	data := []byte{0x01, 0x02, 0x03, 0x04}
+	if err := repo.SaveMercenary(charID, data, 42); err != nil {
+		t.Fatalf("SaveMercenary failed: %v", err)
+	}
+
+	var gotData []byte
+	var gotRastaID uint32
+	if err := db.QueryRow("SELECT savemercenary, rasta_id FROM characters WHERE id=$1", charID).Scan(&gotData, &gotRastaID); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if len(gotData) != 4 || gotData[0] != 0x01 {
+		t.Errorf("Expected mercenary data, got: %x", gotData)
+	}
+	if gotRastaID != 42 {
+		t.Errorf("Expected rasta_id=42, got: %d", gotRastaID)
+	}
+}
+
+func TestUpdateGCPAndPact(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if err := repo.UpdateGCPAndPact(charID, 100, 55); err != nil {
+		t.Fatalf("UpdateGCPAndPact failed: %v", err)
+	}
+
+	var gcp, pactID uint32
+	if err := db.QueryRow("SELECT gcp, pact_id FROM characters WHERE id=$1", charID).Scan(&gcp, &pactID); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if gcp != 100 || pactID != 55 {
+		t.Errorf("Expected gcp=100 pact_id=55, got gcp=%d pact_id=%d", gcp, pactID)
+	}
+}
+
+func TestFindByRastaID(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if _, err := db.Exec("UPDATE characters SET rasta_id=999 WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	gotID, gotName, err := repo.FindByRastaID(999)
+	if err != nil {
+		t.Fatalf("FindByRastaID failed: %v", err)
+	}
+	if gotID != charID {
+		t.Errorf("Expected charID %d, got: %d", charID, gotID)
+	}
+	if gotName != "RepoChar" {
+		t.Errorf("Expected 'RepoChar', got: %q", gotName)
 	}
 }

@@ -33,7 +33,7 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	if _, err := s.server.db.Exec("UPDATE characters SET guild_post_checked = now() WHERE id = $1", s.charID); err != nil {
+	if err := s.server.charRepo.UpdateGuildPostChecked(s.charID); err != nil {
 		s.logger.Error("Failed to update guild post checked time", zap.Error(err))
 	}
 	bf := byteframe.NewByteFrame()
@@ -118,9 +118,8 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	case 5: // Check for new messages
-		var timeChecked time.Time
 		var newPosts int
-		err := s.server.db.QueryRow("SELECT guild_post_checked FROM characters WHERE id = $1", s.charID).Scan(&timeChecked)
+		timeChecked, err := s.server.charRepo.ReadGuildPostChecked(s.charID)
 		if err == nil {
 			_ = s.server.db.QueryRow("SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND deleted = false AND (EXTRACT(epoch FROM created_at)::int) > $2", guild.ID, timeChecked.Unix()).Scan(&newPosts)
 			if newPosts > 0 {

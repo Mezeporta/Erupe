@@ -64,7 +64,7 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 		var data []byte
 
 		// Load existing save
-		err := s.server.db.QueryRow("SELECT platedata FROM characters WHERE id = $1", s.charID).Scan(&data)
+		data, err := s.server.charRepo.LoadColumn(s.charID, "platedata")
 		if err != nil {
 			s.logger.Error("Failed to load platedata",
 				zap.Error(err),
@@ -104,7 +104,7 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 		}
 		dataSize = len(saveOutput)
 
-		_, err = s.server.db.Exec("UPDATE characters SET platedata=$1 WHERE id=$2", saveOutput, s.charID)
+		err = s.server.charRepo.SaveColumn(s.charID, "platedata", saveOutput)
 		if err != nil {
 			s.logger.Error("Failed to save platedata",
 				zap.Error(err),
@@ -118,7 +118,7 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 		dataSize = len(pkt.RawDataPayload)
 
 		// simply update database, no extra processing
-		_, err := s.server.db.Exec("UPDATE characters SET platedata=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+		err := s.server.charRepo.SaveColumn(s.charID, "platedata", pkt.RawDataPayload)
 		if err != nil {
 			s.logger.Error("Failed to save platedata",
 				zap.Error(err),
@@ -164,7 +164,7 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 		var data []byte
 
 		// Load existing save
-		err := s.server.db.QueryRow("SELECT platebox FROM characters WHERE id = $1", s.charID).Scan(&data)
+		data, err := s.server.charRepo.LoadColumn(s.charID, "platebox")
 		if err != nil {
 			s.logger.Error("Failed to load platebox", zap.Error(err))
 			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -195,7 +195,7 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 			return
 		}
 
-		_, err = s.server.db.Exec("UPDATE characters SET platebox=$1 WHERE id=$2", saveOutput, s.charID)
+		err = s.server.charRepo.SaveColumn(s.charID, "platebox", saveOutput)
 		if err != nil {
 			s.logger.Error("Failed to save platebox", zap.Error(err))
 			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -206,7 +206,7 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 	} else {
 		dumpSaveData(s, pkt.RawDataPayload, "platebox")
 		// simply update database, no extra processing
-		_, err := s.server.db.Exec("UPDATE characters SET platebox=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+		err := s.server.charRepo.SaveColumn(s.charID, "platebox", pkt.RawDataPayload)
 		if err != nil {
 			s.logger.Error("Failed to save platebox", zap.Error(err))
 		}
@@ -242,7 +242,7 @@ func handleMsgMhfSavePlateMyset(s *Session, p mhfpacket.MHFPacket) {
 
 	// looks to always return the full thing, simply update database, no extra processing
 	dumpSaveData(s, pkt.RawDataPayload, "platemyset")
-	_, err := s.server.db.Exec("UPDATE characters SET platemyset=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+	err := s.server.charRepo.SaveColumn(s.charID, "platemyset", pkt.RawDataPayload)
 	if err != nil {
 		s.logger.Error("Failed to save platemyset",
 			zap.Error(err),
