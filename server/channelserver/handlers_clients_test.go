@@ -160,22 +160,18 @@ func TestHandleMsgMhfListMember_Integration(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		blockedCSV     string
 		wantBlockCount int
 	}{
 		{
 			name:           "no_blocked_users",
-			blockedCSV:     "",
 			wantBlockCount: 0,
 		},
 		{
 			name:           "single_blocked_user",
-			blockedCSV:     "2",
 			wantBlockCount: 1,
 		},
 		{
 			name:           "multiple_blocked_users",
-			blockedCSV:     "2,3,4",
 			wantBlockCount: 3,
 		},
 	}
@@ -187,17 +183,19 @@ func TestHandleMsgMhfListMember_Integration(t *testing.T) {
 			charName := fmt.Sprintf("Char%d", i)
 			charID := CreateTestCharacter(t, db, userID, charName)
 
-			// Create blocked characters
-			if tt.blockedCSV != "" {
-				// Create the blocked users
-				for i := 2; i <= 4; i++ {
-					blockedUserID := CreateTestUser(t, db, "blocked_user_"+tt.name+"_"+string(rune(i)))
-					CreateTestCharacter(t, db, blockedUserID, "BlockedChar_"+string(rune(i)))
+			// Create blocked characters and build CSV from their actual IDs
+			blockedCSV := ""
+			for j := 0; j < tt.wantBlockCount; j++ {
+				blockedUserID := CreateTestUser(t, db, fmt.Sprintf("blk_%s_%d", tt.name, j))
+				blockedCharID := CreateTestCharacter(t, db, blockedUserID, fmt.Sprintf("Blk%d_%d", i, j))
+				if blockedCSV != "" {
+					blockedCSV += ","
 				}
+				blockedCSV += fmt.Sprintf("%d", blockedCharID)
 			}
 
 			// Set blocked list
-			_, err := db.Exec("UPDATE characters SET blocked = $1 WHERE id = $2", tt.blockedCSV, charID)
+			_, err := db.Exec("UPDATE characters SET blocked = $1 WHERE id = $2", blockedCSV, charID)
 			if err != nil {
 				t.Fatalf("Failed to update blocked list: %v", err)
 			}

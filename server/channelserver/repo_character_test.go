@@ -22,12 +22,12 @@ func TestLoadColumn(t *testing.T) {
 
 	// Write a known blob to a column
 	blob := []byte{0xDE, 0xAD, 0xBE, 0xEF}
-	_, err := db.Exec("UPDATE characters SET kouryou_point=$1 WHERE id=$2", blob, charID)
+	_, err := db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", blob, charID)
 	if err != nil {
 		t.Fatalf("Setup failed: %v", err)
 	}
 
-	data, err := repo.LoadColumn(charID, "kouryou_point")
+	data, err := repo.LoadColumn(charID, "otomoairou")
 	if err != nil {
 		t.Fatalf("LoadColumn failed: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestLoadColumnNil(t *testing.T) {
 	repo, _, charID := setupCharRepo(t)
 
 	// Column should be NULL by default
-	data, err := repo.LoadColumn(charID, "kouryou_point")
+	data, err := repo.LoadColumn(charID, "otomoairou")
 	if err != nil {
 		t.Fatalf("LoadColumn failed: %v", err)
 	}
@@ -53,13 +53,13 @@ func TestSaveColumn(t *testing.T) {
 	repo, db, charID := setupCharRepo(t)
 
 	blob := []byte{0x01, 0x02, 0x03}
-	if err := repo.SaveColumn(charID, "kouryou_point", blob); err != nil {
+	if err := repo.SaveColumn(charID, "otomoairou", blob); err != nil {
 		t.Fatalf("SaveColumn failed: %v", err)
 	}
 
 	// Verify via direct SELECT
 	var got []byte
-	if err := db.QueryRow("SELECT kouryou_point FROM characters WHERE id=$1", charID).Scan(&got); err != nil {
+	if err := db.QueryRow("SELECT otomoairou FROM characters WHERE id=$1", charID).Scan(&got); err != nil {
 		t.Fatalf("Verification query failed: %v", err)
 	}
 	if len(got) != 3 || got[0] != 0x01 || got[2] != 0x03 {

@@ -52,9 +52,9 @@ func TestSessionLifecycle_BasicSaveLoadCycle(t *testing.T) {
 	session1 := createTestSessionForServerWithChar(server, charID, "LifecycleChar")
 	// Note: Not calling Start() since we're testing handlers directly, not packet processing
 
-	// Modify data via packet handlers
+	// Modify data via packet handlers (frontier_points is on users table since 9.2 migration)
 	initialPoints := uint32(5000)
-	_, err := db.Exec("UPDATE characters SET frontier_points = $1 WHERE id = $2", initialPoints, charID)
+	_, err := db.Exec("UPDATE users SET frontier_points = $1 WHERE id = $2", initialPoints, userID)
 	if err != nil {
 		t.Fatalf("Failed to set initial road points: %v", err)
 	}
@@ -292,9 +292,9 @@ func TestSessionLifecycle_MultipleDataTypesPersistence(t *testing.T) {
 	// ===== SESSION 1: Modify multiple data types =====
 	session1 := createTestSessionForServerWithChar(server, charID, "MultiChar")
 
-	// 1. Set Road Points
+	// 1. Set Road Points (frontier_points is on users table since 9.2 migration)
 	rdpPoints := uint32(7500)
-	_, err := db.Exec("UPDATE characters SET frontier_points = $1 WHERE id = $2", rdpPoints, charID)
+	_, err := db.Exec("UPDATE users SET frontier_points = $1 WHERE id = $2", rdpPoints, userID)
 	if err != nil {
 		t.Fatalf("Failed to set RdP: %v", err)
 	}
@@ -362,9 +362,9 @@ func TestSessionLifecycle_MultipleDataTypesPersistence(t *testing.T) {
 
 	allPassed := true
 
-	// Verify 1: Road Points
+	// Verify 1: Road Points (frontier_points is on users table)
 	var loadedRdP uint32
-	_ = db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&loadedRdP)
+	_ = db.QueryRow("SELECT frontier_points FROM users WHERE id = $1", userID).Scan(&loadedRdP)
 	if loadedRdP != rdpPoints {
 		t.Errorf("❌ RdP not persisted: got %d, want %d", loadedRdP, rdpPoints)
 		allPassed = false
@@ -446,9 +446,9 @@ func TestSessionLifecycle_DisconnectWithoutLogout(t *testing.T) {
 	// ===== SESSION 1: Modify data then disconnect without explicit logout =====
 	session1 := createTestSessionForServerWithChar(server, charID, "DisconnectChar")
 
-	// Modify data
+	// Modify data (frontier_points is on users table since 9.2 migration)
 	rdpPoints := uint32(9999)
-	_, err := db.Exec("UPDATE characters SET frontier_points = $1 WHERE id = $2", rdpPoints, charID)
+	_, err := db.Exec("UPDATE users SET frontier_points = $1 WHERE id = $2", rdpPoints, userID)
 	if err != nil {
 		t.Fatalf("Failed to set RdP: %v", err)
 	}
@@ -535,9 +535,9 @@ func TestSessionLifecycle_RapidReconnect(t *testing.T) {
 
 		session := createTestSessionForServerWithChar(server, charID, "RapidChar")
 
-		// Modify road points each cycle
+		// Modify road points each cycle (frontier_points is on users table since 9.2 migration)
 		points := uint32(1000 * cycle)
-		_, err := db.Exec("UPDATE characters SET frontier_points = $1 WHERE id = $2", points, charID)
+		_, err := db.Exec("UPDATE users SET frontier_points = $1 WHERE id = $2", points, userID)
 		if err != nil {
 			t.Fatalf("Cycle %d: Failed to update points: %v", cycle, err)
 		}
@@ -548,7 +548,7 @@ func TestSessionLifecycle_RapidReconnect(t *testing.T) {
 
 		// Verify points persisted
 		var loadedPoints uint32
-		_ = db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&loadedPoints)
+		_ = db.QueryRow("SELECT frontier_points FROM users WHERE id = $1", userID).Scan(&loadedPoints)
 		if loadedPoints != points {
 			t.Errorf("❌ Cycle %d: Points not persisted: got %d, want %d", cycle, loadedPoints, points)
 		} else {

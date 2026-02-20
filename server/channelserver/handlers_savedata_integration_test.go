@@ -28,25 +28,25 @@ func TestSaveLoad_RoadPoints(t *testing.T) {
 	defer TeardownTestDB(t, db)
 
 	userID := CreateTestUser(t, db, "testuser")
-	charID := CreateTestCharacter(t, db, userID, "TestChar")
+	_ = CreateTestCharacter(t, db, userID, "TestChar")
 
-	// Set initial Road Points
+	// Set initial Road Points (frontier_points is on the users table since 9.2 migration)
 	initialPoints := uint32(1000)
-	_, err := db.Exec("UPDATE characters SET frontier_points = $1 WHERE id = $2", initialPoints, charID)
+	_, err := db.Exec("UPDATE users SET frontier_points = $1 WHERE id = $2", initialPoints, userID)
 	if err != nil {
 		t.Fatalf("Failed to set initial road points: %v", err)
 	}
 
 	// Modify Road Points
 	newPoints := uint32(2500)
-	_, err = db.Exec("UPDATE characters SET frontier_points = $1 WHERE id = $2", newPoints, charID)
+	_, err = db.Exec("UPDATE users SET frontier_points = $1 WHERE id = $2", newPoints, userID)
 	if err != nil {
 		t.Fatalf("Failed to update road points: %v", err)
 	}
 
 	// Verify Road Points persisted
 	var savedPoints uint32
-	err = db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&savedPoints)
+	err = db.QueryRow("SELECT frontier_points FROM users WHERE id = $1", userID).Scan(&savedPoints)
 	if err != nil {
 		t.Fatalf("Failed to query road points: %v", err)
 	}
@@ -468,9 +468,9 @@ func TestSaveLoad_CompleteSaveLoadCycle(t *testing.T) {
 	s.Name = "SaveLoadTest"
 	SetTestDB(s.server, db)
 
-	// 1. Set Road Points
+	// 1. Set Road Points (frontier_points is on the users table since 9.2 migration)
 	rdpPoints := uint32(5000)
-	_, err := db.Exec("UPDATE characters SET frontier_points = $1 WHERE id = $2", rdpPoints, charID)
+	_, err := db.Exec("UPDATE users SET frontier_points = $1 WHERE id = $2", rdpPoints, userID)
 	if err != nil {
 		t.Fatalf("Failed to set RdP: %v", err)
 	}
@@ -506,7 +506,7 @@ func TestSaveLoad_CompleteSaveLoadCycle(t *testing.T) {
 	mock2 := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s2 := createTestSession(mock2)
 	s2.charID = charID
-	s2.server.db = db
+	SetTestDB(s2.server, db)
 	s2.server.userBinaryParts = make(map[userBinaryPartID][]byte)
 
 	// Load character data
@@ -520,9 +520,9 @@ func TestSaveLoad_CompleteSaveLoadCycle(t *testing.T) {
 		t.Errorf("Character name not loaded correctly: got %q, want %q", s2.Name, "SaveLoadTest")
 	}
 
-	// Verify Road Points persisted
+	// Verify Road Points persisted (frontier_points is on users table)
 	var loadedRdP uint32
-	_ = db.QueryRow("SELECT frontier_points FROM characters WHERE id = $1", charID).Scan(&loadedRdP)
+	_ = db.QueryRow("SELECT frontier_points FROM users WHERE id = $1", userID).Scan(&loadedRdP)
 	if loadedRdP != rdpPoints {
 		t.Errorf("RdP not persisted: got %d, want %d (BUG CONFIRMED)", loadedRdP, rdpPoints)
 	} else {
