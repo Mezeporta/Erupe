@@ -1,6 +1,10 @@
 package channelserver
 
 import (
+	"database/sql"
+	"errors"
+	"time"
+
 	"github.com/jmoiron/sqlx"
 )
 
@@ -94,6 +98,21 @@ func (r *GachaRepository) GetStepupStep(gachaID uint32, charID uint32) (uint8, e
 		gachaID, charID,
 	).Scan(&step)
 	return step, err
+}
+
+// GetStepupWithTime returns the current step and creation time for a stepup entry.
+// Returns sql.ErrNoRows if no entry exists.
+func (r *GachaRepository) GetStepupWithTime(gachaID uint32, charID uint32) (uint8, time.Time, error) {
+	var step uint8
+	var createdAt time.Time
+	err := r.db.QueryRow(
+		`SELECT step, COALESCE(created_at, '2000-01-01'::timestamptz) FROM gacha_stepup WHERE gacha_id = $1 AND character_id = $2`,
+		gachaID, charID,
+	).Scan(&step, &createdAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, time.Time{}, err
+	}
+	return step, createdAt, err
 }
 
 // HasEntryType returns whether a gacha has any entries of the given type.

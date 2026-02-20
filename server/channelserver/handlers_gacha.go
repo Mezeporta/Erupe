@@ -1,9 +1,13 @@
 package channelserver
 
 import (
+	"database/sql"
+	"errors"
+	"math/rand"
+	"time"
+
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
-	"math/rand"
 
 	"go.uber.org/zap"
 )
@@ -306,8 +310,25 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetStepupStatus(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetStepupStatus)
-	// TODO: Reset daily (noon)
-	step, _ := s.server.gachaRepo.GetStepupStep(pkt.GachaID, s.charID)
+
+	// Compute the most recent noon boundary
+	midday := TimeMidnight().Add(12 * time.Hour)
+	if TimeAdjusted().Before(midday) {
+		midday = midday.Add(-24 * time.Hour)
+	}
+
+	step, createdAt, err := s.server.gachaRepo.GetStepupWithTime(pkt.GachaID, s.charID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		s.logger.Error("Failed to get gacha stepup state", zap.Error(err))
+	}
+	// Reset stale stepup progress (created before the most recent noon)
+	if err == nil && createdAt.Before(midday) {
+		if err := s.server.gachaRepo.DeleteStepup(pkt.GachaID, s.charID); err != nil {
+			s.logger.Error("Failed to reset stale gacha stepup", zap.Error(err))
+		}
+		step = 0
+	}
+
 	hasEntry, _ := s.server.gachaRepo.HasEntryType(pkt.GachaID, step)
 	if !hasEntry {
 		if err := s.server.gachaRepo.DeleteStepup(pkt.GachaID, s.charID); err != nil {

@@ -54,6 +54,7 @@ SELECT
 	 	ga.sub2_id = g.id
 	), 0) AS alliance_id,
 	icon,
+	COALESCE(rp_reset_at, '2000-01-01'::timestamptz) AS rp_reset_at,
 	(SELECT count(1) FROM guild_characters gc WHERE gc.guild_id = g.id) AS member_count
 	FROM guilds g
 	JOIN guild_characters gc ON gc.character_id = leader_id
@@ -937,6 +938,30 @@ func (r *GuildRepository) ListInvitedCharacters(guildID uint32) ([]*ScoutedChara
 		chars = append(chars, sc)
 	}
 	return chars, nil
+}
+
+// RolloverDailyRP moves rp_today into rp_yesterday for all members of a guild,
+// then updates the guild's rp_reset_at timestamp.
+func (r *GuildRepository) RolloverDailyRP(guildID uint32, noon time.Time) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(
+		`UPDATE guild_characters SET rp_yesterday = rp_today, rp_today = 0 WHERE guild_id = $1`,
+		guildID,
+	); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err := tx.Exec(
+		`UPDATE guilds SET rp_reset_at = $1 WHERE id = $2`,
+		noon, guildID,
+	); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 // AddWeeklyBonusUsers atomically adds numUsers to the guild's weekly bonus exceptional user count.

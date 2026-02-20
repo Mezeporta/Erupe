@@ -56,6 +56,7 @@ type Guild struct {
 	Souls         uint32        `db:"souls"`
 	AllianceID    uint32        `db:"alliance_id"`
 	Icon          *GuildIcon    `db:"icon"`
+	RPResetAt     time.Time     `db:"rp_reset_at"`
 
 	GuildLeader
 }

@@ -1,10 +1,12 @@
 package channelserver
 
 import (
+	"sort"
+	"time"
+
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/mhfitem"
 	_config "erupe-ce/config"
-	"sort"
 
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/network/mhfpacket"
@@ -103,6 +105,17 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	} else if guild == nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 2))
 		return
+	}
+
+	// Lazy daily RP rollover: move rp_today → rp_yesterday at noon
+	midday := TimeMidnight().Add(12 * time.Hour)
+	if TimeAdjusted().Before(midday) {
+		midday = midday.Add(-24 * time.Hour)
+	}
+	if guild.RPResetAt.Before(midday) {
+		if err := s.server.guildRepo.RolloverDailyRP(guild.ID, midday); err != nil {
+			s.logger.Error("Failed to rollover guild daily RP", zap.Error(err))
+		}
 	}
 
 	guildMembers, err := s.server.guildRepo.GetMembers(guild.ID, false)
