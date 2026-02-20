@@ -292,11 +292,20 @@ func logoutPlayer(s *Session) {
 	_ = s.rawConn.Close()
 	s.server.Unlock()
 
-	// Stage cleanup
+	// Stage cleanup — snapshot sessions first under server mutex, then iterate stages under stagesLock
+	s.server.Lock()
+	sessionSnapshot := make([]*Session, 0, len(s.server.sessions))
+	for _, sess := range s.server.sessions {
+		sessionSnapshot = append(sessionSnapshot, sess)
+	}
+	s.server.Unlock()
+
+	s.server.stagesLock.RLock()
 	for _, stage := range s.server.stages {
-		// Tell sessions registered to disconnecting players quest to unregister
+		stage.Lock()
+		// Tell sessions registered to disconnecting player's quest to unregister
 		if stage.host != nil && stage.host.charID == s.charID {
-			for _, sess := range s.server.sessions {
+			for _, sess := range sessionSnapshot {
 				for rSlot := range stage.reservedClientSlots {
 					if sess.charID == rSlot && sess.stage != nil && sess.stage.id[3:5] != "Qs" {
 						sess.QueueSendMHFNonBlocking(&mhfpacket.MsgSysStageDestruct{})
@@ -309,7 +318,9 @@ func logoutPlayer(s *Session) {
 				delete(stage.clients, session)
 			}
 		}
+		stage.Unlock()
 	}
+	s.server.stagesLock.RUnlock()
 
 	// Update sign sessions and server player count
 	if s.server.db != nil {
@@ -339,11 +350,13 @@ func logoutPlayer(s *Session) {
 		CharID: s.charID,
 	}, s)
 
-	s.server.Lock()
+	s.server.stagesLock.RLock()
 	for _, stage := range s.server.stages {
+		stage.Lock()
 		delete(stage.reservedClientSlots, s.charID)
+		stage.Unlock()
 	}
-	s.server.Unlock()
+	s.server.stagesLock.RUnlock()
 
 	removeSessionFromSemaphore(s)
 	removeSessionFromStage(s)
