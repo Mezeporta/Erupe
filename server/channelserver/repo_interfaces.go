@@ -271,7 +271,7 @@ type EventRepo interface {
 	GetLoginBoosts(charID uint32) ([]loginBoost, error)
 	InsertLoginBoost(charID uint32, weekReq uint8, expiration, reset time.Time) error
 	UpdateLoginBoost(charID uint32, weekReq uint8, expiration, reset time.Time) error
-	GetEventQuests() (*sql.Rows, error)
+	GetEventQuests() ([]EventQuest, error)
 	UpdateEventQuestStartTime(tx *sql.Tx, id uint32, startTime time.Time) error
 	BeginTx() (*sql.Tx, error)
 }

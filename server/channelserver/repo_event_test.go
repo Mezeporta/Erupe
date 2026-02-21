@@ -32,14 +32,13 @@ func insertEventQuest(t *testing.T, db *sqlx.DB, questType, questID int, startTi
 func TestGetEventQuestsEmpty(t *testing.T) {
 	repo, _ := setupEventRepo(t)
 
-	rows, err := repo.GetEventQuests()
+	quests, err := repo.GetEventQuests()
 	if err != nil {
 		t.Fatalf("GetEventQuests failed: %v", err)
 	}
-	defer rows.Close()
 
-	if rows.Next() {
-		t.Error("Expected no rows for empty event_quests table")
+	if len(quests) != 0 {
+		t.Errorf("Expected no quests for empty event_quests table, got: %d", len(quests))
 	}
 }
 
@@ -50,25 +49,28 @@ func TestGetEventQuestsReturnsRows(t *testing.T) {
 	insertEventQuest(t, db, 1, 100, now, 0, 0)
 	insertEventQuest(t, db, 2, 200, now, 7, 3)
 
-	rows, err := repo.GetEventQuests()
+	quests, err := repo.GetEventQuests()
 	if err != nil {
 		t.Fatalf("GetEventQuests failed: %v", err)
 	}
-	defer rows.Close()
 
-	count := 0
-	for rows.Next() {
-		var id, mark uint32
-		var questID, flags, activeDays, inactiveDays int
-		var maxPlayers, questType uint8
-		var startTime time.Time
-		if err := rows.Scan(&id, &maxPlayers, &questType, &questID, &mark, &flags, &startTime, &activeDays, &inactiveDays); err != nil {
-			t.Fatalf("Scan failed: %v", err)
-		}
-		count++
+	if len(quests) != 2 {
+		t.Errorf("Expected 2 quests, got: %d", len(quests))
 	}
-	if count != 2 {
-		t.Errorf("Expected 2 rows, got: %d", count)
+	if quests[0].QuestID != 100 {
+		t.Errorf("Expected first quest ID 100, got: %d", quests[0].QuestID)
+	}
+	if quests[1].QuestID != 200 {
+		t.Errorf("Expected second quest ID 200, got: %d", quests[1].QuestID)
+	}
+	if quests[0].QuestType != 1 {
+		t.Errorf("Expected first quest type 1, got: %d", quests[0].QuestType)
+	}
+	if quests[1].ActiveDays != 7 {
+		t.Errorf("Expected second quest active_days 7, got: %d", quests[1].ActiveDays)
+	}
+	if quests[1].InactiveDays != 3 {
+		t.Errorf("Expected second quest inactive_days 3, got: %d", quests[1].InactiveDays)
 	}
 }
 
@@ -80,25 +82,17 @@ func TestGetEventQuestsOrderByQuestID(t *testing.T) {
 	insertEventQuest(t, db, 1, 100, now, 0, 0)
 	insertEventQuest(t, db, 1, 200, now, 0, 0)
 
-	rows, err := repo.GetEventQuests()
+	quests, err := repo.GetEventQuests()
 	if err != nil {
 		t.Fatalf("GetEventQuests failed: %v", err)
 	}
-	defer rows.Close()
 
-	var questIDs []int
-	for rows.Next() {
-		var id, mark uint32
-		var questID, flags, activeDays, inactiveDays int
-		var maxPlayers, questType uint8
-		var startTime time.Time
-		if err := rows.Scan(&id, &maxPlayers, &questType, &questID, &mark, &flags, &startTime, &activeDays, &inactiveDays); err != nil {
-			t.Fatalf("Scan failed: %v", err)
+	if len(quests) != 3 || quests[0].QuestID != 100 || quests[1].QuestID != 200 || quests[2].QuestID != 300 {
+		ids := make([]int, len(quests))
+		for i, q := range quests {
+			ids[i] = q.QuestID
 		}
-		questIDs = append(questIDs, questID)
-	}
-	if len(questIDs) != 3 || questIDs[0] != 100 || questIDs[1] != 200 || questIDs[2] != 300 {
-		t.Errorf("Expected quest IDs [100, 200, 300], got: %v", questIDs)
+		t.Errorf("Expected quest IDs [100, 200, 300], got: %v", ids)
 	}
 }
 

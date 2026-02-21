@@ -1,7 +1,6 @@
 package channelserver
 
 import (
-	"database/sql"
 	"encoding/binary"
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/decryption"
@@ -264,25 +263,17 @@ func loadQuestFile(s *Session, questId int) []byte {
 	return result
 }
 
-func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
-	var id, mark uint32
-	var questId, activeDuration, inactiveDuration, flags int
-	var maxPlayers, questType uint8
-	var startTime time.Time
-	if err := rows.Scan(&id, &maxPlayers, &questType, &questId, &mark, &flags, &startTime, &activeDuration, &inactiveDuration); err != nil {
-		return nil, fmt.Errorf("failed to scan event quest row: %w", err)
-	}
-
-	data := loadQuestFile(s, questId)
+func makeEventQuest(s *Session, eq EventQuest) ([]byte, error) {
+	data := loadQuestFile(s, eq.QuestID)
 	if data == nil {
-		return nil, fmt.Errorf("failed to load quest file (%d)", questId)
+		return nil, fmt.Errorf("failed to load quest file (%d)", eq.QuestID)
 	}
 
 	bf := byteframe.NewByteFrame()
-	bf.WriteUint32(id)
+	bf.WriteUint32(eq.ID)
 	bf.WriteUint32(0) // Unk
 	bf.WriteUint8(0)  // Unk
-	switch questType {
+	switch eq.QuestType {
 	case QuestTypeRegularRaviente:
 		bf.WriteUint8(s.server.erupeConfig.GameplayOptions.RegularRavienteMaxPlayers)
 	case QuestTypeViolentRaviente:
@@ -294,17 +285,17 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 	case QuestTypeSmallBerserkRavi:
 		bf.WriteUint8(s.server.erupeConfig.GameplayOptions.SmallBerserkRavienteMaxPlayers)
 	default:
-		bf.WriteUint8(maxPlayers)
+		bf.WriteUint8(eq.MaxPlayers)
 	}
-	bf.WriteUint8(questType)
-	if questType == QuestTypeSpecialTool {
+	bf.WriteUint8(eq.QuestType)
+	if eq.QuestType == QuestTypeSpecialTool {
 		bf.WriteBool(false)
 	} else {
 		bf.WriteBool(true)
 	}
 	bf.WriteUint16(0) // Unk
 	if s.server.erupeConfig.RealClientMode >= cfg.G2 {
-		bf.WriteUint32(mark)
+		bf.WriteUint32(eq.Mark)
 	}
 	bf.WriteUint16(0) // Unk
 	bf.WriteUint16(uint16(len(data)))
@@ -320,10 +311,10 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 		bf.WriteUint8(flagByte & 0b11100000)
 	} else {
 		// Allow for seasons to be specified in database, otherwise use the one in the file.
-		if flags < 0 {
+		if eq.Flags < 0 {
 			bf.WriteUint8(flagByte)
 		} else {
-			bf.WriteUint8(uint8(flags))
+			bf.WriteUint8(uint8(eq.Flags))
 		}
 	}
 
@@ -348,59 +339,48 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(0)
 
-	rows, err := s.server.eventRepo.GetEventQuests()
+	quests, err := s.server.eventRepo.GetEventQuests()
 	if err == nil {
 		currentTime := time.Now()
 		tx, err := s.server.eventRepo.BeginTx()
 		if err != nil {
 			s.logger.Error("Failed to begin transaction for event quests", zap.Error(err))
-			_ = rows.Close()
 			doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 			return
 		}
 
-		for rows.Next() {
-			var id, mark uint32
-			var questId, flags, activeDays, inactiveDays int
-			var maxPlayers, questType uint8
-			var startTime time.Time
-
-			err = rows.Scan(&id, &maxPlayers, &questType, &questId, &mark, &flags, &startTime, &activeDays, &inactiveDays)
-			if err != nil {
-				s.logger.Error("Failed to scan event quest row", zap.Error(err))
-				continue
-			}
-
+		for i, eq := range quests {
 			// Use the Event Cycling system
-			if activeDays > 0 {
-				cycleLength := (time.Duration(activeDays) + time.Duration(inactiveDays)) * 24 * time.Hour
+			if eq.ActiveDays > 0 {
+				cycleLength := (time.Duration(eq.ActiveDays) + time.Duration(eq.InactiveDays)) * 24 * time.Hour
 
 				// Count the number of full cycles elapsed since the last rotation.
-				extraCycles := int(currentTime.Sub(startTime) / cycleLength)
+				extraCycles := int(currentTime.Sub(eq.StartTime) / cycleLength)
 
 				if extraCycles > 0 {
 					// Calculate the rotation time based on start time, active duration, and inactive duration.
-					rotationTime := startTime.Add(time.Duration(activeDays+inactiveDays) * 24 * time.Hour * time.Duration(extraCycles))
+					rotationTime := eq.StartTime.Add(time.Duration(eq.ActiveDays+eq.InactiveDays) * 24 * time.Hour * time.Duration(extraCycles))
 					if currentTime.After(rotationTime) {
 						// Normalize rotationTime to 12PM JST to align with the in-game events update notification.
 						newRotationTime := time.Date(rotationTime.Year(), rotationTime.Month(), rotationTime.Day(), 12, 0, 0, 0, TimeAdjusted().Location())
 
-						err = s.server.eventRepo.UpdateEventQuestStartTime(tx, id, newRotationTime)
+						err = s.server.eventRepo.UpdateEventQuestStartTime(tx, eq.ID, newRotationTime)
 						if err != nil {
 							_ = tx.Rollback()
 							break
 						}
-						startTime = newRotationTime // Set the new start time so the quest can be used/removed immediately.
+						quests[i].StartTime = newRotationTime // Set the new start time so the quest can be used/removed immediately.
+						eq = quests[i]
 					}
 				}
 
 				// Check if the quest is currently active
-				if currentTime.Before(startTime) || currentTime.After(startTime.Add(time.Duration(activeDays)*24*time.Hour)) {
+				if currentTime.Before(eq.StartTime) || currentTime.After(eq.StartTime.Add(time.Duration(eq.ActiveDays)*24*time.Hour)) {
 					continue
 				}
 			}
 
-			data, err := makeEventQuest(s, rows)
+			data, err := makeEventQuest(s, eq)
 			if err != nil {
 				s.logger.Error("Failed to make event quest", zap.Error(err))
 				continue
@@ -419,7 +399,6 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 
-		_ = rows.Close()
 		_ = tx.Commit()
 	}
 
