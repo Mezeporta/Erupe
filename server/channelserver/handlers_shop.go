@@ -57,17 +57,9 @@ func writeShopItems(bf *byteframe.ByteFrame, items []ShopItem, mode cfg.Mode) {
 }
 
 func getShopItems(s *Session, shopType uint8, shopID uint32) []ShopItem {
-	var items []ShopItem
-	var temp ShopItem
-	rows, err := s.server.shopRepo.GetShopItems(shopType, shopID, s.charID)
-	if err == nil {
-		for rows.Next() {
-			err = rows.StructScan(&temp)
-			if err != nil {
-				continue
-			}
-			items = append(items, temp)
-		}
+	items, err := s.server.shopRepo.GetShopItems(shopType, shopID, s.charID)
+	if err != nil {
+		return nil
 	}
 	return items
 }
@@ -270,20 +262,11 @@ func handleMsgMhfGetFpointExchangeList(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetFpointExchangeList)
 
 	bf := byteframe.NewByteFrame()
-	var exchange FPointExchange
-	var exchanges []FPointExchange
+	exchanges, _ := s.server.shopRepo.GetFpointExchangeList()
 	var buyables uint16
-	rows, err := s.server.shopRepo.GetFpointExchangeList()
-	if err == nil {
-		for rows.Next() {
-			err = rows.StructScan(&exchange)
-			if err != nil {
-				continue
-			}
-			if exchange.Buyable {
-				buyables++
-			}
-			exchanges = append(exchanges, exchange)
+	for _, e := range exchanges {
+		if e.Buyable {
+			buyables++
 		}
 	}
 	if s.server.erupeConfig.RealClientMode <= cfg.Z2 {

@@ -225,27 +225,18 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	if pkt.Op != 2 && pkt.Op != 5 {
-		var loans uint8
-		temp := byteframe.NewByteFrame()
-		rows, err := s.server.mercenaryRepo.GetMercenaryLoans(s.charID)
+		loans, err := s.server.mercenaryRepo.GetMercenaryLoans(s.charID)
 		if err != nil {
 			s.logger.Error("Failed to query mercenary loans", zap.Error(err))
-		} else {
-			defer func() { _ = rows.Close() }()
-			for rows.Next() {
-				if err := rows.Scan(&name, &cid, &pactID); err != nil {
-					continue
-				}
-				loans++
-				temp.WriteUint32(uint32(pactID))
-				temp.WriteUint32(cid)
-				temp.WriteUint32(uint32(TimeAdjusted().Unix()))
-				temp.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * 7).Unix()))
-				temp.WriteBytes(stringsupport.PaddedString(name, 18, true))
-			}
 		}
-		bf.WriteUint8(loans)
-		bf.WriteBytes(temp.Data())
+		bf.WriteUint8(uint8(len(loans)))
+		for _, loan := range loans {
+			bf.WriteUint32(uint32(loan.PactID))
+			bf.WriteUint32(loan.CharID)
+			bf.WriteUint32(uint32(TimeAdjusted().Unix()))
+			bf.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * 7).Unix()))
+			bf.WriteBytes(stringsupport.PaddedString(loan.Name, 18, true))
+		}
 
 		if pkt.Op != 1 && pkt.Op != 4 {
 			data, _ := s.server.charRepo.LoadColumn(s.charID, "savemercenary")
@@ -393,36 +384,28 @@ func getGuildAirouList(s *Session) []Airou {
 	if err != nil {
 		return guildCats
 	}
-	rows, err := s.server.mercenaryRepo.GetGuildHuntCatsUsed(s.charID)
+	usages, err := s.server.mercenaryRepo.GetGuildHuntCatsUsed(s.charID)
 	if err != nil {
 		s.logger.Warn("Failed to get recently used airous", zap.Error(err))
 		return guildCats
 	}
 
-	var csvTemp string
-	var startTemp time.Time
-	for rows.Next() {
-		err = rows.Scan(&csvTemp, &startTemp)
-		if err != nil {
-			continue
-		}
-		if startTemp.Add(time.Second * time.Duration(s.server.erupeConfig.GameplayOptions.TreasureHuntPartnyaCooldown)).Before(TimeAdjusted()) {
-			for i, j := range stringsupport.CSVElems(csvTemp) {
+	for _, usage := range usages {
+		if usage.Start.Add(time.Second * time.Duration(s.server.erupeConfig.GameplayOptions.TreasureHuntPartnyaCooldown)).Before(TimeAdjusted()) {
+			for i, j := range stringsupport.CSVElems(usage.CatsUsed) {
 				bannedCats[uint32(j)] = i
 			}
 		}
 	}
 
-	rows, err = s.server.mercenaryRepo.GetGuildAirou(guild.ID)
+	airouData, err := s.server.mercenaryRepo.GetGuildAirou(guild.ID)
 	if err != nil {
 		s.logger.Warn("Selecting otomoairou based on guild failed", zap.Error(err))
 		return guildCats
 	}
 
-	for rows.Next() {
-		var data []byte
-		err = rows.Scan(&data)
-		if err != nil || len(data) == 0 {
+	for _, data := range airouData {
+		if len(data) == 0 {
 			continue
 		}
 		// first byte has cat existence in general, can skip if 0

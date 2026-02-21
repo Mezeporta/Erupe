@@ -118,59 +118,45 @@ type CafeBonus struct {
 
 func handleMsgMhfGetCafeDurationBonusInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetCafeDurationBonusInfo)
-	bf := byteframe.NewByteFrame()
 
-	var count uint32
-	rows, err := s.server.cafeRepo.GetBonuses(s.charID)
+	bonuses, err := s.server.cafeRepo.GetBonuses(s.charID)
 	if err != nil {
 		s.logger.Error("Error getting cafebonus", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
-	} else {
-		for rows.Next() {
-			count++
-			cafeBonus := &CafeBonus{}
-			err = rows.StructScan(&cafeBonus)
-			if err != nil {
-				s.logger.Error("Error scanning cafebonus", zap.Error(err))
-			}
-			bf.WriteUint32(cafeBonus.TimeReq)
-			bf.WriteUint32(cafeBonus.ItemType)
-			bf.WriteUint32(cafeBonus.ItemID)
-			bf.WriteUint32(cafeBonus.Quantity)
-			bf.WriteBool(cafeBonus.Claimed)
-		}
-		resp := byteframe.NewByteFrame()
-		resp.WriteUint32(0)
-		resp.WriteUint32(uint32(TimeAdjusted().Unix()))
-		resp.WriteUint32(count)
-		resp.WriteBytes(bf.Data())
-		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+		return
 	}
+	bf := byteframe.NewByteFrame()
+	for _, cb := range bonuses {
+		bf.WriteUint32(cb.TimeReq)
+		bf.WriteUint32(cb.ItemType)
+		bf.WriteUint32(cb.ItemID)
+		bf.WriteUint32(cb.Quantity)
+		bf.WriteBool(cb.Claimed)
+	}
+	resp := byteframe.NewByteFrame()
+	resp.WriteUint32(0)
+	resp.WriteUint32(uint32(TimeAdjusted().Unix()))
+	resp.WriteUint32(uint32(len(bonuses)))
+	resp.WriteBytes(bf.Data())
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
 func handleMsgMhfReceiveCafeDurationBonus(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReceiveCafeDurationBonus)
 	bf := byteframe.NewByteFrame()
-	var count uint32
 	bf.WriteUint32(0)
-	rows, err := s.server.cafeRepo.GetClaimable(s.charID, TimeAdjusted().Unix()-s.sessionStart)
+	claimable, err := s.server.cafeRepo.GetClaimable(s.charID, TimeAdjusted().Unix()-s.sessionStart)
 	if err != nil || !mhfcourse.CourseExists(30, s.courses) {
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 	} else {
-		for rows.Next() {
-			cafeBonus := &CafeBonus{}
-			err = rows.StructScan(cafeBonus)
-			if err != nil {
-				continue
-			}
-			count++
-			bf.WriteUint32(cafeBonus.ID)
-			bf.WriteUint32(cafeBonus.ItemType)
-			bf.WriteUint32(cafeBonus.ItemID)
-			bf.WriteUint32(cafeBonus.Quantity)
+		for _, cb := range claimable {
+			bf.WriteUint32(cb.ID)
+			bf.WriteUint32(cb.ItemType)
+			bf.WriteUint32(cb.ItemID)
+			bf.WriteUint32(cb.Quantity)
 		}
 		_, _ = bf.Seek(0, io.SeekStart)
-		bf.WriteUint32(count)
+		bf.WriteUint32(uint32(len(claimable)))
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 	}
 }

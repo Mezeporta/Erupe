@@ -254,18 +254,13 @@ func handleMsgMhfGetTrendWeapon(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetTrendWeapon)
 	trendWeapons := [14][3]TrendWeapon{}
 	for i := uint8(0); i < 14; i++ {
-		rows, err := s.server.miscRepo.GetTrendWeapons(i)
+		ids, err := s.server.miscRepo.GetTrendWeapons(i)
 		if err != nil {
 			continue
 		}
-		j := 0
-		for rows.Next() {
+		for j, id := range ids {
 			trendWeapons[i][j].WeaponType = i
-			if err := rows.Scan(&trendWeapons[i][j].WeaponID); err != nil {
-				s.logger.Error("Failed to scan trend weapon", zap.Error(err))
-				break
-			}
-			j++
+			trendWeapons[i][j].WeaponID = id
 		}
 	}
 

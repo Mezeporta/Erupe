@@ -15,11 +15,13 @@ func NewShopRepository(db *sqlx.DB) *ShopRepository {
 }
 
 // GetShopItems returns shop items with per-character purchase counts.
-func (r *ShopRepository) GetShopItems(shopType uint8, shopID uint32, charID uint32) (*sqlx.Rows, error) {
-	return r.db.Queryx(`SELECT id, item_id, cost, quantity, min_hr, min_sr, min_gr, store_level, max_quantity,
+func (r *ShopRepository) GetShopItems(shopType uint8, shopID uint32, charID uint32) ([]ShopItem, error) {
+	var result []ShopItem
+	err := r.db.Select(&result, `SELECT id, item_id, cost, quantity, min_hr, min_sr, min_gr, store_level, max_quantity,
        		COALESCE((SELECT bought FROM shop_items_bought WHERE shop_item_id=si.id AND character_id=$3), 0) as used_quantity,
        		road_floors, road_fatalis FROM shop_items si WHERE shop_type=$1 AND shop_id=$2
        		`, shopType, shopID, charID)
+	return result, err
 }
 
 // RecordPurchase upserts a purchase record, adding to the bought count.
@@ -39,6 +41,8 @@ func (r *ShopRepository) GetFpointItem(tradeID uint32) (quantity, fpoints int, e
 }
 
 // GetFpointExchangeList returns all frontier point exchange items ordered by buyable status.
-func (r *ShopRepository) GetFpointExchangeList() (*sqlx.Rows, error) {
-	return r.db.Queryx(`SELECT id, item_type, item_id, quantity, fpoints, buyable FROM fpoint_items ORDER BY buyable DESC`)
+func (r *ShopRepository) GetFpointExchangeList() ([]FPointExchange, error) {
+	var result []FPointExchange
+	err := r.db.Select(&result, `SELECT id, item_type, item_id, quantity, fpoints, buyable FROM fpoint_items ORDER BY buyable DESC`)
+	return result, err
 }

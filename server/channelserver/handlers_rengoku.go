@@ -215,7 +215,6 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	var score RengokuScore
 	var selfExist bool
 	i := uint32(1)
 	bf := byteframe.NewByteFrame()
@@ -225,16 +224,14 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	if guild != nil {
 		guildID = guild.ID
 	}
-	rows, err := s.server.rengokuRepo.GetRanking(pkt.Leaderboard, guildID)
+	scores, err := s.server.rengokuRepo.GetRanking(pkt.Leaderboard, guildID)
 	if err != nil {
 		s.logger.Error("Failed to query rengoku ranking", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 11))
 		return
 	}
-	defer func() { _ = rows.Close() }()
 
-	for rows.Next() {
-		_ = rows.StructScan(&score)
+	for _, score := range scores {
 		if score.Name == s.Name {
 			bf.WriteUint32(i)
 			bf.WriteUint32(score.Score)

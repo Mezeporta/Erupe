@@ -1,6 +1,8 @@
 package channelserver
 
 import (
+	"fmt"
+
 	"github.com/jmoiron/sqlx"
 )
 
@@ -15,6 +17,19 @@ func NewScenarioRepository(db *sqlx.DB) *ScenarioRepository {
 }
 
 // GetCounters returns all scenario counters.
-func (r *ScenarioRepository) GetCounters() (*sqlx.Rows, error) {
-	return r.db.Queryx("SELECT scenario_id, category_id FROM scenario_counter")
+func (r *ScenarioRepository) GetCounters() ([]Scenario, error) {
+	rows, err := r.db.Query("SELECT scenario_id, category_id FROM scenario_counter")
+	if err != nil {
+		return nil, fmt.Errorf("query scenario_counter: %w", err)
+	}
+	defer rows.Close()
+	var result []Scenario
+	for rows.Next() {
+		var s Scenario
+		if err := rows.Scan(&s.MainID, &s.CategoryID); err != nil {
+			return nil, fmt.Errorf("scan scenario_counter: %w", err)
+		}
+		result = append(result, s)
+	}
+	return result, rows.Err()
 }

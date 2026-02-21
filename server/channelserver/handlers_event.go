@@ -136,17 +136,10 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 
 	bf := byteframe.NewByteFrame()
 
-	var loginBoosts []loginBoost
-	rows, err := s.server.eventRepo.GetLoginBoosts(s.charID)
+	loginBoosts, err := s.server.eventRepo.GetLoginBoosts(s.charID)
 	if err != nil || s.server.erupeConfig.GameplayOptions.DisableLoginBoost {
-		_ = rows.Close()
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 35))
 		return
-	}
-	for rows.Next() {
-		var temp loginBoost
-		_ = rows.StructScan(&temp)
-		loginBoosts = append(loginBoosts, temp)
 	}
 	if len(loginBoosts) == 0 {
 		temp := TimeWeekStart()

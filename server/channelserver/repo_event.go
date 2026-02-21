@@ -31,8 +31,10 @@ func (r *EventRepository) InsertFeatureWeapon(startTime time.Time, features uint
 }
 
 // GetLoginBoosts returns all login boost rows for a character, ordered by week_req.
-func (r *EventRepository) GetLoginBoosts(charID uint32) (*sqlx.Rows, error) {
-	return r.db.Queryx("SELECT week_req, expiration, reset FROM login_boost WHERE char_id=$1 ORDER BY week_req", charID)
+func (r *EventRepository) GetLoginBoosts(charID uint32) ([]loginBoost, error) {
+	var result []loginBoost
+	err := r.db.Select(&result, "SELECT week_req, expiration, reset FROM login_boost WHERE char_id=$1 ORDER BY week_req", charID)
+	return result, err
 }
 
 // InsertLoginBoost creates a new login boost entry.

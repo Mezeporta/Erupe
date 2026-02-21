@@ -21,8 +21,9 @@ func (r *CafeRepository) ResetAccepted(charID uint32) error {
 }
 
 // GetBonuses returns all cafe bonuses with their claimed status for a character.
-func (r *CafeRepository) GetBonuses(charID uint32) (*sqlx.Rows, error) {
-	return r.db.Queryx(`
+func (r *CafeRepository) GetBonuses(charID uint32) ([]CafeBonus, error) {
+	var result []CafeBonus
+	err := r.db.Select(&result, `
 	SELECT cb.id, time_req, item_type, item_id, quantity,
 	(
 		SELECT count(*)
@@ -30,11 +31,13 @@ func (r *CafeRepository) GetBonuses(charID uint32) (*sqlx.Rows, error) {
 		WHERE cb.id = ca.cafe_id AND ca.character_id = $1
 	)::int::bool AS claimed
 	FROM cafebonus cb ORDER BY id ASC;`, charID)
+	return result, err
 }
 
 // GetClaimable returns unclaimed cafe bonuses where the character has enough accumulated time.
-func (r *CafeRepository) GetClaimable(charID uint32, elapsedSec int64) (*sqlx.Rows, error) {
-	return r.db.Queryx(`
+func (r *CafeRepository) GetClaimable(charID uint32, elapsedSec int64) ([]CafeBonus, error) {
+	var result []CafeBonus
+	err := r.db.Select(&result, `
 	SELECT c.id, time_req, item_type, item_id, quantity
 	FROM cafebonus c
 	WHERE (
@@ -46,6 +49,7 @@ func (r *CafeRepository) GetClaimable(charID uint32, elapsedSec int64) (*sqlx.Ro
 		FROM characters ch
 		WHERE ch.id = $1
 	) >= time_req`, charID, elapsedSec)
+	return result, err
 }
 
 // GetBonusItem returns the item type and quantity for a specific cafe bonus.

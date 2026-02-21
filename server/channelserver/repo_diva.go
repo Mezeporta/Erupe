@@ -26,7 +26,15 @@ func (r *DivaRepository) InsertEvent(startEpoch uint32) error {
 	return err
 }
 
+// DivaEvent represents a diva event row with ID and start_time epoch.
+type DivaEvent struct {
+	ID        uint32 `db:"id"`
+	StartTime uint32 `db:"start_time"`
+}
+
 // GetEvents returns all diva events with their ID and start_time epoch.
-func (r *DivaRepository) GetEvents() (*sqlx.Rows, error) {
-	return r.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='diva'")
+func (r *DivaRepository) GetEvents() ([]DivaEvent, error) {
+	var result []DivaEvent
+	err := r.db.Select(&result, "SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='diva'")
+	return result, err
 }

@@ -62,15 +62,19 @@ func rengokuIsGuildFiltered(leaderboard uint32) bool {
 
 // GetRanking returns rengoku scores for the given leaderboard.
 // For guild-scoped leaderboards (2,3,6,7), guildID filters the results.
-func (r *RengokuRepository) GetRanking(leaderboard uint32, guildID uint32) (*sqlx.Rows, error) {
+func (r *RengokuRepository) GetRanking(leaderboard uint32, guildID uint32) ([]RengokuScore, error) {
 	col := rengokuColumnForLeaderboard(leaderboard)
+	var result []RengokuScore
+	var err error
 	if rengokuIsGuildFiltered(leaderboard) {
-		return r.db.Queryx(
+		err = r.db.Select(&result,
 			fmt.Sprintf("SELECT %s AS score %s WHERE guild_id=$1 ORDER BY %s DESC", col, rengokuScoreQueryRepo, col),
 			guildID,
 		)
+	} else {
+		err = r.db.Select(&result,
+			fmt.Sprintf("SELECT %s AS score %s ORDER BY %s DESC", col, rengokuScoreQueryRepo, col),
+		)
 	}
-	return r.db.Queryx(
-		fmt.Sprintf("SELECT %s AS score %s ORDER BY %s DESC", col, rengokuScoreQueryRepo, col),
-	)
+	return result, err
 }

@@ -3,8 +3,6 @@ package channelserver
 import (
 	"database/sql"
 	"time"
-
-	"github.com/jmoiron/sqlx"
 )
 
 // Repository interfaces decouple handlers from concrete PostgreSQL implementations,
@@ -224,7 +222,7 @@ type TowerRepo interface {
 // RengokuRepo defines the contract for rengoku score/ranking data access.
 type RengokuRepo interface {
 	UpsertScore(charID uint32, maxStagesMp, maxPointsMp, maxStagesSp, maxPointsSp uint32) error
-	GetRanking(leaderboard uint32, guildID uint32) (*sqlx.Rows, error)
+	GetRanking(leaderboard uint32, guildID uint32) ([]RengokuScore, error)
 }
 
 // MailRepo defines the contract for in-game mail data access.
@@ -270,7 +268,7 @@ type SessionRepo interface {
 type EventRepo interface {
 	GetFeatureWeapon(startTime time.Time) (activeFeature, error)
 	InsertFeatureWeapon(startTime time.Time, features uint32) error
-	GetLoginBoosts(charID uint32) (*sqlx.Rows, error)
+	GetLoginBoosts(charID uint32) ([]loginBoost, error)
 	InsertLoginBoost(charID uint32, weekReq uint8, expiration, reset time.Time) error
 	UpdateLoginBoost(charID uint32, weekReq uint8, expiration, reset time.Time) error
 	GetEventQuests() (*sql.Rows, error)
@@ -287,17 +285,17 @@ type AchievementRepo interface {
 
 // ShopRepo defines the contract for shop data access.
 type ShopRepo interface {
-	GetShopItems(shopType uint8, shopID uint32, charID uint32) (*sqlx.Rows, error)
+	GetShopItems(shopType uint8, shopID uint32, charID uint32) ([]ShopItem, error)
 	RecordPurchase(charID, shopItemID, quantity uint32) error
 	GetFpointItem(tradeID uint32) (quantity, fpoints int, err error)
-	GetFpointExchangeList() (*sqlx.Rows, error)
+	GetFpointExchangeList() ([]FPointExchange, error)
 }
 
 // CafeRepo defines the contract for cafe bonus data access.
 type CafeRepo interface {
 	ResetAccepted(charID uint32) error
-	GetBonuses(charID uint32) (*sqlx.Rows, error)
-	GetClaimable(charID uint32, elapsedSec int64) (*sqlx.Rows, error)
+	GetBonuses(charID uint32) ([]CafeBonus, error)
+	GetClaimable(charID uint32, elapsedSec int64) ([]CafeBonus, error)
 	GetBonusItem(bonusID uint32) (itemType, quantity uint32, err error)
 	AcceptBonus(bonusID, charID uint32) error
 }
@@ -314,25 +312,25 @@ type GoocooRepo interface {
 type DivaRepo interface {
 	DeleteEvents() error
 	InsertEvent(startEpoch uint32) error
-	GetEvents() (*sqlx.Rows, error)
+	GetEvents() ([]DivaEvent, error)
 }
 
 // MiscRepo defines the contract for miscellaneous data access.
 type MiscRepo interface {
-	GetTrendWeapons(weaponType uint8) (*sql.Rows, error)
+	GetTrendWeapons(weaponType uint8) ([]uint16, error)
 	UpsertTrendWeapon(weaponID uint16, weaponType uint8) error
 }
 
 // ScenarioRepo defines the contract for scenario counter data access.
 type ScenarioRepo interface {
-	GetCounters() (*sqlx.Rows, error)
+	GetCounters() ([]Scenario, error)
 }
 
 // MercenaryRepo defines the contract for mercenary/rasta data access.
 type MercenaryRepo interface {
 	NextRastaID() (uint32, error)
 	NextAirouID() (uint32, error)
-	GetMercenaryLoans(charID uint32) (*sql.Rows, error)
-	GetGuildHuntCatsUsed(charID uint32) (*sql.Rows, error)
-	GetGuildAirou(guildID uint32) (*sql.Rows, error)
+	GetMercenaryLoans(charID uint32) ([]MercenaryLoan, error)
+	GetGuildHuntCatsUsed(charID uint32) ([]GuildHuntCatUsage, error)
+	GetGuildAirou(guildID uint32) ([][]byte, error)
 }

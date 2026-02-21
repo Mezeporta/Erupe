@@ -78,16 +78,13 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 
 	const divaIDSentinel = uint32(0xCAFEBEEF)
 	id, start := divaIDSentinel, uint32(0)
-	rows, err := s.server.divaRepo.GetEvents()
+	events, err := s.server.divaRepo.GetEvents()
 	if err != nil {
 		s.logger.Error("Failed to query diva schedule", zap.Error(err))
-	} else {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			if err := rows.Scan(&id, &start); err != nil {
-				s.logger.Error("Failed to scan diva schedule row", zap.Error(err))
-			}
-		}
+	} else if len(events) > 0 {
+		last := events[len(events)-1]
+		id = last.ID
+		start = last.StartTime
 	}
 
 	var timestamps []uint32
