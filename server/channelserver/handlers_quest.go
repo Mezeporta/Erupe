@@ -269,7 +269,9 @@ func makeEventQuest(s *Session, rows *sql.Rows) ([]byte, error) {
 	var questId, activeDuration, inactiveDuration, flags int
 	var maxPlayers, questType uint8
 	var startTime time.Time
-	_ = rows.Scan(&id, &maxPlayers, &questType, &questId, &mark, &flags, &startTime, &activeDuration, &inactiveDuration)
+	if err := rows.Scan(&id, &maxPlayers, &questType, &questId, &mark, &flags, &startTime, &activeDuration, &inactiveDuration); err != nil {
+		return nil, fmt.Errorf("failed to scan event quest row: %w", err)
+	}
 
 	data := loadQuestFile(s, questId)
 	if data == nil {

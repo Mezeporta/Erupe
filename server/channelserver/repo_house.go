@@ -97,12 +97,14 @@ func (r *HouseRepository) UpdateMission(charID uint32, data []byte) error {
 // Warehouse methods
 
 // InitializeWarehouse ensures a warehouse row exists for the character.
-func (r *HouseRepository) InitializeWarehouse(charID uint32) {
+func (r *HouseRepository) InitializeWarehouse(charID uint32) error {
 	var t int
 	err := r.db.QueryRow(`SELECT character_id FROM warehouse WHERE character_id=$1`, charID).Scan(&t)
 	if err != nil {
-		_, _ = r.db.Exec(`INSERT INTO warehouse (character_id) VALUES ($1)`, charID)
+		_, err = r.db.Exec(`INSERT INTO warehouse (character_id) VALUES ($1)`, charID)
+		return err
 	}
+	return nil
 }
 
 const warehouseNamesSQL = `

@@ -529,7 +529,7 @@ func TestOperateWarehouse_Op0_GetBoxNames(t *testing.T) {
 	_, _, session, charID := setupHouseTest(t)
 
 	// Initialize warehouse and rename a box
-	session.server.houseRepo.InitializeWarehouse(charID)
+	_ = session.server.houseRepo.InitializeWarehouse(charID)
 	_ = session.server.houseRepo.RenameWarehouseBox(charID, 0, 0, "MyItems")
 
 	pkt := &mhfpacket.MsgMhfOperateWarehouse{

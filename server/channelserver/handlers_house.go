@@ -330,7 +330,9 @@ func handleMsgMhfAcquireTitle(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfResetTitle(s *Session, p mhfpacket.MHFPacket) {}
 
 func initializeWarehouse(s *Session) {
-	s.server.houseRepo.InitializeWarehouse(s.charID)
+	if err := s.server.houseRepo.InitializeWarehouse(s.charID); err != nil {
+		s.logger.Error("Failed to initialize warehouse", zap.Error(err), zap.Uint32("charID", s.charID))
+	}
 }
 
 func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
