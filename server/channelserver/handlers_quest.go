@@ -342,12 +342,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	quests, err := s.server.eventRepo.GetEventQuests()
 	if err == nil {
 		currentTime := time.Now()
-		tx, err := s.server.eventRepo.BeginTx()
-		if err != nil {
-			s.logger.Error("Failed to begin transaction for event quests", zap.Error(err))
-			doAckBufSucceed(s, pkt.AckHandle, bf.Data())
-			return
-		}
+		var updates []EventQuestUpdate
 
 		for i, eq := range quests {
 			// Use the Event Cycling system
@@ -364,11 +359,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 						// Normalize rotationTime to 12PM JST to align with the in-game events update notification.
 						newRotationTime := time.Date(rotationTime.Year(), rotationTime.Month(), rotationTime.Day(), 12, 0, 0, 0, TimeAdjusted().Location())
 
-						err = s.server.eventRepo.UpdateEventQuestStartTime(tx, eq.ID, newRotationTime)
-						if err != nil {
-							_ = tx.Rollback()
-							break
-						}
+						updates = append(updates, EventQuestUpdate{ID: eq.ID, StartTime: newRotationTime})
 						quests[i].StartTime = newRotationTime // Set the new start time so the quest can be used/removed immediately.
 						eq = quests[i]
 					}
@@ -399,7 +390,9 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 
-		_ = tx.Commit()
+		if err := s.server.eventRepo.UpdateEventQuestStartTimes(updates); err != nil {
+			s.logger.Error("Failed to update event quest start times", zap.Error(err))
+		}
 	}
 
 	tuneValues := []tuneValue{

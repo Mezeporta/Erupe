@@ -60,7 +60,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 			_ = s.server.guildRepo.Save(guild)
 		}
 	case mhfpacket.OperateGuildApply:
-		err = s.server.guildRepo.CreateApplication(guild.ID, s.charID, s.charID, GuildApplicationTypeApplied, nil)
+		err = s.server.guildRepo.CreateApplication(guild.ID, s.charID, s.charID, GuildApplicationTypeApplied)
 		if err == nil {
 			bf.WriteUint32(guild.LeaderCharID)
 		} else {

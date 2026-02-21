@@ -1,7 +1,6 @@
 package channelserver
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -69,13 +68,26 @@ func (r *EventRepository) GetEventQuests() ([]EventQuest, error) {
 	return result, err
 }
 
-// UpdateEventQuestStartTime updates the start_time for an event quest within a transaction.
-func (r *EventRepository) UpdateEventQuestStartTime(tx *sql.Tx, id uint32, startTime time.Time) error {
-	_, err := tx.Exec("UPDATE event_quests SET start_time = $1 WHERE id = $2", startTime, id)
-	return err
+// EventQuestUpdate pairs a quest ID with its new start time.
+type EventQuestUpdate struct {
+	ID        uint32
+	StartTime time.Time
 }
 
-// BeginTx starts a new database transaction.
-func (r *EventRepository) BeginTx() (*sql.Tx, error) {
-	return r.db.Begin()
+// UpdateEventQuestStartTimes batch-updates start times within a single transaction.
+func (r *EventRepository) UpdateEventQuestStartTimes(updates []EventQuestUpdate) error {
+	if len(updates) == 0 {
+		return nil
+	}
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	for _, u := range updates {
+		if _, err := tx.Exec("UPDATE event_quests SET start_time = $1 WHERE id = $2", u.StartTime, u.ID); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
 }

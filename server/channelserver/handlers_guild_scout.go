@@ -45,38 +45,14 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	transaction, err := s.server.db.Begin()
-
-	if err != nil {
-		s.logger.Error("Failed to begin transaction for guild scout", zap.Error(err))
-		doAckBufFail(s, pkt.AckHandle, nil)
-		return
-	}
-
-	err = s.server.guildRepo.CreateApplication(guildInfo.ID, pkt.CharID, s.charID, GuildApplicationTypeInvited, transaction)
-
-	if err != nil {
-		_ = transaction.Rollback()
-		s.logger.Error("Failed to create guild scout application", zap.Error(err))
-		doAckBufFail(s, pkt.AckHandle, nil)
-		return
-	}
-
-	err = s.server.mailRepo.SendMailTx(transaction, s.charID, pkt.CharID,
+	err = s.server.guildRepo.CreateApplicationWithMail(
+		guildInfo.ID, pkt.CharID, s.charID, GuildApplicationTypeInvited,
+		s.charID, pkt.CharID,
 		s.server.i18n.guild.invite.title,
-		fmt.Sprintf(s.server.i18n.guild.invite.body, guildInfo.Name),
-		0, 0, true, false)
+		fmt.Sprintf(s.server.i18n.guild.invite.body, guildInfo.Name))
 
 	if err != nil {
-		_ = transaction.Rollback()
-		doAckBufFail(s, pkt.AckHandle, nil)
-		return
-	}
-
-	err = transaction.Commit()
-
-	if err != nil {
-		s.logger.Error("Failed to commit guild scout transaction", zap.Error(err))
+		s.logger.Error("Failed to create guild scout application with mail", zap.Error(err))
 		doAckBufFail(s, pkt.AckHandle, nil)
 		return
 	}

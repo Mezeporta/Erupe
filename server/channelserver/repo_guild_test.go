@@ -270,7 +270,7 @@ func TestApplicationWorkflow(t *testing.T) {
 	applicantID := CreateTestCharacter(t, db, user2, "Applicant")
 
 	// Create application
-	err := repo.CreateApplication(guildID, applicantID, applicantID, GuildApplicationTypeApplied, nil)
+	err := repo.CreateApplication(guildID, applicantID, applicantID, GuildApplicationTypeApplied)
 	if err != nil {
 		t.Fatalf("CreateApplication failed: %v", err)
 	}
@@ -324,7 +324,7 @@ func TestRejectApplication(t *testing.T) {
 	user2 := CreateTestUser(t, db, "reject_user")
 	applicantID := CreateTestCharacter(t, db, user2, "Rejected")
 
-	err := repo.CreateApplication(guildID, applicantID, applicantID, GuildApplicationTypeApplied, nil)
+	err := repo.CreateApplication(guildID, applicantID, applicantID, GuildApplicationTypeApplied)
 	if err != nil {
 		t.Fatalf("CreateApplication failed: %v", err)
 	}
@@ -539,7 +539,7 @@ func TestCancelInvitation(t *testing.T) {
 	user2 := CreateTestUser(t, db, "invite_user")
 	char2 := CreateTestCharacter(t, db, user2, "Invited")
 
-	if err := repo.CreateApplication(guildID, char2, leaderID, GuildApplicationTypeInvited, nil); err != nil {
+	if err := repo.CreateApplication(guildID, char2, leaderID, GuildApplicationTypeInvited); err != nil {
 		t.Fatalf("CreateApplication (invited) failed: %v", err)
 	}
 
@@ -562,7 +562,7 @@ func TestListInvitedCharacters(t *testing.T) {
 	user2 := CreateTestUser(t, db, "scout_user")
 	char2 := CreateTestCharacter(t, db, user2, "Scouted")
 
-	if err := repo.CreateApplication(guildID, char2, leaderID, GuildApplicationTypeInvited, nil); err != nil {
+	if err := repo.CreateApplication(guildID, char2, leaderID, GuildApplicationTypeInvited); err != nil {
 		t.Fatalf("CreateApplication failed: %v", err)
 	}
 
@@ -602,7 +602,7 @@ func TestGetByCharIDWithApplication(t *testing.T) {
 	user2 := CreateTestUser(t, db, "app_char_user")
 	char2 := CreateTestCharacter(t, db, user2, "Applicant2")
 
-	if err := repo.CreateApplication(guildID, char2, char2, GuildApplicationTypeApplied, nil); err != nil {
+	if err := repo.CreateApplication(guildID, char2, char2, GuildApplicationTypeApplied); err != nil {
 		t.Fatalf("CreateApplication failed: %v", err)
 	}
 
@@ -624,7 +624,7 @@ func TestGetMembersApplicants(t *testing.T) {
 	user2 := CreateTestUser(t, db, "applicant_member_user")
 	char2 := CreateTestCharacter(t, db, user2, "AppMember")
 
-	if err := repo.CreateApplication(guildID, char2, char2, GuildApplicationTypeApplied, nil); err != nil {
+	if err := repo.CreateApplication(guildID, char2, char2, GuildApplicationTypeApplied); err != nil {
 		t.Fatalf("CreateApplication failed: %v", err)
 	}
 
@@ -1483,5 +1483,41 @@ func TestDisbandCleansUpAlliance(t *testing.T) {
 	alliance, _ := repo.GetAllianceByID(allianceID)
 	if alliance != nil {
 		t.Errorf("Expected alliance to be deleted after parent guild disband, got: %+v", alliance)
+	}
+}
+
+// --- CreateApplicationWithMail ---
+
+func TestCreateApplicationWithMail(t *testing.T) {
+	repo, db, guildID, leaderID := setupGuildRepo(t)
+
+	user2 := CreateTestUser(t, db, "scout_mail_user")
+	char2 := CreateTestCharacter(t, db, user2, "ScoutTarget")
+
+	err := repo.CreateApplicationWithMail(
+		guildID, char2, leaderID, GuildApplicationTypeInvited,
+		leaderID, char2, "Guild Invite", "You have been invited!")
+	if err != nil {
+		t.Fatalf("CreateApplicationWithMail failed: %v", err)
+	}
+
+	// Verify application was created
+	has, err := repo.HasApplication(guildID, char2)
+	if err != nil {
+		t.Fatalf("HasApplication failed: %v", err)
+	}
+	if !has {
+		t.Error("Expected application to exist after CreateApplicationWithMail")
+	}
+
+	// Verify mail was sent
+	var mailCount int
+	if err := db.QueryRow(
+		"SELECT COUNT(*) FROM mail WHERE sender_id=$1 AND recipient_id=$2 AND subject=$3",
+		leaderID, char2, "Guild Invite").Scan(&mailCount); err != nil {
+		t.Fatalf("Mail verification query failed: %v", err)
+	}
+	if mailCount != 1 {
+		t.Errorf("Expected 1 mail row, got %d", mailCount)
 	}
 }

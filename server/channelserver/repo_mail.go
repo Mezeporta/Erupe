@@ -1,8 +1,6 @@
 package channelserver
 
 import (
-	"database/sql"
-
 	"github.com/jmoiron/sqlx"
 )
 
@@ -24,12 +22,6 @@ const mailInsertQuery = `
 // SendMail inserts a new mail row.
 func (r *MailRepository) SendMail(senderID, recipientID uint32, subject, body string, itemID, itemAmount uint16, isGuildInvite, isSystemMessage bool) error {
 	_, err := r.db.Exec(mailInsertQuery, senderID, recipientID, subject, body, itemID, itemAmount, isGuildInvite, isSystemMessage)
-	return err
-}
-
-// SendMailTx inserts a new mail row within an existing transaction.
-func (r *MailRepository) SendMailTx(tx *sql.Tx, senderID, recipientID uint32, subject, body string, itemID, itemAmount uint16, isGuildInvite, isSystemMessage bool) error {
-	_, err := tx.Exec(mailInsertQuery, senderID, recipientID, subject, body, itemID, itemAmount, isGuildInvite, isSystemMessage)
 	return err
 }
 

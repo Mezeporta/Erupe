@@ -1,7 +1,6 @@
 package channelserver
 
 import (
-	"database/sql"
 	"errors"
 	"time"
 )
@@ -100,10 +99,6 @@ func (m *mockMailRepo) SendMail(senderID, recipientID uint32, subject, body stri
 		isGuildInvite: isGuildInvite, isSystemMessage: isSystemMessage,
 	})
 	return m.sendErr
-}
-
-func (m *mockMailRepo) SendMailTx(_ *sql.Tx, senderID, recipientID uint32, subject, body string, itemID, itemAmount uint16, isGuildInvite, isSystemMessage bool) error {
-	return m.SendMail(senderID, recipientID, subject, body, itemID, itemAmount, isGuildInvite, isSystemMessage)
 }
 
 // --- mockCharacterRepo ---
@@ -271,7 +266,10 @@ func (m *mockGuildRepoForMail) Save(_ *Guild) error                    { return 
 func (m *mockGuildRepoForMail) Disband(_ uint32) error                 { return nil }
 func (m *mockGuildRepoForMail) RemoveCharacter(_ uint32) error         { return nil }
 func (m *mockGuildRepoForMail) AcceptApplication(_, _ uint32) error    { return nil }
-func (m *mockGuildRepoForMail) CreateApplication(_, _, _ uint32, _ GuildApplicationType, _ *sql.Tx) error {
+func (m *mockGuildRepoForMail) CreateApplication(_, _, _ uint32, _ GuildApplicationType) error {
+	return nil
+}
+func (m *mockGuildRepoForMail) CreateApplicationWithMail(_, _, _ uint32, _ GuildApplicationType, _, _ uint32, _, _ string) error {
 	return nil
 }
 func (m *mockGuildRepoForMail) CancelInvitation(_, _ uint32) error              { return nil }

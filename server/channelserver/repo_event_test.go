@@ -96,65 +96,51 @@ func TestGetEventQuestsOrderByQuestID(t *testing.T) {
 	}
 }
 
-func TestBeginTxAndUpdateEventQuestStartTime(t *testing.T) {
+func TestUpdateEventQuestStartTimes(t *testing.T) {
 	repo, db := setupEventRepo(t)
 
 	originalTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
-	questID := insertEventQuest(t, db, 1, 100, originalTime, 7, 3)
+	id1 := insertEventQuest(t, db, 1, 100, originalTime, 7, 3)
+	id2 := insertEventQuest(t, db, 2, 200, originalTime, 5, 2)
 
-	newTime := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
+	newTime1 := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
+	newTime2 := time.Date(2025, 7, 20, 12, 0, 0, 0, time.UTC)
 
-	tx, err := repo.BeginTx()
+	err := repo.UpdateEventQuestStartTimes([]EventQuestUpdate{
+		{ID: id1, StartTime: newTime1},
+		{ID: id2, StartTime: newTime2},
+	})
 	if err != nil {
-		t.Fatalf("BeginTx failed: %v", err)
+		t.Fatalf("UpdateEventQuestStartTimes failed: %v", err)
 	}
 
-	if err := repo.UpdateEventQuestStartTime(tx, questID, newTime); err != nil {
-		_ = tx.Rollback()
-		t.Fatalf("UpdateEventQuestStartTime failed: %v", err)
+	// Verify both updates
+	var got1, got2 time.Time
+	if err := db.QueryRow("SELECT start_time FROM event_quests WHERE id=$1", id1).Scan(&got1); err != nil {
+		t.Fatalf("Verification query failed for id1: %v", err)
 	}
-
-	if err := tx.Commit(); err != nil {
-		t.Fatalf("Commit failed: %v", err)
+	if !got1.Equal(newTime1) {
+		t.Errorf("Expected start_time %v for id1, got: %v", newTime1, got1)
 	}
-
-	// Verify the update
-	var got time.Time
-	if err := db.QueryRow("SELECT start_time FROM event_quests WHERE id=$1", questID).Scan(&got); err != nil {
-		t.Fatalf("Verification query failed: %v", err)
+	if err := db.QueryRow("SELECT start_time FROM event_quests WHERE id=$1", id2).Scan(&got2); err != nil {
+		t.Fatalf("Verification query failed for id2: %v", err)
 	}
-	if !got.Equal(newTime) {
-		t.Errorf("Expected start_time %v, got: %v", newTime, got)
+	if !got2.Equal(newTime2) {
+		t.Errorf("Expected start_time %v for id2, got: %v", newTime2, got2)
 	}
 }
 
-func TestUpdateEventQuestStartTimeRollback(t *testing.T) {
-	repo, db := setupEventRepo(t)
+func TestUpdateEventQuestStartTimesEmpty(t *testing.T) {
+	repo, _ := setupEventRepo(t)
 
-	originalTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
-	questID := insertEventQuest(t, db, 1, 100, originalTime, 0, 0)
-
-	tx, err := repo.BeginTx()
+	// Empty slice should be a no-op
+	err := repo.UpdateEventQuestStartTimes(nil)
 	if err != nil {
-		t.Fatalf("BeginTx failed: %v", err)
+		t.Fatalf("UpdateEventQuestStartTimes with nil should not error, got: %v", err)
 	}
 
-	newTime := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
-	if err := repo.UpdateEventQuestStartTime(tx, questID, newTime); err != nil {
-		t.Fatalf("UpdateEventQuestStartTime failed: %v", err)
-	}
-
-	// Rollback instead of commit
-	if err := tx.Rollback(); err != nil {
-		t.Fatalf("Rollback failed: %v", err)
-	}
-
-	// Verify original time is preserved
-	var got time.Time
-	if err := db.QueryRow("SELECT start_time FROM event_quests WHERE id=$1", questID).Scan(&got); err != nil {
-		t.Fatalf("Verification query failed: %v", err)
-	}
-	if !got.Equal(originalTime) {
-		t.Errorf("Expected original start_time %v after rollback, got: %v", originalTime, got)
+	err = repo.UpdateEventQuestStartTimes([]EventQuestUpdate{})
+	if err != nil {
+		t.Fatalf("UpdateEventQuestStartTimes with empty slice should not error, got: %v", err)
 	}
 }

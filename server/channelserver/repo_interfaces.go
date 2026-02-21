@@ -1,7 +1,6 @@
 package channelserver
 
 import (
-	"database/sql"
 	"time"
 )
 
@@ -52,7 +51,8 @@ type GuildRepo interface {
 	Disband(guildID uint32) error
 	RemoveCharacter(charID uint32) error
 	AcceptApplication(guildID, charID uint32) error
-	CreateApplication(guildID, charID, actorID uint32, appType GuildApplicationType, tx *sql.Tx) error
+	CreateApplication(guildID, charID, actorID uint32, appType GuildApplicationType) error
+	CreateApplicationWithMail(guildID, charID, actorID uint32, appType GuildApplicationType, mailSenderID, mailRecipientID uint32, mailSubject, mailBody string) error
 	CancelInvitation(guildID, charID uint32) error
 	RejectApplication(guildID, charID uint32) error
 	ArrangeCharacters(charIDs []uint32) error
@@ -228,7 +228,6 @@ type RengokuRepo interface {
 // MailRepo defines the contract for in-game mail data access.
 type MailRepo interface {
 	SendMail(senderID, recipientID uint32, subject, body string, itemID, itemAmount uint16, isGuildInvite, isSystemMessage bool) error
-	SendMailTx(tx *sql.Tx, senderID, recipientID uint32, subject, body string, itemID, itemAmount uint16, isGuildInvite, isSystemMessage bool) error
 	GetListForCharacter(charID uint32) ([]Mail, error)
 	GetByID(id int) (*Mail, error)
 	MarkRead(id int) error
@@ -272,8 +271,7 @@ type EventRepo interface {
 	InsertLoginBoost(charID uint32, weekReq uint8, expiration, reset time.Time) error
 	UpdateLoginBoost(charID uint32, weekReq uint8, expiration, reset time.Time) error
 	GetEventQuests() ([]EventQuest, error)
-	UpdateEventQuestStartTime(tx *sql.Tx, id uint32, startTime time.Time) error
-	BeginTx() (*sql.Tx, error)
+	UpdateEventQuestStartTimes(updates []EventQuestUpdate) error
 }
 
 // AchievementRepo defines the contract for achievement data access.

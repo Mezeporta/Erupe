@@ -270,15 +270,30 @@ func (r *GuildRepository) AcceptApplication(guildID, charID uint32) error {
 }
 
 // CreateApplication inserts a guild application or invitation.
-// If tx is non-nil, the operation participates in the given transaction.
-func (r *GuildRepository) CreateApplication(guildID, charID, actorID uint32, appType GuildApplicationType, tx *sql.Tx) error {
-	query := `INSERT INTO guild_applications (guild_id, character_id, actor_id, application_type) VALUES ($1, $2, $3, $4)`
-	if tx != nil {
-		_, err := tx.Exec(query, guildID, charID, actorID, appType)
+func (r *GuildRepository) CreateApplication(guildID, charID, actorID uint32, appType GuildApplicationType) error {
+	_, err := r.db.Exec(
+		`INSERT INTO guild_applications (guild_id, character_id, actor_id, application_type) VALUES ($1, $2, $3, $4)`,
+		guildID, charID, actorID, appType)
+	return err
+}
+
+// CreateApplicationWithMail atomically creates an application and sends a notification mail.
+func (r *GuildRepository) CreateApplicationWithMail(guildID, charID, actorID uint32, appType GuildApplicationType, mailSenderID, mailRecipientID uint32, mailSubject, mailBody string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
 		return err
 	}
-	_, err := r.db.Exec(query, guildID, charID, actorID, appType)
-	return err
+	if _, err := tx.Exec(
+		`INSERT INTO guild_applications (guild_id, character_id, actor_id, application_type) VALUES ($1, $2, $3, $4)`,
+		guildID, charID, actorID, appType); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err := tx.Exec(mailInsertQuery, mailSenderID, mailRecipientID, mailSubject, mailBody, 0, 0, true, false); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 // CancelInvitation removes an invitation for a character.
