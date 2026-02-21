@@ -279,22 +279,18 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	}
 }
 
+var ignoredOpcodes = map[network.PacketID]struct{}{
+	network.MSG_SYS_END:              {},
+	network.MSG_SYS_PING:             {},
+	network.MSG_SYS_NOP:              {},
+	network.MSG_SYS_TIME:             {},
+	network.MSG_SYS_EXTEND_THRESHOLD: {},
+	network.MSG_SYS_POSITION_OBJECT:  {},
+}
+
 func ignored(opcode network.PacketID) bool {
-	ignoreList := []network.PacketID{
-		network.MSG_SYS_END,
-		network.MSG_SYS_PING,
-		network.MSG_SYS_NOP,
-		network.MSG_SYS_TIME,
-		network.MSG_SYS_EXTEND_THRESHOLD,
-		network.MSG_SYS_POSITION_OBJECT,
-		// network.MSG_MHF_SAVEDATA, // Temporarily enabled for debugging save issues
-	}
-	set := make(map[network.PacketID]struct{}, len(ignoreList))
-	for _, s := range ignoreList {
-		set[s] = struct{}{}
-	}
-	_, r := set[opcode]
-	return r
+	_, ok := ignoredOpcodes[opcode]
+	return ok
 }
 
 func (s *Session) logMessage(opcode uint16, data []byte, sender string, recipient string) {
