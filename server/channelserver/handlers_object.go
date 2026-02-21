@@ -72,9 +72,7 @@ func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
 	/* This causes issues with PS3 as this actually sends with endiness!
 	for _, session := range s.server.sessions {
 		if session.charID == s.charID {
-			s.server.userBinaryPartsLock.Lock()
-			s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: 3}] = pkt.RawDataPayload
-			s.server.userBinaryPartsLock.Unlock()
+			s.server.userBinary.Set(s.charID, 3, pkt.RawDataPayload)
 			msg := &mhfpacket.MsgSysNotifyUserBinary{
 				CharID:     s.charID,
 				BinaryType: 3,

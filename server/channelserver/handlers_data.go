@@ -193,9 +193,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrameFromBytes(decompSaveData)
 	_, _ = bf.Seek(88, io.SeekStart)
 	name := bf.ReadNullTerminatedBytes()
-	s.server.userBinaryPartsLock.Lock()
-	s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: 1}] = append(name, []byte{0x00}...)
-	s.server.userBinaryPartsLock.Unlock()
+	s.server.userBinary.Set(s.charID, 1, append(name, []byte{0x00}...))
 	s.Name, _ = stringsupport.SJISToUTF8(name)
 }
 

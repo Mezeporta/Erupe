@@ -15,9 +15,7 @@ func handleMsgSysSetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Warn("Invalid BinaryType", zap.Uint8("type", pkt.BinaryType))
 		return
 	}
-	s.server.userBinaryPartsLock.Lock()
-	s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: pkt.BinaryType}] = pkt.RawDataPayload
-	s.server.userBinaryPartsLock.Unlock()
+	s.server.userBinary.Set(s.charID, pkt.BinaryType, pkt.RawDataPayload)
 
 	s.server.BroadcastMHF(&mhfpacket.MsgSysNotifyUserBinary{
 		CharID:     s.charID,
@@ -28,9 +26,7 @@ func handleMsgSysSetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysGetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysGetUserBinary)
 
-	s.server.userBinaryPartsLock.RLock()
-	data, ok := s.server.userBinaryParts[userBinaryPartID{charID: pkt.CharID, index: pkt.BinaryType}]
-	s.server.userBinaryPartsLock.RUnlock()
+	data, ok := s.server.userBinary.Get(pkt.CharID, pkt.BinaryType)
 
 	if !ok {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))

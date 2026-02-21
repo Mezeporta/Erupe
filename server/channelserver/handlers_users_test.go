@@ -50,12 +50,11 @@ func TestHandleMsgSysNotifyUserBinary(t *testing.T) {
 
 func TestHandleMsgSysGetUserBinary_FromCache(t *testing.T) {
 	server := createMockServer()
-	server.userBinaryParts = make(map[userBinaryPartID][]byte)
+	server.userBinary = NewUserBinaryStore()
 	session := createMockSession(1, server)
 
 	// Pre-populate cache
-	key := userBinaryPartID{charID: 100, index: 1}
-	server.userBinaryParts[key] = []byte{0x01, 0x02, 0x03, 0x04}
+	server.userBinary.Set(100, 1, []byte{0x01, 0x02, 0x03, 0x04})
 
 	pkt := &mhfpacket.MsgSysGetUserBinary{
 		AckHandle:  12345,
@@ -78,7 +77,7 @@ func TestHandleMsgSysGetUserBinary_FromCache(t *testing.T) {
 
 func TestHandleMsgSysGetUserBinary_NotInCache(t *testing.T) {
 	server := createMockServer()
-	server.userBinaryParts = make(map[userBinaryPartID][]byte)
+	server.userBinary = NewUserBinaryStore()
 	session := createMockSession(1, server)
 
 	pkt := &mhfpacket.MsgSysGetUserBinary{

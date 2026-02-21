@@ -217,10 +217,7 @@ func handleMsgMhfUseUdShopCoin(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgMhfGetEnhancedMinidata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetEnhancedMinidata)
 
-	s.server.minidataLock.RLock()
-	data, ok := s.server.minidataParts[pkt.CharID]
-	s.server.minidataLock.RUnlock()
-
+	data, ok := s.server.minidata.Get(pkt.CharID)
 	if !ok {
 		data = make([]byte, 1)
 	}
@@ -231,9 +228,7 @@ func handleMsgMhfSetEnhancedMinidata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetEnhancedMinidata)
 	dumpSaveData(s, pkt.RawDataPayload, "minidata")
 
-	s.server.minidataLock.Lock()
-	s.server.minidataParts[s.charID] = pkt.RawDataPayload
-	s.server.minidataLock.Unlock()
+	s.server.minidata.Set(s.charID, pkt.RawDataPayload)
 
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }

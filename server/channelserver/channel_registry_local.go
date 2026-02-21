@@ -76,7 +76,6 @@ func (r *LocalChannelRegistry) SearchSessions(predicate func(SessionSnapshot) bo
 			break
 		}
 		c.Lock()
-		c.userBinaryPartsLock.RLock()
 		for _, session := range c.sessions {
 			if len(results) >= max {
 				break
@@ -90,16 +89,11 @@ func (r *LocalChannelRegistry) SearchSessions(predicate func(SessionSnapshot) bo
 			if session.stage != nil {
 				snap.StageID = session.stage.id
 			}
-			ub3 := c.userBinaryParts[userBinaryPartID{charID: session.charID, index: 3}]
-			if len(ub3) > 0 {
-				snap.UserBinary3 = make([]byte, len(ub3))
-				copy(snap.UserBinary3, ub3)
-			}
+			snap.UserBinary3 = c.userBinary.GetCopy(session.charID, 3)
 			if predicate(snap) {
 				results = append(results, snap)
 			}
 		}
-		c.userBinaryPartsLock.RUnlock()
 		c.Unlock()
 	}
 	return results

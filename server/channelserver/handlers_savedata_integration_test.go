@@ -507,7 +507,7 @@ func TestSaveLoad_CompleteSaveLoadCycle(t *testing.T) {
 	s2 := createTestSession(mock2)
 	s2.charID = charID
 	SetTestDB(s2.server, db)
-	s2.server.userBinaryParts = make(map[userBinaryPartID][]byte)
+	s2.server.userBinary = NewUserBinaryStore()
 
 	// Load character data
 	loadPkt := &mhfpacket.MsgMhfLoaddata{

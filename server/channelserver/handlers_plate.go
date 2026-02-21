@@ -131,10 +131,8 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 
 	// Invalidate user binary cache so other players see updated appearance
 	// User binary types 2 and 3 contain equipment/appearance data
-	s.server.userBinaryPartsLock.Lock()
-	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 2})
-	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 3})
-	s.server.userBinaryPartsLock.Unlock()
+	s.server.userBinary.Delete(s.charID, 2)
+	s.server.userBinary.Delete(s.charID, 3)
 
 	saveDuration := time.Since(saveStart)
 	s.logger.Info("PlateData saved successfully",
@@ -213,10 +211,8 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	// Invalidate user binary cache so other players see updated appearance
-	s.server.userBinaryPartsLock.Lock()
-	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 2})
-	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 3})
-	s.server.userBinaryPartsLock.Unlock()
+	s.server.userBinary.Delete(s.charID, 2)
+	s.server.userBinary.Delete(s.charID, 3)
 
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
@@ -258,10 +254,8 @@ func handleMsgMhfSavePlateMyset(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	// Invalidate user binary cache so other players see updated appearance
-	s.server.userBinaryPartsLock.Lock()
-	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 2})
-	delete(s.server.userBinaryParts, userBinaryPartID{charID: s.charID, index: 3})
-	s.server.userBinaryPartsLock.Unlock()
+	s.server.userBinary.Delete(s.charID, 2)
+	s.server.userBinary.Delete(s.charID, 3)
 
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }

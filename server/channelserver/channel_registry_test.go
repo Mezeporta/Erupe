@@ -14,7 +14,7 @@ func createTestChannels(count int) []*Server {
 		s.IP = "10.0.0.1"
 		s.Port = uint16(54001 + i)
 		s.GlobalID = "0101"
-		s.userBinaryParts = make(map[userBinaryPartID][]byte)
+		s.userBinary = NewUserBinaryStore()
 		channels[i] = s
 	}
 	return channels

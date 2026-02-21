@@ -536,7 +536,6 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 				break
 			}
 			c.Lock()
-			c.userBinaryPartsLock.RLock()
 			for _, session := range c.sessions {
 				if count == maxResults {
 					break
@@ -551,19 +550,15 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 					continue
 				}
 				count++
-				ub3 := c.userBinaryParts[userBinaryPartID{charID: session.charID, index: 3}]
-				ub3Copy := make([]byte, len(ub3))
-				copy(ub3Copy, ub3)
 				results = append(results, sessionResult{
 					charID:   session.charID,
 					name:     stringsupport.UTF8ToSJIS(session.Name),
 					stageID:  stringsupport.UTF8ToSJIS(session.stage.id),
 					ip:       net.ParseIP(c.IP).To4(),
 					port:     c.Port,
-					userBin3: ub3Copy,
+					userBin3: c.userBinary.GetCopy(session.charID, 3),
 				})
 			}
-			c.userBinaryPartsLock.RUnlock()
 			c.Unlock()
 		}
 

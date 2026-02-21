@@ -443,7 +443,7 @@ func TestHandleMsgMhfLoaddata_Integration(t *testing.T) {
 	s := createTestSession(mock)
 	s.charID = charID
 	SetTestDB(s.server, db)
-	s.server.userBinaryParts = make(map[userBinaryPartID][]byte)
+	s.server.userBinary = NewUserBinaryStore()
 
 	pkt := &mhfpacket.MsgMhfLoaddata{
 		AckHandle: 5678,

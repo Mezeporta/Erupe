@@ -29,12 +29,6 @@ type Config struct {
 	Enable      bool
 }
 
-// Map key type for a user binary part.
-type userBinaryPartID struct {
-	charID uint32
-	index  uint8
-}
-
 // Server is a MHF channel server.
 type Server struct {
 	sync.Mutex
@@ -81,13 +75,8 @@ type Server struct {
 	// Used to map different languages
 	i18n i18n
 
-	// UserBinary
-	userBinaryPartsLock sync.RWMutex
-	userBinaryParts     map[userBinaryPartID][]byte
-
-	// EnhancedMinidata
-	minidataLock  sync.RWMutex
-	minidataParts map[uint32][]byte
+	userBinary *UserBinaryStore
+	minidata   *MinidataStore
 
 	// Semaphore
 	semaphoreLock  sync.RWMutex
@@ -118,8 +107,8 @@ func NewServer(config *Config) *Server {
 		done:            make(chan struct{}),
 		sessions:        make(map[net.Conn]*Session),
 		stages:          make(map[string]*Stage),
-		userBinaryParts: make(map[userBinaryPartID][]byte),
-		minidataParts:   make(map[uint32][]byte),
+		userBinary: NewUserBinaryStore(),
+		minidata:   NewMinidataStore(),
 		semaphore:       make(map[string]*Semaphore),
 		semaphoreIndex:  7,
 		discordBot:      config.DiscordBot,
