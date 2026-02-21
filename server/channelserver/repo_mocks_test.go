@@ -363,6 +363,47 @@ type mockGuildRepoOps struct {
 	createdPost    []interface{}
 	deletedPostID  uint32
 
+	// Alliance
+	alliance          *GuildAlliance
+	getAllianceErr     error
+	createAllianceErr error
+	deleteAllianceErr error
+	removeAllyErr     error
+	deletedAllianceID uint32
+	removedAllyArgs   []uint32
+
+	// Cooking
+	meals         []*GuildMeal
+	listMealsErr  error
+	createdMealID uint32
+	createMealErr error
+	updateMealErr error
+
+	// Adventure
+	adventures       []*GuildAdventure
+	listAdvErr       error
+	createAdvErr     error
+	collectAdvID     uint32
+	chargeAdvID      uint32
+	chargeAdvAmount  uint32
+
+	// Treasure hunt
+	pendingHunt      *TreasureHunt
+	guildHunts       []*TreasureHunt
+	listHuntsErr     error
+	acquireHuntID    uint32
+	reportHuntID     uint32
+	collectHuntID    uint32
+	claimHuntID      uint32
+	createHuntErr    error
+
+	// Hunt data
+	guildKills       []*GuildKill
+	listKillsErr     error
+	countKills       int
+	countKillsErr    error
+	claimBoxCalled   bool
+
 	// Data
 	membership  *GuildMember
 	application *GuildApplication
@@ -458,6 +499,104 @@ func (m *mockGuildRepoOps) CreatePost(guildID, authorID, stampID uint32, postTyp
 func (m *mockGuildRepoOps) DeletePost(postID uint32) error {
 	m.deletedPostID = postID
 	return m.deletePostErr
+}
+
+func (m *mockGuildRepoOps) GetAllianceByID(_ uint32) (*GuildAlliance, error) {
+	return m.alliance, m.getAllianceErr
+}
+
+func (m *mockGuildRepoOps) CreateAlliance(_ string, _ uint32) error {
+	return m.createAllianceErr
+}
+
+func (m *mockGuildRepoOps) DeleteAlliance(id uint32) error {
+	m.deletedAllianceID = id
+	return m.deleteAllianceErr
+}
+
+func (m *mockGuildRepoOps) RemoveGuildFromAlliance(allyID, guildID, sub1, sub2 uint32) error {
+	m.removedAllyArgs = []uint32{allyID, guildID, sub1, sub2}
+	return m.removeAllyErr
+}
+
+func (m *mockGuildRepoOps) ListMeals(_ uint32) ([]*GuildMeal, error) {
+	return m.meals, m.listMealsErr
+}
+
+func (m *mockGuildRepoOps) CreateMeal(_, _, _ uint32, _ time.Time) (uint32, error) {
+	return m.createdMealID, m.createMealErr
+}
+
+func (m *mockGuildRepoOps) UpdateMeal(_, _, _ uint32, _ time.Time) error {
+	return m.updateMealErr
+}
+
+func (m *mockGuildRepoOps) ListAdventures(_ uint32) ([]*GuildAdventure, error) {
+	return m.adventures, m.listAdvErr
+}
+
+func (m *mockGuildRepoOps) CreateAdventure(_, _ uint32, _, _ int64) error {
+	return m.createAdvErr
+}
+
+func (m *mockGuildRepoOps) CreateAdventureWithCharge(_, _, _ uint32, _, _ int64) error {
+	return m.createAdvErr
+}
+
+func (m *mockGuildRepoOps) CollectAdventure(id uint32, _ uint32) error {
+	m.collectAdvID = id
+	return nil
+}
+
+func (m *mockGuildRepoOps) ChargeAdventure(id uint32, amount uint32) error {
+	m.chargeAdvID = id
+	m.chargeAdvAmount = amount
+	return nil
+}
+
+func (m *mockGuildRepoOps) GetPendingHunt(_ uint32) (*TreasureHunt, error) {
+	return m.pendingHunt, nil
+}
+
+func (m *mockGuildRepoOps) ListGuildHunts(_, _ uint32) ([]*TreasureHunt, error) {
+	return m.guildHunts, m.listHuntsErr
+}
+
+func (m *mockGuildRepoOps) CreateHunt(_, _, _, _ uint32, _ []byte, _ string) error {
+	return m.createHuntErr
+}
+
+func (m *mockGuildRepoOps) AcquireHunt(id uint32) error {
+	m.acquireHuntID = id
+	return nil
+}
+
+func (m *mockGuildRepoOps) RegisterHuntReport(id, _ uint32) error {
+	m.reportHuntID = id
+	return nil
+}
+
+func (m *mockGuildRepoOps) CollectHunt(id uint32) error {
+	m.collectHuntID = id
+	return nil
+}
+
+func (m *mockGuildRepoOps) ClaimHuntReward(id, _ uint32) error {
+	m.claimHuntID = id
+	return nil
+}
+
+func (m *mockGuildRepoOps) ClaimHuntBox(_ uint32, _ time.Time) error {
+	m.claimBoxCalled = true
+	return nil
+}
+
+func (m *mockGuildRepoOps) ListGuildKills(_, _ uint32) ([]*GuildKill, error) {
+	return m.guildKills, m.listKillsErr
+}
+
+func (m *mockGuildRepoOps) CountGuildKills(_, _ uint32) (int, error) {
+	return m.countKills, m.countKillsErr
 }
 
 // --- mockUserRepoForItems ---
