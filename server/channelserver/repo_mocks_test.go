@@ -330,3 +330,269 @@ func (m *mockGuildRepoForMail) InsertKillLog(_ uint32, _ int, _ uint8, _ time.Ti
 func (m *mockGuildRepoForMail) ListInvitedCharacters(_ uint32) ([]*ScoutedCharacter, error) { return nil, nil }
 func (m *mockGuildRepoForMail) RolloverDailyRP(_ uint32, _ time.Time) error     { return nil }
 func (m *mockGuildRepoForMail) AddWeeklyBonusUsers(_ uint32, _ uint8) error     { return nil }
+
+// --- mockGuildRepoOps (enhanced guild repo for ops/scout/board tests) ---
+
+type mockGuildRepoOps struct {
+	mockGuildRepoForMail
+
+	// Configurable errors
+	saveErr       error
+	saveMemberErr error
+	disbandErr    error
+	getMembersErr error
+	acceptErr     error
+	rejectErr     error
+	removeErr     error
+	createAppErr  error
+	getMemberErr  error
+	hasAppResult  bool
+	hasAppErr     error
+	listPostsErr  error
+	createPostErr error
+	deletePostErr error
+
+	// State tracking
+	disbandedID    uint32
+	removedCharID  uint32
+	acceptedCharID uint32
+	rejectedCharID uint32
+	savedGuild     *Guild
+	savedMembers   []*GuildMember
+	createdAppArgs []interface{}
+	createdPost    []interface{}
+	deletedPostID  uint32
+
+	// Data
+	membership  *GuildMember
+	application *GuildApplication
+	posts       []*MessageBoardPost
+}
+
+func (m *mockGuildRepoOps) GetByID(guildID uint32) (*Guild, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	if m.guild != nil && m.guild.ID == guildID {
+		return m.guild, nil
+	}
+	return nil, errNotFound
+}
+
+func (m *mockGuildRepoOps) GetByCharID(charID uint32) (*Guild, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	return m.guild, nil
+}
+
+func (m *mockGuildRepoOps) GetMembers(guildID uint32, applicants bool) ([]*GuildMember, error) {
+	if m.getMembersErr != nil {
+		return nil, m.getMembersErr
+	}
+	return m.members, nil
+}
+
+func (m *mockGuildRepoOps) GetCharacterMembership(_ uint32) (*GuildMember, error) {
+	if m.getMemberErr != nil {
+		return nil, m.getMemberErr
+	}
+	return m.membership, nil
+}
+
+func (m *mockGuildRepoOps) Save(guild *Guild) error {
+	m.savedGuild = guild
+	return m.saveErr
+}
+
+func (m *mockGuildRepoOps) SaveMember(member *GuildMember) error {
+	m.savedMembers = append(m.savedMembers, member)
+	return m.saveMemberErr
+}
+
+func (m *mockGuildRepoOps) Disband(guildID uint32) error {
+	m.disbandedID = guildID
+	return m.disbandErr
+}
+
+func (m *mockGuildRepoOps) RemoveCharacter(charID uint32) error {
+	m.removedCharID = charID
+	return m.removeErr
+}
+
+func (m *mockGuildRepoOps) AcceptApplication(guildID, charID uint32) error {
+	m.acceptedCharID = charID
+	return m.acceptErr
+}
+
+func (m *mockGuildRepoOps) RejectApplication(guildID, charID uint32) error {
+	m.rejectedCharID = charID
+	return m.rejectErr
+}
+
+func (m *mockGuildRepoOps) CreateApplication(guildID, charID, actorID uint32, appType GuildApplicationType) error {
+	m.createdAppArgs = []interface{}{guildID, charID, actorID, appType}
+	return m.createAppErr
+}
+
+func (m *mockGuildRepoOps) HasApplication(guildID, charID uint32) (bool, error) {
+	return m.hasAppResult, m.hasAppErr
+}
+
+func (m *mockGuildRepoOps) GetApplication(guildID, charID uint32, appType GuildApplicationType) (*GuildApplication, error) {
+	return m.application, nil
+}
+
+func (m *mockGuildRepoOps) ListPosts(guildID uint32, postType int) ([]*MessageBoardPost, error) {
+	if m.listPostsErr != nil {
+		return nil, m.listPostsErr
+	}
+	return m.posts, nil
+}
+
+func (m *mockGuildRepoOps) CreatePost(guildID, authorID, stampID uint32, postType int, title, body string, maxPosts int) error {
+	m.createdPost = []interface{}{guildID, authorID, stampID, postType, title, body, maxPosts}
+	return m.createPostErr
+}
+
+func (m *mockGuildRepoOps) DeletePost(postID uint32) error {
+	m.deletedPostID = postID
+	return m.deletePostErr
+}
+
+// --- mockUserRepoForItems ---
+
+type mockUserRepoForItems struct {
+	itemBoxData []byte
+	itemBoxErr  error
+	setData     []byte
+}
+
+func (m *mockUserRepoForItems) GetItemBox(_ uint32) ([]byte, error) {
+	return m.itemBoxData, m.itemBoxErr
+}
+
+func (m *mockUserRepoForItems) SetItemBox(_ uint32, data []byte) error {
+	m.setData = data
+	return nil
+}
+
+// Stub all other UserRepo methods.
+func (m *mockUserRepoForItems) GetGachaPoints(_ uint32) (uint32, uint32, uint32, error) { return 0, 0, 0, nil }
+func (m *mockUserRepoForItems) GetTrialCoins(_ uint32) (uint16, error)                  { return 0, nil }
+func (m *mockUserRepoForItems) DeductTrialCoins(_ uint32, _ uint32) error               { return nil }
+func (m *mockUserRepoForItems) DeductPremiumCoins(_ uint32, _ uint32) error             { return nil }
+func (m *mockUserRepoForItems) AddPremiumCoins(_ uint32, _ uint32) error                { return nil }
+func (m *mockUserRepoForItems) AddTrialCoins(_ uint32, _ uint32) error                  { return nil }
+func (m *mockUserRepoForItems) DeductFrontierPoints(_ uint32, _ uint32) error           { return nil }
+func (m *mockUserRepoForItems) AddFrontierPoints(_ uint32, _ uint32) error              { return nil }
+func (m *mockUserRepoForItems) AdjustFrontierPointsDeduct(_ uint32, _ int) (uint32, error) { return 0, nil }
+func (m *mockUserRepoForItems) AdjustFrontierPointsCredit(_ uint32, _ int) (uint32, error) { return 0, nil }
+func (m *mockUserRepoForItems) AddFrontierPointsFromGacha(_ uint32, _ uint32, _ uint8) error { return nil }
+func (m *mockUserRepoForItems) GetRights(_ uint32) (uint32, error)                      { return 0, nil }
+func (m *mockUserRepoForItems) SetRights(_ uint32, _ uint32) error                      { return nil }
+func (m *mockUserRepoForItems) IsOp(_ uint32) (bool, error)                             { return false, nil }
+func (m *mockUserRepoForItems) SetLastCharacter(_ uint32, _ uint32) error               { return nil }
+func (m *mockUserRepoForItems) GetTimer(_ uint32) (bool, error)                         { return false, nil }
+func (m *mockUserRepoForItems) SetTimer(_ uint32, _ bool) error                         { return nil }
+func (m *mockUserRepoForItems) CountByPSNID(_ string) (int, error)                      { return 0, nil }
+func (m *mockUserRepoForItems) SetPSNID(_ uint32, _ string) error                       { return nil }
+func (m *mockUserRepoForItems) GetDiscordToken(_ uint32) (string, error)                { return "", nil }
+func (m *mockUserRepoForItems) SetDiscordToken(_ uint32, _ string) error                { return nil }
+func (m *mockUserRepoForItems) LinkDiscord(_ string, _ string) (string, error)          { return "", nil }
+func (m *mockUserRepoForItems) SetPasswordByDiscordID(_ string, _ []byte) error         { return nil }
+func (m *mockUserRepoForItems) GetByIDAndUsername(_ uint32) (uint32, string, error)      { return 0, "", nil }
+func (m *mockUserRepoForItems) BanUser(_ uint32, _ *time.Time) error                    { return nil }
+
+// --- mockStampRepoForItems ---
+
+type mockStampRepoForItems struct {
+	checkedTime  time.Time
+	checkedErr   error
+	totals       [2]uint16 // total, redeemed
+	totalsErr    error
+	initCalled   bool
+	incrementCalled bool
+	setCalled    bool
+	exchangeResult [2]uint16
+	exchangeErr  error
+	yearlyResult [2]uint16
+	yearlyErr    error
+}
+
+func (m *mockStampRepoForItems) GetChecked(_ uint32, _ string) (time.Time, error) {
+	return m.checkedTime, m.checkedErr
+}
+
+func (m *mockStampRepoForItems) Init(_ uint32, _ time.Time) error {
+	m.initCalled = true
+	return nil
+}
+
+func (m *mockStampRepoForItems) SetChecked(_ uint32, _ string, _ time.Time) error {
+	m.setCalled = true
+	return nil
+}
+
+func (m *mockStampRepoForItems) IncrementTotal(_ uint32, _ string) error {
+	m.incrementCalled = true
+	return nil
+}
+
+func (m *mockStampRepoForItems) GetTotals(_ uint32, _ string) (uint16, uint16, error) {
+	return m.totals[0], m.totals[1], m.totalsErr
+}
+
+func (m *mockStampRepoForItems) ExchangeYearly(_ uint32) (uint16, uint16, error) {
+	return m.yearlyResult[0], m.yearlyResult[1], m.yearlyErr
+}
+
+func (m *mockStampRepoForItems) Exchange(_ uint32, _ string) (uint16, uint16, error) {
+	return m.exchangeResult[0], m.exchangeResult[1], m.exchangeErr
+}
+
+// --- mockHouseRepoForItems ---
+
+type mockHouseRepoForItems struct {
+	warehouseItems map[uint8][]byte
+	setData        map[uint8][]byte
+	setErr         error
+}
+
+func newMockHouseRepoForItems() *mockHouseRepoForItems {
+	return &mockHouseRepoForItems{
+		warehouseItems: make(map[uint8][]byte),
+		setData:        make(map[uint8][]byte),
+	}
+}
+
+func (m *mockHouseRepoForItems) GetWarehouseItemData(_ uint32, index uint8) ([]byte, error) {
+	return m.warehouseItems[index], nil
+}
+
+func (m *mockHouseRepoForItems) SetWarehouseItemData(_ uint32, index uint8, data []byte) error {
+	m.setData[index] = data
+	return m.setErr
+}
+
+func (m *mockHouseRepoForItems) InitializeWarehouse(_ uint32) error                           { return nil }
+
+// Stub all other HouseRepo methods.
+func (m *mockHouseRepoForItems) UpdateInterior(_ uint32, _ []byte) error                      { return nil }
+func (m *mockHouseRepoForItems) GetHouseByCharID(_ uint32) (HouseData, error)                 { return HouseData{}, nil }
+func (m *mockHouseRepoForItems) SearchHousesByName(_ string) ([]HouseData, error)              { return nil, nil }
+func (m *mockHouseRepoForItems) UpdateHouseState(_ uint32, _ uint8, _ string) error            { return nil }
+func (m *mockHouseRepoForItems) GetHouseAccess(_ uint32) (uint8, string, error)                { return 0, "", nil }
+func (m *mockHouseRepoForItems) GetHouseContents(_ uint32) ([]byte, []byte, []byte, []byte, []byte, []byte, []byte, error) {
+	return nil, nil, nil, nil, nil, nil, nil, nil
+}
+func (m *mockHouseRepoForItems) GetMission(_ uint32) ([]byte, error)                          { return nil, nil }
+func (m *mockHouseRepoForItems) UpdateMission(_ uint32, _ []byte) error                       { return nil }
+func (m *mockHouseRepoForItems) GetWarehouseNames(_ uint32) ([10]string, [10]string, error) {
+	return [10]string{}, [10]string{}, nil
+}
+func (m *mockHouseRepoForItems) RenameWarehouseBox(_ uint32, _ uint8, _ uint8, _ string) error { return nil }
+func (m *mockHouseRepoForItems) GetWarehouseEquipData(_ uint32, _ uint8) ([]byte, error)       { return nil, nil }
+func (m *mockHouseRepoForItems) SetWarehouseEquipData(_ uint32, _ uint8, _ []byte) error       { return nil }
+func (m *mockHouseRepoForItems) GetTitles(_ uint32) ([]Title, error)                           { return nil, nil }
+func (m *mockHouseRepoForItems) AcquireTitle(_ uint16, _ uint32) error                         { return nil }
