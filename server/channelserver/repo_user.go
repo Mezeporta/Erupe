@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -217,4 +218,17 @@ func (r *UserRepository) GetByIDAndUsername(charID uint32) (userID uint32, usern
 		charID,
 	).Scan(&userID, &username)
 	return
+}
+
+// BanUser inserts or updates a ban for the given user.
+// A nil expires means a permanent ban; non-nil sets a temporary ban with expiry.
+func (r *UserRepository) BanUser(userID uint32, expires *time.Time) error {
+	if expires == nil {
+		_, err := r.db.Exec(`INSERT INTO bans VALUES ($1)
+			ON CONFLICT (user_id) DO UPDATE SET expires=NULL`, userID)
+		return err
+	}
+	_, err := r.db.Exec(`INSERT INTO bans VALUES ($1, $2)
+		ON CONFLICT (user_id) DO UPDATE SET expires=$2`, userID, *expires)
+	return err
 }

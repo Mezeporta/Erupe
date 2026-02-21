@@ -224,3 +224,15 @@ func (r *CharacterRepository) SaveHouseData(charID uint32, houseTier []byte, hou
 		houseTier, houseData, bookshelf, gallery, tore, garden, charID)
 	return err
 }
+
+// LoadSaveData reads the core save columns for a character.
+// Returns charID, savedata, isNewCharacter, name, and any error.
+func (r *CharacterRepository) LoadSaveData(charID uint32) (uint32, []byte, bool, string, error) {
+	var id uint32
+	var savedata []byte
+	var isNew bool
+	var name string
+	err := r.db.QueryRow("SELECT id, savedata, is_new_character, name FROM characters WHERE id = $1", charID).
+		Scan(&id, &savedata, &isNew, &name)
+	return id, savedata, isNew, name, err
+}

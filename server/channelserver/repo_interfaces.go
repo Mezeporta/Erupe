@@ -41,6 +41,7 @@ type CharacterRepo interface {
 	FindByRastaID(rastaID int) (charID uint32, name string, err error)
 	SaveCharacterData(charID uint32, compSave []byte, hr, gr uint16, isFemale bool, weaponType uint8, weaponID uint16) error
 	SaveHouseData(charID uint32, houseTier []byte, houseData, bookshelf, gallery, tore, garden []byte) error
+	LoadSaveData(charID uint32) (uint32, []byte, bool, string, error)
 }
 
 // GuildRepo defines the contract for guild data access.
@@ -141,6 +142,7 @@ type UserRepo interface {
 	LinkDiscord(discordID string, token string) (string, error)
 	SetPasswordByDiscordID(discordID string, hash []byte) error
 	GetByIDAndUsername(charID uint32) (userID uint32, username string, err error)
+	BanUser(userID uint32, expires *time.Time) error
 }
 
 // GachaRepo defines the contract for gacha system data access.
@@ -271,6 +273,9 @@ type EventRepo interface {
 	GetLoginBoosts(charID uint32) (*sqlx.Rows, error)
 	InsertLoginBoost(charID uint32, weekReq uint8, expiration, reset time.Time) error
 	UpdateLoginBoost(charID uint32, weekReq uint8, expiration, reset time.Time) error
+	GetEventQuests() (*sql.Rows, error)
+	UpdateEventQuestStartTime(tx *sql.Tx, id uint32, startTime time.Time) error
+	BeginTx() (*sql.Tx, error)
 }
 
 // AchievementRepo defines the contract for achievement data access.

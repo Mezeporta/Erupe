@@ -104,14 +104,12 @@ func parseChatCommand(s *Session, command string) {
 					uid, uname, err := s.server.userRepo.GetByIDAndUsername(cid)
 					if err == nil {
 						if expiry.IsZero() {
-							if _, err := s.server.db.Exec(`INSERT INTO bans VALUES ($1)
-                 				ON CONFLICT (user_id) DO UPDATE SET expires=NULL`, uid); err != nil {
+							if err := s.server.userRepo.BanUser(uid, nil); err != nil {
 								s.logger.Error("Failed to ban user", zap.Error(err))
 							}
 							sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.ban.success, uname))
 						} else {
-							if _, err := s.server.db.Exec(`INSERT INTO bans VALUES ($1, $2)
-                 				ON CONFLICT (user_id) DO UPDATE SET expires=$2`, uid, expiry); err != nil {
+							if err := s.server.userRepo.BanUser(uid, &expiry); err != nil {
 								s.logger.Error("Failed to ban user with expiry", zap.Error(err))
 							}
 							sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.ban.success, uname)+fmt.Sprintf(s.server.i18n.commands.ban.length, expiry.Format(time.DateTime)))

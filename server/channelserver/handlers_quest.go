@@ -348,10 +348,10 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(0)
 
-	rows, err := s.server.db.Query("SELECT id, COALESCE(max_players, 4) AS max_players, quest_type, quest_id, COALESCE(mark, 0) AS mark, COALESCE(flags, -1), start_time, COALESCE(active_days, 0) AS active_days, COALESCE(inactive_days, 0) AS inactive_days FROM event_quests ORDER BY quest_id")
+	rows, err := s.server.eventRepo.GetEventQuests()
 	if err == nil {
 		currentTime := time.Now()
-		tx, err := s.server.db.Begin()
+		tx, err := s.server.eventRepo.BeginTx()
 		if err != nil {
 			s.logger.Error("Failed to begin transaction for event quests", zap.Error(err))
 			_ = rows.Close()
@@ -385,7 +385,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 						// Normalize rotationTime to 12PM JST to align with the in-game events update notification.
 						newRotationTime := time.Date(rotationTime.Year(), rotationTime.Month(), rotationTime.Day(), 12, 0, 0, 0, TimeAdjusted().Location())
 
-						_, err = tx.Exec("UPDATE event_quests SET start_time = $1 WHERE id = $2", newRotationTime, id)
+						err = s.server.eventRepo.UpdateEventQuestStartTime(tx, id, newRotationTime)
 						if err != nil {
 							_ = tx.Rollback()
 							break

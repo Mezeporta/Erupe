@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"database/sql"
 	"errors"
 
 	cfg "erupe-ce/config"
@@ -11,26 +12,23 @@ import (
 
 // GetCharacterSaveData loads a character's save data from the database.
 func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error) {
-	result, err := s.server.db.Query("SELECT id, savedata, is_new_character, name FROM characters WHERE id = $1", charID)
+	id, savedata, isNew, name, err := s.server.charRepo.LoadSaveData(charID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			s.logger.Error("No savedata found", zap.Uint32("charID", charID))
+			return nil, errors.New("no savedata found")
+		}
 		s.logger.Error("Failed to get savedata", zap.Error(err), zap.Uint32("charID", charID))
-		return nil, err
-	}
-	defer func() { _ = result.Close() }()
-	if !result.Next() {
-		err = errors.New("no savedata found")
-		s.logger.Error("No savedata found", zap.Uint32("charID", charID))
 		return nil, err
 	}
 
 	saveData := &CharacterSaveData{
-		Mode:     s.server.erupeConfig.RealClientMode,
-		Pointers: getPointers(s.server.erupeConfig.RealClientMode),
-	}
-	err = result.Scan(&saveData.CharID, &saveData.compSave, &saveData.IsNewCharacter, &saveData.Name)
-	if err != nil {
-		s.logger.Error("Failed to scan savedata", zap.Error(err), zap.Uint32("charID", charID))
-		return nil, err
+		CharID:         id,
+		compSave:       savedata,
+		IsNewCharacter: isNew,
+		Name:           name,
+		Mode:           s.server.erupeConfig.RealClientMode,
+		Pointers:       getPointers(s.server.erupeConfig.RealClientMode),
 	}
 
 	if saveData.compSave == nil {

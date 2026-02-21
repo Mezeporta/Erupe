@@ -194,6 +194,7 @@ func (m *mockCharacterRepo) UpdateGCPAndPact(_ uint32, _ uint32, _ uint32) error
 func (m *mockCharacterRepo) FindByRastaID(_ int) (uint32, string, error)                         { return 0, "", nil }
 func (m *mockCharacterRepo) SaveCharacterData(_ uint32, _ []byte, _, _ uint16, _ bool, _ uint8, _ uint16) error { return nil }
 func (m *mockCharacterRepo) SaveHouseData(_ uint32, _ []byte, _, _, _, _, _ []byte) error        { return nil }
+func (m *mockCharacterRepo) LoadSaveData(_ uint32) (uint32, []byte, bool, string, error)         { return 0, nil, false, "", nil }
 
 // --- mockGoocooRepo ---
 

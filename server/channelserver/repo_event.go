@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -44,4 +45,20 @@ func (r *EventRepository) InsertLoginBoost(charID uint32, weekReq uint8, expirat
 func (r *EventRepository) UpdateLoginBoost(charID uint32, weekReq uint8, expiration, reset time.Time) error {
 	_, err := r.db.Exec(`UPDATE login_boost SET expiration=$1, reset=$2 WHERE char_id=$3 AND week_req=$4`, expiration, reset, charID, weekReq)
 	return err
+}
+
+// GetEventQuests returns all event quest rows ordered by quest_id.
+func (r *EventRepository) GetEventQuests() (*sql.Rows, error) {
+	return r.db.Query("SELECT id, COALESCE(max_players, 4) AS max_players, quest_type, quest_id, COALESCE(mark, 0) AS mark, COALESCE(flags, -1), start_time, COALESCE(active_days, 0) AS active_days, COALESCE(inactive_days, 0) AS inactive_days FROM event_quests ORDER BY quest_id")
+}
+
+// UpdateEventQuestStartTime updates the start_time for an event quest within a transaction.
+func (r *EventRepository) UpdateEventQuestStartTime(tx *sql.Tx, id uint32, startTime time.Time) error {
+	_, err := tx.Exec("UPDATE event_quests SET start_time = $1 WHERE id = $2", startTime, id)
+	return err
+}
+
+// BeginTx starts a new database transaction.
+func (r *EventRepository) BeginTx() (*sql.Tx, error) {
+	return r.db.Begin()
 }
