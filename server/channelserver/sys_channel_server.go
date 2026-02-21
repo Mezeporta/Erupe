@@ -101,9 +101,7 @@ type Server struct {
 
 	raviente *Raviente
 
-	questCacheLock sync.RWMutex
-	questCacheData map[int][]byte
-	questCacheTime map[int]time.Time
+	questCache *QuestCache
 
 	handlerTable map[network.PacketID]handlerFunc
 }
@@ -132,8 +130,7 @@ func NewServer(config *Config) *Server {
 			state:    make([]uint32, 30),
 			support:  make([]uint32, 30),
 		},
-		questCacheData: make(map[int][]byte),
-		questCacheTime: make(map[int]time.Time),
+		questCache: NewQuestCache(config.ErupeConfig.QuestCacheExpiry),
 		handlerTable:   buildHandlerTable(),
 	}
 

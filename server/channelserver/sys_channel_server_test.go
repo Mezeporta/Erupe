@@ -58,8 +58,7 @@ func createTestServer() *Server {
 		sessions:       make(map[net.Conn]*Session),
 		stages:         make(map[string]*Stage),
 		semaphore:      make(map[string]*Semaphore),
-		questCacheData: make(map[int][]byte),
-		questCacheTime: make(map[int]time.Time),
+		questCache: NewQuestCache(0),
 		erupeConfig: &cfg.Config{
 			DebugOptions: cfg.DebugOptions{
 				LogOutboundMessages: false,
