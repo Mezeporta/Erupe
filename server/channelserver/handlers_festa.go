@@ -338,7 +338,11 @@ func handleMsgMhfStateFestaU(s *Session, p mhfpacket.MHFPacket) {
 	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	applicant := false
 	if guild != nil {
-		applicant, _ = s.server.guildRepo.HasApplication(guild.ID, s.charID)
+		var appErr error
+		applicant, appErr = s.server.guildRepo.HasApplication(guild.ID, s.charID)
+		if appErr != nil {
+			s.logger.Warn("Failed to check guild application status", zap.Error(appErr))
+		}
 	}
 	if err != nil || guild == nil || applicant {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -367,7 +371,11 @@ func handleMsgMhfStateFestaG(s *Session, p mhfpacket.MHFPacket) {
 	guild, err := s.server.guildRepo.GetByCharID(s.charID)
 	applicant := false
 	if guild != nil {
-		applicant, _ = s.server.guildRepo.HasApplication(guild.ID, s.charID)
+		var appErr error
+		applicant, appErr = s.server.guildRepo.HasApplication(guild.ID, s.charID)
+		if appErr != nil {
+			s.logger.Warn("Failed to check guild application status", zap.Error(appErr))
+		}
 	}
 	resp := byteframe.NewByteFrame()
 	if err != nil || guild == nil || applicant {

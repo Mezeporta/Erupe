@@ -188,9 +188,11 @@ func handleMsgMhfEnumerateOrder(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {}
 
 func userGetItems(s *Session) []mhfitem.MHFItemStack {
-	var data []byte
 	var items []mhfitem.MHFItemStack
-	data, _ = s.server.userRepo.GetItemBox(s.userID)
+	data, err := s.server.userRepo.GetItemBox(s.userID)
+	if err != nil {
+		s.logger.Warn("Failed to load user item box", zap.Error(err))
+	}
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()
@@ -247,7 +249,10 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 		updated = 1
 	}
 
-	total, redeemed, _ = s.server.stampRepo.GetTotals(s.charID, pkt.StampType)
+	total, redeemed, err = s.server.stampRepo.GetTotals(s.charID, pkt.StampType)
+	if err != nil {
+		s.logger.Warn("Failed to get stamp totals", zap.Error(err))
+	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(total)
 	bf.WriteUint16(redeemed)

@@ -402,12 +402,14 @@ func addWarehouseItem(s *Session, item mhfitem.MHFItemStack) {
 
 func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
 	initializeWarehouse(s)
-	var data []byte
 	var items []mhfitem.MHFItemStack
 	if index > 10 {
 		return items
 	}
-	data, _ = s.server.houseRepo.GetWarehouseItemData(s.charID, index)
+	data, err := s.server.houseRepo.GetWarehouseItemData(s.charID, index)
+	if err != nil {
+		s.logger.Warn("Failed to load warehouse item data", zap.Error(err))
+	}
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()
@@ -420,12 +422,14 @@ func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
 }
 
 func warehouseGetEquipment(s *Session, index uint8) []mhfitem.MHFEquipment {
-	var data []byte
 	var equipment []mhfitem.MHFEquipment
 	if index > 10 {
 		return equipment
 	}
-	data, _ = s.server.houseRepo.GetWarehouseEquipData(s.charID, index)
+	data, err := s.server.houseRepo.GetWarehouseEquipData(s.charID, index)
+	if err != nil {
+		s.logger.Warn("Failed to load warehouse equipment data", zap.Error(err))
+	}
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()

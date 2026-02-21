@@ -51,13 +51,19 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 					guild.LeaderCharID = guildMembers[i].CharID
 					guildMembers[0].OrderIndex = guildMembers[i].OrderIndex
 					guildMembers[i].OrderIndex = 1
-					_ = s.server.guildRepo.SaveMember(guildMembers[0])
-					_ = s.server.guildRepo.SaveMember(guildMembers[i])
+					if err := s.server.guildRepo.SaveMember(guildMembers[0]); err != nil {
+						s.logger.Error("Failed to save former leader member data", zap.Error(err))
+					}
+					if err := s.server.guildRepo.SaveMember(guildMembers[i]); err != nil {
+						s.logger.Error("Failed to save new leader member data", zap.Error(err))
+					}
 					bf.WriteUint32(guildMembers[i].CharID)
 					break
 				}
 			}
-			_ = s.server.guildRepo.Save(guild)
+			if err := s.server.guildRepo.Save(guild); err != nil {
+				s.logger.Error("Failed to save guild after leadership resign", zap.Error(err))
+			}
 		}
 	case mhfpacket.OperateGuildApply:
 		err = s.server.guildRepo.CreateApplication(guild.ID, s.charID, s.charID, GuildApplicationTypeApplied)
@@ -76,9 +82,11 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		if err != nil {
 			response = 0
 		} else {
-			_ = s.server.mailRepo.SendMail(0, s.charID, "Withdrawal",
+			if err := s.server.mailRepo.SendMail(0, s.charID, "Withdrawal",
 				fmt.Sprintf("You have withdrawn from 「%s」.", guild.Name),
-				0, 0, false, true)
+				0, 0, false, true); err != nil {
+				s.logger.Warn("Failed to send guild withdrawal notification", zap.Error(err))
+			}
 		}
 		bf.WriteUint32(uint32(response))
 	case mhfpacket.OperateGuildDonateRank:
@@ -101,7 +109,9 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 			return
 		}
 		guild.Comment, _ = stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
-		_ = s.server.guildRepo.Save(guild)
+		if err := s.server.guildRepo.Save(guild); err != nil {
+			s.logger.Error("Failed to save guild comment", zap.Error(err))
+		}
 	case mhfpacket.OperateGuildUpdateMotto:
 		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -110,7 +120,9 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		_ = pkt.Data1.ReadUint16()
 		guild.SubMotto = pkt.Data1.ReadUint8()
 		guild.MainMotto = pkt.Data1.ReadUint8()
-		_ = s.server.guildRepo.Save(guild)
+		if err := s.server.guildRepo.Save(guild); err != nil {
+			s.logger.Error("Failed to save guild motto", zap.Error(err))
+		}
 	case mhfpacket.OperateGuildRenamePugi1:
 		handleRenamePugi(s, pkt.Data2, guild, 1)
 	case mhfpacket.OperateGuildRenamePugi2:
@@ -165,7 +177,9 @@ func handleRenamePugi(s *Session, bf *byteframe.ByteFrame, guild *Guild, num int
 	default:
 		guild.PugiName3 = name
 	}
-	_ = s.server.guildRepo.Save(guild)
+	if err := s.server.guildRepo.Save(guild); err != nil {
+		s.logger.Error("Failed to save guild pugi name", zap.Error(err))
+	}
 }
 
 func handleChangePugi(s *Session, outfit uint8, guild *Guild, num int) {
@@ -177,7 +191,9 @@ func handleChangePugi(s *Session, outfit uint8, guild *Guild, num int) {
 	case 3:
 		guild.PugiOutfit3 = outfit
 	}
-	_ = s.server.guildRepo.Save(guild)
+	if err := s.server.guildRepo.Save(guild); err != nil {
+		s.logger.Error("Failed to save guild pugi outfit", zap.Error(err))
+	}
 }
 
 func handleDonateRP(s *Session, amount uint16, guild *Guild, _type int) []byte {
@@ -299,7 +315,9 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 	} else {
-		_ = s.server.mailRepo.SendMail(mail.SenderID, mail.RecipientID, mail.Subject, mail.Body, 0, 0, false, true)
+		if err := s.server.mailRepo.SendMail(mail.SenderID, mail.RecipientID, mail.Subject, mail.Body, 0, 0, false, true); err != nil {
+			s.logger.Warn("Failed to send guild member operation mail", zap.Error(err))
+		}
 		if s.server.Registry != nil {
 			s.server.Registry.NotifyMailToCharID(pkt.CharID, s, &mail)
 		} else {

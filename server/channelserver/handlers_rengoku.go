@@ -202,7 +202,11 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	var isApplicant bool
 	if guild != nil {
-		isApplicant, _ = s.server.guildRepo.HasApplication(guild.ID, s.charID)
+		var appErr error
+		isApplicant, appErr = s.server.guildRepo.HasApplication(guild.ID, s.charID)
+		if appErr != nil {
+			s.logger.Warn("Failed to check guild application status", zap.Error(appErr))
+		}
 	}
 	if isApplicant {
 		guild = nil

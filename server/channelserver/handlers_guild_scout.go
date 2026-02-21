@@ -148,7 +148,9 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(guild.ID)
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 		for _, m := range msgs {
-			_ = s.server.mailRepo.SendMail(m.senderID, m.recipientID, m.subject, m.body, 0, 0, false, true)
+			if err := s.server.mailRepo.SendMail(m.senderID, m.recipientID, m.subject, m.body, 0, 0, false, true); err != nil {
+				s.logger.Warn("Failed to send guild scout response mail", zap.Error(err))
+			}
 		}
 	}
 }

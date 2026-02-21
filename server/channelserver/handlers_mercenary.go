@@ -212,7 +212,11 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	var cid uint32
 	var name string
 	if pactID > 0 {
-		cid, name, _ = s.server.charRepo.FindByRastaID(pactID)
+		var findErr error
+		cid, name, findErr = s.server.charRepo.FindByRastaID(pactID)
+		if findErr != nil {
+			s.logger.Warn("Failed to find character by rasta ID", zap.Error(findErr))
+		}
 		bf.WriteUint8(1) // numLends
 		bf.WriteUint32(uint32(pactID))
 		bf.WriteUint32(cid)
