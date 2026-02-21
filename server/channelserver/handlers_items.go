@@ -4,7 +4,7 @@ import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/mhfitem"
 	"erupe-ce/common/mhfmon"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 
 	"go.uber.org/zap"
@@ -313,7 +313,7 @@ func handleMsgMhfStampcardStamp(s *Session, p mhfpacket.MHFPacket) {
 		{300, 5392, 1, 5392, 3},
 		{999, 5392, 1, 5392, 4},
 	}
-	if s.server.erupeConfig.RealClientMode <= _config.Z1 {
+	if s.server.erupeConfig.RealClientMode <= cfg.Z1 {
 		for _, reward := range rewards {
 			if pkt.HR >= reward.HR {
 				pkt.Item1 = reward.Item1
@@ -326,7 +326,7 @@ func handleMsgMhfStampcardStamp(s *Session, p mhfpacket.MHFPacket) {
 
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(pkt.HR)
-	if s.server.erupeConfig.RealClientMode >= _config.G1 {
+	if s.server.erupeConfig.RealClientMode >= cfg.G1 {
 		bf.WriteUint16(pkt.GR)
 	}
 	var stamps, rewardTier, rewardUnk uint16

@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/nullcomp"
 )
@@ -14,37 +14,37 @@ import (
 func TestGetPointers(t *testing.T) {
 	tests := []struct {
 		name       string
-		clientMode _config.Mode
+		clientMode cfg.Mode
 		wantGender int
 		wantHR     int
 	}{
 		{
 			name:       "ZZ_version",
-			clientMode: _config.ZZ,
+			clientMode: cfg.ZZ,
 			wantGender: 81,
 			wantHR:     130550,
 		},
 		{
 			name:       "Z2_version",
-			clientMode: _config.Z2,
+			clientMode: cfg.Z2,
 			wantGender: 81,
 			wantHR:     94550,
 		},
 		{
 			name:       "G10_version",
-			clientMode: _config.G10,
+			clientMode: cfg.G10,
 			wantGender: 81,
 			wantHR:     94550,
 		},
 		{
 			name:       "F5_version",
-			clientMode: _config.F5,
+			clientMode: cfg.F5,
 			wantGender: 81,
 			wantHR:     62550,
 		},
 		{
 			name:       "S6_version",
-			clientMode: _config.S6,
+			clientMode: cfg.S6,
 			wantGender: 81,
 			wantHR:     14550,
 		},
@@ -258,8 +258,8 @@ func TestCharacterSaveData_updateStructWithSaveData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			save := &CharacterSaveData{
-				Mode:           _config.Z2,
-				Pointers:       getPointers(_config.Z2),
+				Mode:           cfg.Z2,
+				Pointers:       getPointers(cfg.Z2),
 				decompSave:     tt.setupSaveData(),
 				IsNewCharacter: tt.isNewCharacter,
 			}
@@ -308,8 +308,8 @@ func TestCharacterSaveData_updateSaveDataWithStruct(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			save := &CharacterSaveData{
-				Mode:       _config.G10,
-				Pointers:   getPointers(_config.G10),
+				Mode:       cfg.G10,
+				Pointers:   getPointers(cfg.G10),
 				decompSave: make([]byte, 150000),
 				RP:         tt.rp,
 				KQF:        tt.kqf,
@@ -414,7 +414,7 @@ func TestGetCharacterSaveData_Integration(t *testing.T) {
 			s := createTestSession(mock)
 			s.charID = charID
 			SetTestDB(s.server, db)
-			s.server.erupeConfig.RealClientMode = _config.Z2
+			s.server.erupeConfig.RealClientMode = cfg.Z2
 
 			// Get character save data
 			saveData, err := GetCharacterSaveData(s, charID)
@@ -458,7 +458,7 @@ func TestCharacterSaveData_Save_Integration(t *testing.T) {
 	s := createTestSession(mock)
 	s.charID = charID
 	SetTestDB(s.server, db)
-	s.server.erupeConfig.RealClientMode = _config.Z2
+	s.server.erupeConfig.RealClientMode = cfg.Z2
 
 	// Load character save data
 	saveData, err := GetCharacterSaveData(s, charID)

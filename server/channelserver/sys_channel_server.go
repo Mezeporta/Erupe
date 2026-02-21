@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/binpacket"
 	"erupe-ce/network/mhfpacket"
@@ -24,7 +24,7 @@ type Config struct {
 	Logger      *zap.Logger
 	DB          *sqlx.DB
 	DiscordBot  *discordbot.DiscordBot
-	ErupeConfig *_config.Config
+	ErupeConfig *cfg.Config
 	Name        string
 	Enable      bool
 }
@@ -62,7 +62,7 @@ type Server struct {
 	achievementRepo *AchievementRepository
 	shopRepo       *ShopRepository
 	cafeRepo       *CafeRepository
-	erupeConfig    *_config.Config
+	erupeConfig    *cfg.Config
 	acceptConns    chan net.Conn
 	deleteConns    chan net.Conn
 	sessions       map[net.Conn]*Session

@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 )
 
 // TestEncodeServerInfo_EmptyClanMemberLimits verifies the crash is FIXED when ClanMemberLimits is empty
@@ -15,13 +15,13 @@ import (
 // From erupe.log.1:659922
 // After fix: Should handle empty array gracefully with default value (60)
 func TestEncodeServerInfo_EmptyClanMemberLimits(t *testing.T) {
-	config := &_config.Config{
-		RealClientMode: _config.Z1,
+	config := &cfg.Config{
+		RealClientMode: cfg.Z1,
 		Host:           "127.0.0.1",
-		Entrance: _config.Entrance{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    53310,
-			Entries: []_config.EntranceServerInfo{
+			Entries: []cfg.EntranceServerInfo{
 				{
 					Name:        "TestServer",
 					Description: "Test",
@@ -29,7 +29,7 @@ func TestEncodeServerInfo_EmptyClanMemberLimits(t *testing.T) {
 					Type:        0,
 					Recommended: 0,
 					AllowedClientFlags: 0xFFFFFFFF,
-					Channels: []_config.EntranceChannelInfo{
+					Channels: []cfg.EntranceChannelInfo{
 						{
 							Port:       54001,
 							MaxPlayers: 100,
@@ -38,7 +38,7 @@ func TestEncodeServerInfo_EmptyClanMemberLimits(t *testing.T) {
 				},
 			},
 		},
-		GameplayOptions: _config.GameplayOptions{
+		GameplayOptions: cfg.GameplayOptions{
 			ClanMemberLimits: [][]uint8{}, // Empty array - should now use default (60) instead of panicking
 		},
 	}
@@ -117,13 +117,13 @@ func TestClanMemberLimitsBoundsChecking(t *testing.T) {
 // Previously panicked: runtime error: index out of range [1]
 // After fix: Should handle missing column gracefully with default value (60)
 func TestEncodeServerInfo_MissingSecondColumnClanMemberLimits(t *testing.T) {
-	config := &_config.Config{
-		RealClientMode: _config.Z1,
+	config := &cfg.Config{
+		RealClientMode: cfg.Z1,
 		Host:           "127.0.0.1",
-		Entrance: _config.Entrance{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    53310,
-			Entries: []_config.EntranceServerInfo{
+			Entries: []cfg.EntranceServerInfo{
 				{
 					Name:        "TestServer",
 					Description: "Test",
@@ -131,7 +131,7 @@ func TestEncodeServerInfo_MissingSecondColumnClanMemberLimits(t *testing.T) {
 					Type:        0,
 					Recommended: 0,
 					AllowedClientFlags: 0xFFFFFFFF,
-					Channels: []_config.EntranceChannelInfo{
+					Channels: []cfg.EntranceChannelInfo{
 						{
 							Port:       54001,
 							MaxPlayers: 100,
@@ -140,7 +140,7 @@ func TestEncodeServerInfo_MissingSecondColumnClanMemberLimits(t *testing.T) {
 				},
 			},
 		},
-		GameplayOptions: _config.GameplayOptions{
+		GameplayOptions: cfg.GameplayOptions{
 			ClanMemberLimits: [][]uint8{
 				{1}, // Only 1 element, code used to panic accessing [1]
 			},

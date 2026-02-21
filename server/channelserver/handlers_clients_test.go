@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
 	"go.uber.org/zap"
@@ -390,8 +390,8 @@ func TestEnumerateClient_ConcurrentAccess(t *testing.T) {
 	server := &Server{
 		logger: logger,
 		stages: make(map[string]*Stage),
-		erupeConfig: &_config.Config{
-			DebugOptions: _config.DebugOptions{
+		erupeConfig: &cfg.Config{
+			DebugOptions: cfg.DebugOptions{
 				LogOutboundMessages: false,
 			},
 		},

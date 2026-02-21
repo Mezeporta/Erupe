@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -497,7 +497,7 @@ func TestAckHandlePacketsParse(t *testing.T) {
 		{"MsgMhfGetKijuInfo", network.MSG_MHF_GET_KIJU_INFO},
 	}
 
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -547,7 +547,7 @@ func TestAddAchievementParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAddAchievement{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -587,7 +587,7 @@ func TestGetAchievementParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfGetAchievement{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -630,7 +630,7 @@ func TestBuildNotImplemented(t *testing.T) {
 	for _, pkt := range packetsToTest {
 		t.Run(pkt.Opcode().String(), func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
-			err := pkt.Build(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Build(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err == nil {
 				t.Logf("Build() did not return error (implementation may exist)")
 			} else {

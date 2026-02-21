@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"erupe-ce/config"
+	cfg "erupe-ce/config"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
@@ -304,7 +304,7 @@ func newTestServerWithMock(t *testing.T) (*Server, sqlmock.Sqlmock) {
 	server := &Server{
 		logger:      zap.NewNop(),
 		db:          sqlxDB,
-		erupeConfig: &_config.Config{},
+		erupeConfig: &cfg.Config{},
 	}
 
 	return server, mock

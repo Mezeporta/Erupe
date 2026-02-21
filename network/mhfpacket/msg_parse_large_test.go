@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
 // TestParseLargeMsgSysUpdateRightBuild tests Build for MsgSysUpdateRight (no Parse implementation).
 func TestParseLargeMsgSysUpdateRightBuild(t *testing.T) {
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 	original := &MsgSysUpdateRight{
 		ClientRespAckHandle: 0x12345678,
 		Bitfield:            0xDEADBEEF,
@@ -58,7 +58,7 @@ func TestParseLargeMsgMhfOperateWarehouse(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperateWarehouse{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -93,7 +93,7 @@ func TestParseLargeMsgMhfOperateWarehouseEquip(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperateWarehouse{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -133,7 +133,7 @@ func TestParseLargeMsgMhfLoadHouse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfLoadHouse{}
-			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -172,7 +172,7 @@ func TestParseLargeMsgMhfSendMail(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfSendMail{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -233,7 +233,7 @@ func TestParseLargeMsgMhfApplyBbsArticle(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfApplyBbsArticle{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -271,7 +271,7 @@ func TestParseLargeMsgMhfChargeFesta(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfChargeFesta{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -306,7 +306,7 @@ func TestParseLargeMsgMhfChargeFestaZeroSouls(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfChargeFesta{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 	if len(pkt.Souls) != 0 {
@@ -329,7 +329,7 @@ func TestParseLargeMsgMhfOperateJoint(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperateJoint{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -365,7 +365,7 @@ func TestParseLargeMsgMhfOperationInvGuild(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperationInvGuild{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -404,7 +404,7 @@ func TestParseLargeMsgMhfSaveMercenary(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfSaveMercenary{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -446,7 +446,7 @@ func TestParseLargeMsgMhfUpdateHouse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfUpdateHouse{}
-			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -481,7 +481,7 @@ func TestParseLargeMsgSysCreateAcquireSemaphore(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysCreateAcquireSemaphore{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -513,7 +513,7 @@ func TestParseLargeMsgMhfOperateGuild(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfOperateGuild{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -553,7 +553,7 @@ func TestParseLargeMsgMhfReadBeatLevel(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfReadBeatLevel{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -597,7 +597,7 @@ func TestParseLargeMsgSysCreateObject(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysCreateObject{}
-			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+			if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
 
@@ -633,7 +633,7 @@ func TestParseLargeMsgSysLockGlobalSema(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysLockGlobalSema{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -665,7 +665,7 @@ func TestParseLargeMsgMhfCreateJoint(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfCreateJoint{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -690,7 +690,7 @@ func TestParseLargeMsgMhfGetUdTacticsRemainingPoint(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfGetUdTacticsRemainingPoint{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -719,7 +719,7 @@ func TestParseLargeMsgMhfPostCafeDurationBonusReceived(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfPostCafeDurationBonusReceived{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -745,7 +745,7 @@ func TestParseLargeMsgMhfPostCafeDurationBonusReceivedEmpty(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfPostCafeDurationBonusReceived{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 	if len(pkt.CafeBonusID) != 0 {
@@ -763,7 +763,7 @@ func TestParseLargeMsgMhfRegistGuildAdventureDiva(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfRegistGuildAdventureDiva{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -788,7 +788,7 @@ func TestParseLargeMsgMhfStateFestaG(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfStateFestaG{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -813,7 +813,7 @@ func TestParseLargeMsgMhfStateFestaU(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfStateFestaU{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -839,7 +839,7 @@ func TestParseLargeMsgSysEnumerateStage(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysEnumerateStage{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
@@ -865,7 +865,7 @@ func TestParseLargeMsgSysReserveStage(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgSysReserveStage{}
-	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ}); err != nil {
+	if err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ}); err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
 

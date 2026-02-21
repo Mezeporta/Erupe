@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 )
 
 // TestMakeSignResponse_EmptyCapLinkValues verifies the crash is FIXED when CapLink.Values is empty
@@ -15,16 +15,16 @@ import (
 // From erupe.log.1:659796 and 659853
 // After fix: Should handle empty array gracefully with defaults
 func TestMakeSignResponse_EmptyCapLinkValues(t *testing.T) {
-	config := &_config.Config{
-		DebugOptions: _config.DebugOptions{
-			CapLink: _config.CapLinkOptions{
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
 				Values: []uint16{}, // Empty array - should now use defaults instead of panicking
 				Key:    "test",
 				Host:   "localhost",
 				Port:   8080,
 			},
 		},
-		GameplayOptions: _config.GameplayOptions{
+		GameplayOptions: cfg.GameplayOptions{
 			MezFesSoloTickets:  100,
 			MezFesGroupTickets: 100,
 			ClanMemberLimits: [][]uint8{
@@ -69,16 +69,16 @@ func TestMakeSignResponse_EmptyCapLinkValues(t *testing.T) {
 // Previously panicked: runtime error: index out of range [1]
 // After fix: Should handle small array gracefully with defaults
 func TestMakeSignResponse_InsufficientCapLinkValues(t *testing.T) {
-	config := &_config.Config{
-		DebugOptions: _config.DebugOptions{
-			CapLink: _config.CapLinkOptions{
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
 				Values: []uint16{51728}, // Only 1 element, code used to panic accessing [1]
 				Key:    "test",
 				Host:   "localhost",
 				Port:   8080,
 			},
 		},
-		GameplayOptions: _config.GameplayOptions{
+		GameplayOptions: cfg.GameplayOptions{
 			MezFesSoloTickets:  100,
 			MezFesGroupTickets: 100,
 			ClanMemberLimits: [][]uint8{
@@ -118,16 +118,16 @@ func TestMakeSignResponse_InsufficientCapLinkValues(t *testing.T) {
 // Previously panicked: runtime error: index out of range [2/3/4]
 // After fix: Should handle small array gracefully with defaults
 func TestMakeSignResponse_MissingCapLinkValues234(t *testing.T) {
-	config := &_config.Config{
-		DebugOptions: _config.DebugOptions{
-			CapLink: _config.CapLinkOptions{
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
 				Values: []uint16{100, 200}, // Only 2 elements, code used to panic accessing [2][3][4]
 				Key:    "test",
 				Host:   "localhost",
 				Port:   8080,
 			},
 		},
-		GameplayOptions: _config.GameplayOptions{
+		GameplayOptions: cfg.GameplayOptions{
 			MezFesSoloTickets:  100,
 			MezFesGroupTickets: 100,
 			ClanMemberLimits: [][]uint8{

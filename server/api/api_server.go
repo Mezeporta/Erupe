@@ -2,7 +2,7 @@ package api
 
 import (
 	"context"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,14 +19,14 @@ import (
 type Config struct {
 	Logger      *zap.Logger
 	DB          *sqlx.DB
-	ErupeConfig *_config.Config
+	ErupeConfig *cfg.Config
 }
 
 // APIServer is Erupes Standard API interface
 type APIServer struct {
 	sync.Mutex
 	logger         *zap.Logger
-	erupeConfig    *_config.Config
+	erupeConfig    *cfg.Config
 	db             *sqlx.DB
 	httpServer     *http.Server
 	isShuttingDown bool

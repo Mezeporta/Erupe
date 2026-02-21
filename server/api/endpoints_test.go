@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/common/gametime"
 	"go.uber.org/zap"
 )
@@ -19,20 +19,20 @@ func TestLauncherEndpoint(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
-	cfg.API.Banners = []_config.APISignBanner{
+	c := NewTestConfig()
+	c.API.Banners = []cfg.APISignBanner{
 		{Src: "http://example.com/banner1.jpg", Link: "http://example.com"},
 	}
-	cfg.API.Messages = []_config.APISignMessage{
+	c.API.Messages = []cfg.APISignMessage{
 		{Message: "Welcome to Erupe", Date: 0, Kind: 0, Link: "http://example.com"},
 	}
-	cfg.API.Links = []_config.APISignLink{
+	c.API.Links = []cfg.APISignLink{
 		{Name: "Forum", Icon: "forum", Link: "http://forum.example.com"},
 	}
 
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -83,14 +83,14 @@ func TestLauncherEndpointEmptyConfig(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
-	cfg.API.Banners = []_config.APISignBanner{}
-	cfg.API.Messages = []_config.APISignMessage{}
-	cfg.API.Links = []_config.APISignLink{}
+	c := NewTestConfig()
+	c.API.Banners = []cfg.APISignBanner{}
+	c.API.Messages = []cfg.APISignMessage{}
+	c.API.Links = []cfg.APISignLink{}
 
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 	}
 
 	req := httptest.NewRequest("GET", "/launcher", nil)
@@ -119,10 +119,10 @@ func TestLoginEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -144,10 +144,10 @@ func TestLoginEndpointEmptyCredentials(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -196,10 +196,10 @@ func TestRegisterEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -219,10 +219,10 @@ func TestRegisterEndpointEmptyCredentials(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -267,10 +267,10 @@ func TestCreateCharacterEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -290,10 +290,10 @@ func TestDeleteCharacterEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -313,10 +313,10 @@ func TestExportSaveEndpointInvalidJSON(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -336,12 +336,12 @@ func TestScreenShotEndpointDisabled(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
-	cfg.Screenshots.Enabled = false
+	c := NewTestConfig()
+	c.Screenshots.Enabled = false
 
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -375,10 +375,10 @@ func TestScreenShotGetInvalidToken(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -415,14 +415,14 @@ func TestNewAuthDataStructure(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
-	cfg.DebugOptions.MaxLauncherHR = false
-	cfg.HideLoginNotice = false
-	cfg.LoginNotices = []string{"Notice 1", "Notice 2"}
+	c := NewTestConfig()
+	c.DebugOptions.MaxLauncherHR = false
+	c.HideLoginNotice = false
+	c.LoginNotices = []string{"Notice 1", "Notice 2"}
 
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -455,8 +455,8 @@ func TestNewAuthDataStructure(t *testing.T) {
 		t.Error("MezFes should not be nil")
 	}
 
-	if authData.PatchServer != cfg.API.PatchServer {
-		t.Errorf("PatchServer = %s, want %s", authData.PatchServer, cfg.API.PatchServer)
+	if authData.PatchServer != c.API.PatchServer {
+		t.Errorf("PatchServer = %s, want %s", authData.PatchServer, c.API.PatchServer)
 	}
 
 	if len(authData.Notices) == 0 {
@@ -471,12 +471,12 @@ func TestNewAuthDataDebugMode(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
-	cfg.DebugOptions.MaxLauncherHR = true
+	c := NewTestConfig()
+	c.DebugOptions.MaxLauncherHR = true
 
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -505,14 +505,14 @@ func TestNewAuthDataMezFesConfiguration(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
-	cfg.GameplayOptions.MezFesSoloTickets = 150
-	cfg.GameplayOptions.MezFesGroupTickets = 75
-	cfg.GameplayOptions.MezFesSwitchMinigame = true
+	c := NewTestConfig()
+	c.GameplayOptions.MezFesSoloTickets = 150
+	c.GameplayOptions.MezFesGroupTickets = 75
+	c.GameplayOptions.MezFesSwitchMinigame = true
 
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -539,13 +539,13 @@ func TestNewAuthDataHideNotices(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
-	cfg.HideLoginNotice = true
-	cfg.LoginNotices = []string{"Notice 1", "Notice 2"}
+	c := NewTestConfig()
+	c.HideLoginNotice = true
+	c.LoginNotices = []string{"Notice 1", "Notice 2"}
 
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -563,10 +563,10 @@ func TestNewAuthDataTimestamps(t *testing.T) {
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 		db:          nil,
 	}
 
@@ -588,10 +588,10 @@ func BenchmarkLauncherEndpoint(b *testing.B) {
 	logger, _ := zap.NewDevelopment()
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 	}
 
 	b.ResetTimer()
@@ -607,10 +607,10 @@ func BenchmarkNewAuthData(b *testing.B) {
 	logger, _ := zap.NewDevelopment()
 	defer func() { _ = logger.Sync() }()
 
-	cfg := NewTestConfig()
+	c := NewTestConfig()
 	server := &APIServer{
 		logger:      logger,
-		erupeConfig: cfg,
+		erupeConfig: c,
 	}
 
 	characters := make([]Character, 16)

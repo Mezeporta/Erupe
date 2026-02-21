@@ -3,14 +3,14 @@ package channelserver
 import (
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 )
 
 func TestHandleMsgMhfEnumerateRanking_Default(t *testing.T) {
 	server := createMockServer()
-	server.erupeConfig = &_config.Config{
-		DebugOptions: _config.DebugOptions{
+	server.erupeConfig = &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
 			TournamentOverride: 0, // Default state
 		},
 	}
@@ -34,8 +34,8 @@ func TestHandleMsgMhfEnumerateRanking_Default(t *testing.T) {
 
 func TestHandleMsgMhfEnumerateRanking_State1(t *testing.T) {
 	server := createMockServer()
-	server.erupeConfig = &_config.Config{
-		DebugOptions: _config.DebugOptions{
+	server.erupeConfig = &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
 			TournamentOverride: 1,
 		},
 	}
@@ -59,8 +59,8 @@ func TestHandleMsgMhfEnumerateRanking_State1(t *testing.T) {
 
 func TestHandleMsgMhfEnumerateRanking_State2(t *testing.T) {
 	server := createMockServer()
-	server.erupeConfig = &_config.Config{
-		DebugOptions: _config.DebugOptions{
+	server.erupeConfig = &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
 			TournamentOverride: 2,
 		},
 	}
@@ -84,8 +84,8 @@ func TestHandleMsgMhfEnumerateRanking_State2(t *testing.T) {
 
 func TestHandleMsgMhfEnumerateRanking_State3(t *testing.T) {
 	server := createMockServer()
-	server.erupeConfig = &_config.Config{
-		DebugOptions: _config.DebugOptions{
+	server.erupeConfig = &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
 			TournamentOverride: 3,
 		},
 	}

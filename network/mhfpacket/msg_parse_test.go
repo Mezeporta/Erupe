@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
@@ -18,7 +18,7 @@ func TestMsgMhfGetAchievementDetailedParse(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfGetAchievement{}
-	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
@@ -40,7 +40,7 @@ func TestMsgMhfAddAchievementDetailedParse(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAddAchievement{}
-	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
@@ -82,7 +82,7 @@ func TestMsgSysCastBinaryDetailedParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysCastBinary{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -120,7 +120,7 @@ func TestMsgSysLogoutDetailedParse(t *testing.T) {
 		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgSysLogout{}
-		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
@@ -148,7 +148,7 @@ func TestMsgSysBackStageDetailedParse(t *testing.T) {
 		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgSysBackStage{}
-		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
@@ -175,7 +175,7 @@ func TestMsgSysPingDetailedParse(t *testing.T) {
 		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgSysPing{}
-		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
@@ -204,7 +204,7 @@ func TestMsgSysTimeDetailedParse(t *testing.T) {
 		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgSysTime{}
-		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 
 	"go.uber.org/zap"
 )
@@ -19,8 +19,8 @@ func createListeningTestServer(t *testing.T, id uint16) *Server {
 	s := NewServer(&Config{
 		ID:     id,
 		Logger: logger,
-		ErupeConfig: &_config.Config{
-			DebugOptions: _config.DebugOptions{
+		ErupeConfig: &cfg.Config{
+			DebugOptions: cfg.DebugOptions{
 				LogOutboundMessages: false,
 				LogInboundMessages:  false,
 			},

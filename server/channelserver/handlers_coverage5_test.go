@@ -3,7 +3,7 @@ package channelserver
 import (
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 )
 
@@ -12,28 +12,28 @@ import (
 // =============================================================================
 
 func TestEquipSkinHistSize_Default(t *testing.T) {
-	got := equipSkinHistSize(_config.ZZ)
+	got := equipSkinHistSize(cfg.ZZ)
 	if got != 3200 {
 		t.Errorf("equipSkinHistSize(ZZ) = %d, want 3200", got)
 	}
 }
 
 func TestEquipSkinHistSize_Z2(t *testing.T) {
-	got := equipSkinHistSize(_config.Z2)
+	got := equipSkinHistSize(cfg.Z2)
 	if got != 2560 {
 		t.Errorf("equipSkinHistSize(Z2) = %d, want 2560", got)
 	}
 }
 
 func TestEquipSkinHistSize_Z1(t *testing.T) {
-	got := equipSkinHistSize(_config.Z1)
+	got := equipSkinHistSize(cfg.Z1)
 	if got != 1280 {
 		t.Errorf("equipSkinHistSize(Z1) = %d, want 1280", got)
 	}
 }
 
 func TestEquipSkinHistSize_OlderMode(t *testing.T) {
-	got := equipSkinHistSize(_config.G1)
+	got := equipSkinHistSize(cfg.G1)
 	if got != 1280 {
 		t.Errorf("equipSkinHistSize(G1) = %d, want 1280", got)
 	}

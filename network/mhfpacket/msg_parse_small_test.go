@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
@@ -60,7 +60,7 @@ func TestParseSmallNotImplemented(t *testing.T) {
 		{"MsgSysTransBinary", &MsgSysTransBinary{}},
 	}
 
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 	for _, tc := range packets {
 		t.Run(tc.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -89,7 +89,7 @@ func TestParseSmallNoData(t *testing.T) {
 		{"MsgSysUnreserveStage", &MsgSysUnreserveStage{}},
 	}
 
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 	for _, tc := range packets {
 		t.Run(tc.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -112,7 +112,7 @@ func TestParseSmallLogout(t *testing.T) {
 		{"max", 255},
 	}
 
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
@@ -134,7 +134,7 @@ func TestParseSmallLogout(t *testing.T) {
 // TestParseSmallEnumerateHouse tests Parse for MsgMhfEnumerateHouse which reads
 // AckHandle, CharID, Method, Unk, lenName, and optional Name.
 func TestParseSmallEnumerateHouse(t *testing.T) {
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 
 	t.Run("no name", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
@@ -205,7 +205,7 @@ func TestParseSmallNotImplementedDoesNotPanic(t *testing.T) {
 		&MsgSysSerialize{},
 	}
 
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 	for _, pkt := range packets {
 		t.Run("not_implemented", func(t *testing.T) {
 			bf := byteframe.NewByteFrame()

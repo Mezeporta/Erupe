@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 
@@ -39,7 +39,7 @@ func createMockServer() *Server {
 	logger, _ := zap.NewDevelopment()
 	s := &Server{
 		logger:       logger,
-		erupeConfig:  &_config.Config{},
+		erupeConfig:  &cfg.Config{},
 		stages:       make(map[string]*Stage),
 		sessions:     make(map[net.Conn]*Session),
 		handlerTable: buildHandlerTable(),

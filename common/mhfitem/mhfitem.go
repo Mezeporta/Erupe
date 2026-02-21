@@ -3,7 +3,7 @@ package mhfitem
 import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/token"
-	"erupe-ce/config"
+	cfg "erupe-ce/config"
 )
 
 // MHFItem represents a single item identified by its in-game item ID.
@@ -113,7 +113,7 @@ func SerializeWarehouseItems(i []MHFItemStack) []byte {
 // ReadWarehouseEquipment deserializes an MHFEquipment from a ByteFrame. The
 // binary layout varies by game version: sigils are present from G1 onward and
 // an additional field is present from Z1 onward.
-func ReadWarehouseEquipment(bf *byteframe.ByteFrame, mode _config.Mode) MHFEquipment {
+func ReadWarehouseEquipment(bf *byteframe.ByteFrame, mode cfg.Mode) MHFEquipment {
 	var equipment MHFEquipment
 	equipment.Decorations = make([]MHFItem, 3)
 	equipment.Sigils = make([]MHFSigil, 3)
@@ -131,7 +131,7 @@ func ReadWarehouseEquipment(bf *byteframe.ByteFrame, mode _config.Mode) MHFEquip
 	for i := 0; i < 3; i++ {
 		equipment.Decorations[i].ItemID = bf.ReadUint16()
 	}
-	if mode >= _config.G1 {
+	if mode >= cfg.G1 {
 		for i := 0; i < 3; i++ {
 			for j := 0; j < 3; j++ {
 				equipment.Sigils[i].Effects[j].ID = bf.ReadUint16()
@@ -145,14 +145,14 @@ func ReadWarehouseEquipment(bf *byteframe.ByteFrame, mode _config.Mode) MHFEquip
 			equipment.Sigils[i].Unk3 = bf.ReadUint8()
 		}
 	}
-	if mode >= _config.Z1 {
+	if mode >= cfg.Z1 {
 		equipment.Unk1 = bf.ReadUint16()
 	}
 	return equipment
 }
 
 // ToBytes serializes the equipment to its binary protocol representation.
-func (e MHFEquipment) ToBytes(mode _config.Mode) []byte {
+func (e MHFEquipment) ToBytes(mode cfg.Mode) []byte {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(e.WarehouseID)
 	bf.WriteUint8(e.ItemType)
@@ -162,7 +162,7 @@ func (e MHFEquipment) ToBytes(mode _config.Mode) []byte {
 	for i := 0; i < 3; i++ {
 		bf.WriteUint16(e.Decorations[i].ItemID)
 	}
-	if mode >= _config.G1 {
+	if mode >= cfg.G1 {
 		for i := 0; i < 3; i++ {
 			for j := 0; j < 3; j++ {
 				bf.WriteUint16(e.Sigils[i].Effects[j].ID)
@@ -176,7 +176,7 @@ func (e MHFEquipment) ToBytes(mode _config.Mode) []byte {
 			bf.WriteUint8(e.Sigils[i].Unk3)
 		}
 	}
-	if mode >= _config.Z1 {
+	if mode >= cfg.Z1 {
 		bf.WriteUint16(e.Unk1)
 	}
 	return bf.Data()
@@ -184,7 +184,7 @@ func (e MHFEquipment) ToBytes(mode _config.Mode) []byte {
 
 // SerializeWarehouseEquipment serializes a slice of equipment with a uint16
 // count header for transmission in warehouse response packets.
-func SerializeWarehouseEquipment(i []MHFEquipment, mode _config.Mode) []byte {
+func SerializeWarehouseEquipment(i []MHFEquipment, mode cfg.Mode) []byte {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(uint16(len(i)))
 	bf.WriteUint16(0) // Unused

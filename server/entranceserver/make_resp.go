@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"erupe-ce/common/stringsupport"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"net"
 
 	"erupe-ce/common/byteframe"
@@ -12,18 +12,18 @@ import (
 	"go.uber.org/zap"
 )
 
-func encodeServerInfo(config *_config.Config, s *Server, local bool) []byte {
+func encodeServerInfo(config *cfg.Config, s *Server, local bool) []byte {
 	serverInfos := config.Entrance.Entries
 	bf := byteframe.NewByteFrame()
 
 	for serverIdx, si := range serverInfos {
 		// Prevent MezFes Worlds displaying on Z1
-		if config.RealClientMode <= _config.Z1 {
+		if config.RealClientMode <= cfg.Z1 {
 			if si.Type == 6 {
 				continue
 			}
 		}
-		if config.RealClientMode <= _config.G6 {
+		if config.RealClientMode <= cfg.G6 {
 			if si.Type == 5 {
 				continue
 			}
@@ -42,22 +42,22 @@ func encodeServerInfo(config *_config.Config, s *Server, local bool) []byte {
 		bf.WriteUint16(uint16(len(si.Channels)))
 		bf.WriteUint8(si.Type)
 		bf.WriteUint8(uint8(((gametime.Adjusted().Unix() / 86400) + int64(serverIdx)) % 3))
-		if s.erupeConfig.RealClientMode >= _config.G1 {
+		if s.erupeConfig.RealClientMode >= cfg.G1 {
 			bf.WriteUint8(si.Recommended)
 		}
 
 		fullName := append(append(stringsupport.UTF8ToSJIS(si.Name), []byte{0x00}...), stringsupport.UTF8ToSJIS(si.Description)...)
-		if s.erupeConfig.RealClientMode >= _config.G1 && s.erupeConfig.RealClientMode <= _config.G5 {
+		if s.erupeConfig.RealClientMode >= cfg.G1 && s.erupeConfig.RealClientMode <= cfg.G5 {
 			bf.WriteUint8(uint8(len(fullName)))
 			bf.WriteBytes(fullName)
 		} else {
-			if s.erupeConfig.RealClientMode >= _config.G51 {
+			if s.erupeConfig.RealClientMode >= cfg.G51 {
 				bf.WriteUint8(0) // Ignored
 			}
 			bf.WriteBytes(stringsupport.PaddedString(string(fullName), 65, false))
 		}
 
-		if s.erupeConfig.RealClientMode >= _config.GG {
+		if s.erupeConfig.RealClientMode >= cfg.GG {
 			bf.WriteUint32(si.AllowedClientFlags)
 		}
 
@@ -119,11 +119,11 @@ func makeHeader(data []byte, respType string, entryCount uint16, key byte) []byt
 	return bf.Data()
 }
 
-func makeSv2Resp(config *_config.Config, s *Server, local bool) []byte {
+func makeSv2Resp(config *cfg.Config, s *Server, local bool) []byte {
 	serverInfos := config.Entrance.Entries
 	// Decrease by the number of MezFes Worlds
 	var mf int
-	if config.RealClientMode <= _config.Z1 {
+	if config.RealClientMode <= cfg.Z1 {
 		for _, si := range serverInfos {
 			if si.Type == 6 {
 				mf++
@@ -132,7 +132,7 @@ func makeSv2Resp(config *_config.Config, s *Server, local bool) []byte {
 	}
 	// and Return Worlds
 	var ret int
-	if config.RealClientMode <= _config.G6 {
+	if config.RealClientMode <= cfg.G6 {
 		for _, si := range serverInfos {
 			if si.Type == 5 {
 				ret++
@@ -146,7 +146,7 @@ func makeSv2Resp(config *_config.Config, s *Server, local bool) []byte {
 	}
 
 	respType := "SV2"
-	if config.RealClientMode <= _config.G32 {
+	if config.RealClientMode <= cfg.G32 {
 		respType = "SVR"
 	}
 

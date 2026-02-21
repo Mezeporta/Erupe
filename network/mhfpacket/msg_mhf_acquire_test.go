@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -52,7 +52,7 @@ func TestMsgMhfAcquireGuildTresureParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireGuildTresure{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -93,7 +93,7 @@ func TestMsgMhfAcquireTitleParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireTitle{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -134,7 +134,7 @@ func TestMsgMhfAcquireDistItemParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireDistItem{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -178,7 +178,7 @@ func TestMsgMhfAcquireMonthlyItemParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireMonthlyItem{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -232,7 +232,7 @@ func TestAcquirePacketEdgeCases(t *testing.T) {
 		_, _ = bf.Seek(0, io.SeekStart)
 
 		pkt := &MsgMhfAcquireGuildTresure{}
-		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+		err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
@@ -251,7 +251,7 @@ func TestAcquirePacketEdgeCases(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireDistItem{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v for type %d", err, i)
 			}

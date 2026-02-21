@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 )
 
@@ -247,7 +247,7 @@ func TestBuildCoverage_NotImplemented(t *testing.T) {
 		{"MsgSysReserve1AF", &MsgSysReserve1AF{}},
 	}
 
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 	bf := byteframe.NewByteFrame()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -285,7 +285,7 @@ func TestParseCoverage_NotImplemented(t *testing.T) {
 		{"MsgMhfUpdateGuild", &MsgMhfUpdateGuild{}},
 	}
 
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 	bf := byteframe.NewByteFrame()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

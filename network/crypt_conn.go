@@ -3,7 +3,7 @@ package network
 import (
 	"encoding/hex"
 	"errors"
-	"erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/crypto"
 	"io"
 	"net"
@@ -26,7 +26,7 @@ type Conn interface {
 type CryptConn struct {
 	logger                      *zap.Logger
 	conn                        net.Conn
-	realClientMode              _config.Mode
+	realClientMode              cfg.Mode
 	readKeyRot                  uint32
 	sendKeyRot                  uint32
 	sentPackets                 int32
@@ -35,7 +35,7 @@ type CryptConn struct {
 }
 
 // NewCryptConn creates a new CryptConn with proper default values.
-func NewCryptConn(conn net.Conn, mode _config.Mode, logger *zap.Logger) *CryptConn {
+func NewCryptConn(conn net.Conn, mode cfg.Mode, logger *zap.Logger) *CryptConn {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -69,7 +69,7 @@ func (cc *CryptConn) ReadPacket() ([]byte, error) {
 	var encryptedPacketBody []byte
 
 	// Don't know when support for this was added, works in Forward.4, doesn't work in Season 6.0
-	if cc.realClientMode < _config.F1 {
+	if cc.realClientMode < cfg.F1 {
 		encryptedPacketBody = make([]byte, cph.DataSize)
 	} else {
 		encryptedPacketBody = make([]byte, uint32(cph.DataSize)+(uint32(cph.Pf0-0x03)*0x1000))

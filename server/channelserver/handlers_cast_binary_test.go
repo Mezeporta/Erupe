@@ -8,7 +8,7 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/mhfcourse"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/binpacket"
 	"erupe-ce/network/mhfpacket"
 )
@@ -317,40 +317,40 @@ func TestBinaryMessageTypes(t *testing.T) {
 func TestSlicesContainsUsage(t *testing.T) {
 	tests := []struct {
 		name     string
-		items    []_config.Course
-		target   _config.Course
+		items    []cfg.Course
+		target   cfg.Course
 		expected bool
 	}{
 		{
 			name: "item_exists",
-			items: []_config.Course{
+			items: []cfg.Course{
 				{Name: "Course1", Enabled: true},
 				{Name: "Course2", Enabled: false},
 			},
-			target:   _config.Course{Name: "Course1", Enabled: true},
+			target:   cfg.Course{Name: "Course1", Enabled: true},
 			expected: true,
 		},
 		{
 			name: "item_not_found",
-			items: []_config.Course{
+			items: []cfg.Course{
 				{Name: "Course1", Enabled: true},
 				{Name: "Course2", Enabled: false},
 			},
-			target:   _config.Course{Name: "Course3", Enabled: true},
+			target:   cfg.Course{Name: "Course3", Enabled: true},
 			expected: false,
 		},
 		{
 			name:     "empty_slice",
-			items:    []_config.Course{},
-			target:   _config.Course{Name: "Course1", Enabled: true},
+			items:    []cfg.Course{},
+			target:   cfg.Course{Name: "Course1", Enabled: true},
 			expected: false,
 		},
 		{
 			name: "enabled_mismatch",
-			items: []_config.Course{
+			items: []cfg.Course{
 				{Name: "Course1", Enabled: true},
 			},
-			target:   _config.Course{Name: "Course1", Enabled: false},
+			target:   cfg.Course{Name: "Course1", Enabled: false},
 			expected: false,
 		},
 	}
@@ -681,7 +681,7 @@ func BenchmarkHandleMsgSysCastBinary(b *testing.B) {
 
 // BenchmarkSlicesContains benchmarks the slices.Contains function
 func BenchmarkSlicesContains(b *testing.B) {
-	courses := []_config.Course{
+	courses := []cfg.Course{
 		{Name: "Course1", Enabled: true},
 		{Name: "Course2", Enabled: false},
 		{Name: "Course3", Enabled: true},
@@ -689,7 +689,7 @@ func BenchmarkSlicesContains(b *testing.B) {
 		{Name: "Course5", Enabled: true},
 	}
 
-	target := _config.Course{Name: "Course3", Enabled: true}
+	target := cfg.Course{Name: "Course3", Enabled: true}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

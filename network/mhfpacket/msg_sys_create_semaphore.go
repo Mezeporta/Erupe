@@ -2,7 +2,7 @@ package mhfpacket
 
 import (
 	"errors"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
@@ -26,7 +26,7 @@ func (m *MsgSysCreateSemaphore) Opcode() network.PacketID {
 func (m *MsgSysCreateSemaphore) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
 	m.Unk0 = bf.ReadUint16()
-	if ctx.RealClientMode >= _config.S7 { // Assuming this was added with Ravi?
+	if ctx.RealClientMode >= cfg.S7 { // Assuming this was added with Ravi?
 		m.PlayerCount = bf.ReadUint8()
 	}
 	bf.ReadUint8() // SemaphoreID length

@@ -3,7 +3,7 @@ package channelserver
 import (
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 )
 
@@ -202,8 +202,8 @@ func TestHandleMsgMhfMercenaryHuntdata_RequestTypeIs2(t *testing.T) {
 
 func TestHandleMsgMhfEnumerateRanking_DefaultBranch(t *testing.T) {
 	server := createMockServer()
-	server.erupeConfig = &_config.Config{
-		DebugOptions: _config.DebugOptions{
+	server.erupeConfig = &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
 			TournamentOverride: 0,
 		},
 	}
@@ -227,8 +227,8 @@ func TestHandleMsgMhfEnumerateRanking_DefaultBranch(t *testing.T) {
 
 func TestHandleMsgMhfEnumerateRanking_NegativeState(t *testing.T) {
 	server := createMockServer()
-	server.erupeConfig = &_config.Config{
-		DebugOptions: _config.DebugOptions{
+	server.erupeConfig = &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
 			TournamentOverride: -1,
 		},
 	}

@@ -6,7 +6,7 @@ import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/mhfcid"
 	"erupe-ce/common/mhfcourse"
-	"erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/binpacket"
 	"erupe-ce/network/mhfpacket"
@@ -22,13 +22,13 @@ import (
 )
 
 var (
-	commands     map[string]_config.Command
+	commands     map[string]cfg.Command
 	commandsOnce sync.Once
 )
 
-func initCommands(cmds []_config.Command, logger *zap.Logger) {
+func initCommands(cmds []cfg.Command, logger *zap.Logger) {
 	commandsOnce.Do(func() {
-		commands = make(map[string]_config.Command)
+		commands = make(map[string]cfg.Command)
 		for _, cmd := range cmds {
 			commands[cmd.Name] = cmd
 			if cmd.Enabled {
@@ -40,7 +40,7 @@ func initCommands(cmds []_config.Command, logger *zap.Logger) {
 	})
 }
 
-func sendDisabledCommandMessage(s *Session, cmd _config.Command) {
+func sendDisabledCommandMessage(s *Session, cmd cfg.Command) {
 	sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.disabled, cmd.Name))
 }
 
@@ -230,7 +230,7 @@ func parseChatCommand(s *Session, command string) {
 		}
 	case commands["KeyQuest"].Prefix:
 		if commands["KeyQuest"].Enabled || s.isOp() {
-			if s.server.erupeConfig.RealClientMode < _config.G10 {
+			if s.server.erupeConfig.RealClientMode < cfg.G10 {
 				sendServerChatMessage(s, s.server.i18n.commands.kqf.version)
 			} else {
 				if len(args) > 1 {
@@ -274,7 +274,7 @@ func parseChatCommand(s *Session, command string) {
 				for _, course := range mhfcourse.Courses() {
 					for _, alias := range course.Aliases() {
 						if strings.EqualFold(args[1], alias) {
-							if slices.Contains(s.server.erupeConfig.Courses, _config.Course{Name: course.Aliases()[0], Enabled: true}) {
+							if slices.Contains(s.server.erupeConfig.Courses, cfg.Course{Name: course.Aliases()[0], Enabled: true}) {
 								var delta uint32
 								if mhfcourse.CourseExists(course.ID, s.courses) {
 									ei := slices.IndexFunc(s.courses, func(c mhfcourse.Course) bool {
@@ -329,7 +329,7 @@ func parseChatCommand(s *Session, command string) {
 					case "cm", "check", "checkmultiplier", "multiplier":
 						sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.ravi.multiplier, s.server.GetRaviMultiplier()))
 					case "sr", "sendres", "resurrection", "ss", "sendsed", "rs", "reqsed":
-						if s.server.erupeConfig.RealClientMode == _config.ZZ {
+						if s.server.erupeConfig.RealClientMode == cfg.ZZ {
 							switch args[1] {
 							case "sr", "sendres", "resurrection":
 								if s.server.raviente.state[28] > 0 {

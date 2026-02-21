@@ -6,7 +6,7 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/mhfitem"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/network/mhfpacket"
@@ -144,10 +144,10 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	for _, member := range guildMembers {
 		bf.WriteUint32(member.CharID)
 		bf.WriteUint16(member.HR)
-		if s.server.erupeConfig.RealClientMode >= _config.G10 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G10 {
 			bf.WriteUint16(member.GR)
 		}
-		if s.server.erupeConfig.RealClientMode < _config.ZZ {
+		if s.server.erupeConfig.RealClientMode < cfg.ZZ {
 			// Magnet Spike crash workaround
 			bf.WriteUint16(0)
 		} else {

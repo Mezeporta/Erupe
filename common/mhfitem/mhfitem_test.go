@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/token"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"testing"
 )
 
@@ -210,7 +210,7 @@ func TestDiffItemStacks(t *testing.T) {
 }
 
 func TestReadWarehouseEquipment(t *testing.T) {
-	mode := _config.Z1
+	mode := cfg.Z1
 
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(12345) // WarehouseID
@@ -269,7 +269,7 @@ func TestReadWarehouseEquipment(t *testing.T) {
 }
 
 func TestReadWarehouseEquipment_ZeroWarehouseID(t *testing.T) {
-	mode := _config.Z1
+	mode := cfg.Z1
 
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(0) // WarehouseID = 0
@@ -302,7 +302,7 @@ func TestReadWarehouseEquipment_ZeroWarehouseID(t *testing.T) {
 }
 
 func TestMHFEquipment_ToBytes(t *testing.T) {
-	mode := _config.Z1
+	mode := cfg.Z1
 
 	equipment := MHFEquipment{
 		WarehouseID: 12345,
@@ -337,7 +337,7 @@ func TestMHFEquipment_ToBytes(t *testing.T) {
 }
 
 func TestSerializeWarehouseEquipment(t *testing.T) {
-	mode := _config.Z1
+	mode := cfg.Z1
 
 	equipment := []MHFEquipment{
 		{
@@ -373,7 +373,7 @@ func TestSerializeWarehouseEquipment(t *testing.T) {
 }
 
 func TestMHFEquipment_RoundTrip(t *testing.T) {
-	mode := _config.Z1
+	mode := cfg.Z1
 
 	original := MHFEquipment{
 		WarehouseID: 99999,

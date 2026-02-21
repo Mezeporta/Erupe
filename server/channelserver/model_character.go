@@ -5,7 +5,7 @@ import (
 
 	"erupe-ce/common/bfutil"
 	"erupe-ce/common/stringsupport"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/server/channelserver/compression/nullcomp"
 )
 
@@ -35,7 +35,7 @@ type CharacterSaveData struct {
 	CharID         uint32
 	Name           string
 	IsNewCharacter bool
-	Mode           _config.Mode
+	Mode           cfg.Mode
 	Pointers       map[SavePointer]int
 
 	Gender        bool
@@ -57,10 +57,10 @@ type CharacterSaveData struct {
 	decompSave []byte
 }
 
-func getPointers(mode _config.Mode) map[SavePointer]int {
+func getPointers(mode cfg.Mode) map[SavePointer]int {
 	pointers := map[SavePointer]int{pGender: 81, lBookshelfData: 5576}
 	switch mode {
-	case _config.ZZ:
+	case cfg.ZZ:
 		pointers[pPlaytime] = 128356
 		pointers[pWeaponID] = 128522
 		pointers[pWeaponType] = 128789
@@ -74,9 +74,9 @@ func getPointers(mode _config.Mode) map[SavePointer]int {
 		pointers[pGardenData] = 142424
 		pointers[pRP] = 142614
 		pointers[pKQF] = 146720
-	case _config.Z2, _config.Z1, _config.G101, _config.G10, _config.G91, _config.G9, _config.G81, _config.G8,
-		_config.G7, _config.G61, _config.G6, _config.G52, _config.G51, _config.G5, _config.GG, _config.G32, _config.G31,
-		_config.G3, _config.G2, _config.G1:
+	case cfg.Z2, cfg.Z1, cfg.G101, cfg.G10, cfg.G91, cfg.G9, cfg.G81, cfg.G8,
+		cfg.G7, cfg.G61, cfg.G6, cfg.G52, cfg.G51, cfg.G5, cfg.GG, cfg.G32, cfg.G31,
+		cfg.G3, cfg.G2, cfg.G1:
 		pointers[pPlaytime] = 92356
 		pointers[pWeaponID] = 92522
 		pointers[pWeaponType] = 92789
@@ -90,7 +90,7 @@ func getPointers(mode _config.Mode) map[SavePointer]int {
 		pointers[pGardenData] = 106424
 		pointers[pRP] = 106614
 		pointers[pKQF] = 110720
-	case _config.F5, _config.F4:
+	case cfg.F5, cfg.F4:
 		pointers[pPlaytime] = 60356
 		pointers[pWeaponID] = 60522
 		pointers[pWeaponType] = 60789
@@ -102,7 +102,7 @@ func getPointers(mode _config.Mode) map[SavePointer]int {
 		pointers[pGalleryData] = 72064
 		pointers[pGardenData] = 74424
 		pointers[pRP] = 74614
-	case _config.S6:
+	case cfg.S6:
 		pointers[pPlaytime] = 12356
 		pointers[pWeaponID] = 12522
 		pointers[pWeaponType] = 12789
@@ -115,9 +115,9 @@ func getPointers(mode _config.Mode) map[SavePointer]int {
 		pointers[pGardenData] = 26424
 		pointers[pRP] = 26614
 	}
-	if mode == _config.G5 {
+	if mode == cfg.G5 {
 		pointers[lBookshelfData] = 5548
-	} else if mode <= _config.GG {
+	} else if mode <= cfg.GG {
 		pointers[lBookshelfData] = 4520
 	}
 	return pointers
@@ -145,10 +145,10 @@ func (save *CharacterSaveData) Decompress() error {
 func (save *CharacterSaveData) updateSaveDataWithStruct() {
 	rpBytes := make([]byte, 2)
 	binary.LittleEndian.PutUint16(rpBytes, save.RP)
-	if save.Mode >= _config.F4 {
+	if save.Mode >= cfg.F4 {
 		copy(save.decompSave[save.Pointers[pRP]:save.Pointers[pRP]+saveFieldRP], rpBytes)
 	}
-	if save.Mode >= _config.G10 {
+	if save.Mode >= cfg.G10 {
 		copy(save.decompSave[save.Pointers[pKQF]:save.Pointers[pKQF]+saveFieldKQF], save.KQF)
 	}
 }
@@ -179,7 +179,7 @@ func (save *CharacterSaveData) updateStructWithSaveData() {
 		save.Gender = false
 	}
 	if !save.IsNewCharacter {
-		if save.Mode >= _config.S6 {
+		if save.Mode >= cfg.S6 {
 			save.RP = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pRP] : save.Pointers[pRP]+saveFieldRP])
 			save.HouseTier = save.decompSave[save.Pointers[pHouseTier] : save.Pointers[pHouseTier]+saveFieldHouseTier]
 			save.HouseData = save.decompSave[save.Pointers[pHouseData] : save.Pointers[pHouseData]+saveFieldHouseData]
@@ -191,12 +191,12 @@ func (save *CharacterSaveData) updateStructWithSaveData() {
 			save.WeaponType = save.decompSave[save.Pointers[pWeaponType]]
 			save.WeaponID = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pWeaponID] : save.Pointers[pWeaponID]+saveFieldWeaponID])
 			save.HR = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pHR] : save.Pointers[pHR]+saveFieldHR])
-			if save.Mode >= _config.G1 {
+			if save.Mode >= cfg.G1 {
 				if save.HR == uint16(999) {
 					save.GR = grpToGR(int(binary.LittleEndian.Uint32(save.decompSave[save.Pointers[pGRP] : save.Pointers[pGRP]+saveFieldGRP])))
 				}
 			}
-			if save.Mode >= _config.G10 {
+			if save.Mode >= cfg.G10 {
 				save.KQF = save.decompSave[save.Pointers[pKQF] : save.Pointers[pKQF]+saveFieldKQF]
 			}
 		}

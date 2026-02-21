@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"go.uber.org/zap"
 )
 
@@ -17,24 +17,24 @@ func NewTestLogger(t *testing.T) *zap.Logger {
 }
 
 // NewTestConfig creates a default test configuration
-func NewTestConfig() *_config.Config {
-	return &_config.Config{
-		API: _config.API{
+func NewTestConfig() *cfg.Config {
+	return &cfg.Config{
+		API: cfg.API{
 			Port:        8000,
 			PatchServer: "http://localhost:8080",
-			Banners:     []_config.APISignBanner{},
-			Messages:    []_config.APISignMessage{},
-			Links:       []_config.APISignLink{},
+			Banners:     []cfg.APISignBanner{},
+			Messages:    []cfg.APISignMessage{},
+			Links:       []cfg.APISignLink{},
 		},
-		Screenshots: _config.ScreenshotsOptions{
+		Screenshots: cfg.ScreenshotsOptions{
 			Enabled:       true,
 			OutputDir:     "/tmp/screenshots",
 			UploadQuality: 85,
 		},
-		DebugOptions: _config.DebugOptions{
+		DebugOptions: cfg.DebugOptions{
 			MaxLauncherHR: false,
 		},
-		GameplayOptions: _config.GameplayOptions{
+		GameplayOptions: cfg.GameplayOptions{
 			MezFesSoloTickets:    100,
 			MezFesGroupTickets:   50,
 			MezFesDuration:       604800, // 1 week

@@ -2,7 +2,7 @@ package channelserver
 
 import (
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"math/bits"
 	"time"
@@ -73,7 +73,7 @@ func handleMsgMhfGetEarthStatus(s *Session, p mhfpacket.MHFPacket) {
 	bf.WriteInt32(s.server.erupeConfig.EarthStatus)
 	bf.WriteInt32(s.server.erupeConfig.EarthID)
 	for i, m := range s.server.erupeConfig.EarthMonsters {
-		if s.server.erupeConfig.RealClientMode <= _config.G9 {
+		if s.server.erupeConfig.RealClientMode <= cfg.G9 {
 			if i == 3 {
 				break
 			}
@@ -157,12 +157,12 @@ const (
 	skinHistSizeZ1 = 1280 // Z1 and older
 )
 
-func equipSkinHistSize(mode _config.Mode) int {
+func equipSkinHistSize(mode cfg.Mode) int {
 	size := skinHistSizeZZ
-	if mode <= _config.Z2 {
+	if mode <= cfg.Z2 {
 		size = skinHistSizeZ2
 	}
-	if mode <= _config.Z1 {
+	if mode <= cfg.Z1 {
 		size = skinHistSizeZ1
 	}
 	return size

@@ -2,7 +2,7 @@ package channelserver
 
 import (
 	"erupe-ce/common/token"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"math"
 	"time"
 
@@ -88,15 +88,15 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func generateFeatureWeapons(count int, mode _config.Mode) activeFeature {
+func generateFeatureWeapons(count int, mode cfg.Mode) activeFeature {
 	_max := 14
-	if mode < _config.ZZ {
+	if mode < cfg.ZZ {
 		_max = 13
 	}
-	if mode < _config.G10 {
+	if mode < cfg.G10 {
 		_max = 12
 	}
-	if mode < _config.GG {
+	if mode < cfg.GG {
 		_max = 11
 	}
 	if count > _max {

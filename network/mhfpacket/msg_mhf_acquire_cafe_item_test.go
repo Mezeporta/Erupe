@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -31,7 +31,7 @@ func TestMsgMhfAcquireCafeItemParse(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAcquireCafeItem{}
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 
 	err := pkt.Parse(bf, ctx)
 	if err != nil {
@@ -90,7 +90,7 @@ func TestMsgMhfAcquireCafeItemParseUint32PointCost(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgMhfAcquireCafeItem{}
-			ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+			ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 
 			err := pkt.Parse(bf, ctx)
 			if err != nil {
@@ -119,7 +119,7 @@ func TestMsgMhfAcquireCafeItemParseFieldOrder(t *testing.T) {
 	_, _ = bf.Seek(0, io.SeekStart)
 
 	pkt := &MsgMhfAcquireCafeItem{}
-	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
@@ -154,7 +154,7 @@ func TestMsgMhfAcquireCafeItemBuildNotImplemented(t *testing.T) {
 	}
 
 	bf := byteframe.NewByteFrame()
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 
 	err := pkt.Build(bf, ctx)
 	if err == nil {

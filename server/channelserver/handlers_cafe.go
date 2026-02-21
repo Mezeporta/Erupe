@@ -4,7 +4,7 @@ import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/mhfcourse"
 	ps "erupe-ce/common/pascalstring"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"fmt"
 	"go.uber.org/zap"
@@ -99,7 +99,7 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 		cafeTime = int(TimeAdjusted().Unix()) - int(s.sessionStart) + cafeTime
 	}
 	bf.WriteUint32(uint32(cafeTime))
-	if s.server.erupeConfig.RealClientMode >= _config.ZZ {
+	if s.server.erupeConfig.RealClientMode >= cfg.ZZ {
 		bf.WriteUint16(0)
 		ps.Uint16(bf, fmt.Sprintf(s.server.i18n.cafe.reset, int(cafeReset.Month()), cafeReset.Day()), true)
 	}

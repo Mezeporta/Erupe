@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 
 	"go.uber.org/zap"
 )
@@ -14,7 +14,7 @@ func TestNewServer(t *testing.T) {
 	cfg := &Config{
 		Logger:      nil,
 		DB:          nil,
-		ErupeConfig: &_config.Config{},
+		ErupeConfig: &cfg.Config{},
 	}
 
 	s := NewServer(cfg)
@@ -67,7 +67,7 @@ func TestConfigFields(t *testing.T) {
 
 func TestServerShutdownFlag(t *testing.T) {
 	cfg := &Config{
-		ErupeConfig: &_config.Config{},
+		ErupeConfig: &cfg.Config{},
 	}
 	s := NewServer(cfg)
 
@@ -85,12 +85,12 @@ func TestServerShutdownFlag(t *testing.T) {
 }
 
 func TestServerConfigStorage(t *testing.T) {
-	erupeConfig := &_config.Config{
+	erupeConfig := &cfg.Config{
 		Host: "192.168.1.100",
-		Entrance: _config.Entrance{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    53310,
-			Entries: []_config.EntranceServerInfo{
+			Entries: []cfg.EntranceServerInfo{
 				{
 					Name: "Test Server",
 					IP:   "127.0.0.1",
@@ -115,13 +115,13 @@ func TestServerConfigStorage(t *testing.T) {
 }
 
 func TestServerEntranceEntries(t *testing.T) {
-	entries := []_config.EntranceServerInfo{
+	entries := []cfg.EntranceServerInfo{
 		{
 			Name:        "World 1",
 			IP:          "10.0.0.1",
 			Type:        1,
 			Recommended: 1,
-			Channels: []_config.EntranceChannelInfo{
+			Channels: []cfg.EntranceChannelInfo{
 				{Port: 54001, MaxPlayers: 100},
 				{Port: 54002, MaxPlayers: 100},
 			},
@@ -131,14 +131,14 @@ func TestServerEntranceEntries(t *testing.T) {
 			IP:          "10.0.0.2",
 			Type:        2,
 			Recommended: 0,
-			Channels: []_config.EntranceChannelInfo{
+			Channels: []cfg.EntranceChannelInfo{
 				{Port: 54003, MaxPlayers: 50},
 			},
 		},
 	}
 
-	erupeConfig := &_config.Config{
-		Entrance: _config.Entrance{
+	erupeConfig := &cfg.Config{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    53310,
 			Entries: entries,
@@ -274,7 +274,7 @@ func TestCalcSum32LargeInput(t *testing.T) {
 }
 
 func TestServerMutexLocking(t *testing.T) {
-	cfg := &Config{ErupeConfig: &_config.Config{}}
+	cfg := &Config{ErupeConfig: &cfg.Config{}}
 	s := NewServer(cfg)
 
 	s.Lock()
@@ -292,8 +292,8 @@ func TestServerMutexLocking(t *testing.T) {
 
 func TestServerStartAndShutdown(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Entrance: _config.Entrance{
+	erupeConfig := &cfg.Config{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    0,
 		},
@@ -331,8 +331,8 @@ func TestServerStartAndShutdown(t *testing.T) {
 
 func TestServerStartWithInvalidPort(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Entrance: _config.Entrance{
+	erupeConfig := &cfg.Config{
+		Entrance: cfg.Entrance{
 			Port: 1,
 		},
 	}
@@ -352,8 +352,8 @@ func TestServerStartWithInvalidPort(t *testing.T) {
 
 func TestServerListenerAddress(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Entrance: _config.Entrance{
+	erupeConfig := &cfg.Config{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    0,
 		},
@@ -388,8 +388,8 @@ func TestServerListenerAddress(t *testing.T) {
 
 func TestServerAcceptClientsExitsOnShutdown(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Entrance: _config.Entrance{
+	erupeConfig := &cfg.Config{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    0,
 		},
@@ -421,8 +421,8 @@ func TestServerAcceptClientsExitsOnShutdown(t *testing.T) {
 
 func TestServerHandleConnectionImmediateClose(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Entrance: _config.Entrance{
+	erupeConfig := &cfg.Config{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    0,
 		},
@@ -452,8 +452,8 @@ func TestServerHandleConnectionImmediateClose(t *testing.T) {
 
 func TestServerHandleConnectionShortInit(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Entrance: _config.Entrance{
+	erupeConfig := &cfg.Config{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    0,
 		},
@@ -484,8 +484,8 @@ func TestServerHandleConnectionShortInit(t *testing.T) {
 
 func TestServerMultipleConnections(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Entrance: _config.Entrance{
+	erupeConfig := &cfg.Config{
+		Entrance: cfg.Entrance{
 			Enabled: true,
 			Port:    0,
 		},

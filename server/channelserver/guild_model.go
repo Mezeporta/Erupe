@@ -3,7 +3,7 @@ package channelserver
 import (
 	"database/sql/driver"
 	"encoding/json"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"time"
 )
 
@@ -111,12 +111,12 @@ func (gi *GuildIcon) Value() (valuer driver.Value, err error) {
 	return json.Marshal(gi)
 }
 
-func (g *Guild) Rank(mode _config.Mode) uint16 {
+func (g *Guild) Rank(mode cfg.Mode) uint16 {
 	rpMap := []uint32{
 		24, 48, 96, 144, 192, 240, 288, 360, 432,
 		504, 600, 696, 792, 888, 984, 1080, 1200,
 	}
-	if mode <= _config.Z2 {
+	if mode <= cfg.Z2 {
 		rpMap = []uint32{
 			3500, 6000, 8500, 11000, 13500, 16000, 20000, 24000, 28000,
 			33000, 38000, 43000, 48000, 55000, 70000, 90000, 120000,
@@ -124,21 +124,21 @@ func (g *Guild) Rank(mode _config.Mode) uint16 {
 	}
 	for i, u := range rpMap {
 		if g.RankRP < u {
-			if mode <= _config.S6 && i >= 12 {
+			if mode <= cfg.S6 && i >= 12 {
 				return 12
-			} else if mode <= _config.F5 && i >= 13 {
+			} else if mode <= cfg.F5 && i >= 13 {
 				return 13
-			} else if mode <= _config.G32 && i >= 14 {
+			} else if mode <= cfg.G32 && i >= 14 {
 				return 14
 			}
 			return uint16(i)
 		}
 	}
-	if mode <= _config.S6 {
+	if mode <= cfg.S6 {
 		return 12
-	} else if mode <= _config.F5 {
+	} else if mode <= cfg.F5 {
 		return 13
-	} else if mode <= _config.G32 {
+	} else if mode <= cfg.G32 {
 		return 14
 	}
 	return 17

@@ -3,7 +3,7 @@ package channelserver
 import (
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"time"
 
@@ -41,7 +41,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(dist.Rights)
 		bf.WriteUint16(dist.TimesAcceptable)
 		bf.WriteUint16(dist.TimesAccepted)
-		if s.server.erupeConfig.RealClientMode >= _config.G9 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G9 {
 			bf.WriteUint16(0) // Unk
 		}
 		bf.WriteInt16(dist.MinHR)
@@ -50,29 +50,29 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteInt16(dist.MaxSR)
 		bf.WriteInt16(dist.MinGR)
 		bf.WriteInt16(dist.MaxGR)
-		if s.server.erupeConfig.RealClientMode >= _config.G7 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G7 {
 			bf.WriteUint8(0) // Unk
 		}
-		if s.server.erupeConfig.RealClientMode >= _config.G6 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G6 {
 			bf.WriteUint16(0) // Unk
 		}
-		if s.server.erupeConfig.RealClientMode >= _config.G8 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G8 {
 			if dist.Selection {
 				bf.WriteUint8(2) // Selection
 			} else {
 				bf.WriteUint8(0)
 			}
 		}
-		if s.server.erupeConfig.RealClientMode >= _config.G7 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G7 {
 			bf.WriteUint16(0) // Unk
 			bf.WriteUint16(0) // Unk
 		}
-		if s.server.erupeConfig.RealClientMode >= _config.G10 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G10 {
 			bf.WriteUint8(0) // Unk
 		}
 		ps.Uint8(bf, dist.EventName, true)
 		k := 6
-		if s.server.erupeConfig.RealClientMode >= _config.G8 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G8 {
 			k = 13
 		}
 		for i := 0; i < 6; i++ {
@@ -81,7 +81,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteUint32(0)
 			}
 		}
-		if s.server.erupeConfig.RealClientMode >= _config.Z2 {
+		if s.server.erupeConfig.RealClientMode >= cfg.Z2 {
 			i := uint8(0)
 			bf.WriteUint8(i)
 			if i <= 10 {
@@ -114,7 +114,7 @@ func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint8(item.ItemType)
 		bf.WriteUint32(item.ItemID)
 		bf.WriteUint32(item.Quantity)
-		if s.server.erupeConfig.RealClientMode >= _config.G8 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G8 {
 			bf.WriteUint32(item.ID)
 		}
 	}

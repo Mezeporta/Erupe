@@ -6,7 +6,7 @@ import (
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/common/stringsupport"
 	"erupe-ce/common/token"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"go.uber.org/zap"
 	"io"
@@ -90,7 +90,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint8(0)
 		}
 		bf.WriteUint16(house.HR)
-		if s.server.erupeConfig.RealClientMode >= _config.G10 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G10 {
 			bf.WriteUint16(house.GR)
 		}
 		ps.Uint8(bf, house.Name, true)
@@ -225,7 +225,7 @@ func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfLoadDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadDecoMyset)
 	defaultData := []byte{0x01, 0x00}
-	if s.server.erupeConfig.RealClientMode < _config.G10 {
+	if s.server.erupeConfig.RealClientMode < cfg.G10 {
 		defaultData = []byte{0x00, 0x00}
 	}
 	loadCharacterData(s, pkt.AckHandle, "decomyset", defaultData)
@@ -247,7 +247,7 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	// Version handling
 	bf := byteframe.NewByteFrame()
 	var size uint
-	if s.server.erupeConfig.RealClientMode >= _config.G10 {
+	if s.server.erupeConfig.RealClientMode >= cfg.G10 {
 		size = 76
 		bf.WriteUint8(1)
 	} else {

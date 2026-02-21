@@ -3,7 +3,7 @@ package channelserver
 import (
 	"encoding/hex"
 	"erupe-ce/common/stringsupport"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"time"
 
 	"erupe-ce/common/byteframe"
@@ -91,7 +91,7 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 	var timestamps []uint32
 	if s.server.erupeConfig.DebugOptions.DivaOverride >= 0 {
 		if s.server.erupeConfig.DebugOptions.DivaOverride == 0 {
-			if s.server.erupeConfig.RealClientMode >= _config.Z2 {
+			if s.server.erupeConfig.RealClientMode >= cfg.Z2 {
 				doAckBufSucceed(s, pkt.AckHandle, make([]byte, 36))
 			} else {
 				doAckBufSucceed(s, pkt.AckHandle, make([]byte, 32))
@@ -103,7 +103,7 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 		timestamps = generateDivaTimestamps(s, start, false)
 	}
 
-	if s.server.erupeConfig.RealClientMode >= _config.Z2 {
+	if s.server.erupeConfig.RealClientMode >= cfg.Z2 {
 		bf.WriteUint32(id)
 	}
 	for i := range timestamps {

@@ -1,7 +1,7 @@
 package channelserver
 
 import (
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"math"
 	"strings"
 	"time"
@@ -76,7 +76,7 @@ func handleMsgMhfGetTowerInfo(s *Session, p mhfpacket.MHFPacket) {
 		towerInfo.Level[1].Floors = td.Block2
 	}
 
-	if s.server.erupeConfig.RealClientMode <= _config.G7 {
+	if s.server.erupeConfig.RealClientMode <= cfg.G7 {
 		towerInfo.Level = towerInfo.Level[:1]
 	}
 

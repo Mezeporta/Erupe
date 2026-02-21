@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -23,11 +23,11 @@ func (m *MsgMhfUpdateMyhouseInfo) Opcode() network.PacketID {
 // Parse parses the packet from binary
 func (m *MsgMhfUpdateMyhouseInfo) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
-	if ctx.RealClientMode >= _config.G10 {
+	if ctx.RealClientMode >= cfg.G10 {
 		m.Data = bf.ReadBytes(362)
-	} else if ctx.RealClientMode >= _config.GG {
+	} else if ctx.RealClientMode >= cfg.GG {
 		m.Data = bf.ReadBytes(338)
-	} else if ctx.RealClientMode >= _config.F5 {
+	} else if ctx.RealClientMode >= cfg.F5 {
 		// G1 is a guess
 		m.Data = bf.ReadBytes(314)
 	} else {

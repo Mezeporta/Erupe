@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 )
 
 // TestGuildCreation tests basic guild creation
@@ -87,31 +87,31 @@ func TestGuildRankCalculation(t *testing.T) {
 		name     string
 		rankRP   uint32
 		wantRank uint16
-		config   _config.Mode
+		config   cfg.Mode
 	}{
 		{
 			name:     "rank_0_minimal_rp",
 			rankRP:   0,
 			wantRank: 0,
-			config:   _config.Z2,
+			config:   cfg.Z2,
 		},
 		{
 			name:     "rank_1_threshold",
 			rankRP:   3500,
 			wantRank: 1,
-			config:   _config.Z2,
+			config:   cfg.Z2,
 		},
 		{
 			name:     "rank_5_middle",
 			rankRP:   16000,
 			wantRank: 6,
-			config:   _config.Z2,
+			config:   cfg.Z2,
 		},
 		{
 			name:     "max_rank",
 			rankRP:   120001,
 			wantRank: 17,
-			config:   _config.Z2,
+			config:   cfg.Z2,
 		},
 	}
 

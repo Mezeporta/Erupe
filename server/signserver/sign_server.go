@@ -6,7 +6,7 @@ import (
 	"net"
 	"sync"
 
-	"erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
@@ -16,14 +16,14 @@ import (
 type Config struct {
 	Logger      *zap.Logger
 	DB          *sqlx.DB
-	ErupeConfig *_config.Config
+	ErupeConfig *cfg.Config
 }
 
 // Server is a MHF sign server.
 type Server struct {
 	sync.Mutex
 	logger         *zap.Logger
-	erupeConfig    *_config.Config
+	erupeConfig    *cfg.Config
 	db             *sqlx.DB
 	listener       net.Listener
 	isShuttingDown bool

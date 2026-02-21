@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -41,7 +41,7 @@ func TestMsgMhfUpdateGuacotParse_SingleEntry(t *testing.T) {
 
 	pkt := &MsgMhfUpdateGuacot{}
 	_, _ = bf.Seek(0, 0)
-	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestMsgMhfUpdateGuacotParse_MultipleEntries(t *testing.T) {
 
 	pkt := &MsgMhfUpdateGuacot{}
 	_, _ = bf.Seek(0, 0)
-	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestMsgMhfUpdateGuacotParse_ZeroEntries(t *testing.T) {
 
 	pkt := &MsgMhfUpdateGuacot{}
 	_, _ = bf.Seek(0, 0)
-	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestMsgMhfUpdateGuacotParse_DeletionEntry(t *testing.T) {
 
 	pkt := &MsgMhfUpdateGuacot{}
 	_, _ = bf.Seek(0, 0)
-	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestMsgMhfUpdateGuacotParse_EmptyName(t *testing.T) {
 
 	pkt := &MsgMhfUpdateGuacot{}
 	_, _ = bf.Seek(0, 0)
-	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
@@ -208,7 +208,7 @@ func TestMsgMhfEnumerateGuacotParse(t *testing.T) {
 
 	pkt := &MsgMhfEnumerateGuacot{}
 	_, _ = bf.Seek(0, 0)
-	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
@@ -223,7 +223,7 @@ func TestMsgMhfEnumerateGuacotParse(t *testing.T) {
 
 func TestMsgMhfUpdateGuacotBuild_NotImplemented(t *testing.T) {
 	pkt := &MsgMhfUpdateGuacot{}
-	err := pkt.Build(byteframe.NewByteFrame(), &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Build(byteframe.NewByteFrame(), &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err == nil {
 		t.Error("Build() should return error (not implemented)")
 	}
@@ -231,7 +231,7 @@ func TestMsgMhfUpdateGuacotBuild_NotImplemented(t *testing.T) {
 
 func TestMsgMhfEnumerateGuacotBuild_NotImplemented(t *testing.T) {
 	pkt := &MsgMhfEnumerateGuacot{}
-	err := pkt.Build(byteframe.NewByteFrame(), &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := pkt.Build(byteframe.NewByteFrame(), &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err == nil {
 		t.Error("Build() should return error (not implemented)")
 	}
@@ -254,7 +254,7 @@ func TestGoocooStruct_Data1Size(t *testing.T) {
 
 	pkt := &MsgMhfUpdateGuacot{}
 	_, _ = bf.Seek(0, 0)
-	_ = pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	_ = pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 
 	g := pkt.Goocoos[0]
 

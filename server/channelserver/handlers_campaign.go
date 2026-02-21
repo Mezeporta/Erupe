@@ -4,7 +4,7 @@ import (
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/common/stringsupport"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"time"
 )
@@ -71,7 +71,7 @@ func handleMsgMhfEnumerateCampaign(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteInt16(event.MaxHR)
 		bf.WriteInt16(event.MinSR)
 		bf.WriteInt16(event.MaxSR)
-		if s.server.erupeConfig.RealClientMode >= _config.G3 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G3 {
 			bf.WriteInt16(event.MinGR)
 			bf.WriteInt16(event.MaxGR)
 		}

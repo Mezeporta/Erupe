@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"sync"
 	"testing"
@@ -60,8 +60,8 @@ func createTestSession(mock network.Conn) *Session {
 		sendPackets: make(chan packet, 20),
 		cryptConn:   mock,
 		server: &Server{
-			erupeConfig: &_config.Config{
-				DebugOptions: _config.DebugOptions{
+			erupeConfig: &cfg.Config{
+				DebugOptions: cfg.DebugOptions{
 					LogOutboundMessages: false,
 				},
 			},

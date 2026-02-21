@@ -3,7 +3,7 @@ package channelserver
 import (
 	"errors"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 
 	"go.uber.org/zap"
@@ -64,7 +64,7 @@ func (save *CharacterSaveData) Save(s *Session) {
 
 	save.updateSaveDataWithStruct()
 
-	if s.server.erupeConfig.RealClientMode >= _config.G1 {
+	if s.server.erupeConfig.RealClientMode >= cfg.G1 {
 		err := save.Compress()
 		if err != nil {
 			s.logger.Error("Failed to compress savedata", zap.Error(err))

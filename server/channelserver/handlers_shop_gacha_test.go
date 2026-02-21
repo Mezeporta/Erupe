@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 )
 
 func TestWriteShopItems_Empty(t *testing.T) {
 	bf := byteframe.NewByteFrame()
 	items := []ShopItem{}
 
-	writeShopItems(bf, items, _config.ZZ)
+	writeShopItems(bf, items, cfg.ZZ)
 
 	result := byteframe.NewByteFrameFromBytes(bf.Data())
 	count1 := result.ReadUint16()
@@ -44,7 +44,7 @@ func TestWriteShopItems_SingleItem(t *testing.T) {
 		},
 	}
 
-	writeShopItems(bf, items, _config.ZZ)
+	writeShopItems(bf, items, cfg.ZZ)
 
 	result := byteframe.NewByteFrameFromBytes(bf.Data())
 	count1 := result.ReadUint16()
@@ -118,7 +118,7 @@ func TestWriteShopItems_MultipleItems(t *testing.T) {
 		{ID: 3, ItemID: 300, Cost: 2000, Quantity: 1},
 	}
 
-	writeShopItems(bf, items, _config.ZZ)
+	writeShopItems(bf, items, cfg.ZZ)
 
 	result := byteframe.NewByteFrameFromBytes(bf.Data())
 	count1 := result.ReadUint16()

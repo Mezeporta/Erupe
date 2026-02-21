@@ -6,7 +6,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"erupe-ce/common/gametime"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -35,9 +35,9 @@ const (
 // LauncherResponse is the JSON payload returned by the /launcher endpoint,
 // containing banners, messages, and links for the game launcher UI.
 type LauncherResponse struct {
-	Banners  []_config.APISignBanner  `json:"banners"`
-	Messages []_config.APISignMessage `json:"messages"`
-	Links    []_config.APISignLink    `json:"links"`
+	Banners  []cfg.APISignBanner  `json:"banners"`
+	Messages []cfg.APISignMessage `json:"messages"`
+	Links    []cfg.APISignLink    `json:"links"`
 }
 
 // User represents an authenticated user's session credentials and permissions.

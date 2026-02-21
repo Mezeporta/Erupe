@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/common/mhfitem"
 	"erupe-ce/network/clientctx"
 	"erupe-ce/network/mhfpacket"
@@ -176,7 +176,7 @@ func TestSessionLifecycle_WarehouseDataPersistence(t *testing.T) {
 		createTestEquipmentItem(102, 3),
 	}
 
-	serializedEquip := mhfitem.SerializeWarehouseEquipment(equipment, _config.ZZ)
+	serializedEquip := mhfitem.SerializeWarehouseEquipment(equipment, cfg.ZZ)
 
 	// Save to warehouse directly (simulating a save handler)
 	_, _ = db.Exec("INSERT INTO warehouse (character_id) VALUES ($1) ON CONFLICT DO NOTHING", charID)
@@ -586,8 +586,8 @@ func createTestServerWithDB(t *testing.T, db *sqlx.DB) *Server {
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		minidataParts:   make(map[uint32][]byte),
 		semaphore:       make(map[string]*Semaphore),
-		erupeConfig: &_config.Config{
-			RealClientMode: _config.ZZ,
+		erupeConfig: &cfg.Config{
+			RealClientMode: cfg.ZZ,
 		},
 		isShuttingDown:  false,
 		done:            make(chan struct{}),

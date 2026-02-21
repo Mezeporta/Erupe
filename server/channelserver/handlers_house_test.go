@@ -2,7 +2,7 @@ package channelserver
 
 import (
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/common/mhfitem"
 	"erupe-ce/common/token"
 	"erupe-ce/network/mhfpacket"
@@ -54,7 +54,7 @@ func setupHouseTest(t *testing.T) (*sqlx.DB, *Server, *Session, uint32) {
 	t.Helper()
 	db := SetupTestDB(t)
 	server := createMockServer()
-	server.erupeConfig.RealClientMode = _config.ZZ
+	server.erupeConfig.RealClientMode = cfg.ZZ
 	SetTestDB(server, db)
 
 	userID := CreateTestUser(t, db, "house_test_user")
@@ -158,7 +158,7 @@ func TestUpdateWarehouse_BoxIndexTooHigh(t *testing.T) {
 
 func TestEnumerateHouse_Method5_EmptyResult(t *testing.T) {
 	server := createMockServer()
-	server.erupeConfig.RealClientMode = _config.ZZ
+	server.erupeConfig.RealClientMode = cfg.ZZ
 	session := createMockSession(1, server)
 
 	pkt := &mhfpacket.MsgMhfEnumerateHouse{
@@ -759,7 +759,7 @@ func TestWarehouseEquipmentSerialization(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Serialize
-			serialized := mhfitem.SerializeWarehouseEquipment(tt.equipment, _config.ZZ)
+			serialized := mhfitem.SerializeWarehouseEquipment(tt.equipment, cfg.ZZ)
 
 			// Basic validation
 			if serialized == nil {

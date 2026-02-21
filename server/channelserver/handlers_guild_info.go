@@ -7,7 +7,7 @@ import (
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/common/stringsupport"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 )
 
@@ -110,7 +110,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint8(guild.PugiOutfit1)
 		bf.WriteUint8(guild.PugiOutfit2)
 		bf.WriteUint8(guild.PugiOutfit3)
-		if s.server.erupeConfig.RealClientMode >= _config.Z1 {
+		if s.server.erupeConfig.RealClientMode >= cfg.Z1 {
 			bf.WriteUint8(guild.PugiOutfit1)
 			bf.WriteUint8(guild.PugiOutfit2)
 			bf.WriteUint8(guild.PugiOutfit3)
@@ -204,7 +204,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteUint32(applicant.CharID)
 				bf.WriteUint32(0)
 				bf.WriteUint16(applicant.HR)
-				if s.server.erupeConfig.RealClientMode >= _config.G10 {
+				if s.server.erupeConfig.RealClientMode >= cfg.G10 {
 					bf.WriteUint16(applicant.GR)
 				}
 				ps.Uint8(bf, applicant.Name, true)

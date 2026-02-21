@@ -2,7 +2,7 @@ package channelserver
 
 import (
 	"encoding/binary"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"sync"
 	"testing"
@@ -45,8 +45,8 @@ func IntegrationTest_PacketQueueFlow(t *testing.T) {
 			s := &Session{
 				sendPackets: make(chan packet, 100),
 					server: &Server{
-					erupeConfig: &_config.Config{
-						DebugOptions: _config.DebugOptions{
+					erupeConfig: &cfg.Config{
+						DebugOptions: cfg.DebugOptions{
 							LogOutboundMessages: false,
 						},
 					},
@@ -119,8 +119,8 @@ func IntegrationTest_ConcurrentQueueing(t *testing.T) {
 	s := &Session{
 		sendPackets: make(chan packet, 200),
 		server: &Server{
-			erupeConfig: &_config.Config{
-				DebugOptions: _config.DebugOptions{
+			erupeConfig: &cfg.Config{
+				DebugOptions: cfg.DebugOptions{
 					LogOutboundMessages: false,
 				},
 			},
@@ -217,8 +217,8 @@ func IntegrationTest_AckPacketFlow(t *testing.T) {
 	s := &Session{
 		sendPackets: make(chan packet, 100),
 		server: &Server{
-			erupeConfig: &_config.Config{
-				DebugOptions: _config.DebugOptions{
+			erupeConfig: &cfg.Config{
+				DebugOptions: cfg.DebugOptions{
 					LogOutboundMessages: false,
 				},
 			},
@@ -282,8 +282,8 @@ func IntegrationTest_MixedPacketTypes(t *testing.T) {
 	s := &Session{
 		sendPackets: make(chan packet, 100),
 		server: &Server{
-			erupeConfig: &_config.Config{
-				DebugOptions: _config.DebugOptions{
+			erupeConfig: &cfg.Config{
+				DebugOptions: cfg.DebugOptions{
 					LogOutboundMessages: false,
 				},
 			},
@@ -338,8 +338,8 @@ func IntegrationTest_PacketOrderPreservation(t *testing.T) {
 	s := &Session{
 		sendPackets: make(chan packet, 100),
 		server: &Server{
-			erupeConfig: &_config.Config{
-				DebugOptions: _config.DebugOptions{
+			erupeConfig: &cfg.Config{
+				DebugOptions: cfg.DebugOptions{
 					LogOutboundMessages: false,
 				},
 			},
@@ -395,8 +395,8 @@ func IntegrationTest_QueueBackpressure(t *testing.T) {
 	s := &Session{
 		sendPackets: make(chan packet, 5),
 		server: &Server{
-			erupeConfig: &_config.Config{
-				DebugOptions: _config.DebugOptions{
+			erupeConfig: &cfg.Config{
+				DebugOptions: cfg.DebugOptions{
 					LogOutboundMessages: false,
 				},
 				LoopDelay: 50, // Slower processing to create backpressure
@@ -599,22 +599,22 @@ func IntegrationTest_ClientVersionCompatibility(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		clientVersion _config.Mode
+		clientVersion cfg.Mode
 		shouldSucceed bool
 	}{
 		{
 			name:          "version_z2",
-			clientVersion: _config.Z2,
+			clientVersion: cfg.Z2,
 			shouldSucceed: true,
 		},
 		{
 			name:          "version_s6",
-			clientVersion: _config.S6,
+			clientVersion: cfg.S6,
 			shouldSucceed: true,
 		},
 		{
 			name:          "version_g32",
-			clientVersion: _config.G32,
+			clientVersion: cfg.G32,
 			shouldSucceed: true,
 		},
 	}
@@ -625,7 +625,7 @@ func IntegrationTest_ClientVersionCompatibility(t *testing.T) {
 			s := &Session{
 				sendPackets: make(chan packet, 100),
 				server: &Server{
-					erupeConfig: &_config.Config{
+					erupeConfig: &cfg.Config{
 						RealClientMode: tt.clientVersion,
 					},
 				},

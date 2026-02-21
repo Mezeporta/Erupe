@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 )
 
 func TestBackportQuest_Basic(t *testing.T) {
@@ -20,7 +20,7 @@ func TestBackportQuest_Basic(t *testing.T) {
 		data[i] = byte(i & 0xFF)
 	}
 
-	result := BackportQuest(data, _config.ZZ)
+	result := BackportQuest(data, cfg.ZZ)
 	if result == nil {
 		t.Fatal("BackportQuest returned nil")
 	}
@@ -43,7 +43,7 @@ func TestBackportQuest_S6Mode(t *testing.T) {
 	// Set some values at data[8:12] so we can check they get copied to data[16:20]
 	binary.LittleEndian.PutUint32(data[8:12], 0xDEADBEEF)
 
-	result := BackportQuest(data, _config.S6)
+	result := BackportQuest(data, cfg.S6)
 	if result == nil {
 		t.Fatal("BackportQuest returned nil")
 	}
@@ -67,7 +67,7 @@ func TestBackportQuest_G91Mode_PatternReplacement(t *testing.T) {
 	data[offset+2] = 0x01
 	data[offset+3] = 0x33
 
-	result := BackportQuest(data, _config.G91)
+	result := BackportQuest(data, cfg.G91)
 
 	// After BackportQuest, the pattern's last 2 bytes should be replaced
 	if result[offset+2] != 0xD7 || result[offset+3] != 0x00 {
@@ -80,7 +80,7 @@ func TestBackportQuest_F5Mode(t *testing.T) {
 	data := make([]byte, 512)
 	binary.LittleEndian.PutUint32(data[0:4], 0)
 
-	result := BackportQuest(data, _config.F5)
+	result := BackportQuest(data, cfg.F5)
 	if result == nil {
 		t.Fatal("BackportQuest returned nil")
 	}
@@ -90,7 +90,7 @@ func TestBackportQuest_G101Mode(t *testing.T) {
 	data := make([]byte, 512)
 	binary.LittleEndian.PutUint32(data[0:4], 0)
 
-	result := BackportQuest(data, _config.G101)
+	result := BackportQuest(data, cfg.G101)
 	if result == nil {
 		t.Fatal("BackportQuest returned nil")
 	}

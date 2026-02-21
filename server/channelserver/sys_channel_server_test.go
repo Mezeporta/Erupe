@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 	"erupe-ce/network/mhfpacket"
 
@@ -60,8 +60,8 @@ func createTestServer() *Server {
 		semaphore:      make(map[string]*Semaphore),
 		questCacheData: make(map[int][]byte),
 		questCacheTime: make(map[int]time.Time),
-		erupeConfig: &_config.Config{
-			DebugOptions: _config.DebugOptions{
+		erupeConfig: &cfg.Config{
+			DebugOptions: cfg.DebugOptions{
 				LogOutboundMessages: false,
 				LogInboundMessages:  false,
 			},
@@ -98,8 +98,8 @@ func TestNewServer(t *testing.T) {
 	config := &Config{
 		ID:     1,
 		Logger: logger,
-		ErupeConfig: &_config.Config{
-			DebugOptions: _config.DebugOptions{},
+		ErupeConfig: &cfg.Config{
+			DebugOptions: cfg.DebugOptions{},
 		},
 		Name: "test-server",
 	}

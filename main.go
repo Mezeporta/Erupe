@@ -1,7 +1,7 @@
 package main
 
 import (
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"fmt"
 	"net"
 	"os"
@@ -42,7 +42,7 @@ var Commit = func() string {
 	return "unknown"
 }
 
-func setupDiscordBot(config *_config.Config, logger *zap.Logger) *discordbot.DiscordBot {
+func setupDiscordBot(config *cfg.Config, logger *zap.Logger) *discordbot.DiscordBot {
 	bot, err := discordbot.NewDiscordBot(discordbot.Options{
 		Logger: logger,
 		Config: config,
@@ -76,7 +76,7 @@ func main() {
 	defer func() { _ = zapLogger.Sync() }()
 	logger := zapLogger.Named("main")
 
-	config, cfgErr := _config.LoadConfig()
+	config, cfgErr := cfg.LoadConfig()
 	if cfgErr != nil {
 		fmt.Println("\nFailed to start Erupe:\n" + fmt.Sprintf("Failed to load config: %s", cfgErr.Error()))
 		go wait()
@@ -341,7 +341,7 @@ func wait() {
 	}
 }
 
-func preventClose(config *_config.Config, text string) {
+func preventClose(config *cfg.Config, text string) {
 	if config != nil && config.DisableSoftCrash {
 		os.Exit(0)
 	}

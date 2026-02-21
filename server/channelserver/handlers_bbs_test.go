@@ -3,7 +3,7 @@ package channelserver
 import (
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 )
 
@@ -51,8 +51,8 @@ func TestHandleMsgMhfGetBbsSnsStatus(t *testing.T) {
 
 func TestHandleMsgMhfApplyBbsArticle(t *testing.T) {
 	server := createMockServer()
-	server.erupeConfig = &_config.Config{
-		Screenshots: _config.ScreenshotsOptions{
+	server.erupeConfig = &cfg.Config{
+		Screenshots: cfg.ScreenshotsOptions{
 			Host: "example.com",
 			Port: 8080,
 		},

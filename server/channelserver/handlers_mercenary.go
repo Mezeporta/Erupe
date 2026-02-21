@@ -3,7 +3,7 @@ package channelserver
 import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/stringsupport"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
@@ -50,7 +50,7 @@ const (
 func handleMsgMhfLoadHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadHunterNavi)
 	naviLength := hunterNaviSizeG8
-	if s.server.erupeConfig.RealClientMode <= _config.G7 {
+	if s.server.erupeConfig.RealClientMode <= cfg.G7 {
 		naviLength = hunterNaviSizeG7
 	}
 	loadCharacterData(s, pkt.AckHandle, "hunternavi", make([]byte, naviLength))
@@ -74,7 +74,7 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 	var dataSize int
 	if pkt.IsDataDiff {
 		naviLength := hunterNaviSizeG8
-		if s.server.erupeConfig.RealClientMode <= _config.G7 {
+		if s.server.erupeConfig.RealClientMode <= cfg.G7 {
 			naviLength = hunterNaviSizeG7
 		}
 		// Load existing save

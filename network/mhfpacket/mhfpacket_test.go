@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
 )
@@ -64,7 +64,7 @@ func TestMsgSysPingRoundTrip(t *testing.T) {
 		AckHandle: 0x12345678,
 	}
 
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 
 	// Build
 	bf := byteframe.NewByteFrame()
@@ -106,7 +106,7 @@ func TestMsgSysTimeRoundTrip(t *testing.T) {
 				Timestamp:     tt.timestamp,
 			}
 
-			ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+			ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 
 			// Build
 			bf := byteframe.NewByteFrame()
@@ -240,7 +240,7 @@ func TestParserInterface(t *testing.T) {
 	bf.WriteUint32(123)
 	_, _ = bf.Seek(0, io.SeekStart)
 
-	err := p.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := p.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Errorf("Parse() error = %v", err)
 	}
@@ -251,7 +251,7 @@ func TestBuilderInterface(t *testing.T) {
 	var b Builder = &MsgSysPing{AckHandle: 456}
 	bf := byteframe.NewByteFrame()
 
-	err := b.Build(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	err := b.Build(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 	if err != nil {
 		t.Errorf("Build() error = %v", err)
 	}
@@ -274,7 +274,7 @@ func TestClientContextBuildSafe(t *testing.T) {
 	pkt := &MsgSysPing{AckHandle: 123}
 	bf := byteframe.NewByteFrame()
 
-	ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 	err := pkt.Build(bf, ctx)
 	if err != nil {
 		t.Logf("Build() returned error: %v", err)
@@ -284,7 +284,7 @@ func TestClientContextBuildSafe(t *testing.T) {
 func TestMsgSysPingBuildFormat(t *testing.T) {
 	pkt := &MsgSysPing{AckHandle: 0x12345678}
 	bf := byteframe.NewByteFrame()
-	_ = pkt.Build(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	_ = pkt.Build(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 
 	data := bf.Data()
 	if len(data) != 4 {
@@ -303,7 +303,7 @@ func TestMsgSysTimeBuildFormat(t *testing.T) {
 		Timestamp:     0xDEADBEEF,
 	}
 	bf := byteframe.NewByteFrame()
-	_ = pkt.Build(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+	_ = pkt.Build(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 
 	data := bf.Data()
 	if len(data) != 5 {
@@ -502,7 +502,7 @@ func TestMsgSysCreateStageParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysCreateStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -554,7 +554,7 @@ func TestMsgSysEnterStageParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysEnterStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -603,7 +603,7 @@ func TestMsgSysMoveStageParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysMoveStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -649,7 +649,7 @@ func TestMsgSysLockStageParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysLockStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -676,7 +676,7 @@ func TestMsgSysUnlockStageRoundTrip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := &clientctx.ClientContext{RealClientMode: _config.ZZ}
+			ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 
 			// Build (returns NOT IMPLEMENTED)
 			original := &MsgSysUnlockStage{}
@@ -717,7 +717,7 @@ func TestMsgSysBackStageParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysBackStage{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -747,7 +747,7 @@ func TestMsgSysLogoutParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysLogout{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}
@@ -801,7 +801,7 @@ func TestMsgSysLoginParse(t *testing.T) {
 			_, _ = bf.Seek(0, io.SeekStart)
 
 			pkt := &MsgSysLogin{}
-			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: _config.ZZ})
+			err := pkt.Parse(bf, &clientctx.ClientContext{RealClientMode: cfg.ZZ})
 			if err != nil {
 				t.Fatalf("Parse() error = %v", err)
 			}

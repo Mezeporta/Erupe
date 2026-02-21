@@ -1,7 +1,7 @@
 package discordbot
 
 import (
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"regexp"
 
 	"github.com/bwmarrin/discordgo"
@@ -41,7 +41,7 @@ var Commands = []*discordgo.ApplicationCommand{
 // messages between the game server and a configured Discord channel.
 type DiscordBot struct {
 	Session      *discordgo.Session
-	config       *_config.Config
+	config       *cfg.Config
 	logger       *zap.Logger
 	MainGuild    *discordgo.Guild
 	RelayChannel *discordgo.Channel
@@ -49,7 +49,7 @@ type DiscordBot struct {
 
 // Options holds the configuration and logger required to create a DiscordBot.
 type Options struct {
-	Config *_config.Config
+	Config *cfg.Config
 	Logger *zap.Logger
 }
 

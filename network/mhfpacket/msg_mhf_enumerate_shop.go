@@ -2,7 +2,7 @@ package mhfpacket
 
 import (
 	"errors"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
@@ -32,7 +32,7 @@ func (m *MsgMhfEnumerateShop) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clie
 	m.ShopID = bf.ReadUint32()
 	m.Limit = bf.ReadUint16()
 	m.Unk3 = bf.ReadUint8()
-	if ctx.RealClientMode >= _config.G2 {
+	if ctx.RealClientMode >= cfg.G2 {
 		m.Unk4 = bf.ReadUint8()
 		m.Unk5 = bf.ReadUint32()
 	}

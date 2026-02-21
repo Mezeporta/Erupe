@@ -1,8 +1,8 @@
 package clientctx
 
-import "erupe-ce/config"
+import cfg "erupe-ce/config"
 
 // ClientContext holds contextual data required for packet encoding/decoding.
 type ClientContext struct {
-	RealClientMode _config.Mode
+	RealClientMode cfg.Mode
 }

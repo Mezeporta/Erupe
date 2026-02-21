@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 
 	"go.uber.org/zap"
 )
@@ -263,8 +263,8 @@ func TestConfigFields(t *testing.T) {
 
 func TestServerStartAndShutdown(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Sign: _config.Sign{
+	erupeConfig := &cfg.Config{
+		Sign: cfg.Sign{
 			Port: 0,
 		},
 	}
@@ -305,8 +305,8 @@ func TestServerStartAndShutdown(t *testing.T) {
 
 func TestServerStartWithInvalidPort(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Sign: _config.Sign{
+	erupeConfig := &cfg.Config{
+		Sign: cfg.Sign{
 			Port: -1,
 		},
 	}
@@ -351,8 +351,8 @@ func TestServerMutex(t *testing.T) {
 
 func TestServerShutdownIdempotent(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Sign: _config.Sign{
+	erupeConfig := &cfg.Config{
+		Sign: cfg.Sign{
 			Port: 0,
 		},
 	}
@@ -379,8 +379,8 @@ func TestServerShutdownIdempotent(t *testing.T) {
 
 func TestServerAcceptClientsExitsOnShutdown(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Sign: _config.Sign{
+	erupeConfig := &cfg.Config{
+		Sign: cfg.Sign{
 			Port: 0,
 		},
 	}
@@ -411,8 +411,8 @@ func TestServerAcceptClientsExitsOnShutdown(t *testing.T) {
 
 func TestServerHandleConnection(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Sign: _config.Sign{
+	erupeConfig := &cfg.Config{
+		Sign: cfg.Sign{
 			Port: 0,
 		},
 	}
@@ -447,8 +447,8 @@ func TestServerHandleConnection(t *testing.T) {
 
 func TestServerHandleConnectionWithShortInit(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Sign: _config.Sign{
+	erupeConfig := &cfg.Config{
+		Sign: cfg.Sign{
 			Port: 0,
 		},
 	}
@@ -479,8 +479,8 @@ func TestServerHandleConnectionWithShortInit(t *testing.T) {
 
 func TestServerHandleConnectionImmediateClose(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Sign: _config.Sign{
+	erupeConfig := &cfg.Config{
+		Sign: cfg.Sign{
 			Port: 0,
 		},
 	}
@@ -509,8 +509,8 @@ func TestServerHandleConnectionImmediateClose(t *testing.T) {
 
 func TestServerMultipleConnections(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Sign: _config.Sign{
+	erupeConfig := &cfg.Config{
+		Sign: cfg.Sign{
 			Port: 0,
 		},
 	}
@@ -550,8 +550,8 @@ func TestServerMultipleConnections(t *testing.T) {
 
 func TestServerListenerAddress(t *testing.T) {
 	logger := zap.NewNop()
-	erupeConfig := &_config.Config{
-		Sign: _config.Sign{
+	erupeConfig := &cfg.Config{
+		Sign: cfg.Sign{
 			Port: 0,
 		},
 	}

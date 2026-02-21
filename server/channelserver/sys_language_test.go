@@ -3,12 +3,12 @@ package channelserver
 import (
 	"testing"
 
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 )
 
 func TestGetLangStrings_English(t *testing.T) {
 	server := &Server{
-		erupeConfig: &_config.Config{
+		erupeConfig: &cfg.Config{
 			Language: "en",
 		},
 	}
@@ -39,7 +39,7 @@ func TestGetLangStrings_English(t *testing.T) {
 
 func TestGetLangStrings_Japanese(t *testing.T) {
 	server := &Server{
-		erupeConfig: &_config.Config{
+		erupeConfig: &cfg.Config{
 			Language: "jp",
 		},
 	}
@@ -52,7 +52,7 @@ func TestGetLangStrings_Japanese(t *testing.T) {
 
 	// Verify Japanese strings are different from English
 	enServer := &Server{
-		erupeConfig: &_config.Config{
+		erupeConfig: &cfg.Config{
 			Language: "en",
 		},
 	}
@@ -65,7 +65,7 @@ func TestGetLangStrings_Japanese(t *testing.T) {
 
 func TestGetLangStrings_DefaultToEnglish(t *testing.T) {
 	server := &Server{
-		erupeConfig: &_config.Config{
+		erupeConfig: &cfg.Config{
 			Language: "unknown_language",
 		},
 	}
@@ -80,7 +80,7 @@ func TestGetLangStrings_DefaultToEnglish(t *testing.T) {
 
 func TestGetLangStrings_EmptyLanguage(t *testing.T) {
 	server := &Server{
-		erupeConfig: &_config.Config{
+		erupeConfig: &cfg.Config{
 			Language: "",
 		},
 	}
