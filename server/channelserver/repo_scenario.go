@@ -22,7 +22,7 @@ func (r *ScenarioRepository) GetCounters() ([]Scenario, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query scenario_counter: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []Scenario
 	for rows.Next() {
 		var s Scenario

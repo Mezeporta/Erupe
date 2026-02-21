@@ -935,10 +935,14 @@ func TestRemoveGuildFromAllianceSub1(t *testing.T) {
 		t.Fatalf("CreateAlliance failed: %v", err)
 	}
 	var allianceID uint32
-	db.QueryRow("SELECT id FROM guild_alliances WHERE parent_id=$1", guildID).Scan(&allianceID)
+	if err := db.QueryRow("SELECT id FROM guild_alliances WHERE parent_id=$1", guildID).Scan(&allianceID); err != nil {
+		t.Fatalf("Failed to get alliance ID: %v", err)
+	}
 
 	// Add sub1
-	db.Exec("UPDATE guild_alliances SET sub1_id=$1 WHERE id=$2", guild2, allianceID)
+	if _, err := db.Exec("UPDATE guild_alliances SET sub1_id=$1 WHERE id=$2", guild2, allianceID); err != nil {
+		t.Fatalf("Failed to set sub1: %v", err)
+	}
 
 	// Remove sub1
 	if err := repo.RemoveGuildFromAlliance(allianceID, guild2, guild2, 0); err != nil {
@@ -972,8 +976,12 @@ func TestRemoveGuildFromAllianceSub1ShiftsSub2(t *testing.T) {
 		t.Fatalf("CreateAlliance failed: %v", err)
 	}
 	var allianceID uint32
-	db.QueryRow("SELECT id FROM guild_alliances WHERE parent_id=$1", guildID).Scan(&allianceID)
-	db.Exec("UPDATE guild_alliances SET sub1_id=$1, sub2_id=$2 WHERE id=$3", guild2, guild3, allianceID)
+	if err := db.QueryRow("SELECT id FROM guild_alliances WHERE parent_id=$1", guildID).Scan(&allianceID); err != nil {
+		t.Fatalf("Failed to get alliance ID: %v", err)
+	}
+	if _, err := db.Exec("UPDATE guild_alliances SET sub1_id=$1, sub2_id=$2 WHERE id=$3", guild2, guild3, allianceID); err != nil {
+		t.Fatalf("Failed to set sub guilds: %v", err)
+	}
 
 	// Remove sub1 — sub2 should shift into sub1's slot
 	if err := repo.RemoveGuildFromAlliance(allianceID, guild2, guild2, guild3); err != nil {
@@ -1010,8 +1018,12 @@ func TestRemoveGuildFromAllianceSub2(t *testing.T) {
 		t.Fatalf("CreateAlliance failed: %v", err)
 	}
 	var allianceID uint32
-	db.QueryRow("SELECT id FROM guild_alliances WHERE parent_id=$1", guildID).Scan(&allianceID)
-	db.Exec("UPDATE guild_alliances SET sub1_id=$1, sub2_id=$2 WHERE id=$3", guild2, guild3, allianceID)
+	if err := db.QueryRow("SELECT id FROM guild_alliances WHERE parent_id=$1", guildID).Scan(&allianceID); err != nil {
+		t.Fatalf("Failed to get alliance ID: %v", err)
+	}
+	if _, err := db.Exec("UPDATE guild_alliances SET sub1_id=$1, sub2_id=$2 WHERE id=$3", guild2, guild3, allianceID); err != nil {
+		t.Fatalf("Failed to set sub guilds: %v", err)
+	}
 
 	// Remove sub2 directly
 	if err := repo.RemoveGuildFromAlliance(allianceID, guild3, guild2, guild3); err != nil {
@@ -1093,7 +1105,9 @@ func TestChargeAdventure(t *testing.T) {
 	}
 
 	var charge uint32
-	db.QueryRow("SELECT charge FROM guild_adventures WHERE id=$1", advID).Scan(&charge)
+	if err := db.QueryRow("SELECT charge FROM guild_adventures WHERE id=$1", advID).Scan(&charge); err != nil {
+		t.Fatalf("Failed to get charge: %v", err)
+	}
 	if charge != 25 {
 		t.Errorf("Expected charge=25, got %d", charge)
 	}
@@ -1194,7 +1208,9 @@ func TestAcquireHunt(t *testing.T) {
 
 	// Verify in DB
 	var acquired bool
-	db.QueryRow("SELECT acquired FROM guild_hunts WHERE id=$1", hunt.HuntID).Scan(&acquired)
+	if err := db.QueryRow("SELECT acquired FROM guild_hunts WHERE id=$1", hunt.HuntID).Scan(&acquired); err != nil {
+		t.Fatalf("Failed to get acquired: %v", err)
+	}
 	if !acquired {
 		t.Error("Expected acquired=true in DB")
 	}
@@ -1208,7 +1224,9 @@ func TestListGuildHunts(t *testing.T) {
 		t.Fatalf("CreateHunt failed: %v", err)
 	}
 	hunt, _ := repo.GetPendingHunt(charID)
-	repo.AcquireHunt(hunt.HuntID)
+	if err := repo.AcquireHunt(hunt.HuntID); err != nil {
+		t.Fatalf("AcquireHunt failed: %v", err)
+	}
 
 	// Create a level-1 hunt (should not appear)
 	if err := repo.CreateHunt(guildID, charID, 20, 1, nil, ""); err != nil {
@@ -1240,7 +1258,9 @@ func TestRegisterHuntReport(t *testing.T) {
 	}
 
 	var treasureHunt *uint32
-	db.QueryRow("SELECT treasure_hunt FROM guild_characters WHERE character_id=$1", charID).Scan(&treasureHunt)
+	if err := db.QueryRow("SELECT treasure_hunt FROM guild_characters WHERE character_id=$1", charID).Scan(&treasureHunt); err != nil {
+		t.Fatalf("Failed to get treasure_hunt: %v", err)
+	}
 	if treasureHunt == nil || *treasureHunt != hunt.HuntID {
 		t.Errorf("Expected treasure_hunt=%d, got %v", hunt.HuntID, treasureHunt)
 	}
@@ -1253,7 +1273,9 @@ func TestCollectHunt(t *testing.T) {
 		t.Fatalf("CreateHunt failed: %v", err)
 	}
 	hunt, _ := repo.GetPendingHunt(charID)
-	repo.RegisterHuntReport(hunt.HuntID, charID)
+	if err := repo.RegisterHuntReport(hunt.HuntID, charID); err != nil {
+		t.Fatalf("RegisterHuntReport failed: %v", err)
+	}
 
 	if err := repo.CollectHunt(hunt.HuntID); err != nil {
 		t.Fatalf("CollectHunt failed: %v", err)
@@ -1261,14 +1283,18 @@ func TestCollectHunt(t *testing.T) {
 
 	// Hunt should be marked collected
 	var collected bool
-	db.QueryRow("SELECT collected FROM guild_hunts WHERE id=$1", hunt.HuntID).Scan(&collected)
+	if err := db.QueryRow("SELECT collected FROM guild_hunts WHERE id=$1", hunt.HuntID).Scan(&collected); err != nil {
+		t.Fatalf("Failed to scan collected: %v", err)
+	}
 	if !collected {
 		t.Error("Expected collected=true")
 	}
 
 	// Character's treasure_hunt should be cleared
 	var treasureHunt *uint32
-	db.QueryRow("SELECT treasure_hunt FROM guild_characters WHERE character_id=$1", charID).Scan(&treasureHunt)
+	if err := db.QueryRow("SELECT treasure_hunt FROM guild_characters WHERE character_id=$1", charID).Scan(&treasureHunt); err != nil {
+		t.Fatalf("Failed to get treasure_hunt: %v", err)
+	}
 	if treasureHunt != nil {
 		t.Errorf("Expected treasure_hunt=NULL, got %v", *treasureHunt)
 	}
@@ -1287,7 +1313,9 @@ func TestClaimHuntReward(t *testing.T) {
 	}
 
 	var count int
-	db.QueryRow("SELECT COUNT(*) FROM guild_hunts_claimed WHERE hunt_id=$1 AND character_id=$2", hunt.HuntID, charID).Scan(&count)
+	if err := db.QueryRow("SELECT COUNT(*) FROM guild_hunts_claimed WHERE hunt_id=$1 AND character_id=$2", hunt.HuntID, charID).Scan(&count); err != nil {
+		t.Fatalf("Failed to scan claimed count: %v", err)
+	}
 	if count != 1 {
 		t.Errorf("Expected 1 claimed entry, got %d", count)
 	}
@@ -1365,7 +1393,9 @@ func TestClaimHuntBox(t *testing.T) {
 	}
 
 	var got time.Time
-	db.QueryRow("SELECT box_claimed FROM guild_characters WHERE character_id=$1", charID).Scan(&got)
+	if err := db.QueryRow("SELECT box_claimed FROM guild_characters WHERE character_id=$1", charID).Scan(&got); err != nil {
+		t.Fatalf("Failed to scan box_claimed: %v", err)
+	}
 	if !got.Equal(claimedAt) {
 		t.Errorf("Expected box_claimed=%v, got %v", claimedAt, got)
 	}
@@ -1376,11 +1406,17 @@ func TestListAndCountGuildKills(t *testing.T) {
 
 	// Set box_claimed to the past so kills after it are visible
 	past := time.Now().Add(-1 * time.Hour).UTC().Truncate(time.Second)
-	repo.ClaimHuntBox(charID, past)
+	if err := repo.ClaimHuntBox(charID, past); err != nil {
+		t.Fatalf("ClaimHuntBox failed: %v", err)
+	}
 
 	// Insert kill logs for this character
-	db.Exec("INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, 100, 1, NOW())", charID)
-	db.Exec("INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, 200, 1, NOW())", charID)
+	if _, err := db.Exec("INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, 100, 1, NOW())", charID); err != nil {
+		t.Fatalf("Failed to insert kill log: %v", err)
+	}
+	if _, err := db.Exec("INSERT INTO kill_logs (character_id, monster, quantity, timestamp) VALUES ($1, 200, 1, NOW())", charID); err != nil {
+		t.Fatalf("Failed to insert kill log: %v", err)
+	}
 
 	kills, err := repo.ListGuildKills(guildID, charID)
 	if err != nil {
@@ -1403,7 +1439,9 @@ func TestListGuildKillsEmpty(t *testing.T) {
 	repo, _, guildID, charID := setupGuildRepo(t)
 
 	// Set box_claimed to now — no kills after it
-	repo.ClaimHuntBox(charID, time.Now().UTC())
+	if err := repo.ClaimHuntBox(charID, time.Now().UTC()); err != nil {
+		t.Fatalf("ClaimHuntBox failed: %v", err)
+	}
 
 	kills, err := repo.ListGuildKills(guildID, charID)
 	if err != nil {
@@ -1433,7 +1471,9 @@ func TestDisbandCleansUpAlliance(t *testing.T) {
 	}
 
 	var allianceID uint32
-	db.QueryRow("SELECT id FROM guild_alliances WHERE parent_id=$1", guildID).Scan(&allianceID)
+	if err := db.QueryRow("SELECT id FROM guild_alliances WHERE parent_id=$1", guildID).Scan(&allianceID); err != nil {
+		t.Fatalf("Failed to scan alliance ID: %v", err)
+	}
 
 	if err := repo.Disband(guildID); err != nil {
 		t.Fatalf("Disband failed: %v", err)

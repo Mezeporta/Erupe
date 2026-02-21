@@ -22,7 +22,7 @@ func (r *MiscRepository) GetTrendWeapons(weaponType uint8) ([]uint16, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query trend_weapons: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []uint16
 	for rows.Next() {
 		var id uint16

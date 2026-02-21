@@ -173,9 +173,7 @@ func applyUpdateSchema(t *testing.T, db *sqlx.DB, projectRoot string) {
 		if stmt == "" {
 			continue
 		}
-		if _, err := db.Exec(stmt); err != nil {
-			// Silently ignore — these are expected for role mismatches, already-applied changes, etc.
-		}
+		_, _ = db.Exec(stmt) // Errors expected for role mismatches, already-applied changes, etc.
 	}
 }
 
@@ -260,7 +258,7 @@ func truncateAllTables(t *testing.T, db *sqlx.DB) {
 	if err != nil {
 		t.Fatalf("Failed to list tables for truncation: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tables []string
 	for rows.Next() {

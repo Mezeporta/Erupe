@@ -2,7 +2,9 @@ package channelserver
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/binary"
+	"errors"
 	"testing"
 
 	cfg "erupe-ce/config"
@@ -569,5 +571,177 @@ func BenchmarkDecompress(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = save.Decompress()
+	}
+}
+
+// --- Mock-based GetCharacterSaveData tests ---
+
+func TestGetCharacterSaveData_NilSavedata(t *testing.T) {
+	server := createMockServer()
+	mock := newMockCharacterRepo()
+	mock.loadSaveDataID = 42
+	mock.loadSaveDataName = "Hunter"
+	mock.loadSaveDataNew = true
+	server.charRepo = mock
+	session := createMockSession(42, server)
+
+	result, err := GetCharacterSaveData(session, 42)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected non-nil result")
+	}
+	if result.CharID != 42 {
+		t.Errorf("CharID = %d, want 42", result.CharID)
+	}
+	if result.Name != "Hunter" {
+		t.Errorf("Name = %q, want %q", result.Name, "Hunter")
+	}
+	if !result.IsNewCharacter {
+		t.Error("IsNewCharacter should be true")
+	}
+}
+
+func TestGetCharacterSaveData_NotFound(t *testing.T) {
+	server := createMockServer()
+	mock := newMockCharacterRepo()
+	mock.loadSaveDataErr = sql.ErrNoRows
+	server.charRepo = mock
+	session := createMockSession(1, server)
+
+	result, err := GetCharacterSaveData(session, 999)
+	if err == nil {
+		t.Fatal("expected error for missing character")
+	}
+	if result != nil {
+		t.Error("expected nil result for missing character")
+	}
+}
+
+func TestGetCharacterSaveData_DBError(t *testing.T) {
+	server := createMockServer()
+	mock := newMockCharacterRepo()
+	mock.loadSaveDataErr = errors.New("connection refused")
+	server.charRepo = mock
+	session := createMockSession(1, server)
+
+	result, err := GetCharacterSaveData(session, 1)
+	if err == nil {
+		t.Fatal("expected error on DB failure")
+	}
+	if result != nil {
+		t.Error("expected nil result on DB failure")
+	}
+}
+
+func TestGetCharacterSaveData_WithCompressedData(t *testing.T) {
+	server := createMockServer()
+	mock := newMockCharacterRepo()
+
+	// Create minimal valid savedata and compress it
+	saveData := make([]byte, 150000)
+	copy(saveData[88:], append([]byte("TestHunter"), 0x00))
+	compressed, err := nullcomp.Compress(saveData)
+	if err != nil {
+		t.Fatalf("failed to compress test savedata: %v", err)
+	}
+
+	mock.loadSaveDataID = 10
+	mock.loadSaveDataData = compressed
+	mock.loadSaveDataName = "TestHunter"
+	mock.loadSaveDataNew = false
+	server.charRepo = mock
+	session := createMockSession(10, server)
+
+	result, err := GetCharacterSaveData(session, 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected non-nil result")
+	}
+	if result.CharID != 10 {
+		t.Errorf("CharID = %d, want 10", result.CharID)
+	}
+	if result.IsNewCharacter {
+		t.Error("IsNewCharacter should be false")
+	}
+	if result.Name != "TestHunter" {
+		t.Errorf("Name = %q, want %q", result.Name, "TestHunter")
+	}
+}
+
+func TestGetCharacterSaveData_NewCharacterSkipsDecompress(t *testing.T) {
+	// When savedata is nil AND IsNewCharacter=true, GetCharacterSaveData
+	// returns a valid result without decompressing.
+	server := createMockServer()
+	mock := newMockCharacterRepo()
+	mock.loadSaveDataID = 5
+	mock.loadSaveDataName = "NewPlayer"
+	mock.loadSaveDataNew = true
+	// loadSaveDataData is nil
+	server.charRepo = mock
+	session := createMockSession(5, server)
+
+	result, err := GetCharacterSaveData(session, 5)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected non-nil result")
+	}
+	if !result.IsNewCharacter {
+		t.Error("IsNewCharacter should be true")
+	}
+	if result.CharID != 5 {
+		t.Errorf("CharID = %d, want 5", result.CharID)
+	}
+}
+
+func TestGetCharacterSaveData_ConfigMode(t *testing.T) {
+	server := createMockServer()
+	mock := newMockCharacterRepo()
+
+	saveData := make([]byte, 150000)
+	copy(saveData[88:], append([]byte("ModeTest"), 0x00))
+	compressed, err := nullcomp.Compress(saveData)
+	if err != nil {
+		t.Fatalf("failed to compress: %v", err)
+	}
+
+	mock.loadSaveDataID = 1
+	mock.loadSaveDataData = compressed
+	mock.loadSaveDataName = "ModeTest"
+	server.charRepo = mock
+
+	modes := []struct {
+		mode cfg.Mode
+		name string
+	}{
+		{cfg.S6, "S6"},
+		{cfg.F5, "F5"},
+		{cfg.G10, "G10"},
+		{cfg.Z2, "Z2"},
+		{cfg.ZZ, "ZZ"},
+	}
+	for _, tc := range modes {
+		mode := tc.mode
+		t.Run(tc.name, func(t *testing.T) {
+			server.erupeConfig.RealClientMode = mode
+			session := createMockSession(1, server)
+
+			result, err := GetCharacterSaveData(session, 1)
+			if err != nil {
+				t.Fatalf("unexpected error for mode %v: %v", mode, err)
+			}
+			if result.Mode != mode {
+				t.Errorf("Mode = %v, want %v", result.Mode, mode)
+			}
+			expectedPointers := getPointers(mode)
+			if len(result.Pointers) != len(expectedPointers) {
+				t.Errorf("Pointers count = %d, want %d", len(result.Pointers), len(expectedPointers))
+			}
+		})
 	}
 }

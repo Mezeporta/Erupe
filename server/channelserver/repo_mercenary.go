@@ -44,7 +44,7 @@ func (r *MercenaryRepository) GetMercenaryLoans(charID uint32) ([]MercenaryLoan,
 	if err != nil {
 		return nil, fmt.Errorf("query mercenary loans: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []MercenaryLoan
 	for rows.Next() {
 		var l MercenaryLoan
@@ -69,7 +69,7 @@ func (r *MercenaryRepository) GetGuildHuntCatsUsed(charID uint32) ([]GuildHuntCa
 	if err != nil {
 		return nil, fmt.Errorf("query guild hunt cats: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []GuildHuntCatUsage
 	for rows.Next() {
 		var u GuildHuntCatUsage
@@ -90,7 +90,7 @@ func (r *MercenaryRepository) GetGuildAirou(guildID uint32) ([][]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query guild airou: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result [][]byte
 	for rows.Next() {
 		var data []byte

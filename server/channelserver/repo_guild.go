@@ -115,7 +115,7 @@ func (r *GuildRepository) GetByID(guildID uint32) (*Guild, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	if !rows.Next() {
 		return nil, nil
 	}
@@ -144,7 +144,7 @@ func (r *GuildRepository) GetByCharID(charID uint32) (*Guild, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	if !rows.Next() {
 		return nil, nil
 	}
@@ -157,7 +157,7 @@ func (r *GuildRepository) ListAll() ([]*Guild, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var guilds []*Guild
 	for rows.Next() {
@@ -370,7 +370,7 @@ func (r *GuildRepository) GetMembers(guildID uint32, applicants bool) ([]*GuildM
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	members := make([]*GuildMember, 0)
 	for rows.Next() {
@@ -390,7 +390,7 @@ func (r *GuildRepository) GetCharacterMembership(charID uint32) (*GuildMember, e
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	if !rows.Next() {
 		return nil, nil
@@ -486,7 +486,7 @@ func (r *GuildRepository) ListPosts(guildID uint32, postType int) ([]*MessageBoa
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var posts []*MessageBoardPost
 	for rows.Next() {
 		post := &MessageBoardPost{}
@@ -504,7 +504,7 @@ func (r *GuildRepository) CreatePost(guildID, authorID, stampID uint32, postType
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.Exec(
 		`INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -585,7 +585,7 @@ func (r *GuildRepository) GetAllianceByID(allianceID uint32) (*GuildAlliance, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	if !rows.Next() {
 		return nil, nil
 	}
@@ -598,7 +598,7 @@ func (r *GuildRepository) ListAlliances() ([]*GuildAlliance, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var alliances []*GuildAlliance
 	for rows.Next() {
 		alliance, err := r.scanAllianceWithGuilds(rows)
@@ -679,7 +679,7 @@ func (r *GuildRepository) ListAdventures(guildID uint32) ([]*GuildAdventure, err
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var adventures []*GuildAdventure
 	for rows.Next() {
 		adv := &GuildAdventure{}
@@ -714,7 +714,7 @@ func (r *GuildRepository) CollectAdventure(adventureID uint32, charID uint32) er
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var collectedBy string
 	err = tx.QueryRow("SELECT collected_by FROM guild_adventures WHERE id = $1 FOR UPDATE", adventureID).Scan(&collectedBy)
@@ -766,7 +766,7 @@ func (r *GuildRepository) ListGuildHunts(guildID, charID uint32) ([]*TreasureHun
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var hunts []*TreasureHunt
 	for rows.Next() {
 		hunt := &TreasureHunt{}
@@ -821,7 +821,7 @@ func (r *GuildRepository) ListMeals(guildID uint32) ([]*GuildMeal, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var meals []*GuildMeal
 	for rows.Next() {
 		meal := &GuildMeal{}
@@ -871,7 +871,7 @@ func (r *GuildRepository) ListGuildKills(guildID, charID uint32) ([]*GuildKill, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var kills []*GuildKill
 	for rows.Next() {
 		kill := &GuildKill{}
@@ -928,7 +928,7 @@ func (r *GuildRepository) ListInvitedCharacters(guildID uint32) ([]*ScoutedChara
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var chars []*ScoutedCharacter
 	for rows.Next() {
 		sc := &ScoutedCharacter{}

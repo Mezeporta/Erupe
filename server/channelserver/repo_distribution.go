@@ -33,7 +33,7 @@ func (r *DistributionRepository) List(charID uint32, distType uint8) ([]Distribu
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var dists []Distribution
 	for rows.Next() {
@@ -52,7 +52,7 @@ func (r *DistributionRepository) GetItems(distributionID uint32) ([]Distribution
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []DistributionItem
 	for rows.Next() {

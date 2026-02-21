@@ -124,7 +124,7 @@ func (r *TowerRepository) GetTenrouiraiMissionScores(guildID uint32, missionInde
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var scores []TenrouiraiCharScore
 	for rows.Next() {
 		var cs TenrouiraiCharScore

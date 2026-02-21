@@ -63,7 +63,7 @@ func (r *FestaRepository) GetFestaEvents() ([]FestaEvent, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var e FestaEvent
 		if err := rows.StructScan(&e); err != nil {
@@ -103,7 +103,7 @@ func (r *FestaRepository) GetTrialsWithMonopoly() ([]FestaTrial, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var trial FestaTrial
 		if err := rows.StructScan(&trial); err != nil {
@@ -213,7 +213,7 @@ func (r *FestaRepository) ListPrizes(charID uint32, prizeType string) ([]Prize, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var prize Prize
 		if err := rows.StructScan(&prize); err != nil {

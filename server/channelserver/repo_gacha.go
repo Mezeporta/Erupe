@@ -38,7 +38,7 @@ func (r *GachaRepository) GetRewardPool(gachaID uint32) ([]GachaEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var entry GachaEntry
 		if err := rows.StructScan(&entry); err == nil {
@@ -58,7 +58,7 @@ func (r *GachaRepository) GetItemsForEntry(entryID uint32) ([]GachaItem, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var item GachaItem
 		if err := rows.StructScan(&item); err == nil {
@@ -78,7 +78,7 @@ func (r *GachaRepository) GetGuaranteedItems(rollType uint8, gachaID uint32) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var item GachaItem
 		if err := rows.StructScan(&item); err == nil {
@@ -155,7 +155,7 @@ func (r *GachaRepository) GetBoxEntryIDs(gachaID uint32, charID uint32) ([]uint3
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var id uint32
 		if err := rows.Scan(&id); err == nil {
@@ -194,7 +194,7 @@ func (r *GachaRepository) ListShop() ([]Gacha, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var g Gacha
 		if err := rows.StructScan(&g); err == nil {
@@ -224,7 +224,7 @@ func (r *GachaRepository) GetAllEntries(gachaID uint32) ([]GachaEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var entry GachaEntry
 		if err := rows.StructScan(&entry); err == nil {

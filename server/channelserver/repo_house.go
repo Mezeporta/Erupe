@@ -46,7 +46,7 @@ func (r *HouseRepository) SearchHousesByName(name string) ([]HouseData, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var house HouseData
 		if err := rows.StructScan(&house); err == nil {
@@ -194,7 +194,7 @@ func (r *HouseRepository) GetTitles(charID uint32) ([]Title, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var title Title
 		if err := rows.StructScan(&title); err == nil {
