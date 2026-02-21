@@ -452,3 +452,142 @@ func TestGetAchData_UpdatedAlwaysFalse(t *testing.T) {
 		}
 	}
 }
+
+// --- Mock-based handler tests ---
+
+func TestHandleMsgMhfGetAchievement_Success(t *testing.T) {
+	server := createMockServer()
+	mock := &mockAchievementRepo{
+		scores: [33]int32{5, 0, 20, 0, 0, 0, 0, 1}, // A few non-zero scores
+	}
+	server.achievementRepo = mock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetAchievement{
+		AckHandle: 100,
+		CharID:    1,
+	}
+
+	handleMsgMhfGetAchievement(session, pkt)
+
+	if !mock.ensureCalled {
+		t.Error("EnsureExists should have been called")
+	}
+
+	select {
+	case p := <-session.sendPackets:
+		// Response should contain: 16 bytes header + 3 bytes unk + 1 byte count + 33 entries
+		// Each entry: 1+1+2+4+1+1+2+4 = 16 bytes, so 33*16 = 528 + 20 header = 548
+		if len(p.data) < 100 {
+			t.Errorf("Response too short: %d bytes", len(p.data))
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgMhfGetAchievement_DBError(t *testing.T) {
+	server := createMockServer()
+	mock := &mockAchievementRepo{
+		getScoresErr: errNotFound,
+	}
+	server.achievementRepo = mock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetAchievement{
+		AckHandle: 100,
+		CharID:    1,
+	}
+
+	handleMsgMhfGetAchievement(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		// On error, should return 20 zero bytes
+		if len(p.data) == 0 {
+			t.Error("Response should have fallback data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgMhfGetAchievement_AllZeroScores(t *testing.T) {
+	server := createMockServer()
+	mock := &mockAchievementRepo{} // All scores default to 0
+	server.achievementRepo = mock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetAchievement{
+		AckHandle: 200,
+		CharID:    1,
+	}
+
+	handleMsgMhfGetAchievement(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) < 100 {
+			t.Errorf("Response too short: %d bytes", len(p.data))
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgMhfAddAchievement_Valid(t *testing.T) {
+	server := createMockServer()
+	mock := &mockAchievementRepo{}
+	server.achievementRepo = mock
+	session := createMockSession(42, server)
+
+	pkt := &mhfpacket.MsgMhfAddAchievement{
+		AchievementID: 5,
+	}
+
+	handleMsgMhfAddAchievement(session, pkt)
+
+	if !mock.ensureCalled {
+		t.Error("EnsureExists should have been called")
+	}
+	if mock.incrementedID != 5 {
+		t.Errorf("IncrementScore called with ID %d, want 5", mock.incrementedID)
+	}
+}
+
+func TestHandleMsgMhfAddAchievement_OutOfRange(t *testing.T) {
+	server := createMockServer()
+	mock := &mockAchievementRepo{}
+	server.achievementRepo = mock
+	session := createMockSession(42, server)
+
+	pkt := &mhfpacket.MsgMhfAddAchievement{
+		AchievementID: 33, // > 32, should be rejected
+	}
+
+	handleMsgMhfAddAchievement(session, pkt)
+
+	if mock.ensureCalled {
+		t.Error("EnsureExists should NOT be called for out-of-range ID")
+	}
+}
+
+func TestHandleMsgMhfAddAchievement_BoundaryID32(t *testing.T) {
+	server := createMockServer()
+	mock := &mockAchievementRepo{}
+	server.achievementRepo = mock
+	session := createMockSession(42, server)
+
+	pkt := &mhfpacket.MsgMhfAddAchievement{
+		AchievementID: 32, // Exactly at boundary, should be accepted
+	}
+
+	handleMsgMhfAddAchievement(session, pkt)
+
+	if !mock.ensureCalled {
+		t.Error("EnsureExists should be called for ID 32")
+	}
+	if mock.incrementedID != 32 {
+		t.Errorf("IncrementScore called with ID %d, want 32", mock.incrementedID)
+	}
+}
