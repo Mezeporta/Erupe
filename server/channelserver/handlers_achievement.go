@@ -3,7 +3,6 @@ package channelserver
 import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
-	"fmt"
 	"io"
 
 	"go.uber.org/zap"
@@ -98,20 +97,11 @@ func GetAchData(id uint8, score int32) Achievement {
 func handleMsgMhfGetAchievement(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetAchievement)
 
-	var exists int
-	err := s.server.db.QueryRow("SELECT id FROM achievements WHERE id=$1", pkt.CharID).Scan(&exists)
-	if err != nil {
-		if _, err := s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", pkt.CharID); err != nil {
-			s.logger.Error("Failed to insert achievements record", zap.Error(err))
-		}
+	if err := s.server.achievementRepo.EnsureExists(pkt.CharID); err != nil {
+		s.logger.Error("Failed to ensure achievements record", zap.Error(err))
 	}
 
-	var scores [33]int32
-	err = s.server.db.QueryRow("SELECT * FROM achievements WHERE id=$1", pkt.CharID).Scan(&scores[0],
-		&scores[0], &scores[1], &scores[2], &scores[3], &scores[4], &scores[5], &scores[6], &scores[7], &scores[8],
-		&scores[9], &scores[10], &scores[11], &scores[12], &scores[13], &scores[14], &scores[15], &scores[16],
-		&scores[17], &scores[18], &scores[19], &scores[20], &scores[21], &scores[22], &scores[23], &scores[24],
-		&scores[25], &scores[26], &scores[27], &scores[28], &scores[29], &scores[30], &scores[31], &scores[32])
+	scores, err := s.server.achievementRepo.GetAllScores(pkt.CharID)
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 20))
 		return
@@ -165,15 +155,11 @@ func handleMsgMhfAddAchievement(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	var exists int
-	err := s.server.db.QueryRow("SELECT id FROM achievements WHERE id=$1", s.charID).Scan(&exists)
-	if err != nil {
-		if _, err := s.server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", s.charID); err != nil {
-			s.logger.Error("Failed to insert achievements record", zap.Error(err))
-		}
+	if err := s.server.achievementRepo.EnsureExists(s.charID); err != nil {
+		s.logger.Error("Failed to ensure achievements record", zap.Error(err))
 	}
 
-	if _, err := s.server.db.Exec(fmt.Sprintf("UPDATE achievements SET ach%d=ach%d+1 WHERE id=$1", pkt.AchievementID, pkt.AchievementID), s.charID); err != nil {
+	if err := s.server.achievementRepo.IncrementScore(s.charID, pkt.AchievementID); err != nil {
 		s.logger.Error("Failed to update achievement score", zap.Error(err))
 	}
 }

@@ -59,10 +59,7 @@ func writeShopItems(bf *byteframe.ByteFrame, items []ShopItem, mode _config.Mode
 func getShopItems(s *Session, shopType uint8, shopID uint32) []ShopItem {
 	var items []ShopItem
 	var temp ShopItem
-	rows, err := s.server.db.Queryx(`SELECT id, item_id, cost, quantity, min_hr, min_sr, min_gr, store_level, max_quantity,
-       		COALESCE((SELECT bought FROM shop_items_bought WHERE shop_item_id=si.id AND character_id=$3), 0) as used_quantity,
-       		road_floors, road_fatalis FROM shop_items si WHERE shop_type=$1 AND shop_id=$2
-       		`, shopType, shopID, s.charID)
+	rows, err := s.server.shopRepo.GetShopItems(shopType, shopID, s.charID)
 	if err == nil {
 		for rows.Next() {
 			err = rows.StructScan(&temp)
@@ -212,11 +209,7 @@ func handleMsgMhfAcquireExchangeShop(s *Session, p mhfpacket.MHFPacket) {
 			continue
 		}
 		buyCount := bf.ReadUint32()
-		if _, err := s.server.db.Exec(`INSERT INTO shop_items_bought (character_id, shop_item_id, bought)
-			VALUES ($1,$2,$3) ON CONFLICT (character_id, shop_item_id)
-			DO UPDATE SET bought = bought + $3
-			WHERE EXCLUDED.character_id=$1 AND EXCLUDED.shop_item_id=$2
-		`, s.charID, itemHash, buyCount); err != nil {
+		if err := s.server.shopRepo.RecordPurchase(s.charID, itemHash, buyCount); err != nil {
 			s.logger.Error("Failed to update shop item purchase count", zap.Error(err))
 		}
 	}
@@ -235,8 +228,8 @@ type FPointExchange struct {
 
 func handleMsgMhfExchangeFpoint2Item(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeFpoint2Item)
-	var itemValue, quantity int
-	if err := s.server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue); err != nil {
+	quantity, itemValue, err := s.server.shopRepo.GetFpointItem(pkt.TradeID)
+	if err != nil {
 		s.logger.Error("Failed to read fpoint item cost", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return
@@ -255,8 +248,8 @@ func handleMsgMhfExchangeFpoint2Item(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfExchangeItem2Fpoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeItem2Fpoint)
-	var itemValue, quantity int
-	if err := s.server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue); err != nil {
+	quantity, itemValue, err := s.server.shopRepo.GetFpointItem(pkt.TradeID)
+	if err != nil {
 		s.logger.Error("Failed to read fpoint item value", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return
@@ -280,7 +273,7 @@ func handleMsgMhfGetFpointExchangeList(s *Session, p mhfpacket.MHFPacket) {
 	var exchange FPointExchange
 	var exchanges []FPointExchange
 	var buyables uint16
-	rows, err := s.server.db.Queryx(`SELECT id, item_type, item_id, quantity, fpoints, buyable FROM fpoint_items ORDER BY buyable DESC`)
+	rows, err := s.server.shopRepo.GetFpointExchangeList()
 	if err == nil {
 		for rows.Next() {
 			err = rows.StructScan(&exchange)

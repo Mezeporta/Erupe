@@ -84,7 +84,7 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 		if err := s.server.charRepo.ResetCafeTime(s.charID, cafeReset); err != nil {
 			s.logger.Error("Failed to reset cafe time", zap.Error(err))
 		}
-		if _, err := s.server.db.Exec(`DELETE FROM cafe_accepted WHERE character_id=$1`, s.charID); err != nil {
+		if err := s.server.cafeRepo.ResetAccepted(s.charID); err != nil {
 			s.logger.Error("Failed to delete accepted cafe bonuses", zap.Error(err))
 		}
 	}
@@ -121,14 +121,7 @@ func handleMsgMhfGetCafeDurationBonusInfo(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 
 	var count uint32
-	rows, err := s.server.db.Queryx(`
-	SELECT cb.id, time_req, item_type, item_id, quantity,
-	(
-		SELECT count(*)
-		FROM cafe_accepted ca
-		WHERE cb.id = ca.cafe_id AND ca.character_id = $1
-	)::int::bool AS claimed
-	FROM cafebonus cb ORDER BY id ASC;`, s.charID)
+	rows, err := s.server.cafeRepo.GetBonuses(s.charID)
 	if err != nil {
 		s.logger.Error("Error getting cafebonus", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -160,18 +153,7 @@ func handleMsgMhfReceiveCafeDurationBonus(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	var count uint32
 	bf.WriteUint32(0)
-	rows, err := s.server.db.Queryx(`
-	SELECT c.id, time_req, item_type, item_id, quantity
-	FROM cafebonus c
-	WHERE (
-		SELECT count(*)
-		FROM cafe_accepted ca
-		WHERE c.id = ca.cafe_id AND ca.character_id = $1
-	) < 1 AND (
-		SELECT ch.cafe_time + $2
-		FROM characters ch
-		WHERE ch.id = $1 
-	) >= time_req`, s.charID, TimeAdjusted().Unix()-s.sessionStart)
+	rows, err := s.server.cafeRepo.GetClaimable(s.charID, TimeAdjusted().Unix()-s.sessionStart)
 	if err != nil || !mhfcourse.CourseExists(30, s.courses) {
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 	} else {
@@ -195,17 +177,14 @@ func handleMsgMhfReceiveCafeDurationBonus(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfPostCafeDurationBonusReceived(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfPostCafeDurationBonusReceived)
-	var cafeBonus CafeBonus
 	for _, cbID := range pkt.CafeBonusID {
-		err := s.server.db.QueryRow(`
-		SELECT cb.id, item_type, quantity FROM cafebonus cb WHERE cb.id=$1
-		`, cbID).Scan(&cafeBonus.ID, &cafeBonus.ItemType, &cafeBonus.Quantity)
+		itemType, quantity, err := s.server.cafeRepo.GetBonusItem(cbID)
 		if err == nil {
-			if cafeBonus.ItemType == 17 {
-				_ = addPointNetcafe(s, int(cafeBonus.Quantity))
+			if itemType == 17 {
+				_ = addPointNetcafe(s, int(quantity))
 			}
 		}
-		if _, err := s.server.db.Exec("INSERT INTO public.cafe_accepted VALUES ($1, $2)", cbID, s.charID); err != nil {
+		if err := s.server.cafeRepo.AcceptBonus(cbID, s.charID); err != nil {
 			s.logger.Error("Failed to insert accepted cafe bonus", zap.Error(err))
 		}
 	}
