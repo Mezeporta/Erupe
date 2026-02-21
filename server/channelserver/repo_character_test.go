@@ -579,3 +579,49 @@ func TestFindByRastaID(t *testing.T) {
 		t.Errorf("Expected 'RepoChar', got: %q", gotName)
 	}
 }
+
+func TestLoadSaveData(t *testing.T) {
+	repo, _, charID := setupCharRepo(t)
+
+	id, savedata, isNew, name, err := repo.LoadSaveData(charID)
+	if err != nil {
+		t.Fatalf("LoadSaveData failed: %v", err)
+	}
+	if id != charID {
+		t.Errorf("Expected charID %d, got: %d", charID, id)
+	}
+	if name != "RepoChar" {
+		t.Errorf("Expected name 'RepoChar', got: %q", name)
+	}
+	if isNew {
+		t.Error("Expected is_new_character=false")
+	}
+	if savedata == nil {
+		t.Error("Expected non-nil savedata")
+	}
+}
+
+func TestLoadSaveDataNewCharacter(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if _, err := db.Exec("UPDATE characters SET is_new_character=true WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	_, _, isNew, _, err := repo.LoadSaveData(charID)
+	if err != nil {
+		t.Fatalf("LoadSaveData failed: %v", err)
+	}
+	if !isNew {
+		t.Error("Expected is_new_character=true")
+	}
+}
+
+func TestLoadSaveDataNotFound(t *testing.T) {
+	repo, _, _ := setupCharRepo(t)
+
+	_, _, _, _, err := repo.LoadSaveData(999999)
+	if err == nil {
+		t.Fatal("Expected error for non-existent character")
+	}
+}
