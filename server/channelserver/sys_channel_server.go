@@ -30,6 +30,15 @@ type Config struct {
 }
 
 // Server is a MHF channel server.
+//
+// Lock ordering (acquire in this order to avoid deadlocks):
+//  1. Server.Mutex          – protects sessions map
+//  2. Server.stagesLock     – protects stages map
+//  3. Stage.RWMutex         – protects per-stage state (clients, objects)
+//  4. Server.semaphoreLock  – protects semaphore map
+//
+// Self-contained stores (userBinary, minidata, questCache) manage their
+// own locks internally and may be acquired at any point.
 type Server struct {
 	sync.Mutex
 	Channels       []*Server
