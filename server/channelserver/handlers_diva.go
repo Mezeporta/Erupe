@@ -20,7 +20,7 @@ const (
 )
 
 func cleanupDiva(s *Session) {
-	if _, err := s.server.db.Exec("DELETE FROM events WHERE event_type='diva'"); err != nil {
+	if err := s.server.divaRepo.DeleteEvents(); err != nil {
 		s.logger.Error("Failed to delete diva events", zap.Error(err))
 	}
 }
@@ -59,7 +59,7 @@ func generateDivaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		cleanupDiva(s)
 		// Generate a new diva defense, starting midnight tomorrow
 		start = uint32(midnight.Add(24 * time.Hour).Unix())
-		if _, err := s.server.db.Exec("INSERT INTO events (event_type, start_time) VALUES ('diva', to_timestamp($1)::timestamp without time zone)", start); err != nil {
+		if err := s.server.divaRepo.InsertEvent(start); err != nil {
 			s.logger.Error("Failed to insert diva event", zap.Error(err))
 		}
 	}
@@ -78,7 +78,7 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 
 	const divaIDSentinel = uint32(0xCAFEBEEF)
 	id, start := divaIDSentinel, uint32(0)
-	rows, err := s.server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='diva'")
+	rows, err := s.server.divaRepo.GetEvents()
 	if err != nil {
 		s.logger.Error("Failed to query diva schedule", zap.Error(err))
 	} else {

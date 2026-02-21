@@ -168,8 +168,8 @@ func handleMsgMhfEnumerateMercenaryLog(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCreateMercenary)
-	var nextID uint32
-	if err := s.server.db.QueryRow("SELECT nextval('rasta_id_seq')").Scan(&nextID); err != nil {
+	nextID, err := s.server.mercenaryRepo.NextRastaID()
+	if err != nil {
 		s.logger.Error("Failed to get next rasta ID", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return
@@ -227,7 +227,7 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	if pkt.Op != 2 && pkt.Op != 5 {
 		var loans uint8
 		temp := byteframe.NewByteFrame()
-		rows, err := s.server.db.Query("SELECT name, id, pact_id FROM characters WHERE pact_id=(SELECT rasta_id FROM characters WHERE id=$1)", s.charID)
+		rows, err := s.server.mercenaryRepo.GetMercenaryLoans(s.charID)
 		if err != nil {
 			s.logger.Error("Failed to query mercenary loans", zap.Error(err))
 		} else {
@@ -323,7 +323,8 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		dataLen := bf.ReadUint32()
 		catID := bf.ReadUint32()
 		if catID == 0 {
-			if err := s.server.db.QueryRow("SELECT nextval('airou_id_seq')").Scan(&catID); err != nil {
+			catID, err = s.server.mercenaryRepo.NextAirouID()
+			if err != nil {
 				s.logger.Error("Failed to get next airou ID", zap.Error(err))
 				doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 				return
@@ -392,9 +393,7 @@ func getGuildAirouList(s *Session) []Airou {
 	if err != nil {
 		return guildCats
 	}
-	rows, err := s.server.db.Query(`SELECT cats_used FROM guild_hunts gh
-		INNER JOIN characters c ON gh.host_id = c.id WHERE c.id=$1
-	`, s.charID)
+	rows, err := s.server.mercenaryRepo.GetGuildHuntCatsUsed(s.charID)
 	if err != nil {
 		s.logger.Warn("Failed to get recently used airous", zap.Error(err))
 		return guildCats
@@ -414,10 +413,7 @@ func getGuildAirouList(s *Session) []Airou {
 		}
 	}
 
-	rows, err = s.server.db.Query(`SELECT c.otomoairou FROM characters c
-	INNER JOIN guild_characters gc ON gc.character_id = c.id
-	WHERE gc.guild_id = $1 AND c.otomoairou IS NOT NULL
-	ORDER BY c.id LIMIT 60`, guild.ID)
+	rows, err = s.server.mercenaryRepo.GetGuildAirou(guild.ID)
 	if err != nil {
 		s.logger.Warn("Selecting otomoairou based on guild failed", zap.Error(err))
 		return guildCats

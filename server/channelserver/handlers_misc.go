@@ -259,7 +259,7 @@ func handleMsgMhfGetTrendWeapon(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetTrendWeapon)
 	trendWeapons := [14][3]TrendWeapon{}
 	for i := uint8(0); i < 14; i++ {
-		rows, err := s.server.db.Query(`SELECT weapon_id FROM trend_weapons WHERE weapon_type=$1 ORDER BY count DESC LIMIT 3`, i)
+		rows, err := s.server.miscRepo.GetTrendWeapons(i)
 		if err != nil {
 			continue
 		}
@@ -288,8 +288,7 @@ func handleMsgMhfGetTrendWeapon(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUpdateUseTrendWeaponLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateUseTrendWeaponLog)
-	if _, err := s.server.db.Exec(`INSERT INTO trend_weapons (weapon_id, weapon_type, count) VALUES ($1, $2, 1) ON CONFLICT (weapon_id) DO
-		UPDATE SET count = trend_weapons.count+1`, pkt.WeaponID, pkt.WeaponType); err != nil {
+	if err := s.server.miscRepo.UpsertTrendWeapon(pkt.WeaponID, pkt.WeaponType); err != nil {
 		s.logger.Error("Failed to update trend weapon log", zap.Error(err))
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

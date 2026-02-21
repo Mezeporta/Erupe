@@ -210,3 +210,17 @@ func (r *CharacterRepository) FindByRastaID(rastaID int) (charID uint32, name st
 	err = r.db.QueryRow("SELECT name, id FROM characters WHERE rasta_id=$1", rastaID).Scan(&name, &charID)
 	return
 }
+
+// SaveCharacterData updates the core save fields on a character.
+func (r *CharacterRepository) SaveCharacterData(charID uint32, compSave []byte, hr, gr uint16, isFemale bool, weaponType uint8, weaponID uint16) error {
+	_, err := r.db.Exec(`UPDATE characters SET savedata=$1, is_new_character=false, hr=$2, gr=$3, is_female=$4, weapon_type=$5, weapon_id=$6 WHERE id=$7`,
+		compSave, hr, gr, isFemale, weaponType, weaponID, charID)
+	return err
+}
+
+// SaveHouseData updates house-related fields in user_binary.
+func (r *CharacterRepository) SaveHouseData(charID uint32, houseTier []byte, houseData, bookshelf, gallery, tore, garden []byte) error {
+	_, err := r.db.Exec(`UPDATE user_binary SET house_tier=$1, house_data=$2, bookshelf=$3, gallery=$4, tore=$5, garden=$6 WHERE id=$7`,
+		houseTier, houseData, bookshelf, gallery, tore, garden, charID)
+	return err
+}

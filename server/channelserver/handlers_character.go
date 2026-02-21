@@ -75,14 +75,11 @@ func (save *CharacterSaveData) Save(s *Session) {
 		save.compSave = save.decompSave
 	}
 
-	_, err := s.server.db.Exec(`UPDATE characters SET savedata=$1, is_new_character=false, hr=$2, gr=$3, is_female=$4, weapon_type=$5, weapon_id=$6 WHERE id=$7
-	`, save.compSave, save.HR, save.GR, save.Gender, save.WeaponType, save.WeaponID, save.CharID)
-	if err != nil {
+	if err := s.server.charRepo.SaveCharacterData(save.CharID, save.compSave, save.HR, save.GR, save.Gender, save.WeaponType, save.WeaponID); err != nil {
 		s.logger.Error("Failed to update savedata", zap.Error(err), zap.Uint32("charID", save.CharID))
 	}
 
-	if _, err := s.server.db.Exec(`UPDATE user_binary SET house_tier=$1, house_data=$2, bookshelf=$3, gallery=$4, tore=$5, garden=$6 WHERE id=$7
-	`, save.HouseTier, save.HouseData, save.BookshelfData, save.GalleryData, save.ToreData, save.GardenData, s.charID); err != nil {
+	if err := s.server.charRepo.SaveHouseData(s.charID, save.HouseTier, save.HouseData, save.BookshelfData, save.GalleryData, save.ToreData, save.GardenData); err != nil {
 		s.logger.Error("Failed to update user binary house data", zap.Error(err))
 	}
 }

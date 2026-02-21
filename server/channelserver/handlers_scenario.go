@@ -22,7 +22,7 @@ func handleMsgMhfInfoScenarioCounter(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfInfoScenarioCounter)
 	var scenarios []Scenario
 	var scenario Scenario
-	scenarioData, err := s.server.db.Queryx("SELECT scenario_id, category_id FROM scenario_counter")
+	scenarioData, err := s.server.scenarioRepo.GetCounters()
 	if err != nil {
 		_ = scenarioData.Close()
 		s.logger.Error("Failed to get scenario counter info from db", zap.Error(err))

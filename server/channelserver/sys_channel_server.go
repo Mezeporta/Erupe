@@ -62,6 +62,11 @@ type Server struct {
 	achievementRepo *AchievementRepository
 	shopRepo       *ShopRepository
 	cafeRepo       *CafeRepository
+	goocooRepo     *GoocooRepository
+	divaRepo       *DivaRepository
+	miscRepo       *MiscRepository
+	scenarioRepo   *ScenarioRepository
+	mercenaryRepo  *MercenaryRepository
 	erupeConfig    *cfg.Config
 	acceptConns    chan net.Conn
 	deleteConns    chan net.Conn
@@ -148,6 +153,11 @@ func NewServer(config *Config) *Server {
 	s.achievementRepo = NewAchievementRepository(config.DB)
 	s.shopRepo = NewShopRepository(config.DB)
 	s.cafeRepo = NewCafeRepository(config.DB)
+	s.goocooRepo = NewGoocooRepository(config.DB)
+	s.divaRepo = NewDivaRepository(config.DB)
+	s.miscRepo = NewMiscRepository(config.DB)
+	s.scenarioRepo = NewScenarioRepository(config.DB)
+	s.mercenaryRepo = NewMercenaryRepository(config.DB)
 
 	// Mezeporta
 	s.stages["sl1Ns200p0a0u0"] = NewStage("sl1Ns200p0a0u0")
