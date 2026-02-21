@@ -352,7 +352,13 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	rows, err := s.server.db.Query("SELECT id, COALESCE(max_players, 4) AS max_players, quest_type, quest_id, COALESCE(mark, 0) AS mark, COALESCE(flags, -1), start_time, COALESCE(active_days, 0) AS active_days, COALESCE(inactive_days, 0) AS inactive_days FROM event_quests ORDER BY quest_id")
 	if err == nil {
 		currentTime := time.Now()
-		tx, _ := s.server.db.Begin()
+		tx, err := s.server.db.Begin()
+		if err != nil {
+			s.logger.Error("Failed to begin transaction for event quests", zap.Error(err))
+			_ = rows.Close()
+			doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+			return
+		}
 
 		for rows.Next() {
 			var id, mark uint32
