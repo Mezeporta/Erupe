@@ -395,4 +395,13 @@ func SetTestDB(s *Server, db *sqlx.DB) {
 	s.stampRepo = NewStampRepository(db)
 	s.distRepo = NewDistributionRepository(db)
 	s.sessionRepo = NewSessionRepository(db)
+	s.eventRepo = NewEventRepository(db)
+	s.achievementRepo = NewAchievementRepository(db)
+	s.shopRepo = NewShopRepository(db)
+	s.cafeRepo = NewCafeRepository(db)
+	s.goocooRepo = NewGoocooRepository(db)
+	s.divaRepo = NewDivaRepository(db)
+	s.miscRepo = NewMiscRepository(db)
+	s.scenarioRepo = NewScenarioRepository(db)
+	s.mercenaryRepo = NewMercenaryRepository(db)
 }

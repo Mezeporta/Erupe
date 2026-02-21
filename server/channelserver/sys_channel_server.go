@@ -40,27 +40,27 @@ type Server struct {
 	Port           uint16
 	logger         *zap.Logger
 	db             *sqlx.DB
-	charRepo       *CharacterRepository
-	guildRepo      *GuildRepository
-	userRepo       *UserRepository
-	gachaRepo      *GachaRepository
-	houseRepo      *HouseRepository
-	festaRepo      *FestaRepository
-	towerRepo      *TowerRepository
-	rengokuRepo    *RengokuRepository
-	mailRepo       *MailRepository
-	stampRepo      *StampRepository
-	distRepo       *DistributionRepository
-	sessionRepo    *SessionRepository
-	eventRepo      *EventRepository
-	achievementRepo *AchievementRepository
-	shopRepo       *ShopRepository
-	cafeRepo       *CafeRepository
-	goocooRepo     *GoocooRepository
-	divaRepo       *DivaRepository
-	miscRepo       *MiscRepository
-	scenarioRepo   *ScenarioRepository
-	mercenaryRepo  *MercenaryRepository
+	charRepo        CharacterRepo
+	guildRepo       GuildRepo
+	userRepo        UserRepo
+	gachaRepo       GachaRepo
+	houseRepo       HouseRepo
+	festaRepo       FestaRepo
+	towerRepo       TowerRepo
+	rengokuRepo     RengokuRepo
+	mailRepo        MailRepo
+	stampRepo       StampRepo
+	distRepo        DistributionRepo
+	sessionRepo     SessionRepo
+	eventRepo       EventRepo
+	achievementRepo AchievementRepo
+	shopRepo        ShopRepo
+	cafeRepo        CafeRepo
+	goocooRepo      GoocooRepo
+	divaRepo        DivaRepo
+	miscRepo        MiscRepo
+	scenarioRepo    ScenarioRepo
+	mercenaryRepo   MercenaryRepo
 	erupeConfig    *cfg.Config
 	acceptConns    chan net.Conn
 	deleteConns    chan net.Conn
