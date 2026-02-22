@@ -4,11 +4,32 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"go.uber.org/zap"
 
 	cfg "erupe-ce/config"
 )
+
+// newMakeSignResponseServer creates a Server with mock repos for makeSignResponse tests.
+func newMakeSignResponseServer(config *cfg.Config) *Server {
+	return &Server{
+		erupeConfig: config,
+		logger:      zap.NewNop(),
+		charRepo: &mockSignCharacterRepo{
+			characters: []character{},
+			friends:    nil,
+			guildmates: nil,
+		},
+		userRepo: &mockSignUserRepo{
+			returnExpiry: time.Now().Add(time.Hour * 24 * 30),
+			lastLogin:    time.Now(),
+		},
+		sessionRepo: &mockSignSessionRepo{
+			registerUIDTokenID: 1,
+		},
+	}
+}
 
 // TestMakeSignResponse_EmptyCapLinkValues verifies the crash is FIXED when CapLink.Values is empty
 // Previously panicked: runtime error: index out of range [0] with length 0
@@ -37,10 +58,7 @@ func TestMakeSignResponse_EmptyCapLinkValues(t *testing.T) {
 
 	session := &Session{
 		logger: zap.NewNop(),
-		server: &Server{
-			erupeConfig: config,
-			logger:      zap.NewNop(),
-		},
+		server: newMakeSignResponseServer(config),
 		client: PC100,
 	}
 
@@ -61,7 +79,7 @@ func TestMakeSignResponse_EmptyCapLinkValues(t *testing.T) {
 	// This should NOT panic on array bounds anymore
 	result := session.makeSignResponse(0)
 	if len(result) > 0 {
-		t.Log("✅ makeSignResponse handled empty CapLink.Values without array bounds panic")
+		t.Log("makeSignResponse handled empty CapLink.Values without array bounds panic")
 	}
 }
 
@@ -89,10 +107,7 @@ func TestMakeSignResponse_InsufficientCapLinkValues(t *testing.T) {
 
 	session := &Session{
 		logger: zap.NewNop(),
-		server: &Server{
-			erupeConfig: config,
-			logger:      zap.NewNop(),
-		},
+		server: newMakeSignResponseServer(config),
 		client: PC100,
 	}
 
@@ -110,7 +125,7 @@ func TestMakeSignResponse_InsufficientCapLinkValues(t *testing.T) {
 	// This should NOT panic on array bounds anymore
 	result := session.makeSignResponse(0)
 	if len(result) > 0 {
-		t.Log("✅ makeSignResponse handled insufficient CapLink.Values without array bounds panic")
+		t.Log("makeSignResponse handled insufficient CapLink.Values without array bounds panic")
 	}
 }
 
@@ -138,10 +153,7 @@ func TestMakeSignResponse_MissingCapLinkValues234(t *testing.T) {
 
 	session := &Session{
 		logger: zap.NewNop(),
-		server: &Server{
-			erupeConfig: config,
-			logger:      zap.NewNop(),
-		},
+		server: newMakeSignResponseServer(config),
 		client: PC100,
 	}
 
@@ -159,7 +171,7 @@ func TestMakeSignResponse_MissingCapLinkValues234(t *testing.T) {
 	// This should NOT panic on array bounds anymore
 	result := session.makeSignResponse(0)
 	if len(result) > 0 {
-		t.Log("✅ makeSignResponse handled missing CapLink.Values[2/3/4] without array bounds panic")
+		t.Log("makeSignResponse handled missing CapLink.Values[2/3/4] without array bounds panic")
 	}
 }
 
@@ -207,7 +219,47 @@ func TestCapLinkValuesBoundsChecking(t *testing.T) {
 				}
 			}
 
-			t.Logf("✅ %s: All 5 indices accessible without panic", tc.name)
+			t.Logf("%s: All 5 indices accessible without panic", tc.name)
 		})
+	}
+}
+
+// TestMakeSignResponse_FullFlow tests the complete makeSignResponse with mock repos.
+func TestMakeSignResponse_FullFlow(t *testing.T) {
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{0, 0, 0, 0, 0},
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:  100,
+			MezFesGroupTickets: 100,
+		},
+	}
+
+	server := newMakeSignResponseServer(config)
+	// Give the server some characters
+	server.charRepo = &mockSignCharacterRepo{
+		characters: []character{
+			{ID: 1, Name: "TestHunter", HR: 100, GR: 50, WeaponType: 3, LastLogin: 1700000000},
+		},
+	}
+
+	conn := newMockConn()
+	session := &Session{
+		logger:  zap.NewNop(),
+		server:  server,
+		rawConn: conn,
+		client:  PC100,
+	}
+
+	result := session.makeSignResponse(1)
+	if len(result) == 0 {
+		t.Error("makeSignResponse() returned empty result")
+	}
+	// First byte should be SIGN_SUCCESS
+	if result[0] != uint8(SIGN_SUCCESS) {
+		t.Errorf("makeSignResponse() first byte = %d, want %d (SIGN_SUCCESS)", result[0], SIGN_SUCCESS)
 	}
 }

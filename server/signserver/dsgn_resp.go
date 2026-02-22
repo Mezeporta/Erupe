@@ -333,8 +333,10 @@ func (s *Session) makeSignResponse(uid uint32) []byte {
 	bf.WriteBytes(filters.Data())
 
 	if s.client == VITA || s.client == PS3 || s.client == PS4 {
-		var psnUser string
-		_ = s.server.db.QueryRow("SELECT psn_id FROM users WHERE id = $1", uid).Scan(&psnUser)
+		psnUser, err := s.server.userRepo.GetPSNIDForUser(uid)
+		if err != nil {
+			s.logger.Warn("Failed to get PSN ID for user", zap.Uint32("uid", uid), zap.Error(err))
+		}
 		bf.WriteBytes(stringsupport.PaddedString(psnUser, 20, true))
 	}
 

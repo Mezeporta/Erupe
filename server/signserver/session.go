@@ -115,8 +115,7 @@ func (s *Session) authenticate(username string, password string) {
 func (s *Session) handleWIIUSGN(bf *byteframe.ByteFrame) {
 	_ = bf.ReadBytes(1)
 	wiiuKey := string(bf.ReadBytes(64))
-	var uid uint32
-	err := s.server.db.QueryRow(`SELECT id FROM users WHERE wiiu_key = $1`, wiiuKey).Scan(&uid)
+	uid, err := s.server.userRepo.GetByWiiUKey(wiiuKey)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			s.logger.Info("Unlinked Wii U attempted to authenticate", zap.String("Key", wiiuKey))
@@ -142,8 +141,7 @@ func (s *Session) handlePSSGN(bf *byteframe.ByteFrame) {
 		_ = bf.ReadBytes(82)
 	}
 	s.psn = string(bf.ReadNullTerminatedBytes())
-	var uid uint32
-	err := s.server.db.QueryRow(`SELECT id FROM users WHERE psn_id = $1`, s.psn).Scan(&uid)
+	uid, err := s.server.userRepo.GetByPSNID(s.psn)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			_ = s.cryptConn.SendPacket(s.makeSignResponse(0))
@@ -159,19 +157,17 @@ func (s *Session) handlePSNLink(bf *byteframe.ByteFrame) {
 	_ = bf.ReadNullTerminatedBytes() // Client ID
 	credStr, _ := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
 	credentials := strings.Split(credStr, "\n")
-	token := string(bf.ReadNullTerminatedBytes())
+	tok := string(bf.ReadNullTerminatedBytes())
 	uid, resp := s.server.validateLogin(credentials[0], credentials[1])
 	if resp == SIGN_SUCCESS && uid > 0 {
-		var psn string
-		err := s.server.db.QueryRow(`SELECT psn_id FROM sign_sessions WHERE token = $1`, token).Scan(&psn)
+		psn, err := s.server.sessionRepo.GetPSNIDByToken(tok)
 		if err != nil {
 			s.sendCode(SIGN_ECOGLINK)
 			return
 		}
 
 		// Since we check for the psn_id, this will never run
-		var exists int
-		err = s.server.db.QueryRow(`SELECT count(*) FROM users WHERE psn_id = $1`, psn).Scan(&exists)
+		exists, err := s.server.userRepo.CountByPSNID(psn)
 		if err != nil {
 			s.sendCode(SIGN_ECOGLINK)
 			return
@@ -180,8 +176,7 @@ func (s *Session) handlePSNLink(bf *byteframe.ByteFrame) {
 			return
 		}
 
-		var currentPSN string
-		err = s.server.db.QueryRow(`SELECT COALESCE(psn_id, '') FROM users WHERE username = $1`, credentials[0]).Scan(&currentPSN)
+		currentPSN, err := s.server.userRepo.GetPSNIDForUsername(credentials[0])
 		if err != nil {
 			s.sendCode(SIGN_ECOGLINK)
 			return
@@ -190,7 +185,7 @@ func (s *Session) handlePSNLink(bf *byteframe.ByteFrame) {
 			return
 		}
 
-		_, err = s.server.db.Exec(`UPDATE users SET psn_id = $1 WHERE username = $2`, psn, credentials[0])
+		err = s.server.userRepo.SetPSNID(credentials[0], psn)
 		if err == nil {
 			s.sendCode(SIGN_SUCCESS)
 			return
