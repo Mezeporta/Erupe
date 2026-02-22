@@ -318,28 +318,7 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		if err := s.server.mailRepo.SendMail(mail.SenderID, mail.RecipientID, mail.Subject, mail.Body, 0, 0, false, true); err != nil {
 			s.logger.Warn("Failed to send guild member operation mail", zap.Error(err))
 		}
-		if s.server.Registry != nil {
-			s.server.Registry.NotifyMailToCharID(pkt.CharID, s, &mail)
-		} else {
-			// Fallback: find the target session under lock, then notify outside the lock.
-			var targetSession *Session
-			for _, channel := range s.server.Channels {
-				channel.Lock()
-				for _, session := range channel.sessions {
-					if session.charID == pkt.CharID {
-						targetSession = session
-						break
-					}
-				}
-				channel.Unlock()
-				if targetSession != nil {
-					break
-				}
-			}
-			if targetSession != nil {
-				SendMailNotification(s, &mail, targetSession)
-			}
-		}
+		s.server.Registry.NotifyMailToCharID(pkt.CharID, s, &mail)
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
 }

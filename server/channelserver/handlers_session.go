@@ -12,7 +12,6 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"fmt"
 	"io"
-	"net"
 	"strings"
 	"time"
 
@@ -442,19 +441,7 @@ func handleMsgSysEcho(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysLockGlobalSema(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysLockGlobalSema)
-	var sgid string
-	if s.server.Registry != nil {
-		sgid = s.server.Registry.FindChannelForStage(pkt.UserIDString)
-	} else {
-		for _, channel := range s.server.Channels {
-			channel.stages.Range(func(id string, _ *Stage) bool {
-				if strings.HasSuffix(id, pkt.UserIDString) {
-					sgid = channel.GlobalID
-				}
-				return true
-			})
-		}
-	}
+	sgid := s.server.Registry.FindChannelForStage(pkt.UserIDString)
 	bf := byteframe.NewByteFrame()
 	if len(sgid) > 0 && sgid != s.server.GlobalID {
 		bf.WriteUint8(0)
@@ -517,59 +504,33 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 	resp.WriteUint16(0)
 	switch pkt.SearchType {
 	case 1, 2, 3: // usersearchidx, usersearchname, lobbysearchname
-		// Snapshot matching sessions under lock, then build response outside locks.
-		type sessionResult struct {
-			charID   uint32
-			name     []byte
-			stageID  []byte
-			ip       net.IP
-			port     uint16
-			userBin3 []byte
-		}
-		var results []sessionResult
-
-		for _, c := range s.server.Channels {
-			if count == maxResults {
-				break
+		predicate := func(snap SessionSnapshot) bool {
+			switch pkt.SearchType {
+			case 1:
+				return snap.CharID == cid
+			case 2:
+				return strings.Contains(snap.Name, term)
+			case 3:
+				return snap.ServerIP.String() == ip && snap.ServerPort == port && snap.StageID == term
 			}
-			c.Lock()
-			for _, session := range c.sessions {
-				if count == maxResults {
-					break
-				}
-				if pkt.SearchType == 1 && session.charID != cid {
-					continue
-				}
-				if pkt.SearchType == 2 && !strings.Contains(session.Name, term) {
-					continue
-				}
-				if pkt.SearchType == 3 && session.server.IP != ip && session.server.Port != port && session.stage.id != term {
-					continue
-				}
-				count++
-				results = append(results, sessionResult{
-					charID:   session.charID,
-					name:     stringsupport.UTF8ToSJIS(session.Name),
-					stageID:  stringsupport.UTF8ToSJIS(session.stage.id),
-					ip:       net.ParseIP(c.IP).To4(),
-					port:     c.Port,
-					userBin3: c.userBinary.GetCopy(session.charID, 3),
-				})
-			}
-			c.Unlock()
+			return false
 		}
+		snapshots := s.server.Registry.SearchSessions(predicate, int(maxResults))
+		count = uint16(len(snapshots))
 
-		for _, r := range results {
+		for _, snap := range snapshots {
 			if !local {
-				resp.WriteUint32(binary.LittleEndian.Uint32(r.ip))
+				resp.WriteUint32(binary.LittleEndian.Uint32(snap.ServerIP))
 			} else {
 				resp.WriteUint32(localhostAddrLE)
 			}
-			resp.WriteUint16(r.port)
-			resp.WriteUint32(r.charID)
-			resp.WriteUint8(uint8(len(r.stageID) + 1))
-			resp.WriteUint8(uint8(len(r.name) + 1))
-			resp.WriteUint16(uint16(len(r.userBin3)))
+			resp.WriteUint16(snap.ServerPort)
+			resp.WriteUint32(snap.CharID)
+			sjisStageID := stringsupport.UTF8ToSJIS(snap.StageID)
+			sjisName := stringsupport.UTF8ToSJIS(snap.Name)
+			resp.WriteUint8(uint8(len(sjisStageID) + 1))
+			resp.WriteUint8(uint8(len(sjisName) + 1))
+			resp.WriteUint16(uint16(len(snap.UserBinary3)))
 
 			// TODO: This case might be <=G2
 			if s.server.erupeConfig.RealClientMode <= cfg.G1 {
@@ -579,9 +540,9 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			}
 			resp.WriteBytes(make([]byte, 8))
 
-			resp.WriteNullTerminatedBytes(r.stageID)
-			resp.WriteNullTerminatedBytes(r.name)
-			resp.WriteBytes(r.userBin3)
+			resp.WriteNullTerminatedBytes(sjisStageID)
+			resp.WriteNullTerminatedBytes(sjisName)
+			resp.WriteBytes(snap.UserBinary3)
 		}
 	case 4: // lobbysearch
 		type FindPartyParams struct {
@@ -668,119 +629,81 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 				}
 			}
 		}
-		// Snapshot matching stages under lock, then build response outside locks.
-		type stageResult struct {
-			ip          net.IP
-			port        uint16
-			clientCount int
-			reserved    int
-			maxPlayers  uint16
-			stageID     string
-			stageData   []int16
-			rawBinData0 []byte
-			rawBinData1 []byte
+		allStages := s.server.Registry.SearchStages(findPartyParams.StagePrefix, int(maxResults))
+
+		// Post-fetch filtering on snapshots (rank restriction, targets)
+		type filteredStage struct {
+			StageSnapshot
+			stageData []int16
 		}
-		var stageResults []stageResult
+		var stageResults []filteredStage
+		for _, snap := range allStages {
+			sb3 := byteframe.NewByteFrameFromBytes(snap.RawBinData3)
+			_, _ = sb3.Seek(4, 0)
 
-		for _, c := range s.server.Channels {
-			if count == maxResults {
-				break
+			stageDataParams := 7
+			if s.server.erupeConfig.RealClientMode <= cfg.G10 {
+				stageDataParams = 4
+			} else if s.server.erupeConfig.RealClientMode <= cfg.Z1 {
+				stageDataParams = 6
 			}
-			cIP := net.ParseIP(c.IP).To4()
-			cPort := c.Port
-			c.stages.Range(func(_ string, stage *Stage) bool {
-				if count == maxResults {
-					return false
+
+			var stageData []int16
+			for i := 0; i < stageDataParams; i++ {
+				if s.server.erupeConfig.RealClientMode >= cfg.Z1 {
+					stageData = append(stageData, sb3.ReadInt16())
+				} else {
+					stageData = append(stageData, int16(sb3.ReadInt8()))
 				}
-				if strings.HasPrefix(stage.id, findPartyParams.StagePrefix) {
-					stage.RLock()
-					sb3 := byteframe.NewByteFrameFromBytes(stage.rawBinaryData[stageBinaryKey{1, 3}])
-					_, _ = sb3.Seek(4, 0)
+			}
 
-					stageDataParams := 7
-					if s.server.erupeConfig.RealClientMode <= cfg.G10 {
-						stageDataParams = 4
-					} else if s.server.erupeConfig.RealClientMode <= cfg.Z1 {
-						stageDataParams = 6
-					}
-
-					var stageData []int16
-					for i := 0; i < stageDataParams; i++ {
-						if s.server.erupeConfig.RealClientMode >= cfg.Z1 {
-							stageData = append(stageData, sb3.ReadInt16())
-						} else {
-							stageData = append(stageData, int16(sb3.ReadInt8()))
-						}
-					}
-
-					if findPartyParams.RankRestriction >= 0 {
-						if stageData[0] > findPartyParams.RankRestriction {
-							stage.RUnlock()
-							return true
-						}
-					}
-
-					var hasTarget bool
-					if len(findPartyParams.Targets) > 0 {
-						for _, target := range findPartyParams.Targets {
-							if target == stageData[1] {
-								hasTarget = true
-								break
-							}
-						}
-						if !hasTarget {
-							stage.RUnlock()
-							return true
-						}
-					}
-
-					// Copy binary data under lock
-					bin0 := stage.rawBinaryData[stageBinaryKey{1, 0}]
-					bin0Copy := make([]byte, len(bin0))
-					copy(bin0Copy, bin0)
-					bin1 := stage.rawBinaryData[stageBinaryKey{1, 1}]
-					bin1Copy := make([]byte, len(bin1))
-					copy(bin1Copy, bin1)
-
-					count++
-					stageResults = append(stageResults, stageResult{
-						ip:          cIP,
-						port:        cPort,
-						clientCount: len(stage.clients) + len(stage.reservedClientSlots),
-						reserved:    len(stage.reservedClientSlots),
-						maxPlayers:  stage.maxPlayers,
-						stageID:     stage.id,
-						stageData:   stageData,
-						rawBinData0: bin0Copy,
-						rawBinData1: bin1Copy,
-					})
-					stage.RUnlock()
+			if findPartyParams.RankRestriction >= 0 {
+				if stageData[0] > findPartyParams.RankRestriction {
+					continue
 				}
-				return true
+			}
+
+			if len(findPartyParams.Targets) > 0 {
+				var hasTarget bool
+				for _, target := range findPartyParams.Targets {
+					if target == stageData[1] {
+						hasTarget = true
+						break
+					}
+				}
+				if !hasTarget {
+					continue
+				}
+			}
+
+			stageResults = append(stageResults, filteredStage{
+				StageSnapshot: snap,
+				stageData:     stageData,
 			})
 		}
+		count = uint16(len(stageResults))
 
 		for _, sr := range stageResults {
 			if !local {
-				resp.WriteUint32(binary.LittleEndian.Uint32(sr.ip))
+				resp.WriteUint32(binary.LittleEndian.Uint32(sr.ServerIP))
 			} else {
 				resp.WriteUint32(localhostAddrLE)
 			}
-			resp.WriteUint16(sr.port)
+			resp.WriteUint16(sr.ServerPort)
 
 			resp.WriteUint16(0) // Static?
 			resp.WriteUint16(0) // Unk, [0 1 2]
-			resp.WriteUint16(uint16(sr.clientCount))
-			resp.WriteUint16(sr.maxPlayers)
+			resp.WriteUint16(uint16(sr.ClientCount))
+			resp.WriteUint16(sr.MaxPlayers)
 			// TODO: Retail returned the number of clients in quests, not workshop/my series
-			resp.WriteUint16(uint16(sr.reserved))
+			resp.WriteUint16(uint16(sr.Reserved))
 
 			resp.WriteUint8(0) // Static?
-			resp.WriteUint8(uint8(sr.maxPlayers))
+			resp.WriteUint8(uint8(sr.MaxPlayers))
 			resp.WriteUint8(1) // Static?
-			resp.WriteUint8(uint8(len(sr.stageID) + 1))
-			resp.WriteUint8(uint8(len(sr.rawBinData0)))
-			resp.WriteUint8(uint8(len(sr.rawBinData1)))
+			resp.WriteUint8(uint8(len(sr.StageID) + 1))
+			resp.WriteUint8(uint8(len(sr.RawBinData0)))
+			resp.WriteUint8(uint8(len(sr.RawBinData1)))
 
 			for i := range sr.stageData {
 				if s.server.erupeConfig.RealClientMode >= cfg.Z1 {
@@ -792,9 +715,9 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint8(0) // Unk
 			resp.WriteUint8(0) // Unk
 
-			resp.WriteNullTerminatedBytes([]byte(sr.stageID))
-			resp.WriteBytes(sr.rawBinData0)
-			resp.WriteBytes(sr.rawBinData1)
+			resp.WriteNullTerminatedBytes([]byte(sr.StageID))
+			resp.WriteBytes(sr.RawBinData0)
+			resp.WriteBytes(sr.RawBinData1)
 		}
 	}
 	_, _ = resp.Seek(0, io.SeekStart)

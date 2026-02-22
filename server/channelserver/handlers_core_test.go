@@ -572,7 +572,7 @@ func TestHandleMsgSysAuthTerminal(t *testing.T) {
 func TestHandleMsgSysLockGlobalSema_NoMatch(t *testing.T) {
 	server := createMockServer()
 	server.GlobalID = "test-server"
-	server.Channels = []*Server{}
+	server.Registry = NewLocalChannelRegistry([]*Server{})
 	session := createMockSession(1, server)
 
 	pkt := &mhfpacket.MsgSysLockGlobalSema{
@@ -602,7 +602,7 @@ func TestHandleMsgSysLockGlobalSema_WithChannel(t *testing.T) {
 		GlobalID: "other-server",
 	}
 	channel.stages.Store("stage_user123", NewStage("stage_user123"))
-	server.Channels = []*Server{channel}
+	server.Registry = NewLocalChannelRegistry([]*Server{channel})
 
 	session := createMockSession(1, server)
 
@@ -633,7 +633,7 @@ func TestHandleMsgSysLockGlobalSema_SameServer(t *testing.T) {
 		GlobalID: "test-server",
 	}
 	channel.stages.Store("stage_user456", NewStage("stage_user456"))
-	server.Channels = []*Server{channel}
+	server.Registry = NewLocalChannelRegistry([]*Server{channel})
 
 	session := createMockSession(1, server)
 

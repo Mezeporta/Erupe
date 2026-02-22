@@ -52,7 +52,7 @@ func (m *mockConn) WasClosed() bool {
 // createTestServer creates a test server instance
 func createTestServer() *Server {
 	logger, _ := zap.NewDevelopment()
-	return &Server{
+	s := &Server{
 		ID:             1,
 		logger:         logger,
 		sessions:       make(map[net.Conn]*Session),
@@ -71,6 +71,8 @@ func createTestServer() *Server {
 			support:  make([]uint32, 30),
 		},
 	}
+	s.Registry = NewLocalChannelRegistry([]*Server{s})
+	return s
 }
 
 // createTestSessionForServer creates a session for a specific server
@@ -296,7 +298,7 @@ func TestBroadcastMHFAllSessions(t *testing.T) {
 // TestFindSessionByCharID tests finding sessions by character ID
 func TestFindSessionByCharID(t *testing.T) {
 	server := createTestServer()
-	server.Channels = []*Server{server} // Add itself as a channel
+	server.Registry = NewLocalChannelRegistry([]*Server{server})
 
 	// Create sessions with different char IDs
 	charIDs := []uint32{100, 200, 300}

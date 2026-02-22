@@ -858,7 +858,7 @@ func TestHandleMsgSysUnlockGlobalSema_Coverage3(t *testing.T) {
 
 func TestHandleMsgSysLockGlobalSema(t *testing.T) {
 	server := createMockServer()
-	server.Channels = make([]*Server, 0)
+	server.Registry = NewLocalChannelRegistry(make([]*Server, 0))
 
 	t.Run("no_channels_returns_response", func(t *testing.T) {
 		session := createMockSession(1, server)

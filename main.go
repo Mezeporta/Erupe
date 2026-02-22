@@ -291,7 +291,6 @@ func main() {
 
 		registry := channelserver.NewLocalChannelRegistry(channels)
 		for _, c := range channels {
-			c.Channels = channels
 			c.Registry = registry
 		}
 	}

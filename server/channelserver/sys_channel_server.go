@@ -43,7 +43,6 @@ type Config struct {
 // own locks internally and may be acquired at any point.
 type Server struct {
 	sync.Mutex
-	Channels       []*Server
 	Registry       ChannelRegistry
 	ID             uint16
 	GlobalID       string
@@ -332,16 +331,7 @@ func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) 
 
 // WorldcastMHF broadcasts a packet to all sessions across all channel servers.
 func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, ignoredChannel *Server) {
-	if s.Registry != nil {
-		s.Registry.Worldcast(pkt, ignoredSession, ignoredChannel)
-		return
-	}
-	for _, c := range s.Channels {
-		if c == ignoredChannel {
-			continue
-		}
-		c.BroadcastMHF(pkt, ignoredSession)
-	}
+	s.Registry.Worldcast(pkt, ignoredSession, ignoredChannel)
 }
 
 // BroadcastChatMessage broadcasts a simple chat message to all the sessions.
@@ -382,20 +372,7 @@ func (s *Server) DiscordScreenShotSend(charName string, title string, descriptio
 
 // FindSessionByCharID looks up a session by character ID across all channels.
 func (s *Server) FindSessionByCharID(charID uint32) *Session {
-	if s.Registry != nil {
-		return s.Registry.FindSessionByCharID(charID)
-	}
-	for _, c := range s.Channels {
-		c.Lock()
-		for _, session := range c.sessions {
-			if session.charID == charID {
-				c.Unlock()
-				return session
-			}
-		}
-		c.Unlock()
-	}
-	return nil
+	return s.Registry.FindSessionByCharID(charID)
 }
 
 // DisconnectUser disconnects all sessions belonging to the given user ID.
@@ -404,22 +381,7 @@ func (s *Server) DisconnectUser(uid uint32) {
 	if err != nil {
 		s.logger.Error("Failed to query characters for disconnect", zap.Error(err))
 	}
-	if s.Registry != nil {
-		s.Registry.DisconnectUser(cids)
-		return
-	}
-	for _, c := range s.Channels {
-		c.Lock()
-		for _, session := range c.sessions {
-			for _, cid := range cids {
-				if session.charID == cid {
-					_ = session.rawConn.Close()
-					break
-				}
-			}
-		}
-		c.Unlock()
-	}
+	s.Registry.DisconnectUser(cids)
 }
 
 // FindObjectByChar finds a stage object owned by the given character ID.

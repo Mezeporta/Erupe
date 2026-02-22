@@ -176,24 +176,17 @@ Pattern C (raw `data[i] = byte(...)` serialization) does not exist in production
 
 ---
 
-## 6. Session Struct is a God Object
+## 6. ~~Session Struct is a God Object~~ (Accepted Design)
 
-`sys_session.go` defines a `Session` struct that carries everything a handler could possibly need:
+`sys_session.go` defines a `Session` struct (~30 fields) that every handler receives. After analysis, this is accepted as appropriate design for this codebase:
 
-- Database connection (`*sql.DB`)
-- Logger
-- Server reference (which itself contains more shared state)
-- Character state (ID, name, stats)
-- Stage/lobby state
-- Semaphore state
-- Send channels
-- Various flags and locks
+- **Field clustering is natural:** The ~30 fields cluster into 7 groups (transport, identity, stage, semaphore, gameplay, mail, debug). Transport fields (`rawConn`, `cryptConn`, `sendPackets`) are only used by `sys_session.go` — already isolated. Stage, semaphore, and mail fields are each used by 1-5 dedicated handlers.
+- **Core identity is pervasive:** `charID` is used by 38 handlers — it's the core identity field. Extracting it adds indirection for zero benefit.
+- **`s.server` coupling is genuine:** Handlers need 2-5 repos + config + broadcast, so narrower interfaces would mirror the full server without meaningful decoupling.
+- **Cross-channel operations use `Registry`:** The `Channels []*Server` field has been removed. All cross-channel operations (worldcast, session lookup, disconnect, stage search, mail notification) now go exclusively through the `ChannelRegistry` interface, removing the last direct inter-server coupling.
+- **Standard game server pattern:** For a game server emulator with the `func(s *Session, p MHFPacket)` handler pattern, Session carrying identity + server reference is standard design.
 
-Every handler receives this god object, coupling all handlers to the entire server's internal state.
-
-**Impact:** Any handler can modify any part of the session or server state. There's no encapsulation. Testing requires constructing a fully populated Session with all dependencies. It's unclear which fields a given handler actually needs.
-
-**Recommendation:** Pass narrower interfaces to handlers (e.g., a `DBQuerier` interface instead of the full server, a `ResponseWriter` instead of the raw send channel).
+**Status:** Accepted design. The `Channels` field was removed and all cross-channel operations are routed through `ChannelRegistry`. No further refactoring planned.
 
 ---
 
@@ -300,7 +293,7 @@ The codebase mixes logging approaches:
 | Severity | Anti-patterns |
 |----------|--------------|
 | **High** | ~~Missing ACK responses / softlocks (#2)~~ **Fixed**, no architectural layering (#3), ~~tight DB coupling (#13)~~ **Fixed** (21 interfaces + mocks) |
-| **Medium** | ~~Magic numbers (#4)~~ **Fixed**, ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, ~~raw SQL duplication (#9)~~ **Complete** (21 repos, 0 inline queries remain) |
+| **Medium** | ~~Magic numbers (#4)~~ **Fixed**, ~~inconsistent binary I/O (#5)~~ **Resolved**, ~~Session god object (#6)~~ **Accepted design** (Channels removed, Registry-only), ~~copy-paste handlers (#8)~~ **Fixed**, ~~raw SQL duplication (#9)~~ **Complete** (21 repos, 0 inline queries remain) |
 | **Low** | God files (#1), ~~`init()` registration (#10)~~ **Fixed**, ~~inconsistent logging (#12)~~ **Fixed**, ~~mutex granularity (#7)~~ **Partially fixed** (stage map done, Raviente unchanged), ~~panic-based flow (#11)~~ **Fixed** |
 
 ### Root Cause

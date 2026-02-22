@@ -50,6 +50,7 @@ func createMockServer() *Server {
 		},
 	}
 	s.i18n = getLangStrings(s)
+	s.Registry = NewLocalChannelRegistry([]*Server{s})
 	return s
 }
 

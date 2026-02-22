@@ -281,7 +281,7 @@ func TestHandleMsgSysLockGlobalSema_RemoteMatch(t *testing.T) {
 		clients:             make(map[*Session]uint32),
 		reservedClientSlots: make(map[uint32]bool),
 	})
-	server.Channels = []*Server{server, otherChannel}
+	server.Registry = NewLocalChannelRegistry([]*Server{server, otherChannel})
 
 	session := createMockSession(1, server)
 

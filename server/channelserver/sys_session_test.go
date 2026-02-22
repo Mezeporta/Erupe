@@ -55,17 +55,19 @@ func createTestSession(mock network.Conn) *Session {
 	// Create a production logger for testing (will output to stderr)
 	logger, _ := zap.NewProduction()
 
+	server := &Server{
+		erupeConfig: &cfg.Config{
+			DebugOptions: cfg.DebugOptions{
+				LogOutboundMessages: false,
+			},
+		},
+	}
+	server.Registry = NewLocalChannelRegistry([]*Server{server})
 	s := &Session{
 		logger:      logger,
 		sendPackets: make(chan packet, 20),
 		cryptConn:   mock,
-		server: &Server{
-			erupeConfig: &cfg.Config{
-				DebugOptions: cfg.DebugOptions{
-					LogOutboundMessages: false,
-				},
-			},
-		},
+		server:      server,
 	}
 	return s
 }
