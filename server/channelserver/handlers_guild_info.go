@@ -287,14 +287,14 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 		if err == nil {
 			switch pkt.Type {
 			case mhfpacket.ENUMERATE_GUILD_TYPE_GUILD_NAME:
-				searchName, _ := stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
+				searchName := stringsupport.SJISToUTF8Lossy(pkt.Data2.ReadNullTerminatedBytes())
 				for _, guild := range tempGuilds {
 					if strings.Contains(guild.Name, searchName) {
 						guilds = append(guilds, guild)
 					}
 				}
 			case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_NAME:
-				searchName, _ := stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
+				searchName := stringsupport.SJISToUTF8Lossy(pkt.Data2.ReadNullTerminatedBytes())
 				for _, guild := range tempGuilds {
 					if strings.Contains(guild.LeaderName, searchName) {
 						guilds = append(guilds, guild)
@@ -364,14 +364,14 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 		tempAlliances, err = s.server.guildRepo.ListAlliances()
 		switch pkt.Type {
 		case mhfpacket.ENUMERATE_ALLIANCE_TYPE_ALLIANCE_NAME:
-			searchName, _ := stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
+			searchName := stringsupport.SJISToUTF8Lossy(pkt.Data2.ReadNullTerminatedBytes())
 			for _, alliance := range tempAlliances {
 				if strings.Contains(alliance.Name, searchName) {
 					alliances = append(alliances, alliance)
 				}
 			}
 		case mhfpacket.ENUMERATE_ALLIANCE_TYPE_LEADER_NAME:
-			searchName, _ := stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
+			searchName := stringsupport.SJISToUTF8Lossy(pkt.Data2.ReadNullTerminatedBytes())
 			for _, alliance := range tempAlliances {
 				if strings.Contains(alliance.ParentGuild.LeaderName, searchName) {
 					alliances = append(alliances, alliance)

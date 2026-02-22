@@ -32,7 +32,7 @@ func (m *MsgMhfLoadHouse) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientCo
 	m.CheckPass = bf.ReadBool()
 	bf.ReadUint16() // Zeroed
 	bf.ReadUint8()  // Password length
-	m.Password, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	m.Password = stringsupport.SJISToUTF8Lossy(bf.ReadNullTerminatedBytes())
 	return nil
 }
 

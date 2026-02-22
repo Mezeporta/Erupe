@@ -30,7 +30,7 @@ func (m *MsgMhfEnumerateHouse) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cli
 	bf.ReadUint16() // Zeroed
 	lenName := bf.ReadUint8()
 	if lenName > 0 {
-		m.Name, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+		m.Name = stringsupport.SJISToUTF8Lossy(bf.ReadNullTerminatedBytes())
 	}
 	return nil
 }

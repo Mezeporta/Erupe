@@ -62,8 +62,8 @@ func ListenChat(ch *protocol.ChannelConn, cb ChatCallback) {
 		_ = pbf.ReadUint16() // flags
 		_ = pbf.ReadUint16() // senderNameLen
 		_ = pbf.ReadUint16() // messageLen
-		msg, _ := stringsupport.SJISToUTF8(pbf.ReadNullTerminatedBytes())
-		sender, _ := stringsupport.SJISToUTF8(pbf.ReadNullTerminatedBytes())
+		msg := stringsupport.SJISToUTF8Lossy(pbf.ReadNullTerminatedBytes())
+		sender := stringsupport.SJISToUTF8Lossy(pbf.ReadNullTerminatedBytes())
 
 		cb(ChatMessage{
 			ChatType:   chatType,

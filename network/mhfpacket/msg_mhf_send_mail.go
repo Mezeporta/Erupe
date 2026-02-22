@@ -35,8 +35,8 @@ func (m *MsgMhfSendMail) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientCon
 	bf.ReadUint16() // Zeroed
 	m.Quantity = bf.ReadUint16()
 	m.ItemID = bf.ReadUint16()
-	m.Subject, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
-	m.Body, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	m.Subject = stringsupport.SJISToUTF8Lossy(bf.ReadNullTerminatedBytes())
+	m.Body = stringsupport.SJISToUTF8Lossy(bf.ReadNullTerminatedBytes())
 	return nil
 }
 

@@ -40,8 +40,8 @@ func (m *MsgBinChat) Parse(bf *byteframe.ByteFrame) error {
 	m.Flags = bf.ReadUint16()
 	_ = bf.ReadUint16() // lenSenderName
 	_ = bf.ReadUint16() // lenMessage
-	m.Message, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
-	m.SenderName, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	m.Message = stringsupport.SJISToUTF8Lossy(bf.ReadNullTerminatedBytes())
+	m.SenderName = stringsupport.SJISToUTF8Lossy(bf.ReadNullTerminatedBytes())
 	return nil
 }
 

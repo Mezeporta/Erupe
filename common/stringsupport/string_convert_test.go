@@ -461,6 +461,25 @@ func BenchmarkCSVElems(b *testing.B) {
 	}
 }
 
+func TestSJISToUTF8Lossy(t *testing.T) {
+	// Valid SJIS (ASCII subset) decodes correctly.
+	got := SJISToUTF8Lossy([]byte("Hello"))
+	if got != "Hello" {
+		t.Errorf("SJISToUTF8Lossy(valid) = %q, want %q", got, "Hello")
+	}
+
+	// Truncated multi-byte SJIS sequence (lead byte 0x82 without trail byte)
+	// does not panic and returns some result (lossy).
+	got = SJISToUTF8Lossy([]byte{0x82})
+	_ = got // must not panic
+
+	// Nil input returns empty string.
+	got = SJISToUTF8Lossy(nil)
+	if got != "" {
+		t.Errorf("SJISToUTF8Lossy(nil) = %q, want %q", got, "")
+	}
+}
+
 func TestUTF8ToSJIS_UnsupportedCharacters(t *testing.T) {
 	// Regression test for PR #116: Characters outside the Shift-JIS range
 	// (e.g. Lenny face, cuneiform) previously caused a panic in UTF8ToSJIS,

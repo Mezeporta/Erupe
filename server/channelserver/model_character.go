@@ -172,7 +172,7 @@ const (
 )
 
 func (save *CharacterSaveData) updateStructWithSaveData() {
-	save.Name, _ = stringsupport.SJISToUTF8(bfutil.UpToNull(save.decompSave[saveFieldNameOffset : saveFieldNameOffset+saveFieldNameLen]))
+	save.Name = stringsupport.SJISToUTF8Lossy(bfutil.UpToNull(save.decompSave[saveFieldNameOffset : saveFieldNameOffset+saveFieldNameLen]))
 	if save.decompSave[save.Pointers[pGender]] == 1 {
 		save.Gender = true
 	} else {

@@ -194,7 +194,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 	_, _ = bf.Seek(88, io.SeekStart)
 	name := bf.ReadNullTerminatedBytes()
 	s.server.userBinary.Set(s.charID, 1, append(name, []byte{0x00}...))
-	s.Name, _ = stringsupport.SJISToUTF8(name)
+	s.Name = stringsupport.SJISToUTF8Lossy(name)
 }
 
 func handleMsgMhfSaveScenarioData(s *Session, p mhfpacket.MHFPacket) {

@@ -30,7 +30,7 @@ func (m *MsgMhfUpdateHouse) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Client
 	bf.ReadUint8() // Zeroed
 	bf.ReadUint8() // Zeroed
 	bf.ReadUint8() // Password length
-	m.Password, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	m.Password = stringsupport.SJISToUTF8Lossy(bf.ReadNullTerminatedBytes())
 	return nil
 }
 

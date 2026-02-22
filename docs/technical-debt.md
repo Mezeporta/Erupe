@@ -102,17 +102,7 @@ Suggested split: `repo_guild.go` (core CRUD), `repo_guild_members.go`, `repo_gui
 
 ~~**a) `fmt.Sprintf` inside structured logger calls (6 sites):**~~ **Fixed.** All 6 sites now use `zap.Uint32`/`zap.Uint8`/`zap.String` structured fields instead of `fmt.Sprintf`.
 
-**b) 20 silently discarded SJIS encoding errors in packet parsing:**
-
-The pattern `m.Field, _ = stringsupport.SJISToUTF8(...)` appears across:
-- `network/binpacket/msg_bin_chat.go:43-44`
-- `network/mhfpacket/msg_mhf_apply_bbs_article.go:33-35`
-- `network/mhfpacket/msg_mhf_send_mail.go:38-39`
-- `network/mhfpacket/msg_mhf_update_guild_message_board.go:41-42,50-51`
-- `server/channelserver/model_character.go:175`
-- And 7+ more packet files
-
-A malformed SJIS string from a client yields an empty string with no log output, making garbled text impossible to debug. The error return should at least be logged at debug level.
+~~**b) 20+ silently discarded SJIS encoding errors in packet parsing:**~~ **Fixed.** All call sites now use `SJISToUTF8Lossy()` which logs decode errors at `slog.Debug` level.
 
 ### ~~6. Inconsistent transaction API~~ (Fixed)
 
@@ -151,5 +141,5 @@ Based on impact and the momentum from recent repo-interface refactoring:
 4. **Split `repo_guild.go`** — last oversized file after the recent refactoring push
 5. ~~**Fix `fmt.Sprintf` in logger calls**~~ — **Done**
 6. ~~**Add `LoopDelay` Viper default**~~ — **Done**
-7. **Log SJIS decoding errors** — improves debuggability for text issues
+7. ~~**Log SJIS decoding errors**~~ — **Done**
 8. ~~**Standardize on `BeginTxx`**~~ — **Done**

@@ -108,7 +108,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
-		guild.Comment, _ = stringsupport.SJISToUTF8(pkt.Data2.ReadNullTerminatedBytes())
+		guild.Comment = stringsupport.SJISToUTF8Lossy(pkt.Data2.ReadNullTerminatedBytes())
 		if err := s.server.guildRepo.Save(guild); err != nil {
 			s.logger.Error("Failed to save guild comment", zap.Error(err))
 		}
@@ -168,7 +168,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleRenamePugi(s *Session, bf *byteframe.ByteFrame, guild *Guild, num int) {
-	name, _ := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+	name := stringsupport.SJISToUTF8Lossy(bf.ReadNullTerminatedBytes())
 	switch num {
 	case 1:
 		guild.PugiName1 = name

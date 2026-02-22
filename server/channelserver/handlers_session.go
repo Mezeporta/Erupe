@@ -489,7 +489,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		bf.ReadUint16() // term length
 		maxResults = bf.ReadUint16()
 		bf.ReadUint8() // Unk
-		term, _ = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
+		term = stringsupport.SJISToUTF8Lossy(bf.ReadNullTerminatedBytes())
 	case 3:
 		_ip := bf.ReadBytes(4)
 		ip = fmt.Sprintf("%d.%d.%d.%d", _ip[3], _ip[2], _ip[1], _ip[0])

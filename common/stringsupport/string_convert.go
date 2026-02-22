@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -38,6 +39,16 @@ func SJISToUTF8(b []byte) (string, error) {
 		return "", fmt.Errorf("ShiftJIS decode: %w", err)
 	}
 	return string(result), nil
+}
+
+// SJISToUTF8Lossy decodes Shift-JIS bytes to a UTF-8 string, logging
+// any decoding error at debug level instead of returning it.
+func SJISToUTF8Lossy(b []byte) string {
+	s, err := SJISToUTF8(b)
+	if err != nil {
+		slog.Debug("SJIS decode failed", "error", err, "raw_len", len(b))
+	}
+	return s
 }
 
 // ToNGWord converts a UTF-8 string into a slice of uint16 values in the
