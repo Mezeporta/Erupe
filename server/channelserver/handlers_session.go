@@ -58,7 +58,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	if !s.server.erupeConfig.DebugOptions.DisableTokenCheck {
 		if err := s.server.sessionRepo.ValidateLoginToken(pkt.LoginTokenString, pkt.LoginTokenNumber, pkt.CharID0); err != nil {
 			_ = s.rawConn.Close()
-			s.logger.Warn(fmt.Sprintf("Invalid login token, offending CID: (%d)", pkt.CharID0))
+			s.logger.Warn("Invalid login token", zap.Uint32("charID", pkt.CharID0))
 			return
 		}
 	}

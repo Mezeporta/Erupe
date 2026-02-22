@@ -328,6 +328,7 @@ func LoadConfig() (*Config, error) {
 		Enabled:   true,
 		OutputDir: "save-backups",
 	})
+	viper.SetDefault("LoopDelay", 50)
 
 	err := viper.ReadInConfig()
 	if err != nil {

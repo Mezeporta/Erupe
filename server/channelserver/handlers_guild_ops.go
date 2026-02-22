@@ -31,7 +31,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OperateGuildDisband:
 		response := 1
 		if guild.LeaderCharID != s.charID {
-			s.logger.Warn(fmt.Sprintf("character '%d' is attempting to manage guild '%d' without permission", s.charID, guild.ID))
+			s.logger.Warn("Unauthorized guild management attempt", zap.Uint32("charID", s.charID), zap.Uint32("guildID", guild.ID))
 			response = 0
 		} else {
 			err = s.server.guildRepo.Disband(guild.ID)
@@ -309,7 +309,7 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		}
 	default:
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-		s.logger.Warn(fmt.Sprintf("unhandled operateGuildMember action '%d'", pkt.Action))
+		s.logger.Warn("Unhandled operateGuildMember action", zap.Uint8("action", pkt.Action))
 	}
 
 	if err != nil {

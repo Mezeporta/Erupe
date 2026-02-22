@@ -180,7 +180,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 
 	data, err := s.server.charRepo.LoadColumn(s.charID, "savedata")
 	if err != nil || len(data) == 0 {
-		s.logger.Warn(fmt.Sprintf("Failed to load savedata (CID: %d)", s.charID), zap.Error(err))
+		s.logger.Warn("Failed to load savedata", zap.Uint32("charID", s.charID), zap.Error(err))
 		_ = s.rawConn.Close() // Terminate the connection
 		return
 	}

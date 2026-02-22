@@ -109,7 +109,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 		// Read the scenario file.
 		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("scenarios/%s.bin", filename)))
 		if err != nil {
-			s.logger.Error(fmt.Sprintf("Failed to open file: %s/scenarios/%s.bin", s.server.erupeConfig.BinPath, filename))
+			s.logger.Error("Failed to open scenario file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", filename))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
@@ -128,7 +128,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 
 		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
 		if err != nil {
-			s.logger.Error(fmt.Sprintf("Failed to open file: %s/quests/%s.bin", s.server.erupeConfig.BinPath, pkt.Filename))
+			s.logger.Error("Failed to open quest file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", pkt.Filename))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
