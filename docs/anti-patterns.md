@@ -197,9 +197,9 @@ Every handler receives this god object, coupling all handlers to the entire serv
 
 ---
 
-## 7. Mutex Granularity Issues
+## 7. ~~Mutex Granularity Issues~~ (Stage Map Fixed)
 
-`sys_stage.go` and `sys_channel_server.go` use coarse-grained `sync.RWMutex` locks on entire maps:
+~~`sys_stage.go` and `sys_channel_server.go` use coarse-grained `sync.RWMutex` locks on entire maps:~~
 
 ```go
 // A single lock for ALL stages
@@ -210,9 +210,7 @@ defer s.stageMapLock.Unlock()
 
 The Raviente shared state uses a single mutex for all Raviente data fields.
 
-**Impact:** Contention scales with player count. Operations on unrelated stages block each other unnecessarily. Under load, this becomes a bottleneck.
-
-**Recommendation:** Use per-stage locks (e.g., `sync.Map` or a map of per-key mutexes) so operations on different stages don't contend. For Raviente, consider splitting the mutex by data group.
+**Status:** **Partially fixed.** The global `stagesLock sync.RWMutex` + `map[string]*Stage` has been replaced with a typed `StageMap` wrapper around `sync.Map`, providing lock-free reads and concurrent writes to disjoint keys. Per-stage `sync.RWMutex` remains for protecting individual stage state. The Raviente mutex is unchanged — contention is inherently low (single world event, few concurrent accessors).
 
 ---
 
@@ -240,17 +238,7 @@ The same table is queried in different handlers with slightly different column s
 
 **Recommendation:** At minimum, define query constants. Ideally, introduce a repository layer that encapsulates all queries for a given entity.
 
-**Status:** ~~Substantially fixed.~~ **Nearly complete.** 21 repository files now cover all major subsystems: character, guild, user, house, tower, festa, mail, rengoku, stamp, distribution, session, gacha, event, achievement, shop, cafe, goocoo, diva, misc, scenario, mercenary. All guild subsystem tables (`guild_posts`, `guild_adventures`, `guild_meals`, `guild_hunts`, `guild_hunts_claimed`, `guild_alliances`) are fully migrated into `repo_guild.go`.
-
-Only 5 inline SQL queries remain across 3 handler files:
-
-| File | Table | Query | Why unmigrated |
-|------|-------|-------|----------------|
-| `handlers_character.go:14` | `characters` | SELECT savedata by ID | Bulk `CharacterSaveData` read |
-| `handlers_commands.go:107` | `bans` | UPSERT permanent ban | Admin command, no `bans` repo yet |
-| `handlers_commands.go:113` | `bans` | UPSERT temporary ban | Admin command, no `bans` repo yet |
-| `handlers_quest.go:352` | `event_quests` | SELECT all event quests for rotation | Event quest rotation logic |
-| `handlers_quest.go:389` | `event_quests` | UPDATE rotation start_time | Event quest rotation logic |
+**Status:** ~~Substantially fixed.~~ ~~Nearly complete.~~ **Complete.** 21 repository files now cover all major subsystems: character, guild, user, house, tower, festa, mail, rengoku, stamp, distribution, session, gacha, event, achievement, shop, cafe, goocoo, diva, misc, scenario, mercenary. All guild subsystem tables (`guild_posts`, `guild_adventures`, `guild_meals`, `guild_hunts`, `guild_hunts_claimed`, `guild_alliances`) are fully migrated into `repo_guild.go`. Zero inline SQL queries remain in handler files — the last 5 were migrated to `charRepo.LoadSaveData`, `userRepo.BanUser`, `eventRepo.GetEventQuests`, and `eventRepo.UpdateEventQuestStartTimes`.
 
 ---
 
@@ -294,18 +282,16 @@ The codebase mixes logging approaches:
 
 ---
 
-## 13. Tight Coupling to PostgreSQL
+## 13. ~~Tight Coupling to PostgreSQL~~ (Decoupled via Interfaces)
 
-Database operations use raw `database/sql` with PostgreSQL-specific syntax throughout:
+~~Database operations use raw `database/sql` with PostgreSQL-specific syntax throughout:~~
 
-- `$1` parameter placeholders (PostgreSQL-specific)
-- PostgreSQL-specific types and functions in queries
-- `*sql.DB` passed directly through the server struct to every handler
-- No interface abstraction over data access
+- ~~`$1` parameter placeholders (PostgreSQL-specific)~~
+- ~~PostgreSQL-specific types and functions in queries~~
+- ~~`*sql.DB` passed directly through the server struct to every handler~~
+- ~~No interface abstraction over data access~~
 
-**Impact:** Unit tests require a real PostgreSQL instance. Storage can't be swapped (e.g., SQLite for development). Mocking data access for handler tests is impossible.
-
-**Recommendation:** While PostgreSQL is the correct production choice, introducing a repository interface would enable in-memory or mock implementations for testing.
+**Status:** **Fixed.** All 20 repository interfaces are defined in `repo_interfaces.go` (`CharacterRepo`, `GuildRepo`, `UserRepo`, `GachaRepo`, `HouseRepo`, `FestaRepo`, `TowerRepo`, `RengokuRepo`, `MailRepo`, `StampRepo`, `DistributionRepo`, `SessionRepo`, `EventRepo`, `AchievementRepo`, `ShopRepo`, `CafeRepo`, `GoocooRepo`, `DivaRepo`, `MiscRepo`, `ScenarioRepo`, `MercenaryRepo`). The `Server` struct holds interface types, not concrete types. Mock implementations in `repo_mocks_test.go` enable handler unit tests without PostgreSQL. SQL is still PostgreSQL-specific within the concrete `*Repository` types, but handlers are fully decoupled from the database.
 
 ---
 
@@ -313,9 +299,9 @@ Database operations use raw `database/sql` with PostgreSQL-specific syntax throu
 
 | Severity | Anti-patterns |
 |----------|--------------|
-| **High** | ~~Missing ACK responses / softlocks (#2)~~ **Fixed**, no architectural layering (#3), tight DB coupling (#13) |
-| **Medium** | ~~Magic numbers (#4)~~ **Fixed**, ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, ~~raw SQL duplication (#9)~~ **Nearly complete** (21 repos, 5 inline queries remain) |
-| **Low** | God files (#1), ~~`init()` registration (#10)~~ **Fixed**, ~~inconsistent logging (#12)~~ **Fixed**, mutex granularity (#7), ~~panic-based flow (#11)~~ **Fixed** |
+| **High** | ~~Missing ACK responses / softlocks (#2)~~ **Fixed**, no architectural layering (#3), ~~tight DB coupling (#13)~~ **Fixed** (21 interfaces + mocks) |
+| **Medium** | ~~Magic numbers (#4)~~ **Fixed**, ~~inconsistent binary I/O (#5)~~ **Resolved**, Session god object (#6), ~~copy-paste handlers (#8)~~ **Fixed**, ~~raw SQL duplication (#9)~~ **Complete** (21 repos, 0 inline queries remain) |
+| **Low** | God files (#1), ~~`init()` registration (#10)~~ **Fixed**, ~~inconsistent logging (#12)~~ **Fixed**, ~~mutex granularity (#7)~~ **Partially fixed** (stage map done, Raviente unchanged), ~~panic-based flow (#11)~~ **Fixed** |
 
 ### Root Cause
 
@@ -329,6 +315,6 @@ Most of these anti-patterns stem from a single root cause: **the codebase grew o
 4. ~~**Extract a guild repository layer**~~ — **Done.** `repo_guild.go` covers all guild tables including subsystem tables
 5. ~~**Define protocol constants**~~ — **Done** (see #4)
 6. ~~**Standardize binary I/O**~~ — already standardized on `byteframe`; remaining `encoding/binary` uses are correct (see #5)
-7. **Migrate last 5 inline queries** — `handlers_character.go` (bulk save read), `handlers_commands.go` (bans UPSERT ×2), `handlers_quest.go` (event quest rotation ×2)
-8. **Introduce repository interfaces** (#13) — enables mocking/testing without PostgreSQL
-9. **Reduce mutex contention** (#7) — per-stage locks instead of global stage map lock
+7. ~~**Migrate last 5 inline queries**~~ — **Done.** Migrated to `charRepo.LoadSaveData`, `userRepo.BanUser`, `eventRepo.GetEventQuests`, `eventRepo.UpdateEventQuestStartTimes`
+8. ~~**Introduce repository interfaces**~~ — **Done.** 20 interfaces in `repo_interfaces.go`, mock implementations in `repo_mocks_test.go`, `Server` struct uses interface types
+9. ~~**Reduce mutex contention**~~ — **Done.** `StageMap` (`sync.Map`-backed) replaces global `stagesLock`. Raviente mutex unchanged (low contention)
