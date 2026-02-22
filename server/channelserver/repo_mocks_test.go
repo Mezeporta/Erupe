@@ -110,9 +110,10 @@ type mockCharacterRepo struct {
 	strings map[string]string
 	bools   map[string]bool
 
-	adjustErr error
-	readErr   error
-	saveErr   error
+	adjustErr     error
+	readErr       error
+	saveErr       error
+	loadColumnErr error
 
 	// LoadSaveData mock fields
 	loadSaveDataID   uint32
@@ -167,7 +168,12 @@ func (m *mockCharacterRepo) SaveTime(_ uint32, column string, value time.Time) e
 	return m.saveErr
 }
 
-func (m *mockCharacterRepo) LoadColumn(_ uint32, column string) ([]byte, error)     { return m.columns[column], nil }
+func (m *mockCharacterRepo) LoadColumn(_ uint32, column string) ([]byte, error) {
+	if m.loadColumnErr != nil {
+		return nil, m.loadColumnErr
+	}
+	return m.columns[column], nil
+}
 func (m *mockCharacterRepo) SaveColumn(_ uint32, column string, data []byte) error   { m.columns[column] = data; return m.saveErr }
 func (m *mockCharacterRepo) GetName(_ uint32) (string, error)                        { return "TestChar", nil }
 func (m *mockCharacterRepo) GetUserID(_ uint32) (uint32, error)                      { return 1, nil }
@@ -735,3 +741,199 @@ func (m *mockHouseRepoForItems) GetWarehouseEquipData(_ uint32, _ uint8) ([]byte
 func (m *mockHouseRepoForItems) SetWarehouseEquipData(_ uint32, _ uint8, _ []byte) error       { return nil }
 func (m *mockHouseRepoForItems) GetTitles(_ uint32) ([]Title, error)                           { return nil, nil }
 func (m *mockHouseRepoForItems) AcquireTitle(_ uint16, _ uint32) error                         { return nil }
+
+// --- mockSessionRepo ---
+
+type mockSessionRepo struct {
+	validateErr error
+	bindErr     error
+	clearErr    error
+	updateErr   error
+
+	boundToken  string
+	clearedToken string
+}
+
+func (m *mockSessionRepo) ValidateLoginToken(_ string, _ uint32, _ uint32) error { return m.validateErr }
+func (m *mockSessionRepo) BindSession(token string, _ uint16, _ uint32) error {
+	m.boundToken = token
+	return m.bindErr
+}
+func (m *mockSessionRepo) ClearSession(token string) error {
+	m.clearedToken = token
+	return m.clearErr
+}
+func (m *mockSessionRepo) UpdatePlayerCount(_ uint16, _ int) error { return m.updateErr }
+
+// --- mockGachaRepo ---
+
+type mockGachaRepo struct {
+	// GetEntryForTransaction
+	txItemType   uint8
+	txItemNumber uint16
+	txRolls      int
+	txErr        error
+
+	// GetRewardPool
+	rewardPool    []GachaEntry
+	rewardPoolErr error
+
+	// GetItemsForEntry
+	entryItems    map[uint32][]GachaItem
+	entryItemsErr error
+
+	// GetGuaranteedItems
+	guaranteedItems []GachaItem
+
+	// Stepup
+	stepupStep    uint8
+	stepupTime    time.Time
+	stepupErr     error
+	hasEntryType  bool
+	deletedStepup bool
+	insertedStep  uint8
+
+	// Box
+	boxEntryIDs    []uint32
+	boxEntryIDsErr error
+	insertedBoxIDs []uint32
+	deletedBox     bool
+
+	// Shop
+	gachas       []Gacha
+	listShopErr  error
+	shopType     int
+	allEntries   []GachaEntry
+	allEntriesErr error
+	weightDivisor float64
+
+	// FrontierPoints from gacha
+	addFPErr error
+}
+
+func (m *mockGachaRepo) GetEntryForTransaction(_ uint32, _ uint8) (uint8, uint16, int, error) {
+	return m.txItemType, m.txItemNumber, m.txRolls, m.txErr
+}
+func (m *mockGachaRepo) GetRewardPool(_ uint32) ([]GachaEntry, error) {
+	return m.rewardPool, m.rewardPoolErr
+}
+func (m *mockGachaRepo) GetItemsForEntry(entryID uint32) ([]GachaItem, error) {
+	if m.entryItemsErr != nil {
+		return nil, m.entryItemsErr
+	}
+	if m.entryItems != nil {
+		return m.entryItems[entryID], nil
+	}
+	return nil, nil
+}
+func (m *mockGachaRepo) GetGuaranteedItems(_ uint8, _ uint32) ([]GachaItem, error) {
+	return m.guaranteedItems, nil
+}
+func (m *mockGachaRepo) GetStepupStep(_ uint32, _ uint32) (uint8, error) {
+	return m.stepupStep, m.stepupErr
+}
+func (m *mockGachaRepo) GetStepupWithTime(_ uint32, _ uint32) (uint8, time.Time, error) {
+	return m.stepupStep, m.stepupTime, m.stepupErr
+}
+func (m *mockGachaRepo) HasEntryType(_ uint32, _ uint8) (bool, error) {
+	return m.hasEntryType, nil
+}
+func (m *mockGachaRepo) DeleteStepup(_ uint32, _ uint32) error {
+	m.deletedStepup = true
+	return nil
+}
+func (m *mockGachaRepo) InsertStepup(_ uint32, step uint8, _ uint32) error {
+	m.insertedStep = step
+	return nil
+}
+func (m *mockGachaRepo) GetBoxEntryIDs(_ uint32, _ uint32) ([]uint32, error) {
+	return m.boxEntryIDs, m.boxEntryIDsErr
+}
+func (m *mockGachaRepo) InsertBoxEntry(_ uint32, entryID uint32, _ uint32) error {
+	m.insertedBoxIDs = append(m.insertedBoxIDs, entryID)
+	return nil
+}
+func (m *mockGachaRepo) DeleteBoxEntries(_ uint32, _ uint32) error {
+	m.deletedBox = true
+	return nil
+}
+func (m *mockGachaRepo) ListShop() ([]Gacha, error)               { return m.gachas, m.listShopErr }
+func (m *mockGachaRepo) GetShopType(_ uint32) (int, error)         { return m.shopType, nil }
+func (m *mockGachaRepo) GetAllEntries(_ uint32) ([]GachaEntry, error) {
+	return m.allEntries, m.allEntriesErr
+}
+func (m *mockGachaRepo) GetWeightDivisor(_ uint32) (float64, error) { return m.weightDivisor, nil }
+
+// --- mockShopRepo ---
+
+type mockShopRepo struct {
+	shopItems       []ShopItem
+	shopItemsErr    error
+	purchases       []shopPurchaseRecord
+	recordErr       error
+	fpointQuantity  int
+	fpointValue     int
+	fpointItemErr   error
+	fpointExchanges []FPointExchange
+}
+
+type shopPurchaseRecord struct {
+	charID, itemHash, quantity uint32
+}
+
+func (m *mockShopRepo) GetShopItems(_ uint8, _ uint32, _ uint32) ([]ShopItem, error) {
+	return m.shopItems, m.shopItemsErr
+}
+func (m *mockShopRepo) RecordPurchase(charID, itemHash, quantity uint32) error {
+	m.purchases = append(m.purchases, shopPurchaseRecord{charID, itemHash, quantity})
+	return m.recordErr
+}
+func (m *mockShopRepo) GetFpointItem(_ uint32) (int, int, error) {
+	return m.fpointQuantity, m.fpointValue, m.fpointItemErr
+}
+func (m *mockShopRepo) GetFpointExchangeList() ([]FPointExchange, error) {
+	return m.fpointExchanges, nil
+}
+
+// --- mockUserRepoGacha (UserRepo with configurable gacha fields) ---
+
+type mockUserRepoGacha struct {
+	mockUserRepoForItems
+
+	gachaFP, gachaGP, gachaGT uint32
+	trialCoins                 uint16
+	deductTrialErr             error
+	deductPremiumErr           error
+	deductFPErr                error
+	addFPFromGachaErr          error
+
+	fpDeductBalance uint32
+	fpDeductErr     error
+	fpCreditBalance uint32
+	fpCreditErr     error
+
+	setLastCharErr error
+	rights         uint32
+	rightsErr      error
+}
+
+func (m *mockUserRepoGacha) GetGachaPoints(_ uint32) (uint32, uint32, uint32, error) {
+	return m.gachaFP, m.gachaGP, m.gachaGT, nil
+}
+func (m *mockUserRepoGacha) GetTrialCoins(_ uint32) (uint16, error)    { return m.trialCoins, nil }
+func (m *mockUserRepoGacha) DeductTrialCoins(_ uint32, _ uint32) error { return m.deductTrialErr }
+func (m *mockUserRepoGacha) DeductPremiumCoins(_ uint32, _ uint32) error {
+	return m.deductPremiumErr
+}
+func (m *mockUserRepoGacha) DeductFrontierPoints(_ uint32, _ uint32) error { return m.deductFPErr }
+func (m *mockUserRepoGacha) AddFrontierPointsFromGacha(_ uint32, _ uint32, _ uint8) error {
+	return m.addFPFromGachaErr
+}
+func (m *mockUserRepoGacha) AdjustFrontierPointsDeduct(_ uint32, _ int) (uint32, error) {
+	return m.fpDeductBalance, m.fpDeductErr
+}
+func (m *mockUserRepoGacha) AdjustFrontierPointsCredit(_ uint32, _ int) (uint32, error) {
+	return m.fpCreditBalance, m.fpCreditErr
+}
+func (m *mockUserRepoGacha) SetLastCharacter(_ uint32, _ uint32) error { return m.setLastCharErr }
+func (m *mockUserRepoGacha) GetRights(_ uint32) (uint32, error)       { return m.rights, m.rightsErr }
