@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	cfg "erupe-ce/config"
 	"erupe-ce/common/gametime"
@@ -33,7 +34,6 @@ func TestLauncherEndpoint(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	// Create test request
@@ -123,7 +123,6 @@ func TestLoginEndpointInvalidJSON(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	// Invalid JSON
@@ -148,7 +147,6 @@ func TestLoginEndpointEmptyCredentials(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	tests := []struct {
@@ -200,7 +198,6 @@ func TestRegisterEndpointInvalidJSON(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	invalidJSON := `{"username": "test"`
@@ -223,7 +220,6 @@ func TestRegisterEndpointEmptyCredentials(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	tests := []struct {
@@ -271,7 +267,6 @@ func TestCreateCharacterEndpointInvalidJSON(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	invalidJSON := `{"token": `
@@ -294,7 +289,6 @@ func TestDeleteCharacterEndpointInvalidJSON(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	invalidJSON := `{"token": "test"`
@@ -317,7 +311,6 @@ func TestExportSaveEndpointInvalidJSON(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	invalidJSON := `{"token": `
@@ -342,7 +335,6 @@ func TestScreenShotEndpointDisabled(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	req := httptest.NewRequest("POST", "/api/ss/bbs/upload.php", nil)
@@ -379,7 +371,6 @@ func TestScreenShotGetInvalidToken(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
 	}
 
 	tests := []struct {
@@ -408,10 +399,16 @@ func TestScreenShotGetInvalidToken(t *testing.T) {
 	}
 }
 
+// newTestUserRepo returns a mock user repo suitable for newAuthData tests.
+func newTestUserRepo() *mockAPIUserRepo {
+	return &mockAPIUserRepo{
+		lastLogin:    time.Now(),
+		returnExpiry: time.Now().Add(time.Hour * 24 * 30),
+	}
+}
+
 // TestNewAuthDataStructure tests the newAuthData helper function
 func TestNewAuthDataStructure(t *testing.T) {
-	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
-
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
@@ -423,7 +420,7 @@ func TestNewAuthDataStructure(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
+		userRepo:    newTestUserRepo(),
 	}
 
 	characters := []Character{
@@ -466,8 +463,6 @@ func TestNewAuthDataStructure(t *testing.T) {
 
 // TestNewAuthDataDebugMode tests newAuthData with debug mode enabled
 func TestNewAuthDataDebugMode(t *testing.T) {
-	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
-
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
@@ -477,7 +472,7 @@ func TestNewAuthDataDebugMode(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
+		userRepo:    newTestUserRepo(),
 	}
 
 	characters := []Character{
@@ -500,8 +495,6 @@ func TestNewAuthDataDebugMode(t *testing.T) {
 
 // TestNewAuthDataMezFesConfiguration tests MezFes configuration in newAuthData
 func TestNewAuthDataMezFesConfiguration(t *testing.T) {
-	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
-
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
@@ -513,7 +506,7 @@ func TestNewAuthDataMezFesConfiguration(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
+		userRepo:    newTestUserRepo(),
 	}
 
 	authData := server.newAuthData(1, 0, 1, "token", []Character{})
@@ -534,8 +527,6 @@ func TestNewAuthDataMezFesConfiguration(t *testing.T) {
 
 // TestNewAuthDataHideNotices tests notice hiding in newAuthData
 func TestNewAuthDataHideNotices(t *testing.T) {
-	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
-
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
@@ -546,7 +537,7 @@ func TestNewAuthDataHideNotices(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
+		userRepo:    newTestUserRepo(),
 	}
 
 	authData := server.newAuthData(1, 0, 1, "token", []Character{})
@@ -558,8 +549,6 @@ func TestNewAuthDataHideNotices(t *testing.T) {
 
 // TestNewAuthDataTimestamps tests timestamp generation in newAuthData
 func TestNewAuthDataTimestamps(t *testing.T) {
-	t.Skip("newAuthData requires database for getReturnExpiry - needs integration test")
-
 	logger := NewTestLogger(t)
 	defer func() { _ = logger.Sync() }()
 
@@ -567,7 +556,7 @@ func TestNewAuthDataTimestamps(t *testing.T) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
-		db:          nil,
+		userRepo:    newTestUserRepo(),
 	}
 
 	authData := server.newAuthData(1, 0, 1, "token", []Character{})
@@ -611,6 +600,10 @@ func BenchmarkNewAuthData(b *testing.B) {
 	server := &APIServer{
 		logger:      logger,
 		erupeConfig: c,
+		userRepo: &mockAPIUserRepo{
+			lastLogin:    time.Now(),
+			returnExpiry: time.Now().Add(time.Hour * 24 * 30),
+		},
 	}
 
 	characters := make([]Character, 16)

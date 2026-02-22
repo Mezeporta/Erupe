@@ -113,6 +113,99 @@ func TestClanMemberLimitsBoundsChecking(t *testing.T) {
 }
 
 
+// TestEncodeServerInfo_WithMockRepo tests encodeServerInfo with a mock server repo
+func TestEncodeServerInfo_WithMockRepo(t *testing.T) {
+	config := &cfg.Config{
+		RealClientMode: cfg.Z1,
+		Host:           "127.0.0.1",
+		Entrance: cfg.Entrance{
+			Enabled: true,
+			Port:    53310,
+			Entries: []cfg.EntranceServerInfo{
+				{
+					Name:        "TestServer",
+					Description: "Test",
+					IP:          "127.0.0.1",
+					Type:        0,
+					Recommended: 0,
+					AllowedClientFlags: 0xFFFFFFFF,
+					Channels: []cfg.EntranceChannelInfo{
+						{
+							Port:       54001,
+							MaxPlayers: 100,
+						},
+					},
+				},
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			ClanMemberLimits: [][]uint8{{1, 60}},
+		},
+	}
+
+	server := &Server{
+		logger:      zap.NewNop(),
+		erupeConfig: config,
+		serverRepo:  &mockEntranceServerRepo{currentPlayers: 42},
+	}
+
+	result := encodeServerInfo(config, server, true)
+	if len(result) == 0 {
+		t.Error("encodeServerInfo returned empty result")
+	}
+}
+
+// TestMakeUsrResp_WithMockRepo tests makeUsrResp with a mock session repo
+func TestMakeUsrResp_WithMockRepo(t *testing.T) {
+	config := &cfg.Config{
+		RealClientMode: cfg.Z1,
+	}
+
+	server := &Server{
+		logger:      zap.NewNop(),
+		erupeConfig: config,
+		sessionRepo: &mockEntranceSessionRepo{serverID: 1234},
+	}
+
+	// Build a minimal USR request packet:
+	// 4 bytes ALL+ prefix, 1 byte 0x00, 2 bytes entry count, then 4 bytes per entry (char ID)
+	pkt := []byte{
+		'A', 'L', 'L', '+',
+		0x00,
+		0x00, 0x01, // 1 entry
+		0x00, 0x00, 0x00, 0x01, // char_id = 1
+	}
+
+	result := makeUsrResp(pkt, server)
+	if len(result) == 0 {
+		t.Error("makeUsrResp returned empty result")
+	}
+}
+
+// TestMakeUsrResp_NilSessionRepo tests makeUsrResp when sessionRepo is nil
+func TestMakeUsrResp_NilSessionRepo(t *testing.T) {
+	config := &cfg.Config{
+		RealClientMode: cfg.Z1,
+	}
+
+	server := &Server{
+		logger:      zap.NewNop(),
+		erupeConfig: config,
+	}
+
+	pkt := []byte{
+		'A', 'L', 'L', '+',
+		0x00,
+		0x00, 0x01,
+		0x00, 0x00, 0x00, 0x01,
+	}
+
+	result := makeUsrResp(pkt, server)
+	if len(result) == 0 {
+		t.Error("makeUsrResp returned empty result")
+	}
+}
+
 // TestEncodeServerInfo_MissingSecondColumnClanMemberLimits tests accessing [last][1] when [last] is too small
 // Previously panicked: runtime error: index out of range [1]
 // After fix: Should handle missing column gracefully with default value (60)

@@ -1,7 +1,6 @@
 package channelserver
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -90,7 +89,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 
 	if s.stage != nil { // avoids lock up when using bed for dream quests
 		// Notify the client to duplicate the existing objects.
-		s.logger.Info(fmt.Sprintf("Sending existing stage objects to %s", s.Name))
+		s.logger.Info("Sending existing stage objects", zap.String("session", s.Name))
 
 		// Lock stage to safely iterate over objects map
 		// We need to copy the objects list first to avoid holding the lock during packet building

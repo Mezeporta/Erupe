@@ -32,9 +32,9 @@ func initCommands(cmds []cfg.Command, logger *zap.Logger) {
 		for _, cmd := range cmds {
 			commands[cmd.Name] = cmd
 			if cmd.Enabled {
-				logger.Info(fmt.Sprintf("Command %s: Enabled, prefix: %s", cmd.Name, cmd.Prefix))
+				logger.Info("Command registered", zap.String("name", cmd.Name), zap.String("prefix", cmd.Prefix), zap.Bool("enabled", true))
 			} else {
-				logger.Info(fmt.Sprintf("Command %s: Disabled", cmd.Name))
+				logger.Info("Command registered", zap.String("name", cmd.Name), zap.Bool("enabled", false))
 			}
 		}
 	})

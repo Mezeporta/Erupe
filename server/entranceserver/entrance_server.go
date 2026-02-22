@@ -19,7 +19,8 @@ type Server struct {
 	sync.Mutex
 	logger         *zap.Logger
 	erupeConfig    *cfg.Config
-	db             *sqlx.DB
+	serverRepo     EntranceServerRepo
+	sessionRepo    EntranceSessionRepo
 	listener       net.Listener
 	isShuttingDown bool
 }
@@ -36,7 +37,10 @@ func NewServer(config *Config) *Server {
 	s := &Server{
 		logger:      config.Logger,
 		erupeConfig: config.ErupeConfig,
-		db:          config.DB,
+	}
+	if config.DB != nil {
+		s.serverRepo = NewEntranceServerRepository(config.DB)
+		s.sessionRepo = NewEntranceSessionRepository(config.DB)
 	}
 	return s
 }

@@ -71,7 +71,9 @@ func encodeServerInfo(config *cfg.Config, s *Server, local bool) []byte {
 			bf.WriteUint16(uint16(channelIdx | 16))
 			bf.WriteUint16(ci.MaxPlayers)
 			var currentPlayers uint16
-			_ = s.db.QueryRow("SELECT current_players FROM servers WHERE server_id=$1", sid).Scan(&currentPlayers)
+			if s.serverRepo != nil {
+				currentPlayers, _ = s.serverRepo.GetCurrentPlayers(sid)
+			}
 			bf.WriteUint16(currentPlayers)
 			bf.WriteUint16(0)
 			bf.WriteUint16(0)
@@ -164,12 +166,10 @@ func makeUsrResp(pkt []byte, s *Server) []byte {
 	for i := 0; i < int(userEntries); i++ {
 		cid := bf.ReadUint32()
 		var sid uint16
-		err := s.db.QueryRow("SELECT(SELECT server_id FROM sign_sessions WHERE char_id=$1) AS _", cid).Scan(&sid)
-		if err != nil {
-			resp.WriteUint16(0)
-		} else {
-			resp.WriteUint16(sid)
+		if s.sessionRepo != nil {
+			sid, _ = s.sessionRepo.GetServerIDForCharacter(cid)
 		}
+		resp.WriteUint16(sid)
 		resp.WriteUint16(0)
 	}
 

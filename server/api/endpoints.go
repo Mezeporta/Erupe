@@ -162,12 +162,7 @@ func (s *APIServer) Login(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(400)
 		return
 	}
-	var (
-		userID     uint32
-		userRights uint32
-		password   string
-	)
-	err := s.db.QueryRow("SELECT id, password, rights FROM users WHERE username = $1", reqData.Username).Scan(&userID, &password, &userRights)
+	userID, password, userRights, err := s.userRepo.GetCredentials(ctx, reqData.Username)
 	if err == sql.ErrNoRows {
 		w.WriteHeader(400)
 		_, _ = w.Write([]byte("username-error"))

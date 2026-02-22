@@ -27,7 +27,9 @@ type APIServer struct {
 	sync.Mutex
 	logger         *zap.Logger
 	erupeConfig    *cfg.Config
-	db             *sqlx.DB
+	userRepo       APIUserRepo
+	charRepo       APICharacterRepo
+	sessionRepo    APISessionRepo
 	httpServer     *http.Server
 	isShuttingDown bool
 }
@@ -37,8 +39,12 @@ func NewAPIServer(config *Config) *APIServer {
 	s := &APIServer{
 		logger:      config.Logger,
 		erupeConfig: config.ErupeConfig,
-		db:          config.DB,
 		httpServer:  &http.Server{},
+	}
+	if config.DB != nil {
+		s.userRepo = NewAPIUserRepository(config.DB)
+		s.charRepo = NewAPICharacterRepository(config.DB)
+		s.sessionRepo = NewAPISessionRepository(config.DB)
 	}
 	return s
 }
