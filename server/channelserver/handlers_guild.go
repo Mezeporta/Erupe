@@ -383,15 +383,48 @@ func handleMsgMhfSetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
+// monthlyTypeString maps the packet's Type field to the DB column prefix.
+func monthlyTypeString(t uint8) string {
+	switch t {
+	case 0:
+		return "monthly"
+	case 1:
+		return "monthly_hl"
+	case 2:
+		return "monthly_ex"
+	default:
+		return ""
+	}
+}
+
 func handleMsgMhfCheckMonthlyItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCheckMonthlyItem)
+
+	typeStr := monthlyTypeString(pkt.Type)
+	if typeStr == "" {
+		doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		return
+	}
+
+	claimed, err := s.server.stampRepo.GetMonthlyClaimed(s.charID, typeStr)
+	if err != nil || claimed.Before(TimeMonthStart()) {
+		doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		return
+	}
+
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
-	// TODO: Implement month-by-month tracker, 0 = Not claimed, 1 = Claimed
-	// Also handles HLC and EXC items, IDs = 064D, 076B
 }
 
 func handleMsgMhfAcquireMonthlyItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireMonthlyItem)
+
+	typeStr := monthlyTypeString(pkt.Unk0)
+	if typeStr != "" {
+		if err := s.server.stampRepo.SetMonthlyClaimed(s.charID, typeStr, TimeAdjusted()); err != nil {
+			s.logger.Error("Failed to set monthly item claimed", zap.Error(err))
+		}
+	}
+
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 

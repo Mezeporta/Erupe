@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Monthly guild item claim tracking per character per type (standard/HLC/EXC), with schema migration (`31-monthly-items.sql`) adding claim timestamps to the `stamps` table
 - API: `GET /version` endpoint returning server name and client mode (`{"clientMode":"ZZ","name":"Erupe-CE"}`)
 - Rework object ID allocation: per-session IDs replace shared map, simplify stage entry notifications
 - Better config file handling and structure

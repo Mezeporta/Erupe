@@ -31,6 +31,12 @@ func WeekNext() time.Time {
 	return WeekStart().Add(time.Hour * 24 * 7)
 }
 
+// MonthStart returns the first day of the current month at midnight in JST.
+func MonthStart() time.Time {
+	midnight := Midnight()
+	return time.Date(midnight.Year(), midnight.Month(), 1, 0, 0, 0, 0, midnight.Location())
+}
+
 // GameAbsolute returns the current position within the 5760-second (96-minute)
 // in-game day/night cycle, offset by 2160 seconds.
 func GameAbsolute() uint32 {

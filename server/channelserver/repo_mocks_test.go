@@ -663,6 +663,12 @@ type mockStampRepoForItems struct {
 	exchangeErr  error
 	yearlyResult [2]uint16
 	yearlyErr    error
+
+	// Monthly item fields
+	monthlyClaimed    time.Time
+	monthlyClaimedErr error
+	monthlySetCalled  bool
+	monthlySetType    string
 }
 
 func (m *mockStampRepoForItems) GetChecked(_ uint32, _ string) (time.Time, error) {
@@ -694,6 +700,16 @@ func (m *mockStampRepoForItems) ExchangeYearly(_ uint32) (uint16, uint16, error)
 
 func (m *mockStampRepoForItems) Exchange(_ uint32, _ string) (uint16, uint16, error) {
 	return m.exchangeResult[0], m.exchangeResult[1], m.exchangeErr
+}
+
+func (m *mockStampRepoForItems) GetMonthlyClaimed(_ uint32, _ string) (time.Time, error) {
+	return m.monthlyClaimed, m.monthlyClaimedErr
+}
+
+func (m *mockStampRepoForItems) SetMonthlyClaimed(_ uint32, monthlyType string, _ time.Time) error {
+	m.monthlySetCalled = true
+	m.monthlySetType = monthlyType
+	return nil
 }
 
 // --- mockHouseRepoForItems ---

@@ -245,6 +245,8 @@ type StampRepo interface {
 	GetTotals(charID uint32, stampType string) (total, redeemed uint16, err error)
 	ExchangeYearly(charID uint32) (total, redeemed uint16, err error)
 	Exchange(charID uint32, stampType string) (total, redeemed uint16, err error)
+	GetMonthlyClaimed(charID uint32, monthlyType string) (time.Time, error)
+	SetMonthlyClaimed(charID uint32, monthlyType string, now time.Time) error
 }
 
 // DistributionRepo defines the contract for distribution/event item data access.

@@ -52,6 +52,7 @@ func TestHandleMsgMhfGenerateUdGuildMap(t *testing.T) {
 
 func TestHandleMsgMhfCheckMonthlyItem(t *testing.T) {
 	server := createMockServer()
+	server.stampRepo = &mockStampRepoForItems{monthlyClaimedErr: errNotFound}
 	session := createMockSession(1, server)
 
 	pkt := &mhfpacket.MsgMhfCheckMonthlyItem{
@@ -73,6 +74,7 @@ func TestHandleMsgMhfCheckMonthlyItem(t *testing.T) {
 
 func TestHandleMsgMhfAcquireMonthlyItem(t *testing.T) {
 	server := createMockServer()
+	server.stampRepo = &mockStampRepoForItems{}
 	session := createMockSession(1, server)
 
 	pkt := &mhfpacket.MsgMhfAcquireMonthlyItem{

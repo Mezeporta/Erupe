@@ -6,6 +6,7 @@ import (
 	"time"
 
 	cfg "erupe-ce/config"
+	"erupe-ce/network/mhfpacket"
 )
 
 // TestGuildCreation tests basic guild creation
@@ -820,5 +821,106 @@ func TestGuildAllianceRelationship(t *testing.T) {
 				t.Errorf("alliance ID mismatch: got %d, want %d", guild.AllianceID, tt.allianceId)
 			}
 		})
+	}
+}
+
+// --- handleMsgMhfCheckMonthlyItem tests ---
+
+func TestCheckMonthlyItem_NotClaimed(t *testing.T) {
+	server := createMockServer()
+	stampMock := &mockStampRepoForItems{
+		monthlyClaimedErr: errNotFound,
+	}
+	server.stampRepo = stampMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfCheckMonthlyItem{AckHandle: 100, Type: 0}
+	handleMsgMhfCheckMonthlyItem(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) < 4 {
+			t.Fatalf("Response too short: %d bytes", len(p.data))
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestCheckMonthlyItem_ClaimedThisMonth(t *testing.T) {
+	server := createMockServer()
+	stampMock := &mockStampRepoForItems{
+		monthlyClaimed: TimeAdjusted(), // claimed right now (within this month)
+	}
+	server.stampRepo = stampMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfCheckMonthlyItem{AckHandle: 100, Type: 0}
+	handleMsgMhfCheckMonthlyItem(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+		// Response received — claimed this month should return 1
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestCheckMonthlyItem_ClaimedLastMonth(t *testing.T) {
+	server := createMockServer()
+	stampMock := &mockStampRepoForItems{
+		monthlyClaimed: TimeMonthStart().Add(-24 * time.Hour), // before this month
+	}
+	server.stampRepo = stampMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfCheckMonthlyItem{AckHandle: 100, Type: 1}
+	handleMsgMhfCheckMonthlyItem(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+		// Response received — last month claim should return 0 (unclaimed)
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestCheckMonthlyItem_UnknownType(t *testing.T) {
+	server := createMockServer()
+	stampMock := &mockStampRepoForItems{}
+	server.stampRepo = stampMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfCheckMonthlyItem{AckHandle: 100, Type: 99}
+	handleMsgMhfCheckMonthlyItem(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+		// Unknown type returns 0 (unclaimed) without DB call
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestAcquireMonthlyItem_MarksAsClaimed(t *testing.T) {
+	server := createMockServer()
+	stampMock := &mockStampRepoForItems{}
+	server.stampRepo = stampMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfAcquireMonthlyItem{AckHandle: 100, Unk0: 2}
+	handleMsgMhfAcquireMonthlyItem(session, pkt)
+
+	if !stampMock.monthlySetCalled {
+		t.Error("SetMonthlyClaimed should be called")
+	}
+	if stampMock.monthlySetType != "monthly_ex" {
+		t.Errorf("SetMonthlyClaimed type = %q, want %q", stampMock.monthlySetType, "monthly_ex")
+	}
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
 	}
 }

@@ -31,7 +31,7 @@ These TODOs represent features that are visibly broken for players.
 | Location | Issue | Impact |
 |----------|-------|--------|
 | `model_character.go:88,101,113` | `TODO: fix bookshelf data pointer` for G10-ZZ, F4-F5, and S6 versions | Wrong pointer corrupts character save reads for three game versions |
-| `handlers_guild.go:389` | `TODO: Implement month-by-month tracker` — always returns `0x01` (claimed) | Players can never claim monthly guild items |
+| ~~`handlers_guild.go:389`~~ | ~~`TODO: Implement month-by-month tracker` — always returns `0x01` (claimed)~~ | ~~Players can never claim monthly guild items~~ **Fixed.** Now tracks per-character per-type monthly claims via `stamps` table. |
 | `handlers_guild_ops.go:148` | `TODO: Move this value onto rp_yesterday and reset to 0... daily?` | Guild daily RP rollover logic is missing entirely |
 | `handlers_achievement.go:125` | `TODO: Notify on rank increase` — always returns `false` | Achievement rank-up notifications are silently suppressed |
 | `handlers_guild_info.go:443` | `TODO: Enable GuildAlliance applications` — hardcoded `true` | Guild alliance applications are always open regardless of setting |
@@ -157,7 +157,7 @@ Based on impact and the momentum from recent repo-interface refactoring:
 
 1. **Add tests for `handlers_session.go` and `handlers_gacha.go`** — highest-risk untested code on the critical login and economy paths
 2. **Refactor signserver to use repository interfaces** — completes the pattern established in channelserver and surfaces 8 hidden error paths
-3. **Fix monthly guild item claim** (`handlers_guild.go:389`) — small fix with direct gameplay impact
+3. ~~**Fix monthly guild item claim**~~ (`handlers_guild.go:389`) — **Done**
 4. **Split `repo_guild.go`** — last oversized file after the recent refactoring push
 5. ~~**Fix `fmt.Sprintf` in logger calls**~~ — **Done**
 6. ~~**Add `LoopDelay` Viper default**~~ — **Done**

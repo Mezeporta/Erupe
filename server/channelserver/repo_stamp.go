@@ -59,3 +59,20 @@ func (r *StampRepository) Exchange(charID uint32, stampType string) (total, rede
 	err = r.db.QueryRow(fmt.Sprintf("UPDATE stamps SET %s_redeemed=%s_redeemed+8 WHERE character_id=$1 RETURNING %s_total, %s_redeemed", stampType, stampType, stampType, stampType), charID).Scan(&total, &redeemed)
 	return
 }
+
+// GetMonthlyClaimed returns the last monthly item claim time for the given type.
+func (r *StampRepository) GetMonthlyClaimed(charID uint32, monthlyType string) (time.Time, error) {
+	var claimed time.Time
+	err := r.db.QueryRow(
+		fmt.Sprintf("SELECT %s_claimed FROM stamps WHERE character_id=$1", monthlyType), charID,
+	).Scan(&claimed)
+	return claimed, err
+}
+
+// SetMonthlyClaimed updates the monthly item claim time for the given type.
+func (r *StampRepository) SetMonthlyClaimed(charID uint32, monthlyType string, now time.Time) error {
+	_, err := r.db.Exec(
+		fmt.Sprintf("UPDATE stamps SET %s_claimed=$1 WHERE character_id=$2", monthlyType), now, charID,
+	)
+	return err
+}
