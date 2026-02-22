@@ -17,7 +17,7 @@ const raceTestCompletionMsg = "Test completed. No race conditions with fixed loc
 func TestCreateStageSuccess(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 
 	// Create a new stage
 	pkt := &mhfpacket.MsgSysCreateStage{
@@ -29,11 +29,10 @@ func TestCreateStageSuccess(t *testing.T) {
 	handleMsgSysCreateStage(s, pkt)
 
 	// Verify stage was created
-	if _, exists := s.server.stages["test_stage_1"]; !exists {
+	stage, exists := s.server.stages.Get("test_stage_1")
+	if !exists {
 		t.Error("stage was not created")
 	}
-
-	stage := s.server.stages["test_stage_1"]
 	if stage.id != "test_stage_1" {
 		t.Errorf("stage ID mismatch: got %s, want test_stage_1", stage.id)
 	}
@@ -46,7 +45,7 @@ func TestCreateStageSuccess(t *testing.T) {
 func TestCreateStageDuplicate(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 
 	// Create first stage
 	pkt1 := &mhfpacket.MsgSysCreateStage{
@@ -65,8 +64,10 @@ func TestCreateStageDuplicate(t *testing.T) {
 	handleMsgSysCreateStage(s, pkt2)
 
 	// Verify only one stage exists
-	if len(s.server.stages) != 1 {
-		t.Errorf("expected 1 stage, got %d", len(s.server.stages))
+	count := 0
+	s.server.stages.Range(func(_ string, _ *Stage) bool { count++; return true })
+	if count != 1 {
+		t.Errorf("expected 1 stage, got %d", count)
 	}
 }
 
@@ -74,13 +75,13 @@ func TestCreateStageDuplicate(t *testing.T) {
 func TestStageLocking(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 
 	// Create a stage
 	stage := NewStage("locked_stage")
 	stage.host = s
 	stage.password = ""
-	s.server.stages["locked_stage"] = stage
+	s.server.stages.Store("locked_stage", stage)
 
 	// Lock the stage
 	pkt := &mhfpacket.MsgSysLockStage{
@@ -103,14 +104,14 @@ func TestStageLocking(t *testing.T) {
 func TestStageReservation(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 
 	// Create a stage
 	stage := NewStage("reserved_stage")
 	stage.host = s
 	stage.reservedClientSlots = make(map[uint32]bool)
 	stage.reservedClientSlots[s.charID] = false // Pre-add the charID so reservation works
-	s.server.stages["reserved_stage"] = stage
+	s.server.stages.Store("reserved_stage", stage)
 
 	// Reserve the stage
 	pkt := &mhfpacket.MsgSysReserveStage{
@@ -163,8 +164,8 @@ func TestStageBinaryData(t *testing.T) {
 			stage := NewStage("binary_stage")
 			stage.rawBinaryData = make(map[stageBinaryKey][]byte)
 			s.stage = stage
-			s.server.stages = make(map[string]*Stage)
-			s.server.stages["binary_stage"] = stage
+		
+			s.server.stages.Store("binary_stage", stage)
 
 			// Store binary data directly
 			key := stageBinaryKey{id0: byte(s.charID >> 8), id1: byte(s.charID & 0xFF)}
@@ -230,8 +231,8 @@ func TestIsStageFull(t *testing.T) {
 				stage.clients[client] = uint32(i)
 			}
 
-			s.server.stages = make(map[string]*Stage)
-			s.server.stages["full_test_stage"] = stage
+		
+			s.server.stages.Store("full_test_stage", stage)
 
 			result := isStageFull(s, "full_test_stage")
 			if result != tt.wantFull {
@@ -245,14 +246,14 @@ func TestIsStageFull(t *testing.T) {
 func TestEnumerateStage(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 	s.server.sessions = make(map[net.Conn]*Session)
 
 	// Create multiple stages
 	for i := 0; i < 3; i++ {
 		stage := NewStage("stage_" + string(rune(i)))
 		stage.maxPlayers = 4
-		s.server.stages[stage.id] = stage
+		s.server.stages.Store(stage.id, stage)
 	}
 
 	// Enumerate stages
@@ -264,8 +265,10 @@ func TestEnumerateStage(t *testing.T) {
 
 	// Basic verification that enumeration was processed
 	// In a real test, we'd verify the response packet content
-	if len(s.server.stages) != 3 {
-		t.Errorf("expected 3 stages, got %d", len(s.server.stages))
+	stageCount := 0
+	s.server.stages.Range(func(_ string, _ *Stage) bool { stageCount++; return true })
+	if stageCount != 3 {
+		t.Errorf("expected 3 stages, got %d", stageCount)
 	}
 }
 
@@ -279,8 +282,8 @@ func TestRemoveSessionFromStage(t *testing.T) {
 	stage.clients[s] = s.charID
 
 	s.stage = stage
-	s.server.stages = make(map[string]*Stage)
-	s.server.stages["removal_stage"] = stage
+
+	s.server.stages.Store("removal_stage", stage)
 
 	// Remove session
 	removeSessionFromStage(s)
@@ -299,18 +302,18 @@ func TestRemoveSessionFromStage(t *testing.T) {
 func TestDestructEmptyStages(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 
 	// Create stages with different client counts
 	emptyStage := NewStage("empty_stage")
 	emptyStage.clients = make(map[*Session]uint32)
 	emptyStage.host = s // Host needs to be set or it won't be destructed
-	s.server.stages["empty_stage"] = emptyStage
+	s.server.stages.Store("empty_stage", emptyStage)
 
 	populatedStage := NewStage("populated_stage")
 	populatedStage.clients = make(map[*Session]uint32)
 	populatedStage.clients[s] = s.charID
-	s.server.stages["populated_stage"] = populatedStage
+	s.server.stages.Store("populated_stage", populatedStage)
 
 	// Destruct empty stages (from the channel server's perspective, not our session's)
 	// The function destructs stages that are not referenced by us or don't have clients
@@ -318,8 +321,10 @@ func TestDestructEmptyStages(t *testing.T) {
 
 	// For this test to work correctly, we'd need to verify the actual removal
 	// Let's just verify the stages exist first
-	if len(s.server.stages) != 2 {
-		t.Errorf("expected 2 stages initially, got %d", len(s.server.stages))
+	initialCount := 0
+	s.server.stages.Range(func(_ string, _ *Stage) bool { initialCount++; return true })
+	if initialCount != 2 {
+		t.Errorf("expected 2 stages initially, got %d", initialCount)
 	}
 }
 
@@ -327,14 +332,14 @@ func TestDestructEmptyStages(t *testing.T) {
 func TestStageTransferBasic(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 	s.server.sessions = make(map[net.Conn]*Session)
 
 	// Transfer to non-existent stage (should create it)
 	doStageTransfer(s, 0x12345678, "new_transfer_stage")
 
 	// Verify stage was created
-	if stage, exists := s.server.stages["new_transfer_stage"]; !exists {
+	if stage, exists := s.server.stages.Get("new_transfer_stage"); !exists {
 		t.Error("stage was not created during transfer")
 	} else {
 		// Verify session is in the stage
@@ -357,12 +362,12 @@ func TestStageTransferBasic(t *testing.T) {
 func TestEnterStageBasic(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 	s.server.sessions = make(map[net.Conn]*Session)
 
 	stage := NewStage("entry_stage")
 	stage.clients = make(map[*Session]uint32)
-	s.server.stages["entry_stage"] = stage
+	s.server.stages.Store("entry_stage", stage)
 
 	pkt := &mhfpacket.MsgSysEnterStage{
 		StageID:   "entry_stage",
@@ -383,7 +388,7 @@ func TestEnterStageBasic(t *testing.T) {
 func TestMoveStagePreservesData(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 	s.server.sessions = make(map[net.Conn]*Session)
 
 	// Create source stage with binary data
@@ -392,13 +397,13 @@ func TestMoveStagePreservesData(t *testing.T) {
 	sourceStage.rawBinaryData = make(map[stageBinaryKey][]byte)
 	key := stageBinaryKey{id0: 0x00, id1: 0x01}
 	sourceStage.rawBinaryData[key] = []byte{0xAA, 0xBB}
-	s.server.stages["source_stage"] = sourceStage
+	s.server.stages.Store("source_stage", sourceStage)
 	s.stage = sourceStage
 
 	// Create destination stage
 	destStage := NewStage("dest_stage")
 	destStage.clients = make(map[*Session]uint32)
-	s.server.stages["dest_stage"] = destStage
+	s.server.stages.Store("dest_stage", destStage)
 
 	pkt := &mhfpacket.MsgSysMoveStage{
 		StageID:   "dest_stage",
@@ -417,12 +422,12 @@ func TestMoveStagePreservesData(t *testing.T) {
 func TestConcurrentStageOperations(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	baseSession := createTestSession(mock)
-	baseSession.server.stages = make(map[string]*Stage)
+
 
 	// Create a stage
 	stage := NewStage("concurrent_stage")
 	stage.clients = make(map[*Session]uint32)
-	baseSession.server.stages["concurrent_stage"] = stage
+	baseSession.server.stages.Store("concurrent_stage", stage)
 
 	var wg sync.WaitGroup
 
@@ -459,7 +464,7 @@ func TestConcurrentStageOperations(t *testing.T) {
 func TestBackStageNavigation(t *testing.T) {
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 	s.server.sessions = make(map[net.Conn]*Session)
 
 	// Create a stringstack for stage move history
@@ -472,8 +477,8 @@ func TestBackStageNavigation(t *testing.T) {
 	stage2 := NewStage("stage_2")
 	stage2.clients = make(map[*Session]uint32)
 
-	s.server.stages["stage_1"] = stage1
-	s.server.stages["stage_2"] = stage2
+	s.server.stages.Store("stage_1", stage1)
+	s.server.stages.Store("stage_2", stage2)
 
 	// First enter stage 2 and push to stack
 	s.stage = stage2
@@ -502,13 +507,13 @@ func TestRaceConditionRemoveSessionFromStageNotLocked(t *testing.T) {
 
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
-	s.server.stages = make(map[string]*Stage)
+
 	s.server.sessions = make(map[net.Conn]*Session)
 
 	stage := NewStage("race_test_stage")
 	stage.clients = make(map[*Session]uint32)
 	stage.objects = make(map[uint32]*Object)
-	s.server.stages["race_test_stage"] = stage
+	s.server.stages.Store("race_test_stage", stage)
 	s.stage = stage
 	stage.clients[s] = s.charID
 
@@ -567,14 +572,14 @@ func TestRaceConditionDoStageTransferUnlockedAccess(t *testing.T) {
 
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	baseSession := createTestSession(mock)
-	baseSession.server.stages = make(map[string]*Stage)
+
 	baseSession.server.sessions = make(map[net.Conn]*Session)
 
 	// Create initial stage
 	stage := NewStage("initial_stage")
 	stage.clients = make(map[*Session]uint32)
 	stage.objects = make(map[uint32]*Object)
-	baseSession.server.stages["initial_stage"] = stage
+	baseSession.server.stages.Store("initial_stage", stage)
 	baseSession.stage = stage
 	stage.clients[baseSession] = baseSession.charID
 
@@ -631,13 +636,13 @@ func TestRaceConditionStageObjectsIteration(t *testing.T) {
 
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	baseSession := createTestSession(mock)
-	baseSession.server.stages = make(map[string]*Stage)
+
 	baseSession.server.sessions = make(map[net.Conn]*Session)
 
 	stage := NewStage("object_race_stage")
 	stage.clients = make(map[*Session]uint32)
 	stage.objects = make(map[uint32]*Object)
-	baseSession.server.stages["object_race_stage"] = stage
+	baseSession.server.stages.Store("object_race_stage", stage)
 	baseSession.stage = stage
 	stage.clients[baseSession] = baseSession.charID
 

@@ -33,9 +33,11 @@ type Config struct {
 //
 // Lock ordering (acquire in this order to avoid deadlocks):
 //  1. Server.Mutex          – protects sessions map
-//  2. Server.stagesLock     – protects stages map
-//  3. Stage.RWMutex         – protects per-stage state (clients, objects)
-//  4. Server.semaphoreLock  – protects semaphore map
+//  2. Stage.RWMutex         – protects per-stage state (clients, objects)
+//  3. Server.semaphoreLock  – protects semaphore map
+//
+// Note: Server.stages is a StageMap (sync.Map-backed), so it requires no
+// external lock for reads or writes.
 //
 // Self-contained stores (userBinary, minidata, questCache) manage their
 // own locks internally and may be acquired at any point.
@@ -78,8 +80,7 @@ type Server struct {
 	isShuttingDown bool
 	done           chan struct{} // Closed on Shutdown to wake background goroutines.
 
-	stagesLock sync.RWMutex
-	stages     map[string]*Stage
+	stages StageMap
 
 	// Used to map different languages
 	i18n i18n
@@ -115,7 +116,6 @@ func NewServer(config *Config) *Server {
 		deleteConns:     make(chan net.Conn),
 		done:            make(chan struct{}),
 		sessions:        make(map[net.Conn]*Session),
-		stages:          make(map[string]*Stage),
 		userBinary: NewUserBinaryStore(),
 		minidata:   NewMinidataStore(),
 		semaphore:       make(map[string]*Semaphore),
@@ -155,25 +155,25 @@ func NewServer(config *Config) *Server {
 	s.mercenaryRepo = NewMercenaryRepository(config.DB)
 
 	// Mezeporta
-	s.stages["sl1Ns200p0a0u0"] = NewStage("sl1Ns200p0a0u0")
+	s.stages.Store("sl1Ns200p0a0u0", NewStage("sl1Ns200p0a0u0"))
 
 	// Rasta bar stage
-	s.stages["sl1Ns211p0a0u0"] = NewStage("sl1Ns211p0a0u0")
+	s.stages.Store("sl1Ns211p0a0u0", NewStage("sl1Ns211p0a0u0"))
 
 	// Pallone Carvan
-	s.stages["sl1Ns260p0a0u0"] = NewStage("sl1Ns260p0a0u0")
+	s.stages.Store("sl1Ns260p0a0u0", NewStage("sl1Ns260p0a0u0"))
 
 	// Pallone Guest House 1st Floor
-	s.stages["sl1Ns262p0a0u0"] = NewStage("sl1Ns262p0a0u0")
+	s.stages.Store("sl1Ns262p0a0u0", NewStage("sl1Ns262p0a0u0"))
 
 	// Pallone Guest House 2nd Floor
-	s.stages["sl1Ns263p0a0u0"] = NewStage("sl1Ns263p0a0u0")
+	s.stages.Store("sl1Ns263p0a0u0", NewStage("sl1Ns263p0a0u0"))
 
 	// Diva fountain / prayer fountain.
-	s.stages["sl2Ns379p0a0u0"] = NewStage("sl2Ns379p0a0u0")
+	s.stages.Store("sl2Ns379p0a0u0", NewStage("sl2Ns379p0a0u0"))
 
 	// MezFes
-	s.stages["sl1Ns462p0a0u0"] = NewStage("sl1Ns462p0a0u0")
+	s.stages.Store("sl1Ns462p0a0u0", NewStage("sl1Ns462p0a0u0"))
 
 	s.i18n = getLangStrings(s)
 
@@ -424,21 +424,20 @@ func (s *Server) DisconnectUser(uid uint32) {
 
 // FindObjectByChar finds a stage object owned by the given character ID.
 func (s *Server) FindObjectByChar(charID uint32) *Object {
-	s.stagesLock.RLock()
-	defer s.stagesLock.RUnlock()
-	for _, stage := range s.stages {
+	var found *Object
+	s.stages.Range(func(_ string, stage *Stage) bool {
 		stage.RLock()
-		for objId := range stage.objects {
-			obj := stage.objects[objId]
+		for _, obj := range stage.objects {
 			if obj.ownerCharID == charID {
+				found = obj
 				stage.RUnlock()
-				return obj
+				return false // stop iteration
 			}
 		}
 		stage.RUnlock()
-	}
-
-	return nil
+		return true
+	})
+	return found
 }
 
 // HasSemaphore checks if the given session is hosting any semaphore.

@@ -61,9 +61,7 @@ func TestLocalRegistryFindChannelForStage(t *testing.T) {
 	channels[1].GlobalID = "0102"
 	reg := NewLocalChannelRegistry(channels)
 
-	channels[1].stagesLock.Lock()
-	channels[1].stages["sl2Qs123p0a0u42"] = NewStage("sl2Qs123p0a0u42")
-	channels[1].stagesLock.Unlock()
+	channels[1].stages.Store("sl2Qs123p0a0u42", NewStage("sl2Qs123p0a0u42"))
 
 	gid := reg.FindChannelForStage("u42")
 	if gid != "0102" {
@@ -136,11 +134,9 @@ func TestLocalRegistrySearchStages(t *testing.T) {
 	channels := createTestChannels(1)
 	reg := NewLocalChannelRegistry(channels)
 
-	channels[0].stagesLock.Lock()
-	channels[0].stages["sl2Ls210test1"] = NewStage("sl2Ls210test1")
-	channels[0].stages["sl2Ls210test2"] = NewStage("sl2Ls210test2")
-	channels[0].stages["sl1Ns200other"] = NewStage("sl1Ns200other")
-	channels[0].stagesLock.Unlock()
+	channels[0].stages.Store("sl2Ls210test1", NewStage("sl2Ls210test1"))
+	channels[0].stages.Store("sl2Ls210test2", NewStage("sl2Ls210test2"))
+	channels[0].stages.Store("sl1Ns200other", NewStage("sl1Ns200other"))
 
 	results := reg.SearchStages("sl2Ls210", 10)
 	if len(results) != 2 {

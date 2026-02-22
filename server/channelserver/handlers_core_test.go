@@ -600,9 +600,8 @@ func TestHandleMsgSysLockGlobalSema_WithChannel(t *testing.T) {
 	// Create a mock channel with stages
 	channel := &Server{
 		GlobalID: "other-server",
-		stages:   make(map[string]*Stage),
 	}
-	channel.stages["stage_user123"] = NewStage("stage_user123")
+	channel.stages.Store("stage_user123", NewStage("stage_user123"))
 	server.Channels = []*Server{channel}
 
 	session := createMockSession(1, server)
@@ -632,9 +631,8 @@ func TestHandleMsgSysLockGlobalSema_SameServer(t *testing.T) {
 	// Create a mock channel with same GlobalID
 	channel := &Server{
 		GlobalID: "test-server",
-		stages:   make(map[string]*Stage),
 	}
-	channel.stages["stage_user456"] = NewStage("stage_user456")
+	channel.stages.Store("stage_user456", NewStage("stage_user456"))
 	server.Channels = []*Server{channel}
 
 	session := createMockSession(1, server)

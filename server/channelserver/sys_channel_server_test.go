@@ -56,7 +56,6 @@ func createTestServer() *Server {
 		ID:             1,
 		logger:         logger,
 		sessions:       make(map[net.Conn]*Session),
-		stages:         make(map[string]*Stage),
 		semaphore:      make(map[string]*Semaphore),
 		questCache: NewQuestCache(0),
 		erupeConfig: &cfg.Config{
@@ -125,7 +124,7 @@ func TestNewServer(t *testing.T) {
 	}
 
 	for _, stageID := range expectedStages {
-		if _, exists := server.stages[stageID]; !exists {
+		if _, exists := server.stages.Get(stageID); !exists {
 			t.Errorf("Default stage %s not initialized", stageID)
 		}
 	}
@@ -682,9 +681,7 @@ func TestFindObjectByChar(t *testing.T) {
 	stage.objects[1] = obj1
 	stage.objects[2] = obj2
 
-	server.stagesLock.Lock()
-	server.stages["test_stage"] = stage
-	server.stagesLock.Unlock()
+	server.stages.Store("test_stage", stage)
 
 	tests := []struct {
 		name      string

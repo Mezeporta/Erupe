@@ -40,7 +40,7 @@ func createMockServer() *Server {
 	s := &Server{
 		logger:       logger,
 		erupeConfig:  &cfg.Config{},
-		stages:       make(map[string]*Stage),
+		// stages is a StageMap (zero value is ready to use)
 		sessions:     make(map[net.Conn]*Session),
 		handlerTable: buildHandlerTable(),
 		raviente: &Raviente{

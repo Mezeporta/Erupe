@@ -56,15 +56,17 @@ func (r *LocalChannelRegistry) DisconnectUser(cids []uint32) {
 
 func (r *LocalChannelRegistry) FindChannelForStage(stageSuffix string) string {
 	for _, channel := range r.channels {
-		channel.stagesLock.RLock()
-		for id := range channel.stages {
+		var gid string
+		channel.stages.Range(func(id string, _ *Stage) bool {
 			if strings.HasSuffix(id, stageSuffix) {
-				gid := channel.GlobalID
-				channel.stagesLock.RUnlock()
-				return gid
+				gid = channel.GlobalID
+				return false // stop iteration
 			}
+			return true
+		})
+		if gid != "" {
+			return gid
 		}
-		channel.stagesLock.RUnlock()
 	}
 	return ""
 }
@@ -105,13 +107,14 @@ func (r *LocalChannelRegistry) SearchStages(stagePrefix string, max int) []Stage
 		if len(results) >= max {
 			break
 		}
-		c.stagesLock.RLock()
-		for _, stage := range c.stages {
+		cIP := net.ParseIP(c.IP).To4()
+		cPort := c.Port
+		c.stages.Range(func(_ string, stage *Stage) bool {
 			if len(results) >= max {
-				break
+				return false
 			}
 			if !strings.HasPrefix(stage.id, stagePrefix) {
-				continue
+				return true
 			}
 			stage.RLock()
 			bin0 := stage.rawBinaryData[stageBinaryKey{1, 0}]
@@ -125,8 +128,8 @@ func (r *LocalChannelRegistry) SearchStages(stagePrefix string, max int) []Stage
 			copy(bin3Copy, bin3)
 
 			results = append(results, StageSnapshot{
-				ServerIP:    net.ParseIP(c.IP).To4(),
-				ServerPort:  c.Port,
+				ServerIP:    cIP,
+				ServerPort:  cPort,
 				StageID:     stage.id,
 				ClientCount: len(stage.clients) + len(stage.reservedClientSlots),
 				Reserved:    len(stage.reservedClientSlots),
@@ -136,8 +139,8 @@ func (r *LocalChannelRegistry) SearchStages(stagePrefix string, max int) []Stage
 				RawBinData3: bin3Copy,
 			})
 			stage.RUnlock()
-		}
-		c.stagesLock.RUnlock()
+			return true
+		})
 	}
 	return results
 }

@@ -582,7 +582,6 @@ func createTestServerWithDB(t *testing.T, db *sqlx.DB) *Server {
 	server := &Server{
 		db:              db,
 		sessions:        make(map[net.Conn]*Session),
-		stages:          make(map[string]*Stage),
 		userBinary: NewUserBinaryStore(),
 		minidata:   NewMinidataStore(),
 		semaphore:       make(map[string]*Semaphore),

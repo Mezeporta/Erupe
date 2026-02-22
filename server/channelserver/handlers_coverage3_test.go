@@ -984,7 +984,7 @@ func TestHandleMsgSysCreateStage_Coverage3(t *testing.T) {
 		default:
 			t.Error("no response queued")
 		}
-		if _, exists := server.stages["test_create_stage"]; !exists {
+		if _, exists := server.stages.Get("test_create_stage"); !exists {
 			t.Error("stage should have been created")
 		}
 	})

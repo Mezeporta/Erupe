@@ -192,22 +192,16 @@ func TestChannelIsolation_IndependentStages(t *testing.T) {
 	stageName := "sl1Qs999p0a0u42"
 
 	// Add stage only to channel 1.
-	channels[0].stagesLock.Lock()
-	channels[0].stages[stageName] = NewStage(stageName)
-	channels[0].stagesLock.Unlock()
+	channels[0].stages.Store(stageName, NewStage(stageName))
 
 	// Channel 1 should have the stage.
-	channels[0].stagesLock.RLock()
-	_, ok1 := channels[0].stages[stageName]
-	channels[0].stagesLock.RUnlock()
+	_, ok1 := channels[0].stages.Get(stageName)
 	if !ok1 {
 		t.Error("channel 1 should have the stage")
 	}
 
 	// Channel 2 should NOT have the stage.
-	channels[1].stagesLock.RLock()
-	_, ok2 := channels[1].stages[stageName]
-	channels[1].stagesLock.RUnlock()
+	_, ok2 := channels[1].stages.Get(stageName)
 	if ok2 {
 		t.Error("channel 2 should not have channel 1's stage")
 	}

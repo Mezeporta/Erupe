@@ -290,7 +290,7 @@ func logoutPlayer(s *Session) {
 	_ = s.rawConn.Close()
 	s.server.Unlock()
 
-	// Stage cleanup — snapshot sessions first under server mutex, then iterate stages under stagesLock
+	// Stage cleanup — snapshot sessions first under server mutex, then iterate stages
 	s.server.Lock()
 	sessionSnapshot := make([]*Session, 0, len(s.server.sessions))
 	for _, sess := range s.server.sessions {
@@ -298,8 +298,7 @@ func logoutPlayer(s *Session) {
 	}
 	s.server.Unlock()
 
-	s.server.stagesLock.RLock()
-	for _, stage := range s.server.stages {
+	s.server.stages.Range(func(_ string, stage *Stage) bool {
 		stage.Lock()
 		// Tell sessions registered to disconnecting player's quest to unregister
 		if stage.host != nil && stage.host.charID == s.charID {
@@ -317,8 +316,8 @@ func logoutPlayer(s *Session) {
 			}
 		}
 		stage.Unlock()
-	}
-	s.server.stagesLock.RUnlock()
+		return true
+	})
 
 	// Update sign sessions and server player count
 	if s.server.db != nil {
@@ -346,13 +345,12 @@ func logoutPlayer(s *Session) {
 		CharID: s.charID,
 	}, s)
 
-	s.server.stagesLock.RLock()
-	for _, stage := range s.server.stages {
+	s.server.stages.Range(func(_ string, stage *Stage) bool {
 		stage.Lock()
 		delete(stage.reservedClientSlots, s.charID)
 		stage.Unlock()
-	}
-	s.server.stagesLock.RUnlock()
+		return true
+	})
 
 	removeSessionFromSemaphore(s)
 	removeSessionFromStage(s)
@@ -449,13 +447,12 @@ func handleMsgSysLockGlobalSema(s *Session, p mhfpacket.MHFPacket) {
 		sgid = s.server.Registry.FindChannelForStage(pkt.UserIDString)
 	} else {
 		for _, channel := range s.server.Channels {
-			channel.stagesLock.RLock()
-			for id := range channel.stages {
+			channel.stages.Range(func(id string, _ *Stage) bool {
 				if strings.HasSuffix(id, pkt.UserIDString) {
 					sgid = channel.GlobalID
 				}
-			}
-			channel.stagesLock.RUnlock()
+				return true
+			})
 		}
 	}
 	bf := byteframe.NewByteFrame()
@@ -689,10 +686,11 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			if count == maxResults {
 				break
 			}
-			c.stagesLock.RLock()
-			for _, stage := range c.stages {
+			cIP := net.ParseIP(c.IP).To4()
+			cPort := c.Port
+			c.stages.Range(func(_ string, stage *Stage) bool {
 				if count == maxResults {
-					break
+					return false
 				}
 				if strings.HasPrefix(stage.id, findPartyParams.StagePrefix) {
 					stage.RLock()
@@ -718,7 +716,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 					if findPartyParams.RankRestriction >= 0 {
 						if stageData[0] > findPartyParams.RankRestriction {
 							stage.RUnlock()
-							continue
+							return true
 						}
 					}
 
@@ -732,7 +730,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 						}
 						if !hasTarget {
 							stage.RUnlock()
-							continue
+							return true
 						}
 					}
 
@@ -746,8 +744,8 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 
 					count++
 					stageResults = append(stageResults, stageResult{
-						ip:          net.ParseIP(c.IP).To4(),
-						port:        c.Port,
+						ip:          cIP,
+						port:        cPort,
 						clientCount: len(stage.clients) + len(stage.reservedClientSlots),
 						reserved:    len(stage.reservedClientSlots),
 						maxPlayers:  stage.maxPlayers,
@@ -758,8 +756,8 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 					})
 					stage.RUnlock()
 				}
-			}
-			c.stagesLock.RUnlock()
+				return true
+			})
 		}
 
 		for _, sr := range stageResults {

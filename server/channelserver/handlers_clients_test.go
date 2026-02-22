@@ -34,9 +34,7 @@ func TestHandleMsgSysEnumerateClient(t *testing.T) {
 				s2.charID = 200
 				stage.clients[s1] = 100
 				stage.clients[s2] = 200
-				server.stagesLock.Lock()
-				server.stages[stageID] = stage
-				server.stagesLock.Unlock()
+				server.stages.Store(stageID, stage)
 			},
 			wantClientCount: 2,
 			wantFailure:     false,
@@ -50,9 +48,7 @@ func TestHandleMsgSysEnumerateClient(t *testing.T) {
 				stage.reservedClientSlots[100] = false // Not ready
 				stage.reservedClientSlots[200] = true  // Ready
 				stage.reservedClientSlots[300] = false // Not ready
-				server.stagesLock.Lock()
-				server.stages[stageID] = stage
-				server.stagesLock.Unlock()
+				server.stages.Store(stageID, stage)
 			},
 			wantClientCount: 2, // Only not-ready clients
 			wantFailure:     false,
@@ -66,9 +62,7 @@ func TestHandleMsgSysEnumerateClient(t *testing.T) {
 				stage.reservedClientSlots[100] = false // Not ready
 				stage.reservedClientSlots[200] = true  // Ready
 				stage.reservedClientSlots[300] = true  // Ready
-				server.stagesLock.Lock()
-				server.stages[stageID] = stage
-				server.stagesLock.Unlock()
+				server.stages.Store(stageID, stage)
 			},
 			wantClientCount: 2, // Only ready clients
 			wantFailure:     false,
@@ -79,9 +73,7 @@ func TestHandleMsgSysEnumerateClient(t *testing.T) {
 			getType: 0,
 			setupStage: func(server *Server, stageID string) {
 				stage := NewStage(stageID)
-				server.stagesLock.Lock()
-				server.stages[stageID] = stage
-				server.stagesLock.Unlock()
+				server.stages.Store(stageID, stage)
 			},
 			wantClientCount: 0,
 			wantFailure:     false,
@@ -103,11 +95,6 @@ func TestHandleMsgSysEnumerateClient(t *testing.T) {
 			// Create test session (which creates a server with erupeConfig)
 			mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 			s := createTestSession(mock)
-
-			// Initialize stages map if needed
-			if s.server.stages == nil {
-				s.server.stages = make(map[string]*Stage)
-			}
 
 			// Setup stage
 			tt.setupStage(s.server, tt.stageID)
@@ -389,7 +376,6 @@ func TestEnumerateClient_ConcurrentAccess(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	server := &Server{
 		logger: logger,
-		stages: make(map[string]*Stage),
 		erupeConfig: &cfg.Config{
 			DebugOptions: cfg.DebugOptions{
 				LogOutboundMessages: false,
@@ -408,9 +394,7 @@ func TestEnumerateClient_ConcurrentAccess(t *testing.T) {
 		stage.clients[sess] = i * 100
 	}
 
-	server.stagesLock.Lock()
-	server.stages[stageID] = stage
-	server.stagesLock.Unlock()
+	server.stages.Store(stageID, stage)
 
 	// Run concurrent enumerations
 	done := make(chan bool, 5)
@@ -562,7 +546,6 @@ func BenchmarkEnumerateClients(b *testing.B) {
 	logger, _ := zap.NewDevelopment()
 	server := &Server{
 		logger: logger,
-		stages: make(map[string]*Stage),
 	}
 
 	stageID := "bench_stage"
@@ -576,7 +559,7 @@ func BenchmarkEnumerateClients(b *testing.B) {
 		stage.clients[sess] = i
 	}
 
-	server.stages[stageID] = stage
+	server.stages.Store(stageID, stage)
 
 	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mock)
