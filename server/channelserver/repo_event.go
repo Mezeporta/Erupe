@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"context"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -79,13 +80,14 @@ func (r *EventRepository) UpdateEventQuestStartTimes(updates []EventQuestUpdate)
 	if len(updates) == 0 {
 		return nil
 	}
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback() }()
+
 	for _, u := range updates {
 		if _, err := tx.Exec("UPDATE event_quests SET start_time = $1 WHERE id = $2", u.StartTime, u.ID); err != nil {
-			_ = tx.Rollback()
 			return err
 		}
 	}

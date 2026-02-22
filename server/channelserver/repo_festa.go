@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/jmoiron/sqlx"
@@ -181,16 +182,17 @@ func (r *FestaRepository) RegisterGuild(guildID uint32, team string) error {
 
 // SubmitSouls records soul submissions for a character within a transaction.
 func (r *FestaRepository) SubmitSouls(charID, guildID uint32, souls []uint16) error {
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback() }()
+
 	for i, s := range souls {
 		if s == 0 {
 			continue
 		}
 		if _, err := tx.Exec(`INSERT INTO festa_submissions VALUES ($1, $2, $3, $4, now())`, charID, guildID, i, s); err != nil {
-			_ = tx.Rollback()
 			return err
 		}
 	}

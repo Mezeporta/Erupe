@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -168,10 +169,11 @@ func (r *GuildRepository) ListAll() ([]*Guild, error) {
 
 // Create creates a new guild and adds the leader as its first member.
 func (r *GuildRepository) Create(leaderCharID uint32, guildName string) (int32, error) {
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return 0, err
 	}
+	defer func() { _ = tx.Rollback() }()
 
 	var guildID int32
 	err = tx.QueryRow(
@@ -179,13 +181,11 @@ func (r *GuildRepository) Create(leaderCharID uint32, guildName string) (int32, 
 		guildName, leaderCharID,
 	).Scan(&guildID)
 	if err != nil {
-		_ = tx.Rollback()
 		return 0, err
 	}
 
 	_, err = tx.Exec(`INSERT INTO guild_characters (guild_id, character_id) VALUES ($1, $2)`, guildID, leaderCharID)
 	if err != nil {
-		_ = tx.Rollback()
 		return 0, err
 	}
 
@@ -207,10 +207,11 @@ func (r *GuildRepository) Save(guild *Guild) error {
 
 // Disband removes a guild, its members, and cleans up alliance references.
 func (r *GuildRepository) Disband(guildID uint32) error {
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback() }()
 
 	stmts := []string{
 		"DELETE FROM guild_characters WHERE guild_id = $1",
@@ -219,17 +220,14 @@ func (r *GuildRepository) Disband(guildID uint32) error {
 	}
 	for _, stmt := range stmts {
 		if _, err := tx.Exec(stmt, guildID); err != nil {
-			_ = tx.Rollback()
 			return err
 		}
 	}
 
 	if _, err := tx.Exec("UPDATE guild_alliances SET sub1_id=sub2_id, sub2_id=NULL WHERE sub1_id=$1", guildID); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 	if _, err := tx.Exec("UPDATE guild_alliances SET sub2_id=NULL WHERE sub2_id=$1", guildID); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 
@@ -244,13 +242,13 @@ func (r *GuildRepository) RemoveCharacter(charID uint32) error {
 
 // AcceptApplication deletes the application and adds the character to the guild.
 func (r *GuildRepository) AcceptApplication(guildID, charID uint32) error {
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.Exec(`DELETE FROM guild_applications WHERE character_id = $1`, charID); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 
@@ -258,7 +256,6 @@ func (r *GuildRepository) AcceptApplication(guildID, charID uint32) error {
 		INSERT INTO guild_characters (guild_id, character_id, order_index)
 		VALUES ($1, $2, (SELECT MAX(order_index) + 1 FROM guild_characters WHERE guild_id = $1))
 	`, guildID, charID); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 
@@ -275,18 +272,18 @@ func (r *GuildRepository) CreateApplication(guildID, charID, actorID uint32, app
 
 // CreateApplicationWithMail atomically creates an application and sends a notification mail.
 func (r *GuildRepository) CreateApplicationWithMail(guildID, charID, actorID uint32, appType GuildApplicationType, mailSenderID, mailRecipientID uint32, mailSubject, mailBody string) error {
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback() }()
+
 	if _, err := tx.Exec(
 		`INSERT INTO guild_applications (guild_id, character_id, actor_id, application_type) VALUES ($1, $2, $3, $4)`,
 		guildID, charID, actorID, appType); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 	if _, err := tx.Exec(mailInsertQuery, mailSenderID, mailRecipientID, mailSubject, mailBody, 0, 0, true, false); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 	return tx.Commit()
@@ -312,14 +309,14 @@ func (r *GuildRepository) RejectApplication(guildID, charID uint32) error {
 
 // ArrangeCharacters reorders guild members by updating their order_index values.
 func (r *GuildRepository) ArrangeCharacters(charIDs []uint32) error {
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback() }()
 
 	for i, id := range charIDs {
 		if _, err := tx.Exec("UPDATE guild_characters SET order_index = $1 WHERE character_id = $2", 2+i, id); err != nil {
-			_ = tx.Rollback()
 			return err
 		}
 	}

@@ -1,6 +1,9 @@
 package channelserver
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // AddMemberDailyRP adds RP to a member's daily total.
 func (r *GuildRepository) AddMemberDailyRP(charID uint32, amount uint16) error {
@@ -56,36 +59,34 @@ func (r *GuildRepository) SetRoomExpiry(guildID uint32, expiry time.Time) error 
 // then updates the guild's rp_reset_at timestamp.
 // Uses SELECT FOR UPDATE to prevent concurrent rollovers from racing.
 func (r *GuildRepository) RolloverDailyRP(guildID uint32, noon time.Time) error {
-	tx, err := r.db.Begin()
+	tx, err := r.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback() }()
+
 	// Lock the guild row and re-check whether rollover is still needed.
 	var rpResetAt time.Time
 	if err := tx.QueryRow(
 		`SELECT COALESCE(rp_reset_at, '2000-01-01'::timestamptz) FROM guilds WHERE id = $1 FOR UPDATE`,
 		guildID,
 	).Scan(&rpResetAt); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 	if !rpResetAt.Before(noon) {
 		// Another goroutine already rolled over; nothing to do.
-		_ = tx.Rollback()
 		return nil
 	}
 	if _, err := tx.Exec(
 		`UPDATE guild_characters SET rp_yesterday = rp_today, rp_today = 0 WHERE guild_id = $1`,
 		guildID,
 	); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 	if _, err := tx.Exec(
 		`UPDATE guilds SET rp_reset_at = $1 WHERE id = $2`,
 		noon, guildID,
 	); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 	return tx.Commit()

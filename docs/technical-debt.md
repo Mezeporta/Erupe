@@ -114,19 +114,9 @@ The pattern `m.Field, _ = stringsupport.SJISToUTF8(...)` appears across:
 
 A malformed SJIS string from a client yields an empty string with no log output, making garbled text impossible to debug. The error return should at least be logged at debug level.
 
-### 6. Inconsistent transaction API
+### ~~6. Inconsistent transaction API~~ (Fixed)
 
-`repo_guild.go` mixes two transaction styles in the same file:
-
-```go
-// Line 175 — no context, old style
-tx, err := r.db.Begin()
-
-// Line 518 — sqlx-idiomatic, with context
-tx, err := r.db.BeginTxx(context.Background(), nil)
-```
-
-Should standardize on `BeginTxx` throughout. The `Begin()` calls cannot carry a context for cancellation or timeout.
+**Status:** Fixed. All transaction call sites now use `BeginTxx(context.Background(), nil)` with deferred rollback, replacing the old `Begin()` + manual rollback pattern across `repo_guild.go`, `repo_guild_rp.go`, `repo_festa.go`, and `repo_event.go`.
 
 ### ~~7. `LoopDelay` config has no Viper default~~ (Fixed)
 
@@ -162,4 +152,4 @@ Based on impact and the momentum from recent repo-interface refactoring:
 5. ~~**Fix `fmt.Sprintf` in logger calls**~~ — **Done**
 6. ~~**Add `LoopDelay` Viper default**~~ — **Done**
 7. **Log SJIS decoding errors** — improves debuggability for text issues
-8. **Standardize on `BeginTxx`** — consistency fix in `repo_guild.go`
+8. ~~**Standardize on `BeginTxx`**~~ — **Done**
