@@ -79,7 +79,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 	switch pkt.ShopType {
 	case 1: // Running gachas
 		// Fundamentally, gacha works completely differently, just hide it for now.
-		if s.server.erupeConfig.RealClientMode <= cfg.G7 {
+		if s.server.erupeConfig.RealClientMode < cfg.G1 {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
@@ -93,15 +93,22 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(uint16(len(gachas)))
 		bf.WriteUint16(uint16(len(gachas)))
 		for _, g := range gachas {
-			bf.WriteUint32(g.ID)
-			bf.WriteUint32(0) // Unknown rank restrictions
-			bf.WriteUint32(0)
-			bf.WriteUint32(0)
-			bf.WriteUint32(0)
-			bf.WriteUint32(g.MinGR)
-			bf.WriteUint32(g.MinHR)
-			bf.WriteUint32(0) // only 0 in known packet
+			if s.server.erupeConfig.RealClientMode >= cfg.GG{ 
+				//Before GG, there was no data for G1, so there was no data for G1 except for ID and name
+				//But the difference between G2 and G3 still needs to be tested, and the data for G1 and GG are already clear
+				bf.WriteUint32(g.ID)
+				bf.WriteUint32(0) // Unknown rank restrictions
+				bf.WriteUint32(0)
+				bf.WriteUint32(0)
+				bf.WriteUint32(0)
+				bf.WriteUint32(g.MinGR)
+				bf.WriteUint32(g.MinHR)
+				bf.WriteUint32(0) // only 0 in known packet
+			}
 			ps.Uint8(bf, g.Name, true)
+			if s.server.erupeConfig.RealClientMode <= cfg.GG{  { //For versions less than or equal to GG, each message sent to the name ends
+				continue
+			}
 			ps.Uint8(bf, g.URLBanner, false)
 			ps.Uint8(bf, g.URLFeature, false)
 			if s.server.erupeConfig.RealClientMode >= cfg.G10 {
@@ -138,6 +145,34 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(uint16(len(entries)))
 		for _, ge := range entries {
 			var items []GachaItem
+			if s.server.erupeConfig.RealClientMode <= cfg.GG {
+				// If you need to configure the optional material list among the three options,Configure directly in gacha_detries,The same Entry Type can be merged and displayed in GG,In addition, the prizes are also directly configured in the gacha-entries table,
+				// MHFG1~GG does not use the gacha_items table throughout the entire process, which meets the lottery function of MHFG with a more single function
+				// In addition, the MHFG function itself is relatively simple,Example of lottery configuration for G1~GG:
+				// 	eg: gachaname:test
+				// 	entry: itemgroup: group1:(choose one of the two) ITEM_1_ID:7 COUNT:1  ITEM_1_ID:8 COUNT:2group2:ITEM_1_ID:9 COUNT:3 ; reward:reward1: ITEM_ID:1 COUNT:4 weight:10% reward1: ITEM_ID:2 COUNT:5 weight:90%
+				// 	table:gacha_shop |1|0|0|test|null|null|null|f|f|3|f|
+				// 	table:gacha_entries
+				// 	|1|1|0|7|7|1|0|0|0|0|0|null|
+				// 	|4|1|0|7|8|2|0|0|0|0|0|null|
+				// 	|5|1|1|7|9|3|0|0|0|0|0|null|
+				// 	|8|1|100|7|1|4|1000|0|0|0|0|null|
+				// 	|9|1|100|7|2|5|9000|0|0|0|0|null|
+				bf.WriteUint8(ge.EntryType)     
+				bf.WriteUint32(ge.ID)           
+				bf.WriteUint8(ge.ItemType)      
+				bf.WriteUint32(ge.ItemNumber)   
+				bf.WriteUint16(ge.ItemQuantity) 
+				var weightPr uint16
+				if gachaType >= 4 { // If box   
+					weightPr = 1
+				} else {
+					weightPr = uint16(ge.Weight / divisor)
+				}
+				bf.WriteUint16(weightPr)
+				bf.WriteUint8(0)
+				continue
+			}
 			bf.WriteUint8(ge.EntryType)
 			bf.WriteUint32(ge.ID)
 			bf.WriteUint8(ge.ItemType)
