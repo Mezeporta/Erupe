@@ -9,9 +9,9 @@ import (
 	"erupe-ce/network/mhfpacket"
 )
 
-func TestHandleMsgMhfEnumerateShop_Case1_G7EarlyReturn(t *testing.T) {
+func TestHandleMsgMhfEnumerateShop_Case1_PreG1EarlyReturn(t *testing.T) {
 	server := createMockServer()
-	server.erupeConfig.RealClientMode = cfg.G7
+	server.erupeConfig.RealClientMode = cfg.F5
 
 	session := createMockSession(1, server)
 
