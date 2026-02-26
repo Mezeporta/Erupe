@@ -120,6 +120,54 @@ func TestHandleMsgMhfCaravanRanking(t *testing.T) {
 	}
 }
 
+// Tests consolidated from handlers_coverage3_test.go
+
+func TestNonTrivialHandlers_CaravanGo(t *testing.T) {
+	server := createMockServer()
+
+	tests := []struct {
+		name string
+		fn   func(s *Session)
+	}{
+		{"handleMsgMhfGetRyoudama", func(s *Session) {
+			handleMsgMhfGetRyoudama(s, &mhfpacket.MsgMhfGetRyoudama{AckHandle: 1})
+		}},
+		{"handleMsgMhfGetTinyBin", func(s *Session) {
+			handleMsgMhfGetTinyBin(s, &mhfpacket.MsgMhfGetTinyBin{AckHandle: 1})
+		}},
+		{"handleMsgMhfPostTinyBin", func(s *Session) {
+			handleMsgMhfPostTinyBin(s, &mhfpacket.MsgMhfPostTinyBin{AckHandle: 1})
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			session := createMockSession(1, server)
+			tt.fn(session)
+			select {
+			case p := <-session.sendPackets:
+				if len(p.data) == 0 {
+					t.Errorf("%s: response should have data", tt.name)
+				}
+			default:
+				t.Errorf("%s: no response queued", tt.name)
+			}
+		})
+	}
+}
+
+func TestEmptyHandlers_MiscFiles_Caravan(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgMhfPostRyoudama panicked: %v", r)
+		}
+	}()
+	handleMsgMhfPostRyoudama(session, nil)
+}
+
 func TestHandleMsgMhfCaravanMyRank(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)

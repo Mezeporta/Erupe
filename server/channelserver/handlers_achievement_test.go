@@ -597,3 +597,64 @@ func TestHandleMsgMhfAddAchievement_BoundaryID32(t *testing.T) {
 		t.Errorf("IncrementScore called with ID %d, want 32", mock.incrementedID)
 	}
 }
+
+func TestHandleMsgMhfSetCaAchievementHist_Response(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfSetCaAchievementHist{
+		AckHandle: 44444,
+	}
+
+	handleMsgMhfSetCaAchievementHist(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// Tests consolidated from handlers_coverage3_test.go
+
+func TestEmptyHandlers_AchievementGo(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	tests := []struct {
+		name string
+		fn   func()
+	}{
+		{"handleMsgMhfDisplayedAchievement", func() {
+			handleMsgMhfDisplayedAchievement(session, &mhfpacket.MsgMhfDisplayedAchievement{})
+		}},
+		{"handleMsgMhfGetCaAchievementHist", func() { handleMsgMhfGetCaAchievementHist(session, nil) }},
+		{"handleMsgMhfSetCaAchievement", func() { handleMsgMhfSetCaAchievement(session, nil) }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s panicked: %v", tt.name, r)
+				}
+			}()
+			tt.fn()
+		})
+	}
+}
+
+func TestEmptyHandlers_MiscFiles_Achievement(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgMhfPaymentAchievement panicked: %v", r)
+		}
+	}()
+	handleMsgMhfPaymentAchievement(session, nil)
+}

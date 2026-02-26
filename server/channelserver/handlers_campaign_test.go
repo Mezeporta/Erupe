@@ -68,3 +68,45 @@ func TestHandleMsgMhfApplyCampaign(t *testing.T) {
 		t.Error("No response packet queued")
 	}
 }
+
+// Tests consolidated from handlers_core_test.go
+
+func TestHandleMsgMhfEnumerateItem(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfEnumerateItem{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfEnumerateItem(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgMhfAcquireItem(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfAcquireItem{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfAcquireItem(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}

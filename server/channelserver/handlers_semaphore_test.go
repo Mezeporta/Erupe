@@ -418,6 +418,172 @@ func TestSemaphoreHandlers_SequentialAcquire(t *testing.T) {
 	}
 }
 
+// Tests consolidated from handlers_coverage3_test.go
+
+func TestSimpleAckHandlers_SemaphoreGo(t *testing.T) {
+	server := createMockServer()
+
+	t.Run("handleMsgSysCreateSemaphore", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgSysCreateSemaphore(session, &mhfpacket.MsgSysCreateSemaphore{AckHandle: 1})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("handleMsgSysCreateSemaphore: response should have data")
+			}
+		default:
+			t.Error("handleMsgSysCreateSemaphore: no response queued")
+		}
+	})
+}
+
+func TestHandleMsgSysCreateAcquireSemaphore_Coverage3(t *testing.T) {
+	server := createMockServer()
+	server.semaphore = make(map[string]*Semaphore)
+
+	t.Run("creates_new_semaphore", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgSysCreateAcquireSemaphore(session, &mhfpacket.MsgSysCreateAcquireSemaphore{
+			AckHandle:   1,
+			SemaphoreID: "test_sema_c3_1",
+		})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+		if _, exists := server.semaphore["test_sema_c3_1"]; !exists {
+			t.Error("semaphore should have been created in server map")
+		}
+	})
+
+	t.Run("acquires_existing_semaphore", func(t *testing.T) {
+		session := createMockSession(2, server)
+		handleMsgSysCreateAcquireSemaphore(session, &mhfpacket.MsgSysCreateAcquireSemaphore{
+			AckHandle:   2,
+			SemaphoreID: "test_sema_c3_1",
+		})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("creates_ravi_semaphore", func(t *testing.T) {
+		session := createMockSession(3, server)
+		handleMsgSysCreateAcquireSemaphore(session, &mhfpacket.MsgSysCreateAcquireSemaphore{
+			AckHandle:   3,
+			SemaphoreID: "hs_l0u3B51_c3",
+		})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+		if _, exists := server.semaphore["hs_l0u3B51_c3"]; !exists {
+			t.Error("ravi semaphore should have been created")
+		}
+	})
+}
+
+func TestHandleMsgSysCheckSemaphore_Coverage3(t *testing.T) {
+	server := createMockServer()
+	server.semaphore = make(map[string]*Semaphore)
+
+	t.Run("semaphore_not_exists", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgSysCheckSemaphore(session, &mhfpacket.MsgSysCheckSemaphore{
+			AckHandle:   1,
+			SemaphoreID: "nonexistent_c3",
+		})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("semaphore_exists", func(t *testing.T) {
+		session := createMockSession(1, server)
+		server.semaphore["existing_sema_c3"] = NewSemaphore(session, "existing_sema_c3", 1)
+		handleMsgSysCheckSemaphore(session, &mhfpacket.MsgSysCheckSemaphore{
+			AckHandle:   1,
+			SemaphoreID: "existing_sema_c3",
+		})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+}
+
+func TestHandleMsgSysAcquireSemaphore_Coverage3(t *testing.T) {
+	server := createMockServer()
+	server.semaphore = make(map[string]*Semaphore)
+
+	t.Run("semaphore_exists", func(t *testing.T) {
+		session := createMockSession(1, server)
+		server.semaphore["acquire_sema_c3"] = NewSemaphore(session, "acquire_sema_c3", 1)
+		handleMsgSysAcquireSemaphore(session, &mhfpacket.MsgSysAcquireSemaphore{
+			AckHandle:   1,
+			SemaphoreID: "acquire_sema_c3",
+		})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("semaphore_not_exists", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgSysAcquireSemaphore(session, &mhfpacket.MsgSysAcquireSemaphore{
+			AckHandle:   1,
+			SemaphoreID: "nonexistent_sema_c3",
+		})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+}
+
+func TestEmptyHandlers_MiscFiles_Semaphore(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgSysReleaseSemaphore panicked: %v", r)
+		}
+	}()
+	handleMsgSysReleaseSemaphore(session, nil)
+}
+
 func TestSemaphoreHandlers_MultipleCheck(t *testing.T) {
 	server := createMockServer()
 	server.semaphore = make(map[string]*Semaphore)

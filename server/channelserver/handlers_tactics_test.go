@@ -191,3 +191,103 @@ func TestHandleMsgMhfGetUdTacticsLog(t *testing.T) {
 
 	handleMsgMhfGetUdTacticsLog(session, nil)
 }
+
+// Tests consolidated from handlers_coverage3_test.go
+
+func TestSimpleAckHandlers_TacticsGo(t *testing.T) {
+	server := createMockServer()
+
+	tests := []struct {
+		name string
+		fn   func(s *Session)
+	}{
+		{"handleMsgMhfAddUdTacticsPoint", func(s *Session) {
+			handleMsgMhfAddUdTacticsPoint(s, &mhfpacket.MsgMhfAddUdTacticsPoint{AckHandle: 1})
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			session := createMockSession(1, server)
+			tt.fn(session)
+			select {
+			case p := <-session.sendPackets:
+				if len(p.data) == 0 {
+					t.Errorf("%s: response should have data", tt.name)
+				}
+			default:
+				t.Errorf("%s: no response queued", tt.name)
+			}
+		})
+	}
+}
+
+func TestNonTrivialHandlers_TacticsGo(t *testing.T) {
+	server := createMockServer()
+
+	tests := []struct {
+		name string
+		fn   func(s *Session)
+	}{
+		{"handleMsgMhfGetUdTacticsPoint", func(s *Session) {
+			handleMsgMhfGetUdTacticsPoint(s, &mhfpacket.MsgMhfGetUdTacticsPoint{AckHandle: 1})
+		}},
+		{"handleMsgMhfGetUdTacticsRewardList", func(s *Session) {
+			handleMsgMhfGetUdTacticsRewardList(s, &mhfpacket.MsgMhfGetUdTacticsRewardList{AckHandle: 1})
+		}},
+		{"handleMsgMhfGetUdTacticsFollower", func(s *Session) {
+			handleMsgMhfGetUdTacticsFollower(s, &mhfpacket.MsgMhfGetUdTacticsFollower{AckHandle: 1})
+		}},
+		{"handleMsgMhfGetUdTacticsBonusQuest", func(s *Session) {
+			handleMsgMhfGetUdTacticsBonusQuest(s, &mhfpacket.MsgMhfGetUdTacticsBonusQuest{AckHandle: 1})
+		}},
+		{"handleMsgMhfGetUdTacticsFirstQuestBonus", func(s *Session) {
+			handleMsgMhfGetUdTacticsFirstQuestBonus(s, &mhfpacket.MsgMhfGetUdTacticsFirstQuestBonus{AckHandle: 1})
+		}},
+		{"handleMsgMhfGetUdTacticsRemainingPoint", func(s *Session) {
+			handleMsgMhfGetUdTacticsRemainingPoint(s, &mhfpacket.MsgMhfGetUdTacticsRemainingPoint{AckHandle: 1})
+		}},
+		{"handleMsgMhfGetUdTacticsRanking", func(s *Session) {
+			handleMsgMhfGetUdTacticsRanking(s, &mhfpacket.MsgMhfGetUdTacticsRanking{AckHandle: 1})
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			session := createMockSession(1, server)
+			tt.fn(session)
+			select {
+			case p := <-session.sendPackets:
+				if len(p.data) == 0 {
+					t.Errorf("%s: response should have data", tt.name)
+				}
+			default:
+				t.Errorf("%s: no response queued", tt.name)
+			}
+		})
+	}
+}
+
+func TestEmptyHandlers_MiscFiles_Tactics(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	tests := []struct {
+		name string
+		fn   func()
+	}{
+		{"handleMsgMhfSetUdTacticsFollower", func() { handleMsgMhfSetUdTacticsFollower(session, nil) }},
+		{"handleMsgMhfGetUdTacticsLog", func() { handleMsgMhfGetUdTacticsLog(session, nil) }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s panicked: %v", tt.name, r)
+				}
+			}()
+			tt.fn()
+		})
+	}
+}

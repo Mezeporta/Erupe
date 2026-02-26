@@ -322,6 +322,51 @@ func TestExchangeWeeklyStamp_ExchangeError(t *testing.T) {
 	}
 }
 
+// Tests consolidated from handlers_coverage3_test.go
+
+func TestNonTrivialHandlers_NoDB_Items(t *testing.T) {
+	server := createMockServer()
+
+	t.Run("handleMsgMhfTransferItem", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgMhfTransferItem(session, &mhfpacket.MsgMhfTransferItem{AckHandle: 1})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("handleMsgMhfEnumerateOrder", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgMhfEnumerateOrder(session, &mhfpacket.MsgMhfEnumerateOrder{AckHandle: 1})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("handleMsgMhfEnumeratePrice", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgMhfEnumeratePrice(session, &mhfpacket.MsgMhfEnumeratePrice{AckHandle: 1})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+}
+
 func TestExchangeWeeklyStamp_Yearly(t *testing.T) {
 	server := createMockServer()
 	stampMock := &mockStampRepoForItems{
@@ -358,6 +403,81 @@ func TestExchangeWeeklyStamp_Yearly(t *testing.T) {
 
 	select {
 	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// Tests consolidated from handlers_core_test.go
+
+func TestHandleMsgMhfGetExtraInfo(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgMhfGetExtraInfo panicked: %v", r)
+		}
+	}()
+
+	handleMsgMhfGetExtraInfo(session, nil)
+}
+
+func TestHandleMsgMhfTransferItem(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfTransferItem{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfTransferItem(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgMhfEnumeratePrice(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfEnumeratePrice{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfEnumeratePrice(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgMhfEnumerateOrder(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfEnumerateOrder{
+		AckHandle: 12345,
+	}
+
+	handleMsgMhfEnumerateOrder(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
 	default:
 		t.Error("No response packet queued")
 	}

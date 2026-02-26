@@ -651,3 +651,57 @@ func TestConcurrentSaveData_Integration(t *testing.T) {
 		}
 	}
 }
+
+// =============================================================================
+// Tests consolidated from handlers_coverage4_test.go
+// =============================================================================
+
+func TestGrpToGR(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    int
+		expected uint16
+	}{
+		{"zero", 0, 1},
+		{"low_value", 500, 2},
+		{"first_bracket", 1000, 2},
+		{"mid_bracket", 208750, 51},
+		{"second_bracket", 300000, 62},
+		{"high_value", 593400, 100},
+		{"third_bracket", 700000, 113},
+		{"very_high", 993400, 150},
+		{"above_993400", 1000000, 150},
+		{"fourth_bracket", 1400900, 200},
+		{"max_bracket", 11345900, 900},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := grpToGR(tt.input)
+			if got != tt.expected {
+				t.Errorf("grpToGR(%d) = %d, want %d", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDumpSaveData_Disabled(t *testing.T) {
+	server := createMockServer()
+	server.erupeConfig.SaveDumps.Enabled = false
+	session := createMockSession(1, server)
+
+	// Should return immediately without error
+	dumpSaveData(session, []byte{0x01, 0x02, 0x03}, "test")
+}
+
+func TestHandleMsgSysAuthData(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgSysAuthData panicked: %v", r)
+		}
+	}()
+	handleMsgSysAuthData(session, nil)
+}

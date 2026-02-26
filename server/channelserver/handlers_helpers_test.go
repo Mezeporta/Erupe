@@ -190,6 +190,77 @@ func TestUpdateRights(t *testing.T) {
 	}
 }
 
+// Tests consolidated from handlers_coverage3_test.go
+
+func TestStubHelpers(t *testing.T) {
+	server := createMockServer()
+
+	t.Run("stubEnumerateNoResults", func(t *testing.T) {
+		session := createMockSession(1, server)
+		stubEnumerateNoResults(session, 1)
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("doAckBufSucceed", func(t *testing.T) {
+		session := createMockSession(1, server)
+		doAckBufSucceed(session, 1, []byte{0x01, 0x02, 0x03})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("doAckBufFail", func(t *testing.T) {
+		session := createMockSession(1, server)
+		doAckBufFail(session, 1, []byte{0x01, 0x02, 0x03})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("doAckSimpleSucceed", func(t *testing.T) {
+		session := createMockSession(1, server)
+		doAckSimpleSucceed(session, 1, []byte{0x00, 0x00, 0x00, 0x00})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("doAckSimpleFail", func(t *testing.T) {
+		session := createMockSession(1, server)
+		doAckSimpleFail(session, 1, []byte{0x00, 0x00, 0x00, 0x00})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+}
+
 func TestUpdateRights_Error(t *testing.T) {
 	server := createMockServer()
 	userRepo := &mockUserRepoGacha{rightsErr: errors.New("db error")}

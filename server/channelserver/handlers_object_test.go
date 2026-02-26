@@ -369,3 +369,60 @@ func TestObjectHandlers_SequentialPositionUpdate(t *testing.T) {
 			obj.x, obj.y, obj.z)
 	}
 }
+
+// Tests consolidated from handlers_coverage3_test.go
+
+func TestEmptyHandlers_ObjectGo(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	tests := []struct {
+		name string
+		fn   func()
+	}{
+		{"handleMsgSysDeleteObject", func() { handleMsgSysDeleteObject(session, nil) }},
+		{"handleMsgSysRotateObject", func() { handleMsgSysRotateObject(session, nil) }},
+		{"handleMsgSysDuplicateObject", func() { handleMsgSysDuplicateObject(session, nil) }},
+		{"handleMsgSysGetObjectBinary", func() { handleMsgSysGetObjectBinary(session, nil) }},
+		{"handleMsgSysGetObjectOwner", func() { handleMsgSysGetObjectOwner(session, nil) }},
+		{"handleMsgSysUpdateObjectBinary", func() { handleMsgSysUpdateObjectBinary(session, nil) }},
+		{"handleMsgSysCleanupObject", func() { handleMsgSysCleanupObject(session, nil) }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s panicked: %v", tt.name, r)
+				}
+			}()
+			tt.fn()
+		})
+	}
+}
+
+func TestEmptyHandlers_MiscFiles_Object(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	tests := []struct {
+		name string
+		fn   func()
+	}{
+		{"handleMsgSysAddObject", func() { handleMsgSysAddObject(session, nil) }},
+		{"handleMsgSysDelObject", func() { handleMsgSysDelObject(session, nil) }},
+		{"handleMsgSysDispObject", func() { handleMsgSysDispObject(session, nil) }},
+		{"handleMsgSysHideObject", func() { handleMsgSysHideObject(session, nil) }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s panicked: %v", tt.name, r)
+				}
+			}()
+			tt.fn()
+		})
+	}
+}

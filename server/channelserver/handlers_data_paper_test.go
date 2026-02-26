@@ -395,3 +395,157 @@ func itoa(n uint32) string {
 	}
 	return string(buf[i:])
 }
+
+// =============================================================================
+// Tests consolidated from handlers_coverage4_test.go
+// =============================================================================
+
+func TestHandleMsgMhfGetPaperData_Case0(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
+		AckHandle: 1,
+		DataType:  0,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("case 0: response should have data")
+		}
+	default:
+		t.Error("case 0: no response queued")
+	}
+}
+
+func TestHandleMsgMhfGetPaperData_Case5(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
+		AckHandle: 1,
+		DataType:  5,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("case 5: response should have data")
+		}
+	default:
+		t.Error("case 5: no response queued")
+	}
+}
+
+func TestHandleMsgMhfGetPaperData_Case6(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
+		AckHandle: 1,
+		DataType:  6,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("case 6: response should have data")
+		}
+	default:
+		t.Error("case 6: no response queued")
+	}
+}
+
+func TestHandleMsgMhfGetPaperData_GreaterThan1000_KnownKey(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	// 6001 is a known key in paperGiftData
+	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
+		AckHandle: 1,
+		DataType:  6001,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error(">1000 known: response should have data")
+		}
+	default:
+		t.Error(">1000 known: no response queued")
+	}
+}
+
+func TestHandleMsgMhfGetPaperData_GreaterThan1000_UnknownKey(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	// 9999 is not a known key in paperGiftData
+	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
+		AckHandle: 1,
+		DataType:  9999,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		// Even unknown keys should produce a response (empty earth succeed)
+		_ = p
+	default:
+		t.Error(">1000 unknown: no response queued")
+	}
+}
+
+func TestHandleMsgMhfGetPaperData_DefaultUnknownLessThan1000(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	// Unknown type < 1000, hits default case then falls to else branch
+	handleMsgMhfGetPaperData(session, &mhfpacket.MsgMhfGetPaperData{
+		AckHandle: 1,
+		DataType:  99,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		_ = p
+	default:
+		t.Error("default <1000: no response queued")
+	}
+}
+
+func TestHandleMsgMhfGetGachaPlayHistory(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	handleMsgMhfGetGachaPlayHistory(session, &mhfpacket.MsgMhfGetGachaPlayHistory{
+		AckHandle: 1,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("response should have data")
+		}
+	default:
+		t.Error("no response queued")
+	}
+}
+
+func TestHandleMsgMhfPlayFreeGacha(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	handleMsgMhfPlayFreeGacha(session, &mhfpacket.MsgMhfPlayFreeGacha{
+		AckHandle: 1,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("response should have data")
+		}
+	default:
+		t.Error("no response queued")
+	}
+}

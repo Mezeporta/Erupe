@@ -186,6 +186,26 @@ func TestOperateGuildTresureReport_Claim(t *testing.T) {
 	}
 }
 
+// --- handleMsgMhfAcquireGuildTresureSouvenir tests ---
+
+func TestHandleMsgMhfAcquireGuildTresureSouvenir(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	handleMsgMhfAcquireGuildTresureSouvenir(session, &mhfpacket.MsgMhfAcquireGuildTresureSouvenir{
+		AckHandle: 1,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("response should have data")
+		}
+	default:
+		t.Error("no response queued")
+	}
+}
+
 // --- handleMsgMhfGetGuildTresureSouvenir tests ---
 
 func TestGetGuildTresureSouvenir_Empty(t *testing.T) {

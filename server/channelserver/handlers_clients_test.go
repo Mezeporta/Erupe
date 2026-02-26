@@ -541,6 +541,32 @@ func TestOprMember_EdgeCases_Integration(t *testing.T) {
 	}
 }
 
+// Tests consolidated from handlers_coverage3_test.go
+
+func TestEmptyHandlers_ClientsGo(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	tests := []struct {
+		name string
+		fn   func()
+	}{
+		{"handleMsgMhfShutClient", func() { handleMsgMhfShutClient(session, nil) }},
+		{"handleMsgSysHideClient", func() { handleMsgSysHideClient(session, nil) }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("%s panicked: %v", tt.name, r)
+				}
+			}()
+			tt.fn()
+		})
+	}
+}
+
 // BenchmarkEnumerateClients benchmarks client enumeration
 func BenchmarkEnumerateClients(b *testing.B) {
 	logger, _ := zap.NewDevelopment()

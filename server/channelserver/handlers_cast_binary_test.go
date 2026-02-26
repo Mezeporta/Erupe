@@ -711,3 +711,15 @@ func BenchmarkSlicesIndexFunc(b *testing.B) {
 		_ = slices.IndexFunc(courses, predicate)
 	}
 }
+
+func TestEmptyCastedBinaryHandler(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgSysCastedBinary panicked: %v", r)
+		}
+	}()
+	handleMsgSysCastedBinary(session, nil)
+}

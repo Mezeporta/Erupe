@@ -209,6 +209,55 @@ func TestHandleMsgMhfReadBeatLevelMyRanking_EmptyResponse(t *testing.T) {
 	}
 }
 
+// Tests consolidated from handlers_coverage3_test.go
+
+func TestNonTrivialHandlers_NoDB_Seibattle(t *testing.T) {
+	server := createMockServer()
+
+	t.Run("handleMsgMhfGetSeibattle", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgMhfGetSeibattle(session, &mhfpacket.MsgMhfGetSeibattle{AckHandle: 1})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("handleMsgMhfUpdateBeatLevel", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgMhfUpdateBeatLevel(session, &mhfpacket.MsgMhfUpdateBeatLevel{AckHandle: 1})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+
+	t.Run("handleMsgMhfReadBeatLevel", func(t *testing.T) {
+		session := createMockSession(1, server)
+		handleMsgMhfReadBeatLevel(session, &mhfpacket.MsgMhfReadBeatLevel{
+			AckHandle:    1,
+			ValidIDCount: 2,
+			IDs:          [16]uint32{100, 200},
+		})
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("response should have data")
+			}
+		default:
+			t.Error("no response queued")
+		}
+	})
+}
+
 func TestHandleMsgMhfReadLastWeekBeatRanking_DataSize(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
