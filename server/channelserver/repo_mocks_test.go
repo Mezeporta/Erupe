@@ -121,6 +121,12 @@ type mockCharacterRepo struct {
 	loadSaveDataNew  bool
 	loadSaveDataName string
 	loadSaveDataErr  error
+
+	// ReadEtcPoints mock fields
+	etcBonusQuests uint32
+	etcDailyQuests uint32
+	etcPromoPoints uint32
+	etcPointsErr   error
 }
 
 func newMockCharacterRepo() *mockCharacterRepo {
@@ -205,7 +211,7 @@ func (m *mockCharacterRepo) SetDeleted(_ uint32) error                          
 func (m *mockCharacterRepo) UpdateDailyCafe(_ uint32, _ time.Time, _, _ uint32) error { return nil }
 func (m *mockCharacterRepo) ResetDailyQuests(_ uint32) error                          { return nil }
 func (m *mockCharacterRepo) ReadEtcPoints(_ uint32) (uint32, uint32, uint32, error) {
-	return 0, 0, 0, nil
+	return m.etcBonusQuests, m.etcDailyQuests, m.etcPromoPoints, m.etcPointsErr
 }
 func (m *mockCharacterRepo) ResetCafeTime(_ uint32, _ time.Time) error { return nil }
 func (m *mockCharacterRepo) UpdateGuildPostChecked(_ uint32) error     { return nil }
