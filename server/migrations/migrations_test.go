@@ -62,16 +62,16 @@ func TestMigrateEmptyDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
-	if applied != 1 {
-		t.Errorf("expected 1 migration applied, got %d", applied)
+	if applied != 3 {
+		t.Errorf("expected 3 migrations applied, got %d", applied)
 	}
 
 	ver, err := Version(db)
 	if err != nil {
 		t.Fatalf("Version failed: %v", err)
 	}
-	if ver != 1 {
-		t.Errorf("expected version 1, got %d", ver)
+	if ver != 3 {
+		t.Errorf("expected version 3, got %d", ver)
 	}
 }
 
@@ -103,28 +103,36 @@ func TestMigrateExistingDBWithoutSchemaVersion(t *testing.T) {
 
 	logger, _ := zap.NewDevelopment()
 
-	// Simulate an existing database: create a dummy table
-	_, err := db.Exec("CREATE TABLE users (id SERIAL PRIMARY KEY, name TEXT)")
+	// Simulate an existing database that has the full 0001 schema applied
+	// but no schema_version tracking yet (pre-migration-system installs).
+	// First, run all migrations normally to get the real schema...
+	_, err := Migrate(db, logger)
 	if err != nil {
-		t.Fatalf("Failed to create dummy table: %v", err)
+		t.Fatalf("Initial Migrate failed: %v", err)
+	}
+	// ...then drop schema_version to simulate the pre-tracking state.
+	_, err = db.Exec("DROP TABLE schema_version")
+	if err != nil {
+		t.Fatalf("Failed to drop schema_version: %v", err)
 	}
 
-	// Migrate should detect existing DB and auto-mark baseline
+	// Migrate should detect existing DB and auto-mark baseline,
+	// then apply remaining migrations (0002, 0003).
 	applied, err := Migrate(db, logger)
 	if err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
-	// Baseline (0001) is auto-marked, so 0 "new" migrations applied
-	if applied != 0 {
-		t.Errorf("expected 0 migrations applied (baseline auto-marked), got %d", applied)
+	// Baseline (0001) is auto-marked, then 0002+0003 are applied = 2
+	if applied != 2 {
+		t.Errorf("expected 2 migrations applied (baseline auto-marked, 0002+0003 applied), got %d", applied)
 	}
 
 	ver, err := Version(db)
 	if err != nil {
 		t.Fatalf("Version failed: %v", err)
 	}
-	if ver != 1 {
-		t.Errorf("expected version 1 (auto-marked baseline), got %d", ver)
+	if ver != 3 {
+		t.Errorf("expected version 3, got %d", ver)
 	}
 }
 

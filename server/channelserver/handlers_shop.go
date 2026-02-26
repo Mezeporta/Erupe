@@ -93,7 +93,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(uint16(len(gachas)))
 		bf.WriteUint16(uint16(len(gachas)))
 		for _, g := range gachas {
-			if s.server.erupeConfig.RealClientMode >= cfg.GG{ 
+			if s.server.erupeConfig.RealClientMode >= cfg.GG {
 				//Before GG, there was no data for G1, so there was no data for G1 except for ID and name
 				//But the difference between G2 and G3 still needs to be tested, and the data for G1 and GG are already clear
 				bf.WriteUint32(g.ID)
@@ -106,7 +106,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteUint32(0) // only 0 in known packet
 			}
 			ps.Uint8(bf, g.Name, true)
-			if s.server.erupeConfig.RealClientMode <= cfg.GG{  { //For versions less than or equal to GG, each message sent to the name ends
+			if s.server.erupeConfig.RealClientMode <= cfg.GG { //For versions less than or equal to GG, each message sent to the name ends
 				continue
 			}
 			ps.Uint8(bf, g.URLBanner, false)
