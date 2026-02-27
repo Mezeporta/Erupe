@@ -26,7 +26,7 @@ These TODOs represent features that are visibly broken for players.
 
 | Location | Issue | Impact | Tracker |
 |----------|-------|--------|---------|
-| `model_character.go:88,101,113` | `TODO: fix bookshelf data pointer` for G10-ZZ, F4-F5, and S6 versions | Wrong pointer corrupts character save reads for three game versions. Offset analysis shows all three are off by exactly 14810 vs the consistent delta pattern of other fields — but needs validation against actual save data. | [#164](https://github.com/Mezeporta/Erupe/issues/164) |
+| ~~`model_character.go:88,101,113`~~ | ~~`TODO: fix bookshelf data pointer` for G10-ZZ, F4-F5, and S6 versions~~ | ~~Wrong pointer corrupts character save reads for three game versions.~~ **Fixed.** Corrected offsets to 103928 (G1–Z2), 71928 (F4–F5), 23928 (S6) — validated via inter-version delta analysis and Ghidra decompilation of `snj_db_get_housedata` in the ZZ DLL. | [#164](https://github.com/Mezeporta/Erupe/issues/164) |
 | `handlers_achievement.go:117` | `TODO: Notify on rank increase` — always returns `false` | Achievement rank-up notifications are silently suppressed. Requires understanding what `MhfDisplayedAchievement` (currently an empty handler) sends to track "last displayed" state. | [#165](https://github.com/Mezeporta/Erupe/issues/165) |
 | ~~`handlers_guild_info.go:443`~~ | ~~`TODO: Enable GuildAlliance applications` — hardcoded `true`~~ | ~~Guild alliance applications are always open regardless of setting.~~ **Fixed.** Added `recruiting` column to `guild_alliances`, wired `OperateJoint` actions `0x06`/`0x07`, reads from DB. | [#166](https://github.com/Mezeporta/Erupe/issues/166) |
 | `handlers_session.go:410` | `TODO(Andoryuuta): log key index off-by-one` | Known off-by-one in log key indexing is unresolved | [#167](https://github.com/Mezeporta/Erupe/issues/167) |
@@ -81,6 +81,7 @@ Items resolved since the original audit:
 | — | **Typos** (`sys_session.go`, `handlers_session.go`) | "For Debuging" and "offical" typos already fixed in previous commits. |
 | — | **`db != nil` guard** (`handlers_session.go:322`) | Investigated — this guard is intentional. Test servers run without repos; the guard protects the entire logout path from nil repo dereferences. Not a leaky abstraction. |
 | ~~2~~ | **Repo test coverage (17 files)** | All 20 repo source files now have `_test.go` files with mock-based unit tests. |
+| — | **Bookshelf data pointer** ([#164](https://github.com/Mezeporta/Erupe/issues/164)) | Corrected `pBookshelfData` offsets for G1–Z2 (103928), F4–F5 (71928), S6 (23928). Validated via inter-version delta analysis and Ghidra decompilation of ZZ `snj_db_get_housedata`. |
 
 ---
 
@@ -89,7 +90,7 @@ Items resolved since the original audit:
 Based on remaining impact:
 
 1. ~~**Add tests for `handlers_commands.go`**~~ — **Done.** 62 tests covering all 12 commands (ban, timer, PSN, reload, key quest, rights, course, raviente, teleport, discord, playtime, help), disabled-command gating, op overrides, error paths, and `initCommands`.
-2. **Fix bookshelf data pointer** ([#164](https://github.com/Mezeporta/Erupe/issues/164)) — corrupts saves for three game versions (needs save data validation)
+2. ~~**Fix bookshelf data pointer** ([#164](https://github.com/Mezeporta/Erupe/issues/164))~~ — **Done.** Corrected offsets for G1–Z2, F4–F5, S6 via delta analysis + Ghidra RE
 3. **Fix achievement rank-up notifications** ([#165](https://github.com/Mezeporta/Erupe/issues/165)) — needs protocol research on `MhfDisplayedAchievement`
 4. ~~**Add coverage threshold** to CI~~ — **Done.** 50% floor enforced via `go tool cover` in CI; Codecov removed.
 5. ~~**Fix guild alliance toggle** ([#166](https://github.com/Mezeporta/Erupe/issues/166))~~ — **Done.** `recruiting` column + `OperateJoint` allow/deny actions + DB toggle
