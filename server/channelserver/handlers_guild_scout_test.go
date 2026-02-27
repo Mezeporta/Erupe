@@ -265,3 +265,232 @@ func TestSetRejectGuildScout_DBError(t *testing.T) {
 		t.Error("No response packet queued")
 	}
 }
+
+// --- handleMsgMhfPostGuildScout tests ---
+
+func TestPostGuildScout_Success(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		membership: &GuildMember{GuildID: 10, Recruiter: true},
+	}
+	guildMock.guild = &Guild{ID: 10, Name: "TestGuild"}
+	guildMock.guild.LeaderCharID = 1
+	server.guildRepo = guildMock
+	server.mailRepo = &mockMailRepo{}
+	ensureGuildService(server)
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfPostGuildScout{
+		AckHandle: 100,
+		CharID:    42,
+	}
+
+	handleMsgMhfPostGuildScout(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestPostGuildScout_AlreadyInvited(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		membership:  &GuildMember{GuildID: 10, Recruiter: true},
+		createAppErr: ErrAlreadyInvited,
+	}
+	guildMock.guild = &Guild{ID: 10, Name: "TestGuild"}
+	guildMock.guild.LeaderCharID = 1
+	server.guildRepo = guildMock
+	server.mailRepo = &mockMailRepo{}
+	ensureGuildService(server)
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfPostGuildScout{
+		AckHandle: 100,
+		CharID:    42,
+	}
+
+	handleMsgMhfPostGuildScout(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestPostGuildScout_Error(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		getMemberErr: errNotFound,
+	}
+	server.guildRepo = guildMock
+	server.mailRepo = &mockMailRepo{}
+	ensureGuildService(server)
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfPostGuildScout{
+		AckHandle: 100,
+		CharID:    42,
+	}
+
+	handleMsgMhfPostGuildScout(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// --- handleMsgMhfCancelGuildScout tests ---
+
+func TestCancelGuildScout_Success(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		membership: &GuildMember{GuildID: 10, Recruiter: true},
+	}
+	guildMock.guild = &Guild{ID: 10, Name: "TestGuild"}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfCancelGuildScout{
+		AckHandle:    100,
+		InvitationID: 42,
+	}
+
+	handleMsgMhfCancelGuildScout(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestCancelGuildScout_NoMembership(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		getMemberErr: errNotFound,
+	}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfCancelGuildScout{
+		AckHandle:    100,
+		InvitationID: 42,
+	}
+
+	handleMsgMhfCancelGuildScout(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestCancelGuildScout_NilMembership(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		membership: nil,
+	}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfCancelGuildScout{
+		AckHandle:    100,
+		InvitationID: 42,
+	}
+
+	handleMsgMhfCancelGuildScout(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestCancelGuildScout_GuildNotFound(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		membership: &GuildMember{GuildID: 99, Recruiter: true},
+		getErr:     errNotFound,
+	}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfCancelGuildScout{
+		AckHandle:    100,
+		InvitationID: 42,
+	}
+
+	handleMsgMhfCancelGuildScout(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// --- handleMsgMhfGetGuildScoutList tests ---
+
+func TestGetGuildScoutList_NoGuildNoPrevID(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{} // GetByCharID returns nil
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+	session.prevGuildID = 0
+
+	pkt := &mhfpacket.MsgMhfGetGuildScoutList{AckHandle: 100}
+
+	handleMsgMhfGetGuildScoutList(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetGuildScoutList_NilGuildWithPrevID_GetByIDFails(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{} // GetByCharID returns nil, GetByID for prevGuildID returns not found
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+	session.prevGuildID = 99 // non-zero triggers else branch
+
+	pkt := &mhfpacket.MsgMhfGetGuildScoutList{AckHandle: 100}
+
+	handleMsgMhfGetGuildScoutList(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetGuildScoutList_WithGuild(t *testing.T) {
+	server := createMockServer()
+	guild := &Guild{ID: 10, Name: "TestGuild"}
+	guildMock := &mockGuildRepo{}
+	guildMock.guild = guild
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+	session.prevGuildID = 10
+
+	pkt := &mhfpacket.MsgMhfGetGuildScoutList{AckHandle: 100}
+
+	handleMsgMhfGetGuildScoutList(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}

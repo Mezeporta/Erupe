@@ -408,6 +408,86 @@ func TestExchangeWeeklyStamp_Yearly(t *testing.T) {
 	}
 }
 
+// --- handleMsgMhfEnumerateUnionItem tests ---
+
+func TestEnumerateUnionItem_WithItems(t *testing.T) {
+	server := createMockServer()
+
+	// Build serialized item box with 1 item
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(1)   // numStacks
+	bf.WriteUint16(0)   // unused
+	bf.WriteUint32(100) // warehouseID
+	bf.WriteUint16(500) // itemID
+	bf.WriteUint16(3)   // quantity
+	bf.WriteUint32(0)   // unk0
+
+	userMock := &mockUserRepoForItems{itemBoxData: bf.Data()}
+	server.userRepo = userMock
+	session := createMockSession(1, server)
+	session.userID = 1
+
+	pkt := &mhfpacket.MsgMhfEnumerateUnionItem{AckHandle: 100}
+	handleMsgMhfEnumerateUnionItem(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestEnumerateUnionItem_Empty(t *testing.T) {
+	server := createMockServer()
+	userMock := &mockUserRepoForItems{itemBoxData: nil}
+	server.userRepo = userMock
+	session := createMockSession(1, server)
+	session.userID = 1
+
+	pkt := &mhfpacket.MsgMhfEnumerateUnionItem{AckHandle: 100}
+	handleMsgMhfEnumerateUnionItem(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// --- handleMsgMhfUpdateUnionItem tests ---
+
+func TestUpdateUnionItem(t *testing.T) {
+	server := createMockServer()
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(1)   // numStacks
+	bf.WriteUint16(0)   // unused
+	bf.WriteUint32(100) // warehouseID
+	bf.WriteUint16(500) // itemID
+	bf.WriteUint16(3)   // quantity
+	bf.WriteUint32(0)   // unk0
+
+	userMock := &mockUserRepoForItems{itemBoxData: bf.Data()}
+	server.userRepo = userMock
+	session := createMockSession(1, server)
+	session.userID = 1
+
+	pkt := &mhfpacket.MsgMhfUpdateUnionItem{
+		AckHandle:    100,
+		UpdatedItems: []mhfitem.MHFItemStack{},
+	}
+	handleMsgMhfUpdateUnionItem(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
 // Tests consolidated from handlers_core_test.go
 
 func TestHandleMsgMhfGetExtraInfo(t *testing.T) {

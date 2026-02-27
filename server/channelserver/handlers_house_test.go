@@ -1386,6 +1386,199 @@ func TestHandleMsgMhfOperateWarehouse_Op4(t *testing.T) {
 	<-s.sendPackets
 }
 
+// --- handleMsgMhfLoadHouse tests ---
+
+func TestLoadHouse_OwnHouse(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	server.charRepo = newMockCharacterRepo()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfLoadHouse{AckHandle: 100, CharID: 1, Destination: 9}
+	handleMsgMhfLoadHouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestLoadHouse_OthersHouse(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	server.charRepo = newMockCharacterRepo()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfLoadHouse{AckHandle: 100, CharID: 2, Destination: 3}
+	handleMsgMhfLoadHouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestLoadHouse_Bookshelf(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	server.charRepo = newMockCharacterRepo()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfLoadHouse{AckHandle: 100, CharID: 1, Destination: 4}
+	handleMsgMhfLoadHouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestLoadHouse_Gallery(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfLoadHouse{AckHandle: 100, CharID: 1, Destination: 5}
+	handleMsgMhfLoadHouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestLoadHouse_Tore(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfLoadHouse{AckHandle: 100, CharID: 1, Destination: 8}
+	handleMsgMhfLoadHouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestLoadHouse_Garden(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	server.goocooRepo = newMockGoocooRepo()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfLoadHouse{AckHandle: 100, CharID: 1, Destination: 10}
+	handleMsgMhfLoadHouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestLoadHouse_UnknownDestination(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfLoadHouse{AckHandle: 100, CharID: 1, Destination: 99}
+	handleMsgMhfLoadHouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// --- handleMsgMhfLoadDecoMyset tests ---
+
+func TestLoadDecoMyset(t *testing.T) {
+	server := createMockServer()
+	charMock := newMockCharacterRepo()
+	server.charRepo = charMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfLoadDecoMyset{AckHandle: 100}
+	handleMsgMhfLoadDecoMyset(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response should have default data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// --- handleMsgMhfUpdateWarehouse tests ---
+
+func TestUpdateWarehouse_EmptyItems(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfUpdateWarehouse{
+		AckHandle:    100,
+		BoxType:      0,
+		BoxIndex:     0,
+		UpdatedItems: []mhfitem.MHFItemStack{},
+	}
+	handleMsgMhfUpdateWarehouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestUpdateWarehouse_EmptyEquipment(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfUpdateWarehouse{
+		AckHandle:        100,
+		BoxType:          1,
+		BoxIndex:         0,
+		UpdatedEquipment: []mhfitem.MHFEquipment{},
+	}
+	handleMsgMhfUpdateWarehouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestUpdateWarehouse_InvalidIndex(t *testing.T) {
+	server := createMockServer()
+	server.houseRepo = newMockHouseRepoForItems()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfUpdateWarehouse{
+		AckHandle: 100,
+		BoxType:   0,
+		BoxIndex:  15, // > 10
+	}
+	handleMsgMhfUpdateWarehouse(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
 func TestHandleMsgMhfEnumerateWarehouse_Items(t *testing.T) {
 	srv := createMockServer()
 	srv.houseRepo = newMockHouseRepoForItems()

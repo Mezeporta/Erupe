@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"strings"
 	"testing"
 
 	"erupe-ce/network/mhfpacket"
@@ -253,6 +254,255 @@ func TestHandleMsgMhfPostTenrouirai_QuestToolsDebug(t *testing.T) {
 	pkt := &mhfpacket.MsgMhfPostTenrouirai{AckHandle: 1, Op: 1, Floors: 10, Slays: 5}
 	handleMsgMhfPostTenrouirai(s, pkt)
 	<-s.sendPackets
+}
+
+// --- EmptyTowerCSV tests ---
+
+func TestEmptyTowerCSV(t *testing.T) {
+	result := EmptyTowerCSV(3)
+	if result != "0,0,0" {
+		t.Errorf("EmptyTowerCSV(3) = %q, want %q", result, "0,0,0")
+	}
+
+	result = EmptyTowerCSV(1)
+	if result != "0" {
+		t.Errorf("EmptyTowerCSV(1) = %q, want %q", result, "0")
+	}
+
+	result = EmptyTowerCSV(5)
+	parts := strings.Split(result, ",")
+	if len(parts) != 5 {
+		t.Errorf("EmptyTowerCSV(5) has %d parts, want 5", len(parts))
+	}
+}
+
+// --- handleMsgMhfGetTowerInfo tests ---
+
+func TestGetTowerInfo_InfoType1_TRP(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{
+		towerData: TowerData{TR: 10, TRP: 100},
+	}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetTowerInfo{AckHandle: 100, InfoType: 1}
+	handleMsgMhfGetTowerInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetTowerInfo_InfoType2_Skills(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{
+		towerData: TowerData{TSP: 50},
+		skills:    "1,2,3",
+	}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetTowerInfo{AckHandle: 100, InfoType: 2}
+	handleMsgMhfGetTowerInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetTowerInfo_InfoType3_Level(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{
+		towerData: TowerData{Block1: 5, Block2: 3},
+	}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetTowerInfo{AckHandle: 100, InfoType: 3}
+	handleMsgMhfGetTowerInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetTowerInfo_InfoType4_History(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetTowerInfo{AckHandle: 100, InfoType: 4}
+	handleMsgMhfGetTowerInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetTowerInfo_InfoType5_Level(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{
+		towerData: TowerData{Block1: 10, Block2: 7},
+	}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetTowerInfo{AckHandle: 100, InfoType: 5}
+	handleMsgMhfGetTowerInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetTowerInfo_DBError(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{towerDataErr: errNotFound}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetTowerInfo{AckHandle: 100, InfoType: 1}
+	handleMsgMhfGetTowerInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// --- handleMsgMhfGetGemInfo tests ---
+
+func TestGetGemInfo_QueryType1_Gems(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{gems: "1,2,3,4,5"}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetGemInfo{AckHandle: 100, QueryType: 1}
+	handleMsgMhfGetGemInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetGemInfo_QueryType2_History(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{gems: "0,0,0"}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetGemInfo{AckHandle: 100, QueryType: 2}
+	handleMsgMhfGetGemInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetGemInfo_NoGems(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{gems: ""}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetGemInfo{AckHandle: 100, QueryType: 1}
+	handleMsgMhfGetGemInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// --- handleMsgMhfPostGemInfo tests ---
+
+func TestPostGemInfo_AddGem(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{gems: "0,0,0,0,0"}
+	ensureTowerService(server)
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfPostGemInfo{AckHandle: 100, Op: 1, Gem: 0x0101, Quantity: 5}
+	handleMsgMhfPostGemInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestPostGemInfo_Transfer(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{gems: "0,0,0,0,0"}
+	ensureTowerService(server)
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfPostGemInfo{AckHandle: 100, Op: 2, Gem: 0x0101, Quantity: 1}
+	handleMsgMhfPostGemInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestPostGemInfo_DebugMode(t *testing.T) {
+	server := createMockServer()
+	server.towerRepo = &mockTowerRepo{gems: "0,0,0,0,0"}
+	server.erupeConfig.DebugOptions.QuestTools = true
+	ensureTowerService(server)
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfPostGemInfo{AckHandle: 100, Op: 1, Gem: 0x0101, Quantity: 3}
+	handleMsgMhfPostGemInfo(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// --- handleMsgMhfGetNotice / handleMsgMhfPostNotice tests ---
+
+func TestGetNotice(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetNotice{AckHandle: 100}
+	handleMsgMhfGetNotice(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestPostNotice(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfPostNotice{AckHandle: 100}
+	handleMsgMhfPostNotice(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
 }
 
 // Tests consolidated from handlers_coverage3_test.go
