@@ -45,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed lobby search returning all reserved players instead of only quest-bound players — `QuestReserved` field now counts only clients in "Qs" (quest) stages, matching retail behavior ([#167](https://github.com/Mezeporta/Erupe/issues/167))
+- Documented log key off-by-one (RE'd from mhfo-hd.dll ZZ): `putRecord_log`/`putTerminal_log` don't use the key in ZZ, so the server value is unused beyond issuance ([#167](https://github.com/Mezeporta/Erupe/issues/167))
+- Documented user search padding version boundary (8 vs 40 bytes) with RE findings from ZZ DLL; G2 analysis inconclusive ([#167](https://github.com/Mezeporta/Erupe/issues/167))
 - Fixed bookshelf save data pointer being off by 14810 bytes for G1–Z2, F4–F5, and S6 game versions — corrected offsets to 103928, 71928, and 23928 respectively ([#164](https://github.com/Mezeporta/Erupe/issues/164))
 - Fixed guild alliance application toggle being hardcoded to always-open — now persisted in DB and togglable by the parent guild leader via `OperateJoint` Allow/Deny actions ([#166](https://github.com/Mezeporta/Erupe/issues/166))
 - Fixed gacha shop not working on G1–GG clients due to protocol differences in `handleMsgMhfEnumerateShop` when `ShopType` is 1 or 2 — thanks @Sin365 (#150)

@@ -407,8 +407,13 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	// TODO(Andoryuuta): In the official client, the log key index is off by one,
-	// cutting off the last byte in _most uses_. Find and document these accordingly.
+	// Client log key off-by-one (RE'd from mhfo-hd.dll ZZ):
+	// putIssue_logkey (0x1D) requests and stores all 16 bytes correctly.
+	// putRecord_log (0x1E) and putTerminal_log (0x13) do NOT embed the log key
+	// in their packets — they pass size 0 to the packet builder for the key field.
+	// The original off-by-one note (Andoryuuta) may apply to pre-ZZ clients where
+	// these functions did use the key. In ZZ the key is stored but never sent back,
+	// so the server value is effectively unused beyond issuance.
 	s.Lock()
 	s.logKey = logKey
 	s.Unlock()
@@ -548,7 +553,11 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint8(uint8(len(sjisName) + 1))
 			resp.WriteUint16(uint16(len(snap.UserBinary3)))
 
-			// TODO: This case might be <=G2
+			// User search response padding block (RE'd from mhfo-hd.dll ZZ):
+			// ZZ per-entry parser (FUN_115868a0) reads 0x28 (40) bytes at offset +8
+			// via memcpy into the result struct. G1 and earlier use 8 bytes.
+			// G2 DLL analysis was inconclusive (stripped binary, no shared struct
+			// sizes with ZZ) — the boundary may be <=G2 rather than <=G1.
 			if s.server.erupeConfig.RealClientMode <= cfg.G1 {
 				resp.WriteBytes(make([]byte, 8))
 			} else {
@@ -711,8 +720,10 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint16(0) // Unk, [0 1 2]
 			resp.WriteUint16(uint16(sr.ClientCount))
 			resp.WriteUint16(sr.MaxPlayers)
-			// TODO: Retail returned the number of clients in quests, not workshop/my series
-			resp.WriteUint16(uint16(sr.Reserved))
+			// Retail returned only clients in quest stages ("Qs" prefix),
+			// not workshop/my series. RE'd from FUN_11586690 in mhfo-hd.dll ZZ:
+			// field at entry offset 0x08-0x09 → struct offset 0x1C (param_1[0xe]).
+			resp.WriteUint16(uint16(sr.QuestReserved))
 
 			resp.WriteUint8(0) // Static?
 			resp.WriteUint8(uint8(sr.MaxPlayers))

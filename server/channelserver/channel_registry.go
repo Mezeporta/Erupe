@@ -46,13 +46,14 @@ type SessionSnapshot struct {
 
 // StageSnapshot is an immutable copy of stage data taken under lock.
 type StageSnapshot struct {
-	ServerIP    net.IP
-	ServerPort  uint16
-	StageID     string
-	ClientCount int
-	Reserved    int
-	MaxPlayers  uint16
-	RawBinData0 []byte
-	RawBinData1 []byte
-	RawBinData3 []byte
+	ServerIP      net.IP
+	ServerPort    uint16
+	StageID       string
+	ClientCount   int
+	Reserved      int
+	QuestReserved int // Players who left to enter quest stages ("Qs" prefix)
+	MaxPlayers    uint16
+	RawBinData0   []byte
+	RawBinData1   []byte
+	RawBinData3   []byte
 }

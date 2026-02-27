@@ -107,6 +107,19 @@ func (r *LocalChannelRegistry) SearchStages(stagePrefix string, max int) []Stage
 		if len(results) >= max {
 			break
 		}
+
+		// Pre-collect which charIDs are in quest stages under server lock,
+		// so we can count quest-reserved players without lock ordering issues
+		// (Server.Mutex must be acquired before Stage.RWMutex).
+		c.Lock()
+		inQuest := make(map[uint32]bool)
+		for _, sess := range c.sessions {
+			if sess.stage != nil && len(sess.stage.id) > 4 && sess.stage.id[3:5] == "Qs" {
+				inQuest[sess.charID] = true
+			}
+		}
+		c.Unlock()
+
 		cIP := net.ParseIP(c.IP).To4()
 		cPort := c.Port
 		c.stages.Range(func(_ string, stage *Stage) bool {
@@ -127,16 +140,24 @@ func (r *LocalChannelRegistry) SearchStages(stagePrefix string, max int) []Stage
 			bin3Copy := make([]byte, len(bin3))
 			copy(bin3Copy, bin3)
 
+			questReserved := 0
+			for charID := range stage.reservedClientSlots {
+				if inQuest[charID] {
+					questReserved++
+				}
+			}
+
 			results = append(results, StageSnapshot{
-				ServerIP:    cIP,
-				ServerPort:  cPort,
-				StageID:     stage.id,
-				ClientCount: len(stage.clients) + len(stage.reservedClientSlots),
-				Reserved:    len(stage.reservedClientSlots),
-				MaxPlayers:  stage.maxPlayers,
-				RawBinData0: bin0Copy,
-				RawBinData1: bin1Copy,
-				RawBinData3: bin3Copy,
+				ServerIP:      cIP,
+				ServerPort:    cPort,
+				StageID:       stage.id,
+				ClientCount:   len(stage.clients) + len(stage.reservedClientSlots),
+				Reserved:      len(stage.reservedClientSlots),
+				QuestReserved: questReserved,
+				MaxPlayers:    stage.maxPlayers,
+				RawBinData0:   bin0Copy,
+				RawBinData1:   bin1Copy,
+				RawBinData3:   bin3Copy,
 			})
 			stage.RUnlock()
 			return true
