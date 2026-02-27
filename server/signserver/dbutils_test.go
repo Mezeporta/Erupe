@@ -8,6 +8,7 @@ import (
 	cfg "erupe-ce/config"
 
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestCharacterStruct(t *testing.T) {
@@ -925,6 +926,46 @@ func TestGetUserRightsZeroUID(t *testing.T) {
 	}
 }
 
+func TestRegisterPsnToken(t *testing.T) {
+	sessionRepo := &mockSignSessionRepo{
+		registerPSNTokenID: 42,
+	}
+
+	server := &Server{
+		logger:      zap.NewNop(),
+		erupeConfig: &cfg.Config{},
+		sessionRepo: sessionRepo,
+	}
+
+	tid, tok, err := server.registerPsnToken("test_psn")
+	if err != nil {
+		t.Errorf("registerPsnToken() error: %v", err)
+	}
+	if tid != 42 {
+		t.Errorf("registerPsnToken() tokenID = %d, want 42", tid)
+	}
+	if tok == "" {
+		t.Error("registerPsnToken() token should not be empty")
+	}
+}
+
+func TestRegisterPsnToken_Error(t *testing.T) {
+	sessionRepo := &mockSignSessionRepo{
+		registerPSNErr: errMockDB,
+	}
+
+	server := &Server{
+		logger:      zap.NewNop(),
+		erupeConfig: &cfg.Config{},
+		sessionRepo: sessionRepo,
+	}
+
+	_, _, err := server.registerPsnToken("test_psn")
+	if err == nil {
+		t.Error("registerPsnToken() should return error")
+	}
+}
+
 func TestGetUserRightsDBError(t *testing.T) {
 	userRepo := &mockSignUserRepo{
 		rightsErr: sql.ErrConnDone,
@@ -957,6 +998,106 @@ func TestGetFriendsForCharactersError(t *testing.T) {
 	friends := server.getFriendsForCharacters(chars)
 	if len(friends) != 0 {
 		t.Errorf("getFriendsForCharacters() on error = %d, want 0", len(friends))
+	}
+}
+
+func TestValidateLogin_CorrectPassword(t *testing.T) {
+	password := "correctpassword"
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+	if err != nil {
+		t.Fatal("failed to hash password:", err)
+	}
+
+	userRepo := &mockSignUserRepo{
+		credUID:      1,
+		credPassword: string(hash),
+	}
+
+	server := &Server{
+		logger:      zap.NewNop(),
+		erupeConfig: &cfg.Config{},
+		userRepo:    userRepo,
+	}
+
+	uid, resp := server.validateLogin("testuser", password)
+	if resp != SIGN_SUCCESS {
+		t.Errorf("validateLogin() correct password = %d, want SIGN_SUCCESS(%d)", resp, SIGN_SUCCESS)
+	}
+	if uid != 1 {
+		t.Errorf("validateLogin() uid = %d, want 1", uid)
+	}
+}
+
+func TestValidateLogin_PermanentBan(t *testing.T) {
+	password := "password"
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+	if err != nil {
+		t.Fatal("failed to hash password:", err)
+	}
+
+	userRepo := &mockSignUserRepo{
+		credUID:       1,
+		credPassword:  string(hash),
+		permanentBans: 1,
+	}
+
+	server := &Server{
+		logger:      zap.NewNop(),
+		erupeConfig: &cfg.Config{},
+		userRepo:    userRepo,
+	}
+
+	uid, resp := server.validateLogin("banned", password)
+	if resp != SIGN_EELIMINATE {
+		t.Errorf("validateLogin() permanent ban = %d, want SIGN_EELIMINATE(%d)", resp, SIGN_EELIMINATE)
+	}
+	if uid != 1 {
+		t.Errorf("validateLogin() uid = %d, want 1", uid)
+	}
+}
+
+func TestValidateLogin_ActiveBan(t *testing.T) {
+	password := "password"
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+	if err != nil {
+		t.Fatal("failed to hash password:", err)
+	}
+
+	userRepo := &mockSignUserRepo{
+		credUID:      1,
+		credPassword: string(hash),
+		activeBans:   1,
+	}
+
+	server := &Server{
+		logger:      zap.NewNop(),
+		erupeConfig: &cfg.Config{},
+		userRepo:    userRepo,
+	}
+
+	_, resp := server.validateLogin("suspended", password)
+	if resp != SIGN_ESUSPEND {
+		t.Errorf("validateLogin() active ban = %d, want SIGN_ESUSPEND(%d)", resp, SIGN_ESUSPEND)
+	}
+}
+
+func TestValidateLogin_AutoCreateError(t *testing.T) {
+	userRepo := &mockSignUserRepo{
+		credErr:     sql.ErrNoRows,
+		registerErr: errMockDB,
+	}
+
+	server := &Server{
+		logger: zap.NewNop(),
+		erupeConfig: &cfg.Config{
+			AutoCreateAccount: true,
+		},
+		userRepo: userRepo,
+	}
+
+	_, resp := server.validateLogin("newuser", "password")
+	if resp != SIGN_EABORT {
+		t.Errorf("validateLogin() auto-create error = %d, want SIGN_EABORT(%d)", resp, SIGN_EABORT)
 	}
 }
 
