@@ -162,8 +162,12 @@ func TestLoginEndpoint_UsernameNotFound(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want 400", rec.Code)
 	}
-	if rec.Body.String() != "username-error" {
-		t.Errorf("body = %q, want username-error", rec.Body.String())
+	var errResp ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&errResp); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	if errResp.Error != "invalid_username" {
+		t.Errorf("error = %q, want invalid_username", errResp.Error)
 	}
 }
 
@@ -195,8 +199,12 @@ func TestLoginEndpoint_WrongPassword(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want 400", rec.Code)
 	}
-	if rec.Body.String() != "password-error" {
-		t.Errorf("body = %q, want password-error", rec.Body.String())
+	var errResp ErrorResponse
+	if err := json.NewDecoder(rec.Body).Decode(&errResp); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	if errResp.Error != "invalid_password" {
+		t.Errorf("error = %q, want invalid_password", errResp.Error)
 	}
 }
 

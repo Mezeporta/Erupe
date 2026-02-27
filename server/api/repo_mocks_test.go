@@ -106,6 +106,23 @@ func (m *mockAPICharacterRepo) ExportSave(_ context.Context, _, _ uint32) (map[s
 	return m.exportResult, m.exportErr
 }
 
+// mockAPIEventRepo implements APIEventRepo for testing.
+type mockAPIEventRepo struct {
+	featureWeapon    *FeatureWeaponRow
+	featureWeaponErr error
+
+	events    []EventRow
+	eventsErr error
+}
+
+func (m *mockAPIEventRepo) GetFeatureWeapon(_ context.Context, _ time.Time) (*FeatureWeaponRow, error) {
+	return m.featureWeapon, m.featureWeaponErr
+}
+
+func (m *mockAPIEventRepo) GetActiveEvents(_ context.Context, _ string) ([]EventRow, error) {
+	return m.events, m.eventsErr
+}
+
 // mockAPISessionRepo implements APISessionRepo for testing.
 type mockAPISessionRepo struct {
 	createTokenID  uint32

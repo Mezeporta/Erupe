@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- API: Standardized JSON error responses (`{"error":"...","message":"..."}`) across all endpoints via `writeError` helper
+- API: Auth middleware extracting `Authorization: Bearer <token>` header for v2 routes; legacy body-token auth preserved
+- API: `returning` field on characters (true if last login > 90 days ago) and `courses` field on auth data (derived from user rights)
+- API: `/v2/` route prefix with HTTP method enforcement alongside legacy routes
+- API: `GET /v2/server/status` endpoint returning MezFes schedule, featured weapon, and festa/diva event status
+- API: `APIEventRepo` interface and read-only implementation for feature weapons and events
 - Catch-up migration (`0002_catch_up_patches.sql`) for databases with partially-applied patch schemas — idempotent no-op on fresh or fully-patched databases, fills gaps for partial installations
 - Embedded auto-migrating database schema system (`server/migrations/`): the server binary now contains all SQL schemas and runs migrations automatically on startup — no more `pg_restore`, manual patch ordering, or external `schemas/` directory needed
 - Setup wizard: web-based first-run configuration at `http://localhost:8080` when `config.json` is missing — guides users through database connection, schema initialization, and server settings

@@ -44,6 +44,26 @@ type APICharacterRepo interface {
 	ExportSave(ctx context.Context, userID, charID uint32) (map[string]interface{}, error)
 }
 
+// APIEventRepo defines the contract for read-only event data access.
+type APIEventRepo interface {
+	// GetFeatureWeapon returns the feature weapon entry for the given week start time.
+	GetFeatureWeapon(ctx context.Context, startTime time.Time) (*FeatureWeaponRow, error)
+	// GetActiveEvents returns all events of the given type.
+	GetActiveEvents(ctx context.Context, eventType string) ([]EventRow, error)
+}
+
+// FeatureWeaponRow holds a single feature_weapon table row.
+type FeatureWeaponRow struct {
+	StartTime      time.Time `db:"start_time"`
+	ActiveFeatures uint32    `db:"featured"`
+}
+
+// EventRow holds a single events table row with epoch start time.
+type EventRow struct {
+	ID        int   `db:"id"`
+	StartTime int64 `db:"start_time"`
+}
+
 // APISessionRepo defines the contract for session/token data access.
 type APISessionRepo interface {
 	// CreateToken inserts a new sign session and returns its ID and token.

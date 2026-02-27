@@ -7,6 +7,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"erupe-ce/common/gametime"
+	"erupe-ce/common/mhfcourse"
 	cfg "erupe-ce/config"
 	"fmt"
 	"image"
@@ -57,6 +58,13 @@ type Character struct {
 	HR        uint32 `json:"hr" db:"hr"`
 	GR        uint32 `json:"gr"`
 	LastLogin int32  `json:"lastLogin" db:"last_login"`
+	Returning bool   `json:"returning"`
+}
+
+// CourseInfo describes an active subscription course for the authenticated user.
+type CourseInfo struct {
+	ID   uint16 `json:"id"`
+	Name string `json:"name"`
 }
 
 // MezFes represents the current Mezeporta Festival event schedule and ticket configuration.
@@ -72,14 +80,15 @@ type MezFes struct {
 // AuthData is the JSON payload returned after successful login or registration,
 // containing session info, character list, event data, and server notices.
 type AuthData struct {
-	CurrentTS     uint32      `json:"currentTs"`
-	ExpiryTS      uint32      `json:"expiryTs"`
-	EntranceCount uint32      `json:"entranceCount"`
-	Notices       []string    `json:"notices"`
-	User          User        `json:"user"`
-	Characters    []Character `json:"characters"`
-	MezFes        *MezFes     `json:"mezFes"`
-	PatchServer   string      `json:"patchServer"`
+	CurrentTS     uint32       `json:"currentTs"`
+	ExpiryTS      uint32       `json:"expiryTs"`
+	EntranceCount uint32       `json:"entranceCount"`
+	Notices       []string     `json:"notices"`
+	User          User         `json:"user"`
+	Characters    []Character  `json:"characters"`
+	Courses       []CourseInfo `json:"courses"`
+	MezFes        *MezFes      `json:"mezFes"`
+	PatchServer   string       `json:"patchServer"`
 }
 
 // ExportData wraps a character's full database row for save export.
@@ -101,23 +110,27 @@ func (s *APIServer) newAuthData(userID uint32, userRights uint32, userTokenID ui
 		PatchServer: s.erupeConfig.API.PatchServer,
 		Notices:     []string{},
 	}
+	// Compute returning status per character
+	ninetyDaysAgo := time.Now().Add(-90 * 24 * time.Hour)
+	for i := range resp.Characters {
+		resp.Characters[i].Returning = time.Unix(int64(resp.Characters[i].LastLogin), 0).Before(ninetyDaysAgo)
+	}
+	// Derive active courses from user rights
+	courses, _ := mhfcourse.GetCourseStruct(userRights, s.erupeConfig.DefaultCourses)
+	resp.Courses = make([]CourseInfo, 0, len(courses))
+	for _, c := range courses {
+		name := ""
+		if aliases := c.Aliases(); len(aliases) > 0 {
+			name = aliases[0]
+		}
+		resp.Courses = append(resp.Courses, CourseInfo{ID: c.ID, Name: name})
+	}
 	if s.erupeConfig.DebugOptions.MaxLauncherHR {
 		for i := range resp.Characters {
 			resp.Characters[i].HR = 7
 		}
 	}
-	stalls := []uint32{10, 3, 6, 9, 4, 8, 5, 7}
-	if s.erupeConfig.GameplayOptions.MezFesSwitchMinigame {
-		stalls[4] = 2
-	}
-	resp.MezFes = &MezFes{
-		ID:           uint32(gametime.WeekStart().Unix()),
-		Start:        uint32(gametime.WeekStart().Add(-time.Duration(s.erupeConfig.GameplayOptions.MezFesDuration) * time.Second).Unix()),
-		End:          uint32(gametime.WeekNext().Unix()),
-		SoloTickets:  s.erupeConfig.GameplayOptions.MezFesSoloTickets,
-		GroupTickets: s.erupeConfig.GameplayOptions.MezFesGroupTickets,
-		Stalls:       stalls,
-	}
+	resp.MezFes = s.buildMezFes()
 	if !s.erupeConfig.HideLoginNotice {
 		resp.Notices = append(resp.Notices, strings.Join(s.erupeConfig.LoginNotices[:], "<PAGE>"))
 	}
@@ -160,35 +173,33 @@ func (s *APIServer) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		s.logger.Error("JSON decode error", zap.Error(err))
-		w.WriteHeader(400)
+		writeError(w, http.StatusBadRequest, "invalid_request", "Malformed request body")
 		return
 	}
 	userID, password, userRights, err := s.userRepo.GetCredentials(ctx, reqData.Username)
 	if err == sql.ErrNoRows {
-		w.WriteHeader(400)
-		_, _ = w.Write([]byte("username-error"))
+		writeError(w, http.StatusBadRequest, "invalid_username", "Username not found")
 		return
 	} else if err != nil {
 		s.logger.Warn("SQL query error", zap.Error(err))
-		w.WriteHeader(500)
+		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(password), []byte(reqData.Password)) != nil {
-		w.WriteHeader(400)
-		_, _ = w.Write([]byte("password-error"))
+		writeError(w, http.StatusBadRequest, "invalid_password", "Incorrect password")
 		return
 	}
 
 	userTokenID, userToken, err := s.createLoginToken(ctx, userID)
 	if err != nil {
 		s.logger.Warn("Error registering login token", zap.Error(err))
-		w.WriteHeader(500)
+		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	characters, err := s.getCharactersForUser(ctx, userID)
 	if err != nil {
 		s.logger.Warn("Error getting characters from DB", zap.Error(err))
-		w.WriteHeader(500)
+		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	if characters == nil {
@@ -209,11 +220,11 @@ func (s *APIServer) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		s.logger.Error("JSON decode error", zap.Error(err))
-		w.WriteHeader(400)
+		writeError(w, http.StatusBadRequest, "invalid_request", "Malformed request body")
 		return
 	}
 	if reqData.Username == "" || reqData.Password == "" {
-		w.WriteHeader(400)
+		writeError(w, http.StatusBadRequest, "missing_fields", "Username and password required")
 		return
 	}
 	s.logger.Info("Creating account", zap.String("username", reqData.Username))
@@ -221,19 +232,18 @@ func (s *APIServer) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Constraint == "users_username_key" {
-			w.WriteHeader(400)
-			_, _ = w.Write([]byte("username-exists-error"))
+			writeError(w, http.StatusBadRequest, "username_exists", "Username already taken")
 			return
 		}
 		s.logger.Error("Error checking user", zap.Error(err), zap.String("username", reqData.Username))
-		w.WriteHeader(500)
+		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 
 	userTokenID, userToken, err := s.createLoginToken(ctx, userID)
 	if err != nil {
 		s.logger.Error("Error registering login token", zap.Error(err))
-		w.WriteHeader(500)
+		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	respData := s.newAuthData(userID, userRights, userTokenID, userToken, []Character{})
@@ -241,28 +251,32 @@ func (s *APIServer) Register(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(respData)
 }
 
-// CreateCharacter handles POST /character/create, creating a new character
-// slot for the authenticated user.
+// CreateCharacter handles POST /characters (v2) or POST /character/create (legacy),
+// creating a new character slot for the authenticated user.
 func (s *APIServer) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	var reqData struct {
-		Token string `json:"token"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
-		s.logger.Error("JSON decode error", zap.Error(err))
-		w.WriteHeader(400)
-		return
-	}
-
-	userID, err := s.userIDFromToken(ctx, reqData.Token)
-	if err != nil {
-		w.WriteHeader(401)
-		return
+	userID, ok := UserIDFromContext(ctx)
+	if !ok {
+		// Legacy path: read token from body
+		var reqData struct {
+			Token string `json:"token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+			s.logger.Error("JSON decode error", zap.Error(err))
+			writeError(w, http.StatusBadRequest, "invalid_request", "Malformed request body")
+			return
+		}
+		var err error
+		userID, err = s.userIDFromToken(ctx, reqData.Token)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "unauthorized", "Invalid or expired token")
+			return
+		}
 	}
 	character, err := s.createCharacter(ctx, userID)
 	if err != nil {
-		s.logger.Error("Failed to create character", zap.Error(err), zap.String("token", reqData.Token))
-		w.WriteHeader(500)
+		s.logger.Error("Failed to create character", zap.Error(err))
+		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	if s.erupeConfig.DebugOptions.MaxLauncherHR {
@@ -272,55 +286,87 @@ func (s *APIServer) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(character)
 }
 
-// DeleteCharacter handles POST /character/delete, soft-deleting an existing
-// character or removing an unfinished one.
+// DeleteCharacter handles POST /characters/{id}/delete (v2) or POST /character/delete (legacy),
+// soft-deleting an existing character or removing an unfinished one.
 func (s *APIServer) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	var reqData struct {
-		Token  string `json:"token"`
-		CharID uint32 `json:"charId"`
+	userID, ok := UserIDFromContext(ctx)
+	var charID uint32
+	if ok {
+		// V2 path: user ID from middleware, char ID from URL
+		vars := mux.Vars(r)
+		if idStr, exists := vars["id"]; exists {
+			if _, err := fmt.Sscanf(idStr, "%d", &charID); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_request", "Invalid character ID")
+				return
+			}
+		}
+	} else {
+		// Legacy path: read token and charId from body
+		var reqData struct {
+			Token  string `json:"token"`
+			CharID uint32 `json:"charId"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+			s.logger.Error("JSON decode error", zap.Error(err))
+			writeError(w, http.StatusBadRequest, "invalid_request", "Malformed request body")
+			return
+		}
+		var err error
+		userID, err = s.userIDFromToken(ctx, reqData.Token)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "unauthorized", "Invalid or expired token")
+			return
+		}
+		charID = reqData.CharID
 	}
-	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
-		s.logger.Error("JSON decode error", zap.Error(err))
-		w.WriteHeader(400)
-		return
-	}
-	userID, err := s.userIDFromToken(ctx, reqData.Token)
-	if err != nil {
-		w.WriteHeader(401)
-		return
-	}
-	if err := s.deleteCharacter(ctx, userID, reqData.CharID); err != nil {
-		s.logger.Error("Failed to delete character", zap.Error(err), zap.String("token", reqData.Token), zap.Uint32("charID", reqData.CharID))
-		w.WriteHeader(500)
+	if err := s.deleteCharacter(ctx, userID, charID); err != nil {
+		s.logger.Error("Failed to delete character", zap.Error(err), zap.Uint32("charID", charID))
+		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	w.Header().Add("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(struct{}{})
 }
 
-// ExportSave handles POST /character/export, returning the full character
-// database row as JSON for backup purposes.
+// ExportSave handles GET /characters/{id}/export (v2) or POST /character/export (legacy),
+// returning the full character database row as JSON for backup purposes.
 func (s *APIServer) ExportSave(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	var reqData struct {
-		Token  string `json:"token"`
-		CharID uint32 `json:"charId"`
+	userID, ok := UserIDFromContext(ctx)
+	var charID uint32
+	if ok {
+		// V2 path: user ID from middleware, char ID from URL
+		vars := mux.Vars(r)
+		if idStr, exists := vars["id"]; exists {
+			if _, err := fmt.Sscanf(idStr, "%d", &charID); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_request", "Invalid character ID")
+				return
+			}
+		}
+	} else {
+		// Legacy path: read token and charId from body
+		var reqData struct {
+			Token  string `json:"token"`
+			CharID uint32 `json:"charId"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+			s.logger.Error("JSON decode error", zap.Error(err))
+			writeError(w, http.StatusBadRequest, "invalid_request", "Malformed request body")
+			return
+		}
+		var err error
+		userID, err = s.userIDFromToken(ctx, reqData.Token)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "unauthorized", "Invalid or expired token")
+			return
+		}
+		charID = reqData.CharID
 	}
-	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
-		s.logger.Error("JSON decode error", zap.Error(err))
-		w.WriteHeader(400)
-		return
-	}
-	userID, err := s.userIDFromToken(ctx, reqData.Token)
+	character, err := s.exportSave(ctx, userID, charID)
 	if err != nil {
-		w.WriteHeader(401)
-		return
-	}
-	character, err := s.exportSave(ctx, userID, reqData.CharID)
-	if err != nil {
-		s.logger.Error("Failed to export save", zap.Error(err), zap.String("token", reqData.Token), zap.Uint32("charID", reqData.CharID))
-		w.WriteHeader(500)
+		s.logger.Error("Failed to export save", zap.Error(err), zap.Uint32("charID", charID))
+		writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	save := ExportData{
@@ -443,6 +489,79 @@ func (s *APIServer) ScreenShot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeResult("200")
+}
+
+func (s *APIServer) buildMezFes() *MezFes {
+	stalls := []uint32{10, 3, 6, 9, 4, 8, 5, 7}
+	if s.erupeConfig.GameplayOptions.MezFesSwitchMinigame {
+		stalls[4] = 2
+	}
+	return &MezFes{
+		ID:           uint32(gametime.WeekStart().Unix()),
+		Start:        uint32(gametime.WeekStart().Add(-time.Duration(s.erupeConfig.GameplayOptions.MezFesDuration) * time.Second).Unix()),
+		End:          uint32(gametime.WeekNext().Unix()),
+		SoloTickets:  s.erupeConfig.GameplayOptions.MezFesSoloTickets,
+		GroupTickets: s.erupeConfig.GameplayOptions.MezFesGroupTickets,
+		Stalls:       stalls,
+	}
+}
+
+// ServerStatusResponse is the JSON payload returned by GET /v2/server/status.
+type ServerStatusResponse struct {
+	MezFes         *MezFes            `json:"mezFes"`
+	FeaturedWeapon *FeatureWeaponInfo `json:"featuredWeapon"`
+	Events         EventStatus        `json:"events"`
+}
+
+// FeatureWeaponInfo describes the currently featured weapons.
+type FeatureWeaponInfo struct {
+	StartTime      uint32 `json:"startTime"`
+	ActiveFeatures uint32 `json:"activeFeatures"`
+}
+
+// EventStatus indicates which recurring events are currently active.
+type EventStatus struct {
+	FestaActive bool `json:"festaActive"`
+	DivaActive  bool `json:"divaActive"`
+}
+
+// ServerStatus handles GET /v2/server/status, returning MezFes schedule,
+// featured weapon, and event activity status.
+func (s *APIServer) ServerStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	resp := ServerStatusResponse{
+		MezFes: s.buildMezFes(),
+	}
+
+	if s.eventRepo != nil {
+		weekStart := gametime.WeekStart()
+		fw, err := s.eventRepo.GetFeatureWeapon(ctx, weekStart)
+		if err != nil {
+			s.logger.Warn("Failed to query feature weapon", zap.Error(err))
+		} else if fw != nil {
+			resp.FeaturedWeapon = &FeatureWeaponInfo{
+				StartTime:      uint32(fw.StartTime.Unix()),
+				ActiveFeatures: fw.ActiveFeatures,
+			}
+		}
+
+		festaEvents, err := s.eventRepo.GetActiveEvents(ctx, "festa")
+		if err != nil {
+			s.logger.Warn("Failed to query festa events", zap.Error(err))
+		} else {
+			resp.Events.FestaActive = len(festaEvents) > 0
+		}
+
+		divaEvents, err := s.eventRepo.GetActiveEvents(ctx, "diva")
+		if err != nil {
+			s.logger.Warn("Failed to query diva events", zap.Error(err))
+		} else {
+			resp.Events.DivaActive = len(divaEvents) > 0
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // Health handles GET /health, returning the server's health status.
