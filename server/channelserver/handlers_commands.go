@@ -258,7 +258,7 @@ func parseChatCommand(s *Session, command string) {
 		if commands["Rights"].Enabled || s.isOp() {
 			if len(args) > 1 {
 				v, err := strconv.Atoi(args[1])
-				if err != nil {
+				if err != nil || v < 0 || v > math.MaxUint32 {
 					sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.commands.rights.error, commands["Rights"].Prefix))
 					return
 				}

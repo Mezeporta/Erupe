@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+
+	"github.com/lib/pq"
 )
 
 // clientModes returns all supported client version strings.
@@ -150,14 +152,7 @@ func createDatabase(host string, port int, user, password, dbName string) error 
 	}
 	defer func() { _ = db.Close() }()
 
-	// Database names can't be parameterized; validate it's alphanumeric + underscores.
-	for _, c := range dbName {
-		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
-			return fmt.Errorf("invalid database name %q: only alphanumeric characters and underscores allowed", dbName)
-		}
-	}
-
-	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+	_, err = db.Exec("CREATE DATABASE " + pq.QuoteIdentifier(dbName))
 	if err != nil {
 		return fmt.Errorf("creating database: %w", err)
 	}
