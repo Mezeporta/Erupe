@@ -40,6 +40,7 @@ func newTestRouter(s *APIServer) *mux.Router {
 	v2Auth.Use(s.AuthMiddleware)
 	v2Auth.HandleFunc("/characters", s.CreateCharacter).Methods("POST")
 	v2Auth.HandleFunc("/characters/{id}/delete", s.DeleteCharacter).Methods("POST")
+	v2Auth.HandleFunc("/characters/{id}", s.DeleteCharacter).Methods("DELETE")
 	v2Auth.HandleFunc("/characters/{id}/export", s.ExportSave).Methods("GET")
 
 	v2.HandleFunc("/server/status", s.ServerStatus).Methods("GET")
@@ -295,6 +296,201 @@ func TestV2ServerStatusRoute_WithEvents(t *testing.T) {
 	}
 	if !resp.Events.DivaActive {
 		t.Error("DivaActive should be true")
+	}
+}
+
+func TestV2CreateCharacter_InvalidToken(t *testing.T) {
+	logger := NewTestLogger(t)
+	server := &APIServer{
+		logger:      logger,
+		erupeConfig: NewTestConfig(),
+		sessionRepo: &mockAPISessionRepo{
+			userIDErr: sql.ErrNoRows,
+		},
+	}
+
+	router := newTestRouter(server)
+
+	req := httptest.NewRequest("POST", "/v2/characters", nil)
+	req.Header.Set("Authorization", "Bearer bad-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("POST /v2/characters (bad token): status = %d, want 401", rec.Code)
+	}
+}
+
+func TestV2DeleteCharacter_InvalidToken(t *testing.T) {
+	logger := NewTestLogger(t)
+	server := &APIServer{
+		logger:      logger,
+		erupeConfig: NewTestConfig(),
+		sessionRepo: &mockAPISessionRepo{
+			userIDErr: sql.ErrNoRows,
+		},
+	}
+
+	router := newTestRouter(server)
+
+	req := httptest.NewRequest("POST", "/v2/characters/5/delete", nil)
+	req.Header.Set("Authorization", "Bearer bad-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("POST /v2/characters/5/delete (bad token): status = %d, want 401", rec.Code)
+	}
+}
+
+func TestV2DeleteCharacter_DELETE(t *testing.T) {
+	logger := NewTestLogger(t)
+	server := &APIServer{
+		logger:      logger,
+		erupeConfig: NewTestConfig(),
+		sessionRepo: &mockAPISessionRepo{userID: 1},
+		charRepo:    &mockAPICharacterRepo{isNewResult: true},
+	}
+
+	router := newTestRouter(server)
+
+	req := httptest.NewRequest("DELETE", "/v2/characters/5", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("DELETE /v2/characters/5: status = %d, want 200", rec.Code)
+	}
+}
+
+func TestV2DeleteCharacter_DELETE_InvalidToken(t *testing.T) {
+	logger := NewTestLogger(t)
+	server := &APIServer{
+		logger:      logger,
+		erupeConfig: NewTestConfig(),
+		sessionRepo: &mockAPISessionRepo{
+			userIDErr: sql.ErrNoRows,
+		},
+	}
+
+	router := newTestRouter(server)
+
+	req := httptest.NewRequest("DELETE", "/v2/characters/5", nil)
+	req.Header.Set("Authorization", "Bearer bad-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("DELETE /v2/characters/5 (bad token): status = %d, want 401", rec.Code)
+	}
+}
+
+func TestV2DeleteCharacter_Finalized(t *testing.T) {
+	logger := NewTestLogger(t)
+	server := &APIServer{
+		logger:      logger,
+		erupeConfig: NewTestConfig(),
+		sessionRepo: &mockAPISessionRepo{userID: 1},
+		charRepo:    &mockAPICharacterRepo{isNewResult: false},
+	}
+
+	router := newTestRouter(server)
+
+	req := httptest.NewRequest("POST", "/v2/characters/5/delete", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("POST /v2/characters/5/delete (finalized): status = %d, want 200", rec.Code)
+	}
+}
+
+func TestV2ExportSave_InvalidToken(t *testing.T) {
+	logger := NewTestLogger(t)
+	server := &APIServer{
+		logger:      logger,
+		erupeConfig: NewTestConfig(),
+		sessionRepo: &mockAPISessionRepo{
+			userIDErr: sql.ErrNoRows,
+		},
+	}
+
+	router := newTestRouter(server)
+
+	req := httptest.NewRequest("GET", "/v2/characters/1/export", nil)
+	req.Header.Set("Authorization", "Bearer bad-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("GET /v2/characters/1/export (bad token): status = %d, want 401", rec.Code)
+	}
+}
+
+func TestV2ExportSave_VerifyBody(t *testing.T) {
+	logger := NewTestLogger(t)
+	server := &APIServer{
+		logger:      logger,
+		erupeConfig: NewTestConfig(),
+		sessionRepo: &mockAPISessionRepo{userID: 1},
+		charRepo: &mockAPICharacterRepo{
+			exportResult: map[string]interface{}{"name": "Hunter", "hr": float64(99)},
+		},
+	}
+
+	router := newTestRouter(server)
+
+	req := httptest.NewRequest("GET", "/v2/characters/1/export", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /v2/characters/1/export: status = %d, want 200", rec.Code)
+	}
+
+	var export ExportData
+	if err := json.NewDecoder(rec.Body).Decode(&export); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	if export.Character["name"] != "Hunter" {
+		t.Errorf("character name = %v, want Hunter", export.Character["name"])
+	}
+}
+
+func TestV2CreateCharacter_DebugHR(t *testing.T) {
+	logger := NewTestLogger(t)
+	conf := NewTestConfig()
+	conf.DebugOptions.MaxLauncherHR = true
+
+	server := &APIServer{
+		logger:      logger,
+		erupeConfig: conf,
+		sessionRepo: &mockAPISessionRepo{userID: 1},
+		charRepo: &mockAPICharacterRepo{
+			newCharacter: Character{ID: 5, Name: "NewChar", HR: 999},
+		},
+	}
+
+	router := newTestRouter(server)
+
+	req := httptest.NewRequest("POST", "/v2/characters", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("POST /v2/characters: status = %d, want 200", rec.Code)
+	}
+
+	var char Character
+	if err := json.NewDecoder(rec.Body).Decode(&char); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	if char.HR != 7 {
+		t.Errorf("HR = %d, want 7 (capped by MaxLauncherHR)", char.HR)
 	}
 }
 
