@@ -152,6 +152,15 @@ Simple CRUD operations should stay as direct repo calls from handlers — not ev
 
 See `docs/anti-patterns.md` for structural patterns and `docs/technical-debt.md` for specific fixable items with file paths and line numbers.
 
+## Pre-Commit Checks
+
+Before every commit, run `gofmt` and `golangci-lint` on changed Go files (excluding `vendor/`). Do not commit if either check fails.
+
+```bash
+gofmt -l .                    # Must produce no output
+golangci-lint run ./...       # Must pass with zero errors
+```
+
 ## Contributing
 
 - Branch naming: `feature/`, `fix/`, `refactor/`, `docs/`
