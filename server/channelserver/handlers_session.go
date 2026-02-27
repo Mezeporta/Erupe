@@ -194,7 +194,14 @@ func saveAllCharacterData(s *Session, rpToAdd int) error {
 	}
 
 	// Save to database (main savedata + user_binary)
-	characterSaveData.Save(s)
+	if err := characterSaveData.Save(s); err != nil {
+		s.logger.Error("Failed to save character data",
+			zap.Error(err),
+			zap.Uint32("charID", s.charID),
+			zap.String("name", s.Name),
+		)
+		return err
+	}
 
 	// Save auxiliary data types
 	// Note: Plate data saves immediately when client sends save packets,

@@ -3,6 +3,7 @@ package channelserver
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
@@ -46,12 +47,12 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 	return saveData, nil
 }
 
-func (save *CharacterSaveData) Save(s *Session) {
+func (save *CharacterSaveData) Save(s *Session) error {
 	if save.decompSave == nil {
 		s.logger.Warn("No decompressed save data, skipping save",
 			zap.Uint32("charID", save.CharID),
 		)
-		return
+		return errors.New("no decompressed save data")
 	}
 
 	if !s.kqfOverride {
@@ -66,7 +67,7 @@ func (save *CharacterSaveData) Save(s *Session) {
 		err := save.Compress()
 		if err != nil {
 			s.logger.Error("Failed to compress savedata", zap.Error(err))
-			return
+			return fmt.Errorf("compress savedata: %w", err)
 		}
 	} else {
 		// Saves were not compressed
@@ -75,11 +76,15 @@ func (save *CharacterSaveData) Save(s *Session) {
 
 	if err := s.server.charRepo.SaveCharacterData(save.CharID, save.compSave, save.HR, save.GR, save.Gender, save.WeaponType, save.WeaponID); err != nil {
 		s.logger.Error("Failed to update savedata", zap.Error(err), zap.Uint32("charID", save.CharID))
+		return fmt.Errorf("save character data: %w", err)
 	}
 
 	if err := s.server.charRepo.SaveHouseData(s.charID, save.HouseTier, save.HouseData, save.BookshelfData, save.GalleryData, save.ToreData, save.GardenData); err != nil {
 		s.logger.Error("Failed to update user binary house data", zap.Error(err))
+		return fmt.Errorf("save house data: %w", err)
 	}
+
+	return nil
 }
 
 func handleMsgMhfSexChanger(s *Session, p mhfpacket.MHFPacket) {

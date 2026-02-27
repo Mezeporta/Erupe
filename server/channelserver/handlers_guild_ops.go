@@ -183,7 +183,9 @@ func handleDonateRP(s *Session, amount uint16, guild *Guild, _type int) []byte {
 		}
 	}
 	saveData.RP -= amount
-	saveData.Save(s)
+	if err := saveData.Save(s); err != nil {
+		s.logger.Error("Failed to save RP after guild donation", zap.Error(err))
+	}
 	switch _type {
 	case 0:
 		if err := s.server.guildRepo.AddRankRP(guild.ID, amount); err != nil {

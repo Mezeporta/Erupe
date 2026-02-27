@@ -156,7 +156,9 @@ func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 					saveData, err := GetCharacterSaveData(s, s.charID)
 					if err == nil {
 						saveData.RP += uint16(item.Quantity)
-						saveData.Save(s)
+						if err := saveData.Save(s); err != nil {
+							s.logger.Error("Failed to save RP from dist item", zap.Error(err))
+						}
 					}
 				}
 			}

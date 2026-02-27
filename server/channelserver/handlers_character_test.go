@@ -476,7 +476,9 @@ func TestCharacterSaveData_Save_Integration(t *testing.T) {
 	saveData.WeaponID = 1234
 
 	// Save it
-	saveData.Save(s)
+	if err := saveData.Save(s); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
 
 	// Reload and verify
 	var hr, gr uint16

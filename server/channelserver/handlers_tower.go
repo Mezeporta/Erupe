@@ -376,7 +376,9 @@ func handleMsgMhfPostTenrouirai(s *Session, p mhfpacket.MHFPacket) {
 		sd, err := GetCharacterSaveData(s, s.charID)
 		if err == nil && sd != nil {
 			sd.RP -= pkt.DonatedRP
-			sd.Save(s)
+			if err := sd.Save(s); err != nil {
+				s.logger.Error("Failed to save RP after tower donation", zap.Error(err))
+			}
 			result, err := s.server.towerService.DonateGuildTowerRP(pkt.GuildID, pkt.DonatedRP)
 			if err != nil {
 				s.logger.Error("Failed to process tower RP donation", zap.Error(err))
