@@ -28,7 +28,7 @@ These TODOs represent features that are visibly broken for players.
 |----------|-------|--------|---------|
 | `model_character.go:88,101,113` | `TODO: fix bookshelf data pointer` for G10-ZZ, F4-F5, and S6 versions | Wrong pointer corrupts character save reads for three game versions. Offset analysis shows all three are off by exactly 14810 vs the consistent delta pattern of other fields — but needs validation against actual save data. | [#164](https://github.com/Mezeporta/Erupe/issues/164) |
 | `handlers_achievement.go:117` | `TODO: Notify on rank increase` — always returns `false` | Achievement rank-up notifications are silently suppressed. Requires understanding what `MhfDisplayedAchievement` (currently an empty handler) sends to track "last displayed" state. | [#165](https://github.com/Mezeporta/Erupe/issues/165) |
-| `handlers_guild_info.go:443` | `TODO: Enable GuildAlliance applications` — hardcoded `true` | Guild alliance applications are always open regardless of setting. Needs research into where the toggle originates. | [#166](https://github.com/Mezeporta/Erupe/issues/166) |
+| ~~`handlers_guild_info.go:443`~~ | ~~`TODO: Enable GuildAlliance applications` — hardcoded `true`~~ | ~~Guild alliance applications are always open regardless of setting.~~ **Fixed.** Added `recruiting` column to `guild_alliances`, wired `OperateJoint` actions `0x06`/`0x07`, reads from DB. | [#166](https://github.com/Mezeporta/Erupe/issues/166) |
 | `handlers_session.go:410` | `TODO(Andoryuuta): log key index off-by-one` | Known off-by-one in log key indexing is unresolved | [#167](https://github.com/Mezeporta/Erupe/issues/167) |
 | `handlers_session.go:551` | `TODO: This case might be <=G2` | Uncertain version detection in switch case | [#167](https://github.com/Mezeporta/Erupe/issues/167) |
 | `handlers_session.go:714` | `TODO: Retail returned the number of clients in quests` | Player count reported to clients does not match retail behavior | [#167](https://github.com/Mezeporta/Erupe/issues/167) |
@@ -92,6 +92,6 @@ Based on remaining impact:
 2. **Fix bookshelf data pointer** ([#164](https://github.com/Mezeporta/Erupe/issues/164)) — corrupts saves for three game versions (needs save data validation)
 3. **Fix achievement rank-up notifications** ([#165](https://github.com/Mezeporta/Erupe/issues/165)) — needs protocol research on `MhfDisplayedAchievement`
 4. ~~**Add coverage threshold** to CI~~ — **Done.** 50% floor enforced via `go tool cover` in CI; Codecov removed.
-5. **Fix guild alliance toggle** ([#166](https://github.com/Mezeporta/Erupe/issues/166)) — needs research into where the setting originates
+5. ~~**Fix guild alliance toggle** ([#166](https://github.com/Mezeporta/Erupe/issues/166))~~ — **Done.** `recruiting` column + `OperateJoint` allow/deny actions + DB toggle
 6. **Fix session handler retail mismatches** ([#167](https://github.com/Mezeporta/Erupe/issues/167)) — log key off-by-one, version boundary, player count
 7. **Reverse-engineer MhfAddUdPoint fields** ([#168](https://github.com/Mezeporta/Erupe/issues/168)) — needs packet captures

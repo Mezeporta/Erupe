@@ -440,7 +440,7 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 			ps.Uint8(bf, alliance.Name, true)
 			ps.Uint8(bf, alliance.ParentGuild.LeaderName, true)
 			bf.WriteUint8(0x01) // Unk
-			bf.WriteBool(true)  // TODO: Enable GuildAlliance applications
+			bf.WriteBool(!alliance.Recruiting)
 		}
 	} else {
 		hasNextPage := false

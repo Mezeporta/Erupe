@@ -15,6 +15,7 @@ type GuildAlliance struct {
 	Name         string    `db:"name"`
 	CreatedAt    time.Time `db:"created_at"`
 	TotalMembers uint16
+	Recruiting   bool `db:"recruiting"`
 
 	ParentGuildID uint32 `db:"parent_id"`
 	SubGuild1ID   uint32 `db:"sub1_id"`
@@ -73,6 +74,24 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 				"Non-owner of guild attempted alliance leave",
 				zap.Uint32("CharID", s.charID),
 			)
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		}
+	case mhfpacket.OPERATE_JOINT_ALLOW:
+		if guild.LeaderCharID == s.charID && alliance.ParentGuildID == guild.ID {
+			if err := s.server.guildRepo.SetAllianceRecruiting(alliance.ID, true); err != nil {
+				s.logger.Error("Failed to allow alliance applications", zap.Error(err))
+			}
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		} else {
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		}
+	case mhfpacket.OPERATE_JOINT_DENY:
+		if guild.LeaderCharID == s.charID && alliance.ParentGuildID == guild.ID {
+			if err := s.server.guildRepo.SetAllianceRecruiting(alliance.ID, false); err != nil {
+				s.logger.Error("Failed to deny alliance applications", zap.Error(err))
+			}
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		} else {
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		}
 	case mhfpacket.OPERATE_JOINT_KICK:

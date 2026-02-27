@@ -87,6 +87,7 @@ type GuildRepo interface {
 	CreateAlliance(name string, parentGuildID uint32) error
 	DeleteAlliance(allianceID uint32) error
 	RemoveGuildFromAlliance(allianceID, guildID, subGuild1ID, subGuild2ID uint32) error
+	SetAllianceRecruiting(allianceID uint32, recruiting bool) error
 	ListAdventures(guildID uint32) ([]*GuildAdventure, error)
 	CreateAdventure(guildID, destination uint32, depart, returnTime int64) error
 	CreateAdventureWithCharge(guildID, destination, charge uint32, depart, returnTime int64) error

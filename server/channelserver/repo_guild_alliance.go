@@ -11,6 +11,7 @@ SELECT
 ga.id,
 ga.name,
 created_at,
+ga.recruiting,
 parent_id,
 CASE
 	WHEN sub1_id IS NULL THEN 0
@@ -76,6 +77,12 @@ func (r *GuildRepository) RemoveGuildFromAlliance(allianceID, guildID, subGuild1
 		return err
 	}
 	_, err := r.db.Exec(`UPDATE guild_alliances SET sub2_id = NULL WHERE id = $1`, allianceID)
+	return err
+}
+
+// SetAllianceRecruiting updates whether an alliance is accepting applications.
+func (r *GuildRepository) SetAllianceRecruiting(allianceID uint32, recruiting bool) error {
+	_, err := r.db.Exec("UPDATE guild_alliances SET recruiting=$1 WHERE id=$2", recruiting, allianceID)
 	return err
 }
 

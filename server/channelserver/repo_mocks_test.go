@@ -304,13 +304,15 @@ type mockGuildRepo struct {
 	deletedPostID  uint32
 
 	// Alliance
-	alliance          *GuildAlliance
-	getAllianceErr     error
-	createAllianceErr  error
-	deleteAllianceErr  error
-	removeAllyErr      error
-	deletedAllianceID  uint32
-	removedAllyArgs    []uint32
+	alliance               *GuildAlliance
+	getAllianceErr          error
+	createAllianceErr      error
+	deleteAllianceErr      error
+	removeAllyErr          error
+	setAllianceRecruitErr  error
+	deletedAllianceID      uint32
+	removedAllyArgs        []uint32
+	allianceRecruitingSet  *bool
 
 	// Cooking
 	meals         []*GuildMeal
@@ -452,6 +454,11 @@ func (m *mockGuildRepo) CreateAlliance(_ string, _ uint32) error {
 func (m *mockGuildRepo) DeleteAlliance(id uint32) error {
 	m.deletedAllianceID = id
 	return m.deleteAllianceErr
+}
+
+func (m *mockGuildRepo) SetAllianceRecruiting(_ uint32, recruiting bool) error {
+	m.allianceRecruitingSet = &recruiting
+	return m.setAllianceRecruitErr
 }
 
 func (m *mockGuildRepo) RemoveGuildFromAlliance(allyID, guildID, sub1, sub2 uint32) error {

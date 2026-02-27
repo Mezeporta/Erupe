@@ -238,6 +238,126 @@ func TestOperateJoint_Kick_NotOwner(t *testing.T) {
 	}
 }
 
+func TestOperateJoint_Allow_AsOwner(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		alliance: &GuildAlliance{
+			ID:            5,
+			ParentGuildID: 10,
+		},
+	}
+	guildMock.guild = &Guild{ID: 10}
+	guildMock.guild.LeaderCharID = 1
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfOperateJoint{
+		AckHandle:  100,
+		AllianceID: 5,
+		GuildID:    10,
+		Action:     mhfpacket.OPERATE_JOINT_ALLOW,
+	}
+
+	handleMsgMhfOperateJoint(session, pkt)
+
+	if guildMock.allianceRecruitingSet == nil || !*guildMock.allianceRecruitingSet {
+		t.Error("SetAllianceRecruiting should be called with true")
+	}
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestOperateJoint_Allow_NotOwner(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		alliance: &GuildAlliance{
+			ID:            5,
+			ParentGuildID: 99, // different guild
+		},
+	}
+	guildMock.guild = &Guild{ID: 10}
+	guildMock.guild.LeaderCharID = 1
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfOperateJoint{
+		AckHandle:  100,
+		AllianceID: 5,
+		GuildID:    10,
+		Action:     mhfpacket.OPERATE_JOINT_ALLOW,
+	}
+
+	handleMsgMhfOperateJoint(session, pkt)
+
+	if guildMock.allianceRecruitingSet != nil {
+		t.Error("Non-owner should not toggle alliance recruiting")
+	}
+}
+
+func TestOperateJoint_Deny_AsOwner(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		alliance: &GuildAlliance{
+			ID:            5,
+			ParentGuildID: 10,
+		},
+	}
+	guildMock.guild = &Guild{ID: 10}
+	guildMock.guild.LeaderCharID = 1
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfOperateJoint{
+		AckHandle:  100,
+		AllianceID: 5,
+		GuildID:    10,
+		Action:     mhfpacket.OPERATE_JOINT_DENY,
+	}
+
+	handleMsgMhfOperateJoint(session, pkt)
+
+	if guildMock.allianceRecruitingSet == nil || *guildMock.allianceRecruitingSet {
+		t.Error("SetAllianceRecruiting should be called with false")
+	}
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestOperateJoint_Deny_NotOwner(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		alliance: &GuildAlliance{
+			ID:            5,
+			ParentGuildID: 99,
+		},
+	}
+	guildMock.guild = &Guild{ID: 10}
+	guildMock.guild.LeaderCharID = 1
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfOperateJoint{
+		AckHandle:  100,
+		AllianceID: 5,
+		GuildID:    10,
+		Action:     mhfpacket.OPERATE_JOINT_DENY,
+	}
+
+	handleMsgMhfOperateJoint(session, pkt)
+
+	if guildMock.allianceRecruitingSet != nil {
+		t.Error("Non-owner should not toggle alliance recruiting")
+	}
+}
+
 // --- handleMsgMhfInfoJoint tests ---
 
 func TestInfoJoint_Success(t *testing.T) {
