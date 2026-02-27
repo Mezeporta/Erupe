@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed guild alliance application toggle being hardcoded to always-open — now persisted in DB and togglable by the parent guild leader via `OperateJoint` Allow/Deny actions ([#166](https://github.com/Mezeporta/Erupe/issues/166))
 - Fixed gacha shop not working on G1–GG clients due to protocol differences in `handleMsgMhfEnumerateShop` when `ShopType` is 1 or 2 — thanks @Sin365 (#150)
 - Config file handling and validation
 - Fixes 3 critical race condition in handlers_stage.go.
