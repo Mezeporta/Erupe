@@ -57,7 +57,7 @@ jobs:
       run: go mod download
 
     - name: Run Tests with Race Detector and Coverage
-      run: go test -race -coverprofile=coverage.out ./... -timeout=10m
+      run: go test -race -p 1 -coverprofile=coverage.out ./... -timeout=10m
       env:
         TEST_DB_HOST: localhost
         TEST_DB_PORT: 5433
