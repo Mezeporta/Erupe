@@ -23,7 +23,12 @@ type MessageBoardPost struct {
 
 func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildMessageBoard)
-	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
+	if err != nil {
+		s.logger.Error("Failed to get guild for message board", zap.Error(err))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	if pkt.BoardType == 1 {
 		pkt.MaxPosts = 4
 	}
@@ -107,7 +112,10 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	case 5: // Check for new messages
 		timeChecked, err := s.server.charRepo.ReadGuildPostChecked(s.charID)
 		if err == nil {
-			newPosts, _ := s.server.guildRepo.CountNewPosts(guild.ID, timeChecked)
+			newPosts, countErr := s.server.guildRepo.CountNewPosts(guild.ID, timeChecked)
+			if countErr != nil {
+				s.logger.Warn("Failed to count new guild posts", zap.Error(countErr))
+			}
 			if newPosts > 0 {
 				doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
 				return

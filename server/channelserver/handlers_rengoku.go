@@ -199,7 +199,10 @@ type RengokuScore struct {
 func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateRengokuRanking)
 
-	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
+	guild, guildErr := s.server.guildRepo.GetByCharID(s.charID)
+	if guildErr != nil {
+		s.logger.Warn("Failed to get guild for rengoku ranking", zap.Error(guildErr))
+	}
 	var isApplicant bool
 	if guild != nil {
 		var appErr error

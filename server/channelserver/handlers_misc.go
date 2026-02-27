@@ -13,7 +13,10 @@ import (
 func handleMsgMhfGetEtcPoints(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetEtcPoints)
 
-	dailyTime, _ := s.server.charRepo.ReadTime(s.charID, "daily_time", time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))
+	dailyTime, err := s.server.charRepo.ReadTime(s.charID, "daily_time", time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		s.logger.Warn("Failed to read daily_time for etc points", zap.Error(err))
+	}
 	if TimeAdjusted().After(dailyTime) {
 		if err := s.server.charRepo.ResetDailyQuests(s.charID); err != nil {
 			s.logger.Error("Failed to reset daily quests", zap.Error(err))

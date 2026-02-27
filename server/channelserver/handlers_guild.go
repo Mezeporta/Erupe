@@ -87,7 +87,10 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	if guild != nil {
-		isApplicant, _ := s.server.guildRepo.HasApplication(guild.ID, s.charID)
+		isApplicant, appErr := s.server.guildRepo.HasApplication(guild.ID, s.charID)
+		if appErr != nil {
+			s.logger.Warn("Failed to check guild application status", zap.Error(appErr))
+		}
 		if isApplicant {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 2))
 			return
@@ -229,7 +232,12 @@ func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(guild.MemberCount))
-	members, _ := s.server.guildRepo.GetMembers(guild.ID, false)
+	members, err := s.server.guildRepo.GetMembers(guild.ID, false)
+	if err != nil {
+		s.logger.Error("Failed to get guild members for manage right", zap.Error(err))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
 	for _, member := range members {
 		bf.WriteUint32(member.CharID)
 		bf.WriteBool(member.Recruiter)

@@ -208,7 +208,10 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryW)
 	bf := byteframe.NewByteFrame()
 
-	pactID, _ := readCharacterInt(s, "pact_id")
+	pactID, pactErr := readCharacterInt(s, "pact_id")
+	if pactErr != nil {
+		s.logger.Warn("Failed to read pact_id", zap.Error(pactErr))
+	}
 	var cid uint32
 	var name string
 	if pactID > 0 {
@@ -243,8 +246,14 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 		}
 
 		if pkt.Op != 1 && pkt.Op != 4 {
-			data, _ := s.server.charRepo.LoadColumn(s.charID, "savemercenary")
-			gcp, _ := readCharacterInt(s, "gcp")
+			data, dataErr := s.server.charRepo.LoadColumn(s.charID, "savemercenary")
+			if dataErr != nil {
+				s.logger.Warn("Failed to load savemercenary", zap.Error(dataErr))
+			}
+			gcp, gcpErr := readCharacterInt(s, "gcp")
+			if gcpErr != nil {
+				s.logger.Warn("Failed to read gcp", zap.Error(gcpErr))
+			}
 
 			if len(data) == 0 {
 				bf.WriteBool(false)
@@ -261,7 +270,10 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfReadMercenaryM(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryM)
-	data, _ := s.server.charRepo.LoadColumn(pkt.CharID, "savemercenary")
+	data, err := s.server.charRepo.LoadColumn(pkt.CharID, "savemercenary")
+	if err != nil {
+		s.logger.Warn("Failed to load savemercenary for other character", zap.Error(err))
+	}
 	resp := byteframe.NewByteFrame()
 	if len(data) == 0 {
 		resp.WriteBool(false)

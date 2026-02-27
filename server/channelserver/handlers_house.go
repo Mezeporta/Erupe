@@ -43,7 +43,10 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	var houses []HouseData
 	switch pkt.Method {
 	case 1:
-		friendsList, _ := s.server.charRepo.ReadString(s.charID, "friends")
+		friendsList, flErr := s.server.charRepo.ReadString(s.charID, "friends")
+		if flErr != nil {
+			s.logger.Warn("Failed to read friends list for house enumeration", zap.Error(flErr))
+		}
 		cids := stringsupport.CSVElems(friendsList)
 		for _, cid := range cids {
 			house, err := s.server.houseRepo.GetHouseByCharID(uint32(cid))
@@ -134,7 +137,10 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 
 		// Friends list verification
 		if state == 3 || state == 5 {
-			friendsList, _ := s.server.charRepo.ReadString(pkt.CharID, "friends")
+			friendsList, flErr := s.server.charRepo.ReadString(pkt.CharID, "friends")
+			if flErr != nil {
+				s.logger.Warn("Failed to read friends list for house access check", zap.Error(flErr))
+			}
 			cids := stringsupport.CSVElems(friendsList)
 			for _, cid := range cids {
 				if uint32(cid) == s.charID {
@@ -148,7 +154,10 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 		if state > 3 {
 			ownGuild, err := s.server.guildRepo.GetByCharID(s.charID)
 			if err == nil && ownGuild != nil {
-				isApplicant, _ := s.server.guildRepo.HasApplication(ownGuild.ID, s.charID)
+				isApplicant, appErr := s.server.guildRepo.HasApplication(ownGuild.ID, s.charID)
+				if appErr != nil {
+					s.logger.Warn("Failed to check guild application for house access", zap.Error(appErr))
+				}
 				othersGuild, err := s.server.guildRepo.GetByCharID(pkt.CharID)
 				if err == nil && othersGuild != nil {
 					if othersGuild.ID == ownGuild.ID && !isApplicant {

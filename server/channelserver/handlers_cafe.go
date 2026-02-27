@@ -51,7 +51,9 @@ func handleMsgMhfCheckDailyCafepoint(s *Session, p mhfpacket.MHFPacket) {
 	var bondBonus, bonusQuests, dailyQuests uint32
 	bf := byteframe.NewByteFrame()
 	if midday.After(dailyTime) {
-		_ = addPointNetcafe(s, 5)
+		if err := addPointNetcafe(s, 5); err != nil {
+			s.logger.Error("Failed to add daily netcafe points", zap.Error(err))
+		}
 		bondBonus = 5 // Bond point bonus quests
 		bonusQuests = s.server.erupeConfig.GameplayOptions.BonusQuestAllowance
 		dailyQuests = s.server.erupeConfig.GameplayOptions.DailyQuestAllowance
@@ -167,7 +169,9 @@ func handleMsgMhfPostCafeDurationBonusReceived(s *Session, p mhfpacket.MHFPacket
 		itemType, quantity, err := s.server.cafeRepo.GetBonusItem(cbID)
 		if err == nil {
 			if itemType == 17 {
-				_ = addPointNetcafe(s, int(quantity))
+				if err := addPointNetcafe(s, int(quantity)); err != nil {
+				s.logger.Error("Failed to add cafe bonus netcafe points", zap.Error(err))
+			}
 			}
 		}
 		if err := s.server.cafeRepo.AcceptBonus(cbID, s.charID); err != nil {
@@ -185,6 +189,7 @@ func addPointNetcafe(s *Session, p int) error {
 	points = min(points+p, s.server.erupeConfig.GameplayOptions.MaximumNP)
 	if err := s.server.charRepo.SaveInt(s.charID, "netcafe_points", points); err != nil {
 		s.logger.Error("Failed to update netcafe points", zap.Error(err))
+		return fmt.Errorf("save netcafe points: %w", err)
 	}
 	return nil
 }

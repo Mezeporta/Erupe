@@ -253,11 +253,3 @@ func (m *mockSignSessionRepo) GetPSNIDByToken(token string) (string, error) {
 	return m.psnIDByToken, m.psnIDByTokenErr
 }
 
-// newTestServer creates a Server with mock repos for testing.
-func newTestServer(userRepo SignUserRepo, charRepo SignCharacterRepo, sessionRepo SignSessionRepo) *Server {
-	return &Server{
-		userRepo:    userRepo,
-		charRepo:    charRepo,
-		sessionRepo: sessionRepo,
-	}
-}

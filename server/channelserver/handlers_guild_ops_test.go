@@ -630,7 +630,7 @@ func TestHandleRenamePugi_Pugi1(t *testing.T) {
 	nameBytes := stringsupport.UTF8ToSJIS("TestPugi")
 	bf.WriteBytes(nameBytes)
 	bf.WriteUint8(0) // null terminator
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 
 	handleRenamePugi(s, bf, guild, 1)
 	if guild.PugiName1 != "TestPugi" {
@@ -648,7 +648,7 @@ func TestHandleRenamePugi_Pugi2(t *testing.T) {
 	nameBytes := stringsupport.UTF8ToSJIS("Pugi2")
 	bf.WriteBytes(nameBytes)
 	bf.WriteUint8(0)
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 
 	handleRenamePugi(s, bf, guild, 2)
 	if guild.PugiName2 != "Pugi2" {
@@ -666,7 +666,7 @@ func TestHandleRenamePugi_Pugi3Default(t *testing.T) {
 	nameBytes := stringsupport.UTF8ToSJIS("Pugi3")
 	bf.WriteBytes(nameBytes)
 	bf.WriteUint8(0)
-	bf.Seek(0, 0)
+	_, _ = bf.Seek(0, 0)
 
 	handleRenamePugi(s, bf, guild, 3)
 	if guild.PugiName3 != "Pugi3" {
@@ -719,4 +719,143 @@ func TestHandleAvoidLeadershipUpdate_GetMembershipError(t *testing.T) {
 	pkt := &mhfpacket.MsgMhfOperateGuild{AckHandle: 1}
 	handleAvoidLeadershipUpdate(s, pkt, true)
 	<-s.sendPackets
+}
+
+func TestHandleAvoidLeadershipUpdate_SaveError(t *testing.T) {
+	srv := createMockServer()
+	membership := &GuildMember{CharID: 100}
+	srv.guildRepo = &mockGuildRepo{membership: membership, saveMemberErr: errNotFound}
+	s := createMockSession(100, srv)
+
+	pkt := &mhfpacket.MsgMhfOperateGuild{AckHandle: 1}
+	handleAvoidLeadershipUpdate(s, pkt, true)
+	<-s.sendPackets
+}
+
+// --- mapMemberAction tests ---
+
+func TestMapMemberAction(t *testing.T) {
+	tests := []struct {
+		proto uint8
+		want  GuildMemberAction
+		ok    bool
+	}{
+		{mhfpacket.OPERATE_GUILD_MEMBER_ACTION_ACCEPT, GuildMemberActionAccept, true},
+		{mhfpacket.OPERATE_GUILD_MEMBER_ACTION_REJECT, GuildMemberActionReject, true},
+		{mhfpacket.OPERATE_GUILD_MEMBER_ACTION_KICK, GuildMemberActionKick, true},
+		{255, 0, false},
+	}
+	for _, tt := range tests {
+		action, ok := mapMemberAction(tt.proto)
+		if ok != tt.ok {
+			t.Errorf("mapMemberAction(%d) ok = %v, want %v", tt.proto, ok, tt.ok)
+		}
+		if action != tt.want {
+			t.Errorf("mapMemberAction(%d) = %d, want %d", tt.proto, action, tt.want)
+		}
+	}
+}
+
+func TestOperateGuildMember_UnknownAction(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		membership: &GuildMember{GuildID: 10, CharID: 1, IsLeader: true, OrderIndex: 1},
+	}
+	guildMock.guild = &Guild{ID: 10, Name: "TestGuild"}
+	guildMock.guild.LeaderCharID = 1
+	server.guildRepo = guildMock
+	server.mailRepo = &mockMailRepo{}
+	ensureGuildService(server)
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfOperateGuildMember{
+		AckHandle: 100,
+		GuildID:   10,
+		CharID:    42,
+		Action:    255, // unknown action
+	}
+
+	handleMsgMhfOperateGuildMember(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+// --- handleDonateRP tests ---
+
+func TestDonateRP_Type0_RankRP(t *testing.T) {
+	server := createMockServer()
+	charMock := newMockCharacterRepo()
+	// Build minimal save data that GetCharacterSaveData can parse
+	charMock.loadSaveDataID = 1
+	charMock.loadSaveDataData = nil // triggers new char path
+	charMock.loadSaveDataNew = true
+	charMock.loadSaveDataName = "TestChar"
+	server.charRepo = charMock
+	guildMock := &mockGuildRepo{}
+	guildMock.guild = &Guild{ID: 10}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	result := handleDonateRP(session, 5, guildMock.guild, 0)
+	if len(result) != 4 {
+		t.Errorf("Expected 4 bytes, got %d", len(result))
+	}
+}
+
+func TestDonateRP_Type1_EventRP(t *testing.T) {
+	server := createMockServer()
+	charMock := newMockCharacterRepo()
+	charMock.loadSaveDataID = 1
+	charMock.loadSaveDataData = nil
+	charMock.loadSaveDataNew = true
+	charMock.loadSaveDataName = "TestChar"
+	server.charRepo = charMock
+	guildMock := &mockGuildRepo{}
+	guildMock.guild = &Guild{ID: 10}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	result := handleDonateRP(session, 10, guildMock.guild, 1)
+	if len(result) != 4 {
+		t.Errorf("Expected 4 bytes, got %d", len(result))
+	}
+}
+
+func TestDonateRP_Type2_RoomRP_NoReset(t *testing.T) {
+	server := createMockServer()
+	charMock := newMockCharacterRepo()
+	charMock.loadSaveDataID = 1
+	charMock.loadSaveDataData = nil
+	charMock.loadSaveDataNew = true
+	charMock.loadSaveDataName = "TestChar"
+	server.charRepo = charMock
+	guildMock := &mockGuildRepo{}
+	guildMock.guild = &Guild{ID: 10}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	result := handleDonateRP(session, 5, guildMock.guild, 2) // 0+5 < 30, no reset
+	if len(result) != 4 {
+		t.Errorf("Expected 4 bytes, got %d", len(result))
+	}
+}
+
+func TestDonateRP_SaveDataError(t *testing.T) {
+	server := createMockServer()
+	charMock := newMockCharacterRepo()
+	charMock.loadSaveDataErr = errNotFound
+	server.charRepo = charMock
+	guildMock := &mockGuildRepo{}
+	guildMock.guild = &Guild{ID: 10}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	result := handleDonateRP(session, 5, guildMock.guild, 0)
+	if len(result) != 4 {
+		t.Errorf("Expected 4 bytes on error, got %d", len(result))
+	}
 }

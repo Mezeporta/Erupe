@@ -139,7 +139,9 @@ func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 			for _, item := range distItems {
 				switch item.ItemType {
 				case 17:
-					_ = addPointNetcafe(s, int(item.Quantity))
+					if err := addPointNetcafe(s, int(item.Quantity)); err != nil {
+					s.logger.Error("Failed to add dist item netcafe points", zap.Error(err))
+				}
 				case 19:
 					if err := s.server.userRepo.AddPremiumCoins(s.userID, item.Quantity); err != nil {
 						s.logger.Error("Failed to update gacha premium", zap.Error(err))

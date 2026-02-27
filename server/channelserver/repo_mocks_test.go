@@ -810,8 +810,6 @@ type mockGachaRepo struct {
 	allEntriesErr error
 	weightDivisor float64
 
-	// FrontierPoints from gacha
-	addFPErr error
 }
 
 func (m *mockGachaRepo) GetEntryForTransaction(_ uint32, _ uint8) (uint8, uint16, int, error) {

@@ -46,12 +46,11 @@ func (svc *FestaService) EnsureActiveEvent(currentStart uint32, now time.Time, n
 // SubmitSouls filters out zero-value soul entries and records the remaining
 // submissions for the character. Returns nil if all entries are zero.
 func (svc *FestaService) SubmitSouls(charID, guildID uint32, souls []uint16) error {
-	var filtered []uint16
 	hasNonZero := false
 	for _, s := range souls {
-		filtered = append(filtered, s)
 		if s != 0 {
 			hasNonZero = true
+			break
 		}
 	}
 	if !hasNonZero {

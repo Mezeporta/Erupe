@@ -18,7 +18,14 @@ type GuildMeal struct {
 
 func handleMsgMhfLoadGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadGuildCooking)
-	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
+	if err != nil || guild == nil {
+		if err != nil {
+			s.logger.Error("Failed to get guild for cooking", zap.Error(err))
+		}
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 2))
+		return
+	}
 	allMeals, err := s.server.guildRepo.ListMeals(guild.ID)
 	if err != nil {
 		s.logger.Error("Failed to get guild meals from db", zap.Error(err))
@@ -44,7 +51,14 @@ func handleMsgMhfLoadGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfRegistGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfRegistGuildCooking)
-	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
+	guild, err := s.server.guildRepo.GetByCharID(s.charID)
+	if err != nil || guild == nil {
+		if err != nil {
+			s.logger.Error("Failed to get guild for cooking registration", zap.Error(err))
+		}
+		doAckBufFail(s, pkt.AckHandle, nil)
+		return
+	}
 	startTime := TimeAdjusted().Add(time.Duration(s.server.erupeConfig.GameplayOptions.ClanMealDuration-3600) * time.Second)
 	if pkt.OverwriteID != 0 {
 		if err := s.server.guildRepo.UpdateMeal(pkt.OverwriteID, uint32(pkt.MealID), uint32(pkt.Success), startTime); err != nil {
