@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Distribution table: remove unused `data bytea NOT NULL` column that prevented seed data from matching Go code expectations (#169)
+
 ### Added
 
 - API: Standardized JSON error responses (`{"error":"...","message":"..."}`) across all endpoints via `writeError` helper

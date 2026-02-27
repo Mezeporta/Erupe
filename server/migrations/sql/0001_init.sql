@@ -264,7 +264,6 @@ CREATE TABLE public.distribution (
     max_sr integer,
     min_gr integer,
     max_gr integer,
-    data bytea NOT NULL,
     rights integer,
     selection boolean
 );

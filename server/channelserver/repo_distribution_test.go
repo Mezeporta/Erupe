@@ -20,9 +20,9 @@ func createDistribution(t *testing.T, db *sqlx.DB, charID *uint32, distType int,
 	t.Helper()
 	var id uint32
 	err := db.QueryRow(
-		`INSERT INTO distribution (character_id, type, event_name, description, data, times_acceptable)
-		VALUES ($1, $2, $3, $4, $5, 1) RETURNING id`,
-		charID, distType, eventName, description, []byte{0x00},
+		`INSERT INTO distribution (character_id, type, event_name, description, times_acceptable)
+		VALUES ($1, $2, $3, $4, 1) RETURNING id`,
+		charID, distType, eventName, description,
 	).Scan(&id)
 	if err != nil {
 		t.Fatalf("Failed to create distribution: %v", err)
