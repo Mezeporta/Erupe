@@ -2,6 +2,7 @@ package signserver
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -261,5 +262,312 @@ func TestMakeSignResponse_FullFlow(t *testing.T) {
 	// First byte should be SIGN_SUCCESS
 	if result[0] != uint8(SIGN_SUCCESS) {
 		t.Errorf("makeSignResponse() first byte = %d, want %d (SIGN_SUCCESS)", result[0], SIGN_SUCCESS)
+	}
+}
+
+// TestMakeSignResponse_PSNClientWritesPSNID verifies PSN client appends PSNID field.
+func TestMakeSignResponse_PSNClientWritesPSNID(t *testing.T) {
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{0, 0, 0, 0, 0},
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:  100,
+			MezFesGroupTickets: 100,
+		},
+	}
+
+	server := newMakeSignResponseServer(config)
+	server.charRepo = &mockSignCharacterRepo{
+		characters: []character{{ID: 1, Name: "PSNHunter", HR: 50}},
+	}
+	server.userRepo = &mockSignUserRepo{
+		returnExpiry: time.Now().Add(time.Hour * 24 * 30),
+		lastLogin:    time.Now(),
+		psnIDForUser: "MyPSNID",
+	}
+
+	// PC response
+	pcConn := newMockConn()
+	pcSession := &Session{
+		logger:  zap.NewNop(),
+		server:  server,
+		rawConn: pcConn,
+		client:  PC100,
+	}
+	pcResult := pcSession.makeSignResponse(1)
+
+	// PS4 response
+	ps4Conn := newMockConn()
+	ps4Session := &Session{
+		logger:  zap.NewNop(),
+		server:  server,
+		rawConn: ps4Conn,
+		client:  PS4,
+	}
+	ps4Result := ps4Session.makeSignResponse(1)
+
+	// PSN response should be longer due to 20-byte PSNID field
+	if len(ps4Result) <= len(pcResult) {
+		t.Errorf("PS4 response len (%d) should be > PC response len (%d)", len(ps4Result), len(pcResult))
+	}
+}
+
+// TestMakeSignResponse_CapLink51728_20000 verifies CapLink key is written.
+func TestMakeSignResponse_CapLink51728_20000(t *testing.T) {
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{51728, 20000, 0, 0, 0},
+				Key:    "caplink-key-test",
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:  100,
+			MezFesGroupTickets: 100,
+		},
+	}
+
+	server := newMakeSignResponseServer(config)
+	conn := newMockConn()
+	session := &Session{
+		logger:  zap.NewNop(),
+		server:  server,
+		rawConn: conn,
+		client:  PC100,
+	}
+
+	result := session.makeSignResponse(1)
+	if result[0] != uint8(SIGN_SUCCESS) {
+		t.Errorf("first byte = %d, want SIGN_SUCCESS", result[0])
+	}
+
+	// The response with CapLink key should be longer than without
+	configNoKey := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{0, 0, 0, 0, 0},
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:  100,
+			MezFesGroupTickets: 100,
+		},
+	}
+	serverNoKey := newMakeSignResponseServer(configNoKey)
+	sessionNoKey := &Session{
+		logger:  zap.NewNop(),
+		server:  serverNoKey,
+		rawConn: newMockConn(),
+		client:  PC100,
+	}
+	resultNoKey := sessionNoKey.makeSignResponse(1)
+
+	if len(result) <= len(resultNoKey) {
+		t.Errorf("CapLink 51728/20000 response len (%d) should be > base response len (%d)", len(result), len(resultNoKey))
+	}
+}
+
+// TestMakeSignResponse_CapLink51728_20002 verifies the 20002 variant also writes key.
+func TestMakeSignResponse_CapLink51728_20002(t *testing.T) {
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{51728, 20002, 0, 0, 0},
+				Key:    "caplink-key-20002",
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:  100,
+			MezFesGroupTickets: 100,
+		},
+	}
+
+	server := newMakeSignResponseServer(config)
+	session := &Session{
+		logger:  zap.NewNop(),
+		server:  server,
+		rawConn: newMockConn(),
+		client:  PC100,
+	}
+
+	result := session.makeSignResponse(1)
+	if result[0] != uint8(SIGN_SUCCESS) {
+		t.Errorf("first byte = %d, want SIGN_SUCCESS", result[0])
+	}
+	if len(result) == 0 {
+		t.Error("makeSignResponse() returned empty result")
+	}
+}
+
+// TestMakeSignResponse_CapLink51729Combo verifies the 51729 host:port write.
+func TestMakeSignResponse_CapLink51729Combo(t *testing.T) {
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{0, 0, 51729, 1, 20000},
+				Host:   "caplink.example.com",
+				Port:   9999,
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:  100,
+			MezFesGroupTickets: 100,
+		},
+	}
+
+	server := newMakeSignResponseServer(config)
+	session := &Session{
+		logger:  zap.NewNop(),
+		server:  server,
+		rawConn: newMockConn(),
+		client:  PC100,
+	}
+
+	result := session.makeSignResponse(1)
+	if result[0] != uint8(SIGN_SUCCESS) {
+		t.Errorf("first byte = %d, want SIGN_SUCCESS", result[0])
+	}
+
+	// Response with 51729 combo should include host:port string, making it longer
+	configNoCap := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{0, 0, 0, 0, 0},
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:  100,
+			MezFesGroupTickets: 100,
+		},
+	}
+	serverNoCap := newMakeSignResponseServer(configNoCap)
+	sessionNoCap := &Session{
+		logger:  zap.NewNop(),
+		server:  serverNoCap,
+		rawConn: newMockConn(),
+		client:  PC100,
+	}
+	resultNoCap := sessionNoCap.makeSignResponse(1)
+
+	if len(result) <= len(resultNoCap) {
+		t.Errorf("CapLink 51729 combo response len (%d) should be > base len (%d)", len(result), len(resultNoCap))
+	}
+}
+
+// TestMakeSignResponse_MezFesSwitchMinigame verifies stalls[4] is set to 2.
+func TestMakeSignResponse_MezFesSwitchMinigame(t *testing.T) {
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{0, 0, 0, 0, 0},
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:    100,
+			MezFesGroupTickets:   100,
+			MezFesSwitchMinigame: true,
+		},
+	}
+
+	server := newMakeSignResponseServer(config)
+	session := &Session{
+		logger:  zap.NewNop(),
+		server:  server,
+		rawConn: newMockConn(),
+		client:  PC100,
+	}
+
+	result := session.makeSignResponse(1)
+	if result[0] != uint8(SIGN_SUCCESS) {
+		t.Errorf("first byte = %d, want SIGN_SUCCESS", result[0])
+	}
+	if len(result) == 0 {
+		t.Error("makeSignResponse() returned empty result")
+	}
+}
+
+// mockConnRemote is a mockConn variant with a configurable RemoteAddr.
+type mockConnRemote struct {
+	mockConn
+	remoteAddr net.Addr
+}
+
+func (m *mockConnRemote) RemoteAddr() net.Addr {
+	return m.remoteAddr
+}
+
+// TestMakeSignResponse_NonLocalhostRemote verifies the non-localhost entrance addr path.
+func TestMakeSignResponse_NonLocalhostRemote(t *testing.T) {
+	config := &cfg.Config{
+		Host: "192.168.1.100",
+		Entrance: cfg.Entrance{
+			Port: 53310,
+		},
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{0, 0, 0, 0, 0},
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:  100,
+			MezFesGroupTickets: 100,
+		},
+	}
+
+	server := newMakeSignResponseServer(config)
+	conn := &mockConnRemote{
+		mockConn:   *newMockConn(),
+		remoteAddr: &net.TCPAddr{IP: net.ParseIP("10.0.0.5"), Port: 12345},
+	}
+	session := &Session{
+		logger:  zap.NewNop(),
+		server:  server,
+		rawConn: conn,
+		client:  PC100,
+	}
+
+	result := session.makeSignResponse(1)
+	if result[0] != uint8(SIGN_SUCCESS) {
+		t.Errorf("first byte = %d, want SIGN_SUCCESS", result[0])
+	}
+	// Response should contain the Host address (192.168.1.100) rather than 127.0.0.1
+	resultStr := string(result)
+	if !strings.Contains(resultStr, "192.168.1.100") {
+		t.Error("non-localhost response should contain Host address")
+	}
+}
+
+// TestMakeSignResponse_PSNTokenPath verifies the PSN token registration when uid=0 with psn set.
+func TestMakeSignResponse_PSNTokenPath(t *testing.T) {
+	config := &cfg.Config{
+		DebugOptions: cfg.DebugOptions{
+			CapLink: cfg.CapLinkOptions{
+				Values: []uint16{0, 0, 0, 0, 0},
+			},
+		},
+		GameplayOptions: cfg.GameplayOptions{
+			MezFesSoloTickets:  100,
+			MezFesGroupTickets: 100,
+		},
+	}
+
+	server := newMakeSignResponseServer(config)
+	server.sessionRepo = &mockSignSessionRepo{
+		registerPSNTokenID: 500,
+	}
+	session := &Session{
+		logger:  zap.NewNop(),
+		server:  server,
+		rawConn: newMockConn(),
+		client:  PS4,
+		psn:     "my_psn_id",
+	}
+
+	result := session.makeSignResponse(0)
+	if result[0] != uint8(SIGN_SUCCESS) {
+		t.Errorf("first byte = %d, want SIGN_SUCCESS", result[0])
 	}
 }

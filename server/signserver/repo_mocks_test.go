@@ -252,4 +252,3 @@ func (m *mockSignSessionRepo) Validate(token string, tokenID uint32) (bool, erro
 func (m *mockSignSessionRepo) GetPSNIDByToken(token string) (string, error) {
 	return m.psnIDByToken, m.psnIDByTokenErr
 }
-

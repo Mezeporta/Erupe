@@ -846,3 +846,245 @@ func TestAuthenticate_RegisterTokenError(t *testing.T) {
 		t.Errorf("authenticate() token error first byte = %d, want SIGN_EABORT(%d)", pkt[0], SIGN_EABORT)
 	}
 }
+
+// --- handlePacket dispatch ---
+
+func TestHandlePacket_DSGN(t *testing.T) {
+	userRepo := &mockSignUserRepo{credErr: sql.ErrNoRows}
+	session, spy := newHandlerSession(userRepo, nil, nil, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DSGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("user"))
+	bf.WriteNullTerminatedBytes([]byte("pass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(DSGN) error: %v", err)
+	}
+	if spy.lastSent() == nil {
+		t.Fatal("handlePacket(DSGN) sent no packet")
+	}
+}
+
+func TestHandlePacket_SIGN(t *testing.T) {
+	userRepo := &mockSignUserRepo{credErr: sql.ErrNoRows}
+	session, spy := newHandlerSession(userRepo, nil, nil, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("SIGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("user"))
+	bf.WriteNullTerminatedBytes([]byte("pass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(SIGN) error: %v", err)
+	}
+	if spy.lastSent() == nil {
+		t.Fatal("handlePacket(SIGN) sent no packet")
+	}
+}
+
+func TestHandlePacket_DLTSKEYSIGN(t *testing.T) {
+	userRepo := &mockSignUserRepo{credErr: sql.ErrNoRows}
+	session, spy := newHandlerSession(userRepo, nil, nil, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DLTSKEYSIGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("user"))
+	bf.WriteNullTerminatedBytes([]byte("pass"))
+	bf.WriteNullTerminatedBytes([]byte("unk"))
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(DLTSKEYSIGN) error: %v", err)
+	}
+	if spy.lastSent() == nil {
+		t.Fatal("handlePacket(DLTSKEYSIGN) sent no packet")
+	}
+}
+
+func TestHandlePacket_PS4SGN(t *testing.T) {
+	userRepo := &mockSignUserRepo{psnUID: 10}
+	charRepo := &mockSignCharacterRepo{characters: []character{{ID: 1, Name: "PS4Char"}}}
+	sessionRepo := &mockSignSessionRepo{registerUIDTokenID: 100}
+	session, spy := newHandlerSession(userRepo, charRepo, sessionRepo, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("PS4SGN:100"))
+	bf.WriteNullTerminatedBytes([]byte("ps4_psn_id"))
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(PS4SGN) error: %v", err)
+	}
+	if session.client != PS4 {
+		t.Errorf("handlePacket(PS4SGN) client = %d, want PS4(%d)", session.client, PS4)
+	}
+	if spy.lastSent() == nil {
+		t.Fatal("handlePacket(PS4SGN) sent no packet")
+	}
+}
+
+func TestHandlePacket_PS3SGN(t *testing.T) {
+	// PS3 with short buffer should abort
+	session, spy := newHandlerSession(nil, nil, nil, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("PS3SGN:100"))
+	bf.WriteBytes(make([]byte, 10)) // too short for PS3
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(PS3SGN) error: %v", err)
+	}
+	if session.client != PS3 {
+		t.Errorf("handlePacket(PS3SGN) client = %d, want PS3(%d)", session.client, PS3)
+	}
+	pkt := spy.lastSent()
+	if pkt == nil {
+		t.Fatal("handlePacket(PS3SGN) sent no packet")
+	}
+	if len(pkt) != 1 || RespID(pkt[0]) != SIGN_EABORT {
+		t.Errorf("handlePacket(PS3SGN) short buffer = %v, want SIGN_EABORT", pkt)
+	}
+}
+
+func TestHandlePacket_VITASGN(t *testing.T) {
+	// VITA with short buffer should abort
+	session, spy := newHandlerSession(nil, nil, nil, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("VITASGN:100"))
+	bf.WriteBytes(make([]byte, 10)) // too short
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(VITASGN) error: %v", err)
+	}
+	if session.client != VITA {
+		t.Errorf("handlePacket(VITASGN) client = %d, want VITA(%d)", session.client, VITA)
+	}
+	pkt := spy.lastSent()
+	if pkt == nil {
+		t.Fatal("handlePacket(VITASGN) sent no packet")
+	}
+	if len(pkt) != 1 || RespID(pkt[0]) != SIGN_EABORT {
+		t.Errorf("handlePacket(VITASGN) short buffer = %v, want SIGN_EABORT", pkt)
+	}
+}
+
+func TestHandlePacket_WIIUSGN(t *testing.T) {
+	userRepo := &mockSignUserRepo{wiiuUID: 10}
+	charRepo := &mockSignCharacterRepo{characters: []character{{ID: 1, Name: "WiiUChar"}}}
+	sessionRepo := &mockSignSessionRepo{registerUIDTokenID: 200}
+	session, spy := newHandlerSession(userRepo, charRepo, sessionRepo, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("WIIUSGN:100"))
+	bf.WriteBytes(make([]byte, 1))  // skip byte
+	bf.WriteBytes(make([]byte, 64)) // wiiuKey
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(WIIUSGN) error: %v", err)
+	}
+	if session.client != WIIU {
+		t.Errorf("handlePacket(WIIUSGN) client = %d, want WIIU(%d)", session.client, WIIU)
+	}
+	if spy.lastSent() == nil {
+		t.Fatal("handlePacket(WIIUSGN) sent no packet")
+	}
+}
+
+func TestHandlePacket_COGLNK(t *testing.T) {
+	userRepo := &mockSignUserRepo{credErr: sql.ErrNoRows}
+	session, spy := newHandlerSession(userRepo, nil, nil, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("COGLNK:100"))
+	bf.WriteNullTerminatedBytes([]byte("client_id"))
+	bf.WriteNullTerminatedBytes([]byte("baduser\nbadpass"))
+	bf.WriteNullTerminatedBytes([]byte("token"))
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(COGLNK) error: %v", err)
+	}
+	pkt := spy.lastSent()
+	if pkt == nil {
+		t.Fatal("handlePacket(COGLNK) sent no packet")
+	}
+	// Invalid creds → SIGN_ECOGLINK
+	if len(pkt) != 1 || RespID(pkt[0]) != SIGN_ECOGLINK {
+		t.Errorf("handlePacket(COGLNK) = %v, want SIGN_ECOGLINK", pkt)
+	}
+}
+
+func TestHandlePacket_VITACOGLNK(t *testing.T) {
+	userRepo := &mockSignUserRepo{credErr: sql.ErrNoRows}
+	session, spy := newHandlerSession(userRepo, nil, nil, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("VITACOGLNK:100"))
+	bf.WriteNullTerminatedBytes([]byte("client_id"))
+	bf.WriteNullTerminatedBytes([]byte("user\npass"))
+	bf.WriteNullTerminatedBytes([]byte("token"))
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(VITACOGLNK) error: %v", err)
+	}
+	if spy.lastSent() == nil {
+		t.Fatal("handlePacket(VITACOGLNK) sent no packet")
+	}
+}
+
+func TestHandlePacket_DELETE(t *testing.T) {
+	charRepo := &mockSignCharacterRepo{isNew: true}
+	sessionRepo := &mockSignSessionRepo{validateResult: true}
+	session, spy := newHandlerSession(nil, charRepo, sessionRepo, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DELETE:100"))
+	bf.WriteNullTerminatedBytes([]byte("sesstoken"))
+	bf.WriteUint32(42) // characterID
+	bf.WriteUint32(1)  // tokenID
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(DELETE) error: %v", err)
+	}
+	pkt := spy.lastSent()
+	if pkt == nil {
+		t.Fatal("handlePacket(DELETE) sent no packet")
+	}
+	if pkt[0] != 0x01 {
+		t.Errorf("handlePacket(DELETE) = %x, want 0x01 (DEL_SUCCESS)", pkt[0])
+	}
+	if !charRepo.hardDeleteCalled {
+		t.Error("handlePacket(DELETE) should call HardDelete for new character")
+	}
+}
+
+func TestHandlePacket_DELETE_InvalidToken(t *testing.T) {
+	sessionRepo := &mockSignSessionRepo{validateResult: false}
+	session, spy := newHandlerSession(nil, nil, sessionRepo, defaultConfig())
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteNullTerminatedBytes([]byte("DELETE:100"))
+	bf.WriteNullTerminatedBytes([]byte("badtoken"))
+	bf.WriteUint32(42) // characterID
+	bf.WriteUint32(1)  // tokenID
+
+	err := session.handlePacket(bf.Data())
+	if err != nil {
+		t.Fatalf("handlePacket(DELETE) error: %v", err)
+	}
+	// Invalid token → deleteCharacter returns error → no packet sent
+	if spy.lastSent() != nil {
+		t.Error("handlePacket(DELETE) with invalid token should not send DEL_SUCCESS")
+	}
+}
