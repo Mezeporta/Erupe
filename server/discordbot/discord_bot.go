@@ -37,12 +37,24 @@ var Commands = []*discordgo.ApplicationCommand{
 	},
 }
 
+// Session abstracts the discordgo.Session methods used by DiscordBot,
+// allowing tests to inject a mock without a live Discord connection.
+type Session interface {
+	Open() error
+	Channel(channelID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)
+	User(userID string, options ...discordgo.RequestOption) (*discordgo.User, error)
+	ChannelMessageSend(channelID string, content string, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	AddHandler(handler interface{}) func()
+	ApplicationCommandBulkOverwrite(appID string, guildID string, commands []*discordgo.ApplicationCommand, options ...discordgo.RequestOption) ([]*discordgo.ApplicationCommand, error)
+}
+
 // DiscordBot manages a Discord session and provides methods for relaying
 // messages between the game server and a configured Discord channel.
 type DiscordBot struct {
-	Session      *discordgo.Session
+	Session      Session
 	config       *cfg.Config
 	logger       *zap.Logger
+	userID       string
 	MainGuild    *discordgo.Guild
 	RelayChannel *discordgo.Channel
 }
@@ -84,11 +96,31 @@ func NewDiscordBot(options Options) (discordBot *DiscordBot, err error) {
 	return
 }
 
-// Start opens the websocket connection to Discord.
-func (bot *DiscordBot) Start() (err error) {
-	err = bot.Session.Open()
+// Start opens the websocket connection to Discord and caches the bot's user ID.
+func (bot *DiscordBot) Start() error {
+	if err := bot.Session.Open(); err != nil {
+		return err
+	}
+	if ds, ok := bot.Session.(*discordgo.Session); ok && ds.State != nil && ds.State.User != nil {
+		bot.userID = ds.State.User.ID
+	}
+	return nil
+}
 
-	return
+// UserID returns the bot's Discord user ID, populated after Start succeeds.
+func (bot *DiscordBot) UserID() string {
+	return bot.userID
+}
+
+// RegisterCommands bulk-overwrites the global slash commands for this bot.
+func (bot *DiscordBot) RegisterCommands() error {
+	_, err := bot.Session.ApplicationCommandBulkOverwrite(bot.userID, "", Commands)
+	return err
+}
+
+// AddHandler registers an event handler on the underlying Discord session.
+func (bot *DiscordBot) AddHandler(handler interface{}) func() {
+	return bot.Session.AddHandler(handler)
 }
 
 // NormalizeDiscordMessage replaces all mentions to real name from the message.

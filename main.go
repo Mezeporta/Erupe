@@ -63,8 +63,7 @@ func setupDiscordBot(config *cfg.Config, logger *zap.Logger) *discordbot.Discord
 		preventClose(config, fmt.Sprintf("Discord: Failed to start, %s", err.Error()))
 	}
 
-	_, err = bot.Session.ApplicationCommandBulkOverwrite(bot.Session.State.User.ID, "", discordbot.Commands)
-	if err != nil {
+	if err = bot.RegisterCommands(); err != nil {
 		preventClose(config, fmt.Sprintf("Discord: Failed to start, %s", err.Error()))
 	}
 

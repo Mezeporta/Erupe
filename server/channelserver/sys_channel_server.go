@@ -208,8 +208,8 @@ func (s *Server) Start() error {
 
 	// Start the discord bot for chat integration.
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
-		s.discordBot.Session.AddHandler(s.onDiscordMessage)
-		s.discordBot.Session.AddHandler(s.onInteraction)
+		s.discordBot.AddHandler(s.onDiscordMessage)
+		s.discordBot.AddHandler(s.onInteraction)
 	}
 
 	return nil
