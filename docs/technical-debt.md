@@ -1,6 +1,6 @@
 # Erupe Technical Debt & Suggested Next Steps
 
-> Last updated: 2026-02-22
+> Last updated: 2026-02-27
 
 This document tracks actionable technical debt items discovered during a codebase audit. It complements `anti-patterns.md` (which covers structural patterns) by focusing on specific, fixable items with file paths and line numbers.
 
@@ -37,11 +37,7 @@ These TODOs represent features that are visibly broken for players.
 
 **All handler files now have test coverage.**
 
-**Repository files with no store-level test file (17 total):**
-
-`repo_achievement.go`, `repo_cafe.go`, `repo_distribution.go`, `repo_diva.go`, `repo_festa.go`, `repo_gacha.go`, `repo_goocoo.go`, `repo_house.go`, `repo_mail.go`, `repo_mercenary.go`, `repo_misc.go`, `repo_rengoku.go`, `repo_scenario.go`, `repo_session.go`, `repo_shop.go`, `repo_stamp.go`, `repo_tower.go`
-
-These are validated indirectly through mock-based handler tests but have no SQL-level integration tests.
+~~**Repository files with no store-level test file (17 total):**~~ **Fixed.** All 20 repo source files now have corresponding `_test.go` files. The split guild files (`repo_guild_adventure.go`, `repo_guild_alliance.go`, etc.) are covered by `repo_guild_test.go`. These are mock-based unit tests; SQL-level integration tests against a live database remain a future goal.
 
 ---
 
@@ -83,6 +79,7 @@ Items resolved since the original audit:
 | — | **Guild daily RP rollover** (`handlers_guild_ops.go:148`) | Implemented via lazy rollover in `handlers_guild.go:110-119` using `RolloverDailyRP()`. Stale TODO removed. |
 | — | **Typos** (`sys_session.go`, `handlers_session.go`) | "For Debuging" and "offical" typos already fixed in previous commits. |
 | — | **`db != nil` guard** (`handlers_session.go:322`) | Investigated — this guard is intentional. Test servers run without repos; the guard protects the entire logout path from nil repo dereferences. Not a leaky abstraction. |
+| ~~2~~ | **Repo test coverage (17 files)** | All 20 repo source files now have `_test.go` files with mock-based unit tests. |
 
 ---
 
