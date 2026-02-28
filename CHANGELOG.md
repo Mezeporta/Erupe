@@ -7,77 +7,158 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+## [9.3.0-rc1] - 2026-02-28
 
-- Distribution table: remove unused `data bytea NOT NULL` column that prevented seed data from matching Go code expectations (#169)
+900 commits, 860 files changed, ~100,000 lines of new code. The largest Erupe release ever.
 
 ### Added
 
-- API: Standardized JSON error responses (`{"error":"...","message":"..."}`) across all endpoints via `writeError` helper
-- API: Auth middleware extracting `Authorization: Bearer <token>` header for v2 routes; legacy body-token auth preserved
-- API: `returning` field on characters (true if last login > 90 days ago) and `courses` field on auth data (derived from user rights)
-- API: `/v2/` route prefix with HTTP method enforcement alongside legacy routes
-- API: `GET /v2/server/status` endpoint returning MezFes schedule, featured weapon, and festa/diva event status
-- API: `APIEventRepo` interface and read-only implementation for feature weapons and events
+#### Architecture
+- Repository pattern: 21 interfaces in `repo_interfaces.go` replace all inline SQL in handlers (`CharacterRepo`, `GuildRepo`, `UserRepo`, `SessionRepo`, `AchievementRepo`, `CafeRepo`, `DistributionRepo`, `DivaRepo`, `EventRepo`, `FestaRepo`, `GachaRepo`, `GoocooRepo`, `HouseRepo`, `MailRepo`, `MercenaryRepo`, `MiscRepo`, `RengokuRepo`, `ScenarioRepo`, `ShopRepo`, `StampRepo`, `TowerRepo`)
+- Service layer: 6 services encapsulating multi-step business logic (`GuildService`, `MailService`, `GachaService`, `AchievementService`, `TowerService`, `FestaService`)
+- `ChannelRegistry` interface for cross-channel operations (worldcast, session lookup, mail, disconnect) — channels decoupled for independent operation
+- Sign server converted to repository pattern with 3 interfaces (`SignUserRepo`, `SignCharacterRepo`, `SignSessionRepo`)
+
+#### Database & Schema
+- Embedded auto-migrating database schema system (`server/migrations/`): the server binary now contains all SQL and runs migrations automatically on startup — no more `pg_restore`, manual patch ordering, or external `schemas/` directory
 - Catch-up migration (`0002_catch_up_patches.sql`) for databases with partially-applied patch schemas — idempotent no-op on fresh or fully-patched databases, fills gaps for partial installations
-- Embedded auto-migrating database schema system (`server/migrations/`): the server binary now contains all SQL schemas and runs migrations automatically on startup — no more `pg_restore`, manual patch ordering, or external `schemas/` directory needed
-- Setup wizard: web-based first-run configuration at `http://localhost:8080` when `config.json` is missing — guides users through database connection, schema initialization, and server settings
-- CI: Coverage threshold enforcement — fails build if total coverage drops below 50%
-- CI: Release workflow that automatically builds and uploads Linux/Windows binaries to GitHub Releases on tag push
-- Monthly guild item claim tracking per character per type (standard/HLC/EXC), with schema migration (`31-monthly-items.sql`) adding claim timestamps to the `stamps` table
-- API: `GET /version` endpoint returning server name and client mode (`{"clientMode":"ZZ","name":"Erupe-CE"}`)
-- Rework object ID allocation: per-session IDs replace shared map, simplify stage entry notifications
-- Better config file handling and structure
+- Setup wizard: web-based first-run configuration at `http://localhost:8080` when `config.json` is missing — guides through database connection, schema initialization, and server settings
+- Seed data embedded and applied automatically on fresh installs (shops, events, gacha, scenarios, etc.)
+- Database connection pool configuration
+
+#### Game Systems
+- Quest enumeration completely rewritten with quest caching system
+- Event quest cycling with database-driven rotation and season/time override
+- Quest stamp card system with retro stamp rewards
+- Raviente v3 rework: ID system, semaphore handling, party broadcasting, customizable latency and max players
+- Warehouse v2 rewrite with proper serialization across game versions
+- Distribution system completely rewritten with proper typing and version support
+- Conquest/Earth status: multiple war targets, rewritten handlers, status override options
+- Festa bonus categories, trial voting, version-gated info (S6.0, Z2)
+- Monthly guild item claim tracking per character per type (standard/HLC/EXC)
+- Scenario counter implementation with database-driven defaults
+- Campaign structs ported with backwards compatibility
+- Trend weapons implementation
+- Clan Changing Room support
+- Operator accounts and ban system
+- NG word filter (ASCII and SJIS)
+- Custom command prefixes with help command
+
+#### Client Version Support
+- Season 6.0: savedata compatibility, encryption fix, semaphore fix, terminal log fix
+- Forward.4–F.5: ClientMode support added
+- G1–G2: save pointers enabled, gacha shop fix, compatibility fixes
+- G3–G9.1: save pointers verified, DecoMyset response fixes
+- < G10: InfoGuild response fix, semaphore backwards compatibility
+- PS3: PS3SGN support, PSN account linking, trophy course
+- PS Vita: VITASGN support, PSN linking
+- Wii U: WIIUSGN support
+- 40 client versions supported (S1.0 through ZZ) via `ClientMode` config option
+
+#### API
+- `/v2/` route prefix with HTTP method enforcement alongside legacy routes
+- `GET /v2/server/status` endpoint returning MezFes schedule, featured weapon, and festa/diva event status
+- `DELETE /v2/characters/{id}` route
+- `GET /version` endpoint returning server name and client mode
+- `GET /health` endpoint with Docker healthchecks
+- Auth middleware extracting `Authorization: Bearer <token>` header for v2 routes; legacy body-token auth preserved
+- Standardized JSON error responses (`{"error":"...","message":"..."}`) across all endpoints
+- `returning` field on characters (true if last login > 90 days ago) and `courses` field on auth data
+- `APIEventRepo` interface and read-only implementation for feature weapons and events
+- OpenAPI spec at `docs/openapi.yaml`
+
+#### Developer Tooling
+- Protocol bot (`cmd/protbot/`): headless MHF client implementing the complete sign → entrance → channel flow for automated testing and protocol debugging
+- Packet capture & replay system (`network/pcap/`): transparent recording, filtering, metadata, and standalone replay tool
+- Mock repository implementations for all 21 interfaces — handler unit tests without PostgreSQL
+- 120+ new test files, coverage pushed from ~7% to 65%+
+- CI: GitHub Actions with race detector, coverage threshold (≥50%), `golangci-lint` v2, automated release builds (Linux/Windows)
+- CI: Docker CD workflow pushing images to GHCR
+
+#### Logging & Observability
+- Standardized `zap` structured logging across all packages (replaced `fmt.Printf`, `log.*`)
 - Comprehensive production logging for save operations (warehouse, Koryo points, savedata, Hunter Navi, plate equipment)
 - Disconnect type tracking (graceful, connection_lost, error) with detailed logging
 - Session lifecycle logging with duration and metrics tracking
-- Structured logging with timing metrics for all database save operations
-- Plate data (transmog) safety net in logout flow - adds monitoring checkpoint for platedata, platebox, and platemyset persistence
-- Unit tests for `handlers_data_paper.go`: 20 tests covering all DataType branches, ACK payload structure, serialization round-trips, and paperGiftData table integrity
+- Plate data (transmog) safety net in logout flow
 
 ### Changed
 
-- Schema management consolidated: replaced 4 independent code paths (Docker shell script, setup wizard, test helpers, manual psql) with a single embedded migration runner
-- Setup wizard simplified: 3 schema checkboxes replaced with single "Apply database schema" checkbox
+- Minimum Go version: 1.21 → 1.25
+- Monolithic `handlers.go` split into ~30 domain-specific files; guild handlers split from 1 file to 10
+- Handler registration: replaced `init()` with explicit `buildHandlerTable()` construction
+- Eliminated `ErupeConfig` global variable — config passed explicitly throughout
+- Schema management consolidated: replaced 4 independent code paths (Docker shell script, setup wizard, test helpers, manual psql) with single embedded migration runner
 - Docker simplified: removed schema volume mounts and init script — the server binary handles everything
-- Test helpers simplified: `ApplyTestSchema` now uses the migration runner instead of `pg_restore` + manual patch application
-- Updated minimum Go version requirement from 1.23 to 1.25
-- Improved config handling
+- `config.json` removed from repo; `config.example.json` minimized, `config.reference.json` added with all options
+- Stage map replaced with `sync.Map`-backed `StageMap` implementation
 - Refactored logout flow to save all data before cleanup (prevents data loss race conditions)
 - Unified save operation into single `saveAllCharacterData()` function with proper error handling
-- Removed duplicate save calls in `logoutPlayer()` function
+- SignV2 server removed — merged into unified API server
+- `ByteFrame` read-overflow panic replaced with sticky error pattern (`bf.Err()`)
+- `panic()` calls replaced with structured error handling throughout
+- 15+ `Unk*` packet fields renamed to meaningful names across the protocol
+- `errcheck` lint compliance across entire codebase
 
 ### Fixed
 
-- Fixed lobby search returning all reserved players instead of only quest-bound players — `QuestReserved` field now counts only clients in "Qs" (quest) stages, matching retail behavior ([#167](https://github.com/Mezeporta/Erupe/issues/167))
-- Documented log key off-by-one (RE'd from mhfo-hd.dll ZZ): `putRecord_log`/`putTerminal_log` don't use the key in ZZ, so the server value is unused beyond issuance ([#167](https://github.com/Mezeporta/Erupe/issues/167))
-- Documented user search padding version boundary (8 vs 40 bytes) with RE findings from ZZ DLL; G2 analysis inconclusive ([#167](https://github.com/Mezeporta/Erupe/issues/167))
-- Fixed bookshelf save data pointer being off by 14810 bytes for G1–Z2, F4–F5, and S6 game versions — corrected offsets to 103928, 71928, and 23928 respectively ([#164](https://github.com/Mezeporta/Erupe/issues/164))
-- Fixed guild alliance application toggle being hardcoded to always-open — now persisted in DB and togglable by the parent guild leader via `OperateJoint` Allow/Deny actions ([#166](https://github.com/Mezeporta/Erupe/issues/166))
-- Fixed gacha shop not working on G1–GG clients due to protocol differences in `handleMsgMhfEnumerateShop` when `ShopType` is 1 or 2 — thanks @Sin365 (#150)
-- Config file handling and validation
-- Fixes 3 critical race condition in handlers_stage.go.
-- Fix an issue causing a crash on clans with 0 members.
-- Fixed deadlock in zone change causing 60-second timeout when players change zones
-- Fixed crash when sending empty packets in QueueSend/QueueSendNonBlocking
-- Fixed missing stage transfer packet for empty zones
+#### Gameplay
+- Fixed lobby search returning all reserved players instead of only quest-bound players — `QuestReserved` now counts only clients in "Qs" stages, matching retail ([#167](https://github.com/Mezeporta/Erupe/issues/167))
+- Fixed bookshelf save data pointer being off by 14810 bytes for G1–Z2, F4–F5, and S6 game versions ([#164](https://github.com/Mezeporta/Erupe/issues/164))
+- Fixed guild alliance application toggle being hardcoded to always-open ([#166](https://github.com/Mezeporta/Erupe/issues/166))
+- Fixed gacha shop not working on G1–GG clients due to protocol differences — thanks @Sin365 (#150)
 - Fixed save data corruption check rejecting valid saves due to name encoding mismatches (SJIS/UTF-8)
-- Fixed incomplete saves during logout - character savedata now persisted even during ungraceful disconnects
-- Fixed double-save bug in logout flow that caused unnecessary database operations
-- Fixed save operation ordering - now saves data before session cleanup instead of after
-- Fixed stale transmog/armor appearance shown to other players - user binary cache now invalidated when plate data is saved
-- Fixed client crash when quest or scenario files are missing - now sends failure ack instead of nil data
-- Fixed server crash when Discord relay receives messages with unsupported Shift-JIS characters (emoji, Lenny faces, cuneiform, etc.)
-- Fixed data race in token.RNG global used concurrently across goroutines
+- Fixed incomplete saves during logout — character savedata now persisted even during ungraceful disconnects
+- Fixed stale transmog/armor appearance shown to other players — user binary cache invalidated on save
+- Fixed login boost creating hanging connections
+- Fixed MezFes tickets not resetting weekly
+- Fixed event quests not selectable
+- Fixed inflated festa rewards
+- Fixed RP inconsistent between clients
+- Fixed limited friends & clanmates display
+- Fixed house theme corruption on save (#92)
+- Fixed Sky Corridor race condition preventing skill data wipe (#85)
+- Fixed `CafeDuration` and `AcquireCafeItem` cost for G1–G5.2 clients
+- Fixed quest mark labelling
+- Fixed HunterNavi savedata clipping (last 2 bytes)
+
+#### Stability
+- Fixed deadlock in zone change causing 60-second timeout
+- Fixed 3 critical race conditions in `handlers_stage.go`
+- Fixed data race in `token.RNG` global used concurrently across goroutines
+- Fixed JPK decompression data race
+- Fixed session lifecycle races in shutdown path
+- Fixed concurrent quest cache map write
+- Fixed guild RP rollover race
+- Fixed crash on clans with 0 members
+- Fixed crash when sending empty packets in `QueueSend`/`QueueSendNonBlocking`
+- Fixed `LoadDecoMyset` crash with 40+ decoration presets on older versions
+- Fixed `WaitStageBinary` handler hanging indefinitely
+- Fixed double-save bug in logout flow
+- Fixed save operation ordering — data saved before session cleanup instead of after
+
+#### Protocol
+- Fixed missing ACK responses across handlers — prevents client softlocks
+- Fixed missing stage transfer packet for empty zones
+- Fixed client crash when quest or scenario files are missing — sends failure ACK instead of nil data
+- Fixed server crash when Discord relay receives unsupported Shift-JIS characters (emoji, Lenny faces, cuneiform, etc.)
+
+### Removed
+
+- Compatibility with Go 1.21
+- Old `schemas/` and `bundled-schema/` directories (replaced by embedded migrations)
+- `distribution.data` column (unused, prevented seed data from matching Go code expectations) (#169)
+- SignV2 server (merged into unified API server)
+- Unused `timeserver` module
 
 ### Security
 
-- Bumped golang.org/x/net from 0.33.0 to 0.38.0
-- Bumped golang.org/x/crypto from 0.31.0 to 0.35.0
-
-## Removed
-
-- Compatibility with Go 1.21 removed.
+- Bumped `golang.org/x/net` from 0.18.0 to 0.38.0
+- Bumped `golang.org/x/crypto` from 0.15.0 to 0.35.0
+- Path traversal fix in screenshot API endpoint
+- CodeQL scanning added to CI
+- Binary blob size guards on save handlers
+- Database connection arguments escaped
 
 ## [9.2.0] - 2023-04-01
 
