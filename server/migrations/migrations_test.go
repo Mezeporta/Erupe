@@ -62,16 +62,16 @@ func TestMigrateEmptyDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
-	if applied != 3 {
-		t.Errorf("expected 3 migrations applied, got %d", applied)
+	if applied != 5 {
+		t.Errorf("expected 5 migrations applied, got %d", applied)
 	}
 
 	ver, err := Version(db)
 	if err != nil {
 		t.Fatalf("Version failed: %v", err)
 	}
-	if ver != 3 {
-		t.Errorf("expected version 3, got %d", ver)
+	if ver != 5 {
+		t.Errorf("expected version 5, got %d", ver)
 	}
 }
 
@@ -117,22 +117,22 @@ func TestMigrateExistingDBWithoutSchemaVersion(t *testing.T) {
 	}
 
 	// Migrate should detect existing DB and auto-mark baseline,
-	// then apply remaining migrations (0002, 0003).
+	// then apply remaining migrations (0002-0005).
 	applied, err := Migrate(db, logger)
 	if err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
-	// Baseline (0001) is auto-marked, then 0002+0003 are applied = 2
-	if applied != 2 {
-		t.Errorf("expected 2 migrations applied (baseline auto-marked, 0002+0003 applied), got %d", applied)
+	// Baseline (0001) is auto-marked, then 0002-0005 are applied = 4
+	if applied != 4 {
+		t.Errorf("expected 4 migrations applied (baseline auto-marked, 0002-0005 applied), got %d", applied)
 	}
 
 	ver, err := Version(db)
 	if err != nil {
 		t.Fatalf("Version failed: %v", err)
 	}
-	if ver != 3 {
-		t.Errorf("expected version 3, got %d", ver)
+	if ver != 5 {
+		t.Errorf("expected version 5, got %d", ver)
 	}
 }
 
