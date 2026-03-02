@@ -135,8 +135,8 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 
 		if guild.AllianceID > 0 {
 			alliance, err := s.server.guildRepo.GetAllianceByID(guild.AllianceID)
-			if err != nil {
-				bf.WriteUint32(0) // Error, no alliance
+			if err != nil || alliance == nil {
+				bf.WriteUint32(0) // Error or missing alliance
 			} else {
 				bf.WriteUint32(alliance.ID)
 				bf.WriteUint32(uint32(alliance.CreatedAt.Unix()))

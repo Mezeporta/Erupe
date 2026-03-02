@@ -97,6 +97,9 @@ func (r *GuildRepository) scanAllianceWithGuilds(rows *sqlx.Rows) (*GuildAllianc
 	if err != nil {
 		return nil, err
 	}
+	if parentGuild == nil {
+		return nil, fmt.Errorf("alliance %d references non-existent parent guild %d", alliance.ID, alliance.ParentGuildID)
+	}
 	alliance.ParentGuild = *parentGuild
 	alliance.TotalMembers += parentGuild.MemberCount
 
@@ -104,6 +107,9 @@ func (r *GuildRepository) scanAllianceWithGuilds(rows *sqlx.Rows) (*GuildAllianc
 		subGuild1, err := r.GetByID(alliance.SubGuild1ID)
 		if err != nil {
 			return nil, err
+		}
+		if subGuild1 == nil {
+			return nil, fmt.Errorf("alliance %d references non-existent sub guild 1 %d", alliance.ID, alliance.SubGuild1ID)
 		}
 		alliance.SubGuild1 = *subGuild1
 		alliance.TotalMembers += subGuild1.MemberCount
@@ -113,6 +119,9 @@ func (r *GuildRepository) scanAllianceWithGuilds(rows *sqlx.Rows) (*GuildAllianc
 		subGuild2, err := r.GetByID(alliance.SubGuild2ID)
 		if err != nil {
 			return nil, err
+		}
+		if subGuild2 == nil {
+			return nil, fmt.Errorf("alliance %d references non-existent sub guild 2 %d", alliance.ID, alliance.SubGuild2ID)
 		}
 		alliance.SubGuild2 = *subGuild2
 		alliance.TotalMembers += subGuild2.MemberCount

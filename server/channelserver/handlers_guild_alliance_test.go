@@ -438,3 +438,70 @@ func TestInfoJoint_NotFound(t *testing.T) {
 		t.Error("No response packet queued")
 	}
 }
+
+func TestInfoJoint_NilAlliance(t *testing.T) {
+	server := createMockServer()
+	// alliance is nil, no error — simulates deleted alliance
+	guildMock := &mockGuildRepo{}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfInfoJoint{AckHandle: 100, AllianceID: 999}
+
+	handleMsgMhfInfoJoint(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued — would softlock the client")
+	}
+}
+
+func TestOperateJoint_NilGuild(t *testing.T) {
+	server := createMockServer()
+	// guild is nil — simulates deleted guild
+	guildMock := &mockGuildRepo{
+		alliance: &GuildAlliance{ID: 5, ParentGuildID: 10},
+	}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfOperateJoint{
+		AckHandle:  100,
+		AllianceID: 5,
+		GuildID:    10,
+		Action:     mhfpacket.OPERATE_JOINT_DISBAND,
+	}
+
+	handleMsgMhfOperateJoint(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued — would softlock the client")
+	}
+}
+
+func TestOperateJoint_NilAlliance(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{}
+	guildMock.guild = &Guild{ID: 10}
+	guildMock.guild.LeaderCharID = 1
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfOperateJoint{
+		AckHandle:  100,
+		AllianceID: 999,
+		GuildID:    10,
+		Action:     mhfpacket.OPERATE_JOINT_DISBAND,
+	}
+
+	handleMsgMhfOperateJoint(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued — would softlock the client")
+	}
+}
