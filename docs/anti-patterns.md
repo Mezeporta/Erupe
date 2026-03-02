@@ -71,8 +71,7 @@ if err != nil {
 **Pattern C — Fail ACK (correct):** Error logged, explicit fail ACK sent. The client shows an appropriate error dialog and stays connected.
 
 ```go
-if err != nil {
-    s.logger.Error("Failed to read rengoku_data.bin", zap.Error(err))
+if data == nil {
     doAckBufFail(s, pkt.AckHandle, nil)
     return
 }

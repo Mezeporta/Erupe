@@ -520,6 +520,42 @@ func TestEnumerateRengokuRanking_Applicant(t *testing.T) {
 	}
 }
 
+// --- handleMsgMhfGetRengokuBinary tests ---
+
+func TestGetRengokuBinary_Cached(t *testing.T) {
+	server := createMockServer()
+	server.rengokuBin = []byte{0x65, 0x63, 0x64, 0x1a, 0xDE, 0xAD}
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetRengokuBinary{AckHandle: 100}
+	handleMsgMhfGetRengokuBinary(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestGetRengokuBinary_NilCache(t *testing.T) {
+	server := createMockServer()
+	server.rengokuBin = nil
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfGetRengokuBinary{AckHandle: 100}
+	handleMsgMhfGetRengokuBinary(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+		// fail ACK was sent — expected
+	default:
+		t.Error("No response packet queued (expected fail ACK)")
+	}
+}
+
 // Tests consolidated from handlers_coverage3_test.go
 
 func TestNonTrivialHandlers_RengokuGo(t *testing.T) {

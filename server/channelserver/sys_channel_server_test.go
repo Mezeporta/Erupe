@@ -1,8 +1,11 @@
 package channelserver
 
 import (
+	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -725,5 +728,67 @@ func TestFindObjectByChar(t *testing.T) {
 				t.Errorf("Found object ID = %d, want %d", obj.id, tt.wantObjID)
 			}
 		})
+	}
+}
+
+// --- loadRengokuBinary tests ---
+
+func TestLoadRengokuBinary_ValidECD(t *testing.T) {
+	dir := t.TempDir()
+	// Build a minimal valid ECD file: magic + some payload
+	data := make([]byte, 16)
+	binary.LittleEndian.PutUint32(data[:4], ecdMagic)
+	if err := os.WriteFile(filepath.Join(dir, "rengoku_data.bin"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	logger, _ := zap.NewDevelopment()
+	result := loadRengokuBinary(dir, logger)
+
+	if result == nil {
+		t.Fatal("Expected non-nil result for valid ECD file")
+	}
+	if len(result) != 16 {
+		t.Errorf("len = %d, want 16", len(result))
+	}
+}
+
+func TestLoadRengokuBinary_MissingFile(t *testing.T) {
+	dir := t.TempDir()
+	logger, _ := zap.NewDevelopment()
+	result := loadRengokuBinary(dir, logger)
+
+	if result != nil {
+		t.Errorf("Expected nil for missing file, got %d bytes", len(result))
+	}
+}
+
+func TestLoadRengokuBinary_TooSmall(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "rengoku_data.bin"), []byte{0x65, 0x63}, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	logger, _ := zap.NewDevelopment()
+	result := loadRengokuBinary(dir, logger)
+
+	if result != nil {
+		t.Errorf("Expected nil for too-small file, got %d bytes", len(result))
+	}
+}
+
+func TestLoadRengokuBinary_BadMagic(t *testing.T) {
+	dir := t.TempDir()
+	data := make([]byte, 16)
+	binary.LittleEndian.PutUint32(data[:4], 0xDEADBEEF)
+	if err := os.WriteFile(filepath.Join(dir, "rengoku_data.bin"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	logger, _ := zap.NewDevelopment()
+	result := loadRengokuBinary(dir, logger)
+
+	if result != nil {
+		t.Errorf("Expected nil for bad magic, got %d bytes", len(result))
 	}
 }

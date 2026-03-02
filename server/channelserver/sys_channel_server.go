@@ -1,9 +1,12 @@
 package channelserver
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -107,6 +110,8 @@ type Server struct {
 
 	questCache *QuestCache
 
+	rengokuBin []byte // Cached rengoku_data.bin (ECD-encrypted, served to clients as-is)
+
 	handlerTable map[network.PacketID]handlerFunc
 }
 
@@ -186,6 +191,8 @@ func NewServer(config *Config) *Server {
 
 	// MezFes
 	s.stages.Store("sl1Ns462p0a0u0", NewStage("sl1Ns462p0a0u0"))
+
+	s.rengokuBin = loadRengokuBinary(config.ErupeConfig.BinPath, s.logger)
 
 	s.i18n = getLangStrings(s)
 
@@ -436,4 +443,32 @@ const (
 func (s *Server) Season() uint8 {
 	sid := int64(((s.ID & serverIDHighMask) - serverIDBase) / serverIDStride)
 	return uint8(((TimeAdjusted().Unix() / secsPerDay) + sid) % 3)
+}
+
+// ecdMagic is the first 4 bytes of an ECD-encrypted file (little-endian "ecd\x1a").
+const ecdMagic = uint32(0x6563641a)
+
+// loadRengokuBinary reads and validates rengoku_data.bin from binPath.
+// Returns the raw bytes on success, or nil if the file is missing or invalid.
+func loadRengokuBinary(binPath string, logger *zap.Logger) []byte {
+	path := filepath.Join(binPath, "rengoku_data.bin")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		logger.Warn("rengoku_data.bin not found, Hunting Road will be unavailable",
+			zap.String("path", path), zap.Error(err))
+		return nil
+	}
+	if len(data) < 4 {
+		logger.Warn("rengoku_data.bin too small, ignoring",
+			zap.Int("bytes", len(data)))
+		return nil
+	}
+	if magic := binary.LittleEndian.Uint32(data[:4]); magic != ecdMagic {
+		logger.Warn("rengoku_data.bin has invalid ECD magic, ignoring",
+			zap.String("expected", "0x6563641a"),
+			zap.String("got", fmt.Sprintf("0x%08x", magic)))
+		return nil
+	}
+	logger.Info("Loaded rengoku_data.bin", zap.Int("bytes", len(data)))
+	return data
 }
