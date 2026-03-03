@@ -48,7 +48,7 @@ func handleMsgMhfCancelGuildScout(s *Session, p mhfpacket.MHFPacket) {
 
 	guild, err := s.server.guildRepo.GetByID(guildCharData.GuildID)
 
-	if err != nil {
+	if err != nil || guild == nil {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
@@ -87,14 +87,19 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	if result != nil && result.Success {
 		bf.WriteUint32(0)
+		bf.WriteUint32(result.GuildID)
 	} else {
 		if errors.Is(err, ErrApplicationMissing) {
 			s.logger.Warn("Guild invite missing, deleted?",
 				zap.Uint32("charID", s.charID))
 		}
 		bf.WriteUint32(7)
+		if result != nil {
+			bf.WriteUint32(result.GuildID)
+		} else {
+			bf.WriteUint32(0)
+		}
 	}
-	bf.WriteUint32(result.GuildID)
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
