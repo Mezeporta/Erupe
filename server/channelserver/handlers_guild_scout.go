@@ -106,11 +106,12 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Warn("Failed to get guild for scout list", zap.Error(err))
 	}
 
-	if guildInfo == nil && s.prevGuildID == 0 {
-		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-		return
-	} else {
-		guildInfo, err := s.server.guildRepo.GetByID(s.prevGuildID)
+	if guildInfo == nil {
+		if s.prevGuildID == 0 {
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
+		guildInfo, err = s.server.guildRepo.GetByID(s.prevGuildID)
 		if guildInfo == nil || err != nil {
 			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
