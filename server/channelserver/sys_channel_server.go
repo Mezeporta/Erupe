@@ -445,8 +445,9 @@ func (s *Server) Season() uint8 {
 	return uint8(((TimeAdjusted().Unix() / secsPerDay) + sid) % 3)
 }
 
-// ecdMagic is the first 4 bytes of an ECD-encrypted file (little-endian "ecd\x1a").
-const ecdMagic = uint32(0x6563641a)
+// ecdMagic is the ECD magic as read by binary.LittleEndian.Uint32.
+// On-disk bytes: 65 63 64 1A ("ecd\x1a"), LE-decoded: 0x1A646365.
+const ecdMagic = uint32(0x1A646365)
 
 // loadRengokuBinary reads and validates rengoku_data.bin from binPath.
 // Returns the raw bytes on success, or nil if the file is missing or invalid.
@@ -465,7 +466,7 @@ func loadRengokuBinary(binPath string, logger *zap.Logger) []byte {
 	}
 	if magic := binary.LittleEndian.Uint32(data[:4]); magic != ecdMagic {
 		logger.Warn("rengoku_data.bin has invalid ECD magic, ignoring",
-			zap.String("expected", "0x6563641a"),
+			zap.String("expected", "0x1a646365"),
 			zap.String("got", fmt.Sprintf("0x%08x", magic)))
 		return nil
 	}
