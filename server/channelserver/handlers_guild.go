@@ -41,7 +41,7 @@ func handleMsgMhfArrangeGuildMember(s *Session, p mhfpacket.MHFPacket) {
 
 	guild, err := s.server.guildRepo.GetByID(pkt.GuildID)
 
-	if err != nil {
+	if err != nil || guild == nil {
 		s.logger.Error(
 			"failed to respond to ArrangeGuildMember message",
 			zap.Uint32("charID", s.charID),
@@ -131,7 +131,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 
 	alliance, err := s.server.guildRepo.GetAllianceByID(guild.AllianceID)
 	if err != nil {
-		s.logger.Error("Failed to get alliance data")
+		s.logger.Error("Failed to get alliance data", zap.Error(err))
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
@@ -170,7 +170,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(member.LastLogin)
 	}
 
-	if guild.AllianceID > 0 {
+	if guild.AllianceID > 0 && alliance != nil {
 		bf.WriteUint16(alliance.TotalMembers - uint16(len(guildMembers)))
 		if guild.ID != alliance.ParentGuildID {
 			mems, err := s.server.guildRepo.GetMembers(alliance.ParentGuildID, false)
@@ -222,7 +222,8 @@ func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 
 	guild, _ := s.server.guildRepo.GetByCharID(s.charID)
 	if guild == nil || s.prevGuildID != 0 {
-		guild, err := s.server.guildRepo.GetByID(s.prevGuildID)
+		var err error
+		guild, err = s.server.guildRepo.GetByID(s.prevGuildID)
 		s.prevGuildID = 0
 		if guild == nil || err != nil {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -298,7 +299,7 @@ func handleMsgMhfUpdateGuildIcon(s *Session, p mhfpacket.MHFPacket) {
 
 	guild, err := s.server.guildRepo.GetByID(pkt.GuildID)
 
-	if err != nil {
+	if err != nil || guild == nil {
 		s.logger.Error("Failed to get guild info for icon update", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
@@ -306,7 +307,7 @@ func handleMsgMhfUpdateGuildIcon(s *Session, p mhfpacket.MHFPacket) {
 
 	characterInfo, err := s.server.guildRepo.GetCharacterMembership(s.charID)
 
-	if err != nil {
+	if err != nil || characterInfo == nil {
 		s.logger.Error("Failed to get character guild data for icon update", zap.Error(err))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return

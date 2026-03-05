@@ -13,7 +13,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOperateGuild)
 
 	guild, err := s.server.guildRepo.GetByID(pkt.GuildID)
-	if err != nil {
+	if err != nil || guild == nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
@@ -49,7 +49,8 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint32(0)
 		}
 	case mhfpacket.OperateGuildLeave:
-		result, err := s.server.guildService.Leave(s.charID, guild.ID, characterGuildInfo.IsApplicant, guild.Name)
+		isApplicant := characterGuildInfo != nil && characterGuildInfo.IsApplicant
+		result, err := s.server.guildService.Leave(s.charID, guild.ID, isApplicant, guild.Name)
 		if err != nil {
 			s.logger.Error("Failed to leave guild", zap.Error(err))
 		}
@@ -73,7 +74,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OperateGuildSetAvoidLeadershipFalse:
 		handleAvoidLeadershipUpdate(s, pkt, false)
 	case mhfpacket.OperateGuildUpdateComment:
-		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
+		if characterGuildInfo == nil || (!characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader()) {
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
@@ -82,7 +83,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Error("Failed to save guild comment", zap.Error(err))
 		}
 	case mhfpacket.OperateGuildUpdateMotto:
-		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
+		if characterGuildInfo == nil || (!characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader()) {
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
@@ -217,7 +218,7 @@ func handleDonateRP(s *Session, amount uint16, guild *Guild, _type int) []byte {
 func handleAvoidLeadershipUpdate(s *Session, pkt *mhfpacket.MsgMhfOperateGuild, avoidLeadership bool) {
 	characterGuildData, err := s.server.guildRepo.GetCharacterMembership(s.charID)
 
-	if err != nil {
+	if err != nil || characterGuildData == nil {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}

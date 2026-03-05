@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -240,7 +241,12 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	// This shouldn't be needed, but it's better to recover and let the connection die than to panic the server.
 	defer func() {
 		if r := recover(); r != nil {
-			s.logger.Error("Recovered from panic", zap.String("name", s.Name), zap.Any("panic", r))
+			s.logger.Error("Recovered from panic",
+				zap.String("name", s.Name),
+				zap.Stringer("opcode", opcode),
+				zap.Any("panic", r),
+				zap.String("stack", string(debug.Stack())),
+			)
 		}
 	}()
 
