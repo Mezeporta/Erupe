@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -11,7 +12,7 @@ func setupCafeRepo(t *testing.T) (*CafeRepository, *sqlx.DB, uint32) {
 	db := SetupTestDB(t)
 	userID := CreateTestUser(t, db, "cafe_test_user")
 	charID := CreateTestCharacter(t, db, userID, "CafeChar")
-	repo := NewCafeRepository(db)
+	repo := NewCafeRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID
 }

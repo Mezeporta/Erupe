@@ -4,16 +4,16 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // UserRepository centralizes all database access for the users table.
 type UserRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewUserRepository creates a new UserRepository.
-func NewUserRepository(db *sqlx.DB) *UserRepository {
+func NewUserRepository(db *dbutil.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 

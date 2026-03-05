@@ -3,9 +3,9 @@ package channelserver
 import (
 	"testing"
 
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"time"
-	cfg "erupe-ce/config"
 )
 
 func TestHandleMsgMhfGetUdInfo(t *testing.T) {

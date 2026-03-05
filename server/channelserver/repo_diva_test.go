@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -9,7 +10,7 @@ import (
 func setupDivaRepo(t *testing.T) (*DivaRepository, *sqlx.DB) {
 	t.Helper()
 	db := SetupTestDB(t)
-	repo := NewDivaRepository(db)
+	repo := NewDivaRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db
 }

@@ -1,10 +1,10 @@
 package channelserver
 
 import (
-	cfg "erupe-ce/config"
-	"erupe-ce/common/mhfcourse"
-	"erupe-ce/network/mhfpacket"
 	"errors"
+	"erupe-ce/common/mhfcourse"
+	cfg "erupe-ce/config"
+	"erupe-ce/network/mhfpacket"
 	"testing"
 	"time"
 )

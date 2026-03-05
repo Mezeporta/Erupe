@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -11,7 +12,7 @@ func setupAchievementRepo(t *testing.T) (*AchievementRepository, *sqlx.DB, uint3
 	db := SetupTestDB(t)
 	userID := CreateTestUser(t, db, "ach_test_user")
 	charID := CreateTestCharacter(t, db, userID, "AchChar")
-	repo := NewAchievementRepository(db)
+	repo := NewAchievementRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID
 }

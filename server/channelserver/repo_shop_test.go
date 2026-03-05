@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -11,7 +12,7 @@ func setupShopRepo(t *testing.T) (*ShopRepository, *sqlx.DB, uint32) {
 	db := SetupTestDB(t)
 	userID := CreateTestUser(t, db, "shop_test_user")
 	charID := CreateTestCharacter(t, db, userID, "ShopChar")
-	repo := NewShopRepository(db)
+	repo := NewShopRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID
 }

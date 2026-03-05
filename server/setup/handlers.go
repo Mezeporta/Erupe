@@ -45,6 +45,15 @@ func (ws *wizardServer) handleClientModes(w http.ResponseWriter, _ *http.Request
 	writeJSON(w, http.StatusOK, map[string]interface{}{"modes": clientModes()})
 }
 
+func (ws *wizardServer) handleCheckQuests(w http.ResponseWriter, _ *http.Request) {
+	status := checkQuestFiles("")
+	writeJSON(w, http.StatusOK, status)
+}
+
+func (ws *wizardServer) handlePresets(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]interface{}{"presets": availablePresets()})
+}
+
 // testDBRequest is the JSON body for POST /api/setup/test-db.
 type testDBRequest struct {
 	Host     string `json:"host"`

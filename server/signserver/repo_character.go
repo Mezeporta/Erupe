@@ -3,17 +3,17 @@ package signserver
 import (
 	"strings"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 	"github.com/lib/pq"
 )
 
 // SignCharacterRepository implements SignCharacterRepo with PostgreSQL.
 type SignCharacterRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewSignCharacterRepository creates a new SignCharacterRepository.
-func NewSignCharacterRepository(db *sqlx.DB) *SignCharacterRepository {
+func NewSignCharacterRepository(db *dbutil.DB) *SignCharacterRepository {
 	return &SignCharacterRepository{db: db}
 }
 

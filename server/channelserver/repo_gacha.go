@@ -5,17 +5,17 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // GachaRepository centralizes all database access for gacha-related tables
 // (gacha_shop, gacha_entries, gacha_items, gacha_stepup, gacha_box).
 type GachaRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewGachaRepository creates a new GachaRepository.
-func NewGachaRepository(db *sqlx.DB) *GachaRepository {
+func NewGachaRepository(db *dbutil.DB) *GachaRepository {
 	return &GachaRepository{db: db}
 }
 

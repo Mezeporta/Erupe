@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -13,7 +14,7 @@ func setupSessionRepo(t *testing.T) (*SessionRepository, *sqlx.DB, uint32, uint3
 	charID := CreateTestCharacter(t, db, userID, "SessionChar")
 	token := "test_token_12345"
 	sessionID := CreateTestSignSession(t, db, userID, token)
-	repo := NewSessionRepository(db)
+	repo := NewSessionRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, userID, charID, sessionID, token
 }

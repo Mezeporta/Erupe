@@ -1,16 +1,16 @@
 package channelserver
 
 import (
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // SessionRepository centralizes all database access for sign_sessions and servers tables.
 type SessionRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewSessionRepository creates a new SessionRepository.
-func NewSessionRepository(db *sqlx.DB) *SessionRepository {
+func NewSessionRepository(db *dbutil.DB) *SessionRepository {
 	return &SessionRepository{db: db}
 }
 

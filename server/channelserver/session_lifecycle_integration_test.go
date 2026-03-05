@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	dbutil "erupe-ce/common/db"
 	"erupe-ce/common/mhfitem"
 	cfg "erupe-ce/config"
 	"erupe-ce/network/clientctx"
@@ -597,18 +598,19 @@ func createTestServerWithDB(t *testing.T, db *sqlx.DB) *Server {
 	server.logger = logger
 
 	// Initialize repositories
-	server.charRepo = NewCharacterRepository(db)
-	server.guildRepo = NewGuildRepository(db)
-	server.userRepo = NewUserRepository(db)
-	server.gachaRepo = NewGachaRepository(db)
-	server.houseRepo = NewHouseRepository(db)
-	server.festaRepo = NewFestaRepository(db)
-	server.towerRepo = NewTowerRepository(db)
-	server.rengokuRepo = NewRengokuRepository(db)
-	server.mailRepo = NewMailRepository(db)
-	server.stampRepo = NewStampRepository(db)
-	server.distRepo = NewDistributionRepository(db)
-	server.sessionRepo = NewSessionRepository(db)
+	wdb := dbutil.Wrap(db)
+	server.charRepo = NewCharacterRepository(wdb)
+	server.guildRepo = NewGuildRepository(wdb)
+	server.userRepo = NewUserRepository(wdb)
+	server.gachaRepo = NewGachaRepository(wdb)
+	server.houseRepo = NewHouseRepository(wdb)
+	server.festaRepo = NewFestaRepository(wdb)
+	server.towerRepo = NewTowerRepository(wdb)
+	server.rengokuRepo = NewRengokuRepository(wdb)
+	server.mailRepo = NewMailRepository(wdb)
+	server.stampRepo = NewStampRepository(wdb)
+	server.distRepo = NewDistributionRepository(wdb)
+	server.sessionRepo = NewSessionRepository(wdb)
 
 	return server
 }

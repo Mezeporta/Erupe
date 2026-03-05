@@ -3,16 +3,16 @@ package channelserver
 import (
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // MiscRepository centralizes database access for miscellaneous game tables.
 type MiscRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewMiscRepository creates a new MiscRepository.
-func NewMiscRepository(db *sqlx.DB) *MiscRepository {
+func NewMiscRepository(db *dbutil.DB) *MiscRepository {
 	return &MiscRepository{db: db}
 }
 

@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -12,7 +13,7 @@ func setupRengokuRepo(t *testing.T) (*RengokuRepository, *sqlx.DB, uint32, uint3
 	userID := CreateTestUser(t, db, "rengoku_test_user")
 	charID := CreateTestCharacter(t, db, userID, "RengokuChar")
 	guildID := CreateTestGuild(t, db, charID, "RengokuGuild")
-	repo := NewRengokuRepository(db)
+	repo := NewRengokuRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID, guildID
 }

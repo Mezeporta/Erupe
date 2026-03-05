@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 
+	dbutil "erupe-ce/common/db"
 	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"github.com/jmoiron/sqlx"
@@ -38,9 +39,10 @@ func NewServer(config *Config) *Server {
 		erupeConfig: config.ErupeConfig,
 	}
 	if config.DB != nil {
-		s.userRepo = NewSignUserRepository(config.DB)
-		s.charRepo = NewSignCharacterRepository(config.DB)
-		s.sessionRepo = NewSignSessionRepository(config.DB)
+		wdb := dbutil.Wrap(config.DB)
+		s.userRepo = NewSignUserRepository(wdb)
+		s.charRepo = NewSignCharacterRepository(wdb)
+		s.sessionRepo = NewSignSessionRepository(wdb)
 	}
 	return s
 }

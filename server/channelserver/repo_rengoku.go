@@ -3,16 +3,16 @@ package channelserver
 import (
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // RengokuRepository centralizes all database access for the rengoku_score table.
 type RengokuRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewRengokuRepository creates a new RengokuRepository.
-func NewRengokuRepository(db *sqlx.DB) *RengokuRepository {
+func NewRengokuRepository(db *dbutil.DB) *RengokuRepository {
 	return &RengokuRepository{db: db}
 }
 

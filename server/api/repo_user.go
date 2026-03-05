@@ -4,16 +4,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // APIUserRepository implements APIUserRepo with PostgreSQL.
 type APIUserRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewAPIUserRepository creates a new APIUserRepository.
-func NewAPIUserRepository(db *sqlx.DB) *APIUserRepository {
+func NewAPIUserRepository(db *dbutil.DB) *APIUserRepository {
 	return &APIUserRepository{db: db}
 }
 

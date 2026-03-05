@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -9,7 +10,7 @@ import (
 func setupMiscRepo(t *testing.T) (*MiscRepository, *sqlx.DB) {
 	t.Helper()
 	db := SetupTestDB(t)
-	repo := NewMiscRepository(db)
+	repo := NewMiscRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db
 }

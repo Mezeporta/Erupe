@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 func setupEventRepo(t *testing.T) (*EventRepository, *sqlx.DB) {
 	t.Helper()
 	db := SetupTestDB(t)
-	repo := NewEventRepository(db)
+	repo := NewEventRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db
 }

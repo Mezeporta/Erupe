@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -12,7 +13,7 @@ func setupMercenaryRepo(t *testing.T) (*MercenaryRepository, *sqlx.DB, uint32, u
 	userID := CreateTestUser(t, db, "merc_test_user")
 	charID := CreateTestCharacter(t, db, userID, "MercChar")
 	guildID := CreateTestGuild(t, db, charID, "MercGuild")
-	repo := NewMercenaryRepository(db)
+	repo := NewMercenaryRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID, guildID
 }

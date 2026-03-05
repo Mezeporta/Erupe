@@ -3,17 +3,17 @@ package channelserver
 import (
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // TowerRepository centralizes all database access for tower-related tables
 // (tower, guilds tower columns, guild_characters tower columns).
 type TowerRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewTowerRepository creates a new TowerRepository.
-func NewTowerRepository(db *sqlx.DB) *TowerRepository {
+func NewTowerRepository(db *dbutil.DB) *TowerRepository {
 	return &TowerRepository{db: db}
 }
 

@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ func setupStampRepo(t *testing.T) (*StampRepository, *sqlx.DB, uint32) {
 	db := SetupTestDB(t)
 	userID := CreateTestUser(t, db, "stamp_test_user")
 	charID := CreateTestCharacter(t, db, userID, "StampChar")
-	repo := NewStampRepository(db)
+	repo := NewStampRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID
 }

@@ -4,16 +4,16 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // CharacterRepository centralizes all database access for the characters table.
 type CharacterRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewCharacterRepository creates a new CharacterRepository.
-func NewCharacterRepository(db *sqlx.DB) *CharacterRepository {
+func NewCharacterRepository(db *dbutil.DB) *CharacterRepository {
 	return &CharacterRepository{db: db}
 }
 

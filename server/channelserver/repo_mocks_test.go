@@ -304,15 +304,15 @@ type mockGuildRepo struct {
 	deletedPostID  uint32
 
 	// Alliance
-	alliance               *GuildAlliance
-	getAllianceErr          error
-	createAllianceErr      error
-	deleteAllianceErr      error
-	removeAllyErr          error
-	setAllianceRecruitErr  error
-	deletedAllianceID      uint32
-	removedAllyArgs        []uint32
-	allianceRecruitingSet  *bool
+	alliance              *GuildAlliance
+	getAllianceErr        error
+	createAllianceErr     error
+	deleteAllianceErr     error
+	removeAllyErr         error
+	setAllianceRecruitErr error
+	deletedAllianceID     uint32
+	removedAllyArgs       []uint32
+	allianceRecruitingSet *bool
 
 	// Cooking
 	meals         []*GuildMeal
@@ -552,28 +552,28 @@ func (m *mockGuildRepo) Create(_ uint32, _ string) (int32, error) { return 0, ni
 func (m *mockGuildRepo) CreateApplicationWithMail(_, _, _ uint32, _ GuildApplicationType, _, _ uint32, _, _ string) error {
 	return nil
 }
-func (m *mockGuildRepo) CancelInvitation(_, _ uint32) error           { return nil }
-func (m *mockGuildRepo) ArrangeCharacters(_ []uint32) error           { return nil }
-func (m *mockGuildRepo) GetItemBox(_ uint32) ([]byte, error)          { return nil, nil }
-func (m *mockGuildRepo) SaveItemBox(_ uint32, _ []byte) error         { return nil }
-func (m *mockGuildRepo) SetRecruiting(_ uint32, _ bool) error         { return nil }
-func (m *mockGuildRepo) SetPugiOutfits(_ uint32, _ uint32) error      { return nil }
-func (m *mockGuildRepo) SetRecruiter(_ uint32, _ bool) error          { return nil }
-func (m *mockGuildRepo) AddMemberDailyRP(_ uint32, _ uint16) error    { return nil }
-func (m *mockGuildRepo) ExchangeEventRP(_ uint32, _ uint16) (uint32, error) { return 0, nil }
-func (m *mockGuildRepo) AddRankRP(_ uint32, _ uint16) error           { return nil }
-func (m *mockGuildRepo) AddEventRP(_ uint32, _ uint16) error          { return nil }
-func (m *mockGuildRepo) GetRoomRP(_ uint32) (uint16, error)           { return 0, nil }
-func (m *mockGuildRepo) SetRoomRP(_ uint32, _ uint16) error           { return nil }
-func (m *mockGuildRepo) AddRoomRP(_ uint32, _ uint16) error           { return nil }
-func (m *mockGuildRepo) SetRoomExpiry(_ uint32, _ time.Time) error    { return nil }
-func (m *mockGuildRepo) UpdatePost(_ uint32, _, _ string) error       { return nil }
-func (m *mockGuildRepo) UpdatePostStamp(_, _ uint32) error            { return nil }
-func (m *mockGuildRepo) GetPostLikedBy(_ uint32) (string, error)      { return "", nil }
-func (m *mockGuildRepo) SetPostLikedBy(_ uint32, _ string) error      { return nil }
-func (m *mockGuildRepo) CountNewPosts(_ uint32, _ time.Time) (int, error)   { return 0, nil }
-func (m *mockGuildRepo) ListAlliances() ([]*GuildAlliance, error)     { return nil, nil }
-func (m *mockGuildRepo) ClearTreasureHunt(_ uint32) error             { return nil }
+func (m *mockGuildRepo) CancelInvitation(_, _ uint32) error                        { return nil }
+func (m *mockGuildRepo) ArrangeCharacters(_ []uint32) error                        { return nil }
+func (m *mockGuildRepo) GetItemBox(_ uint32) ([]byte, error)                       { return nil, nil }
+func (m *mockGuildRepo) SaveItemBox(_ uint32, _ []byte) error                      { return nil }
+func (m *mockGuildRepo) SetRecruiting(_ uint32, _ bool) error                      { return nil }
+func (m *mockGuildRepo) SetPugiOutfits(_ uint32, _ uint32) error                   { return nil }
+func (m *mockGuildRepo) SetRecruiter(_ uint32, _ bool) error                       { return nil }
+func (m *mockGuildRepo) AddMemberDailyRP(_ uint32, _ uint16) error                 { return nil }
+func (m *mockGuildRepo) ExchangeEventRP(_ uint32, _ uint16) (uint32, error)        { return 0, nil }
+func (m *mockGuildRepo) AddRankRP(_ uint32, _ uint16) error                        { return nil }
+func (m *mockGuildRepo) AddEventRP(_ uint32, _ uint16) error                       { return nil }
+func (m *mockGuildRepo) GetRoomRP(_ uint32) (uint16, error)                        { return 0, nil }
+func (m *mockGuildRepo) SetRoomRP(_ uint32, _ uint16) error                        { return nil }
+func (m *mockGuildRepo) AddRoomRP(_ uint32, _ uint16) error                        { return nil }
+func (m *mockGuildRepo) SetRoomExpiry(_ uint32, _ time.Time) error                 { return nil }
+func (m *mockGuildRepo) UpdatePost(_ uint32, _, _ string) error                    { return nil }
+func (m *mockGuildRepo) UpdatePostStamp(_, _ uint32) error                         { return nil }
+func (m *mockGuildRepo) GetPostLikedBy(_ uint32) (string, error)                   { return "", nil }
+func (m *mockGuildRepo) SetPostLikedBy(_ uint32, _ string) error                   { return nil }
+func (m *mockGuildRepo) CountNewPosts(_ uint32, _ time.Time) (int, error)          { return 0, nil }
+func (m *mockGuildRepo) ListAlliances() ([]*GuildAlliance, error)                  { return nil, nil }
+func (m *mockGuildRepo) ClearTreasureHunt(_ uint32) error                          { return nil }
 func (m *mockGuildRepo) InsertKillLog(_ uint32, _ int, _ uint8, _ time.Time) error { return nil }
 func (m *mockGuildRepo) ListInvitedCharacters(_ uint32) ([]*ScoutedCharacter, error) {
 	return nil, nil
@@ -816,7 +816,6 @@ type mockGachaRepo struct {
 	allEntries    []GachaEntry
 	allEntriesErr error
 	weightDivisor float64
-
 }
 
 func (m *mockGachaRepo) GetEntryForTransaction(_ uint32, _ uint8) (uint8, uint16, int, error) {
@@ -957,26 +956,26 @@ type mockTowerRepo struct {
 	gemsErr      error
 	updatedGems  string
 
-	progress    TenrouiraiProgressData
-	progressErr error
-	scores      []TenrouiraiCharScore
-	scoresErr   error
-	guildRP     uint32
-	guildRPErr  error
-	page           int
-	donated        int
-	pageRPErr      error
-	advanceErr     error
-	advanceCalled  bool
-	donateErr      error
-	donatedRP      uint16
+	progress      TenrouiraiProgressData
+	progressErr   error
+	scores        []TenrouiraiCharScore
+	scoresErr     error
+	guildRP       uint32
+	guildRPErr    error
+	page          int
+	donated       int
+	pageRPErr     error
+	advanceErr    error
+	advanceCalled bool
+	donateErr     error
+	donatedRP     uint16
 }
 
-func (m *mockTowerRepo) GetTowerData(_ uint32) (TowerData, error)   { return m.towerData, m.towerDataErr }
-func (m *mockTowerRepo) GetSkills(_ uint32) (string, error)         { return m.skills, m.skillsErr }
-func (m *mockTowerRepo) UpdateSkills(_ uint32, _ string, _ int32) error { return nil }
+func (m *mockTowerRepo) GetTowerData(_ uint32) (TowerData, error)        { return m.towerData, m.towerDataErr }
+func (m *mockTowerRepo) GetSkills(_ uint32) (string, error)              { return m.skills, m.skillsErr }
+func (m *mockTowerRepo) UpdateSkills(_ uint32, _ string, _ int32) error  { return nil }
 func (m *mockTowerRepo) UpdateProgress(_ uint32, _, _, _, _ int32) error { return nil }
-func (m *mockTowerRepo) GetGems(_ uint32) (string, error)           { return m.gems, m.gemsErr }
+func (m *mockTowerRepo) GetGems(_ uint32) (string, error)                { return m.gems, m.gemsErr }
 func (m *mockTowerRepo) UpdateGems(_ uint32, gems string) error {
 	m.updatedGems = gems
 	return nil
@@ -1003,21 +1002,21 @@ func (m *mockTowerRepo) DonateGuildTowerRP(_ uint32, rp uint16) error {
 // --- mockFestaRepo ---
 
 type mockFestaRepo struct {
-	events      []FestaEvent
-	eventsErr   error
-	teamSouls   uint32
-	teamErr     error
-	trials      []FestaTrial
-	trialsErr   error
-	topGuild    FestaGuildRanking
-	topErr      error
-	topWindow   FestaGuildRanking
-	topWinErr   error
-	charSouls   uint32
-	charErr     error
-	hasClaimed  bool
-	prizes      []Prize
-	prizesErr   error
+	events     []FestaEvent
+	eventsErr  error
+	teamSouls  uint32
+	teamErr    error
+	trials     []FestaTrial
+	trialsErr  error
+	topGuild   FestaGuildRanking
+	topErr     error
+	topWindow  FestaGuildRanking
+	topWinErr  error
+	charSouls  uint32
+	charErr    error
+	hasClaimed bool
+	prizes     []Prize
+	prizesErr  error
 
 	cleanupErr     error
 	cleanupCalled  bool
@@ -1035,8 +1034,8 @@ func (m *mockFestaRepo) InsertEvent(start uint32) error {
 	m.insertedStart = start
 	return m.insertErr
 }
-func (m *mockFestaRepo) GetFestaEvents() ([]FestaEvent, error)     { return m.events, m.eventsErr }
-func (m *mockFestaRepo) GetTeamSouls(_ string) (uint32, error)     { return m.teamSouls, m.teamErr }
+func (m *mockFestaRepo) GetFestaEvents() ([]FestaEvent, error) { return m.events, m.eventsErr }
+func (m *mockFestaRepo) GetTeamSouls(_ string) (uint32, error) { return m.teamSouls, m.teamErr }
 func (m *mockFestaRepo) GetTrialsWithMonopoly() ([]FestaTrial, error) {
 	return m.trials, m.trialsErr
 }
@@ -1046,15 +1045,15 @@ func (m *mockFestaRepo) GetTopGuildForTrial(_ uint16) (FestaGuildRanking, error)
 func (m *mockFestaRepo) GetTopGuildInWindow(_, _ uint32) (FestaGuildRanking, error) {
 	return m.topWindow, m.topWinErr
 }
-func (m *mockFestaRepo) GetCharSouls(_ uint32) (uint32, error)      { return m.charSouls, m.charErr }
-func (m *mockFestaRepo) HasClaimedMainPrize(_ uint32) bool           { return m.hasClaimed }
-func (m *mockFestaRepo) VoteTrial(_ uint32, _ uint32) error          { return nil }
-func (m *mockFestaRepo) RegisterGuild(_ uint32, _ string) error      { return nil }
+func (m *mockFestaRepo) GetCharSouls(_ uint32) (uint32, error)  { return m.charSouls, m.charErr }
+func (m *mockFestaRepo) HasClaimedMainPrize(_ uint32) bool      { return m.hasClaimed }
+func (m *mockFestaRepo) VoteTrial(_ uint32, _ uint32) error     { return nil }
+func (m *mockFestaRepo) RegisterGuild(_ uint32, _ string) error { return nil }
 func (m *mockFestaRepo) SubmitSouls(_, _ uint32, souls []uint16) error {
 	m.submittedSouls = souls
 	return m.submitErr
 }
-func (m *mockFestaRepo) ClaimPrize(_ uint32, _ uint32) error         { return nil }
+func (m *mockFestaRepo) ClaimPrize(_ uint32, _ uint32) error { return nil }
 func (m *mockFestaRepo) ListPrizes(_ uint32, _ string) ([]Prize, error) {
 	return m.prizes, m.prizesErr
 }
@@ -1078,9 +1077,9 @@ type mockDivaRepo struct {
 	eventsErr error
 }
 
-func (m *mockDivaRepo) DeleteEvents() error                      { return nil }
-func (m *mockDivaRepo) InsertEvent(_ uint32) error               { return nil }
-func (m *mockDivaRepo) GetEvents() ([]DivaEvent, error)          { return m.events, m.eventsErr }
+func (m *mockDivaRepo) DeleteEvents() error             { return nil }
+func (m *mockDivaRepo) InsertEvent(_ uint32) error      { return nil }
+func (m *mockDivaRepo) GetEvents() ([]DivaEvent, error) { return m.events, m.eventsErr }
 
 // --- mockEventRepo ---
 
@@ -1122,20 +1121,20 @@ func (m *mockMiscRepo) UpsertTrendWeapon(_ uint16, _ uint8) error { return nil }
 // --- mockMercenaryRepo ---
 
 type mockMercenaryRepo struct {
-	nextRastaID  uint32
-	rastaIDErr   error
-	nextAirouID  uint32
-	airouIDErr   error
-	loans        []MercenaryLoan
-	loansErr     error
-	catUsages    []GuildHuntCatUsage
-	catUsagesErr error
-	guildAirou   [][]byte
+	nextRastaID   uint32
+	rastaIDErr    error
+	nextAirouID   uint32
+	airouIDErr    error
+	loans         []MercenaryLoan
+	loansErr      error
+	catUsages     []GuildHuntCatUsage
+	catUsagesErr  error
+	guildAirou    [][]byte
 	guildAirouErr error
 }
 
-func (m *mockMercenaryRepo) NextRastaID() (uint32, error)  { return m.nextRastaID, m.rastaIDErr }
-func (m *mockMercenaryRepo) NextAirouID() (uint32, error)  { return m.nextAirouID, m.airouIDErr }
+func (m *mockMercenaryRepo) NextRastaID() (uint32, error) { return m.nextRastaID, m.rastaIDErr }
+func (m *mockMercenaryRepo) NextAirouID() (uint32, error) { return m.nextAirouID, m.airouIDErr }
 func (m *mockMercenaryRepo) GetMercenaryLoans(_ uint32) ([]MercenaryLoan, error) {
 	return m.loans, m.loansErr
 }
@@ -1149,17 +1148,17 @@ func (m *mockMercenaryRepo) GetGuildAirou(_ uint32) ([][]byte, error) {
 // --- mockCafeRepo ---
 
 type mockCafeRepo struct {
-	bonuses      []CafeBonus
-	bonusesErr   error
-	claimable    []CafeBonus
-	claimableErr error
+	bonuses       []CafeBonus
+	bonusesErr    error
+	claimable     []CafeBonus
+	claimableErr  error
 	bonusItemType uint32
 	bonusItemQty  uint32
 	bonusItemErr  error
 }
 
-func (m *mockCafeRepo) ResetAccepted(_ uint32) error                  { return nil }
-func (m *mockCafeRepo) GetBonuses(_ uint32) ([]CafeBonus, error)      { return m.bonuses, m.bonusesErr }
+func (m *mockCafeRepo) ResetAccepted(_ uint32) error             { return nil }
+func (m *mockCafeRepo) GetBonuses(_ uint32) ([]CafeBonus, error) { return m.bonuses, m.bonusesErr }
 func (m *mockCafeRepo) GetClaimable(_ uint32, _ int64) ([]CafeBonus, error) {
 	return m.claimable, m.claimableErr
 }

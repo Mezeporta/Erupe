@@ -297,7 +297,7 @@ func TestPostGuildScout_Success(t *testing.T) {
 func TestPostGuildScout_AlreadyInvited(t *testing.T) {
 	server := createMockServer()
 	guildMock := &mockGuildRepo{
-		membership:  &GuildMember{GuildID: 10, Recruiter: true},
+		membership:   &GuildMember{GuildID: 10, Recruiter: true},
 		createAppErr: ErrAlreadyInvited,
 	}
 	guildMock.guild = &Guild{ID: 10, Name: "TestGuild"}

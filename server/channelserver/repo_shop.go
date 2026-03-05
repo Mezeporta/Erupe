@@ -1,16 +1,16 @@
 package channelserver
 
 import (
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // ShopRepository centralizes all database access for shop-related tables.
 type ShopRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewShopRepository creates a new ShopRepository.
-func NewShopRepository(db *sqlx.DB) *ShopRepository {
+func NewShopRepository(db *dbutil.DB) *ShopRepository {
 	return &ShopRepository{db: db}
 }
 

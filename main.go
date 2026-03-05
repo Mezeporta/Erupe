@@ -25,6 +25,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
+	_ "modernc.org/sqlite"
 )
 
 // Temporary DB auto clean on startup for quick development & testing.
@@ -108,7 +109,7 @@ func main() {
 	logger.Info(fmt.Sprintf("Starting Erupe (9.3b-%s)", Commit()))
 	logger.Info(fmt.Sprintf("Client Mode: %s (%d)", config.ClientMode, config.RealClientMode))
 
-	if config.Database.Password == "" {
+	if config.Database.Driver != "sqlite" && config.Database.Password == "" {
 		preventClose(config, "Database password is blank")
 	}
 
@@ -136,19 +137,38 @@ func main() {
 		logger.Info("Discord: Disabled")
 	}
 
-	// Create the postgres DB pool.
-	connectString := fmt.Sprintf(
-		"host='%s' port='%d' user='%s' password='%s' dbname='%s' sslmode=disable",
-		config.Database.Host,
-		config.Database.Port,
-		config.Database.User,
-		config.Database.Password,
-		config.Database.Database,
-	)
-
-	db, err := sqlx.Open("postgres", connectString)
-	if err != nil {
-		preventClose(config, fmt.Sprintf("Database: Failed to open, %s", err.Error()))
+	// Create the DB pool.
+	var db *sqlx.DB
+	if config.Database.Driver == "sqlite" {
+		dbPath := config.Database.Database
+		if dbPath == "" || dbPath == "erupe" {
+			dbPath = "erupe.db"
+		}
+		db, err = sqlx.Open("sqlite", dbPath+"?_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)")
+		if err != nil {
+			preventClose(config, fmt.Sprintf("Database: Failed to open SQLite %s, %s", dbPath, err.Error()))
+		}
+		// SQLite only supports one writer at a time.
+		db.SetMaxOpenConns(1)
+		logger.Info(fmt.Sprintf("Database: SQLite opened (%s)", dbPath))
+	} else {
+		connectString := fmt.Sprintf(
+			"host='%s' port='%d' user='%s' password='%s' dbname='%s' sslmode=disable",
+			config.Database.Host,
+			config.Database.Port,
+			config.Database.User,
+			config.Database.Password,
+			config.Database.Database,
+		)
+		db, err = sqlx.Open("postgres", connectString)
+		if err != nil {
+			preventClose(config, fmt.Sprintf("Database: Failed to open, %s", err.Error()))
+		}
+		// Configure connection pool to avoid exhausting PostgreSQL under load.
+		db.SetMaxOpenConns(50)
+		db.SetMaxIdleConns(10)
+		db.SetConnMaxLifetime(5 * time.Minute)
+		db.SetConnMaxIdleTime(2 * time.Minute)
 	}
 
 	// Test the DB connection.
@@ -156,12 +176,6 @@ func main() {
 	if err != nil {
 		preventClose(config, fmt.Sprintf("Database: Failed to ping, %s", err.Error()))
 	}
-
-	// Configure connection pool to avoid exhausting PostgreSQL under load.
-	db.SetMaxOpenConns(50)
-	db.SetMaxIdleConns(10)
-	db.SetConnMaxLifetime(5 * time.Minute)
-	db.SetConnMaxIdleTime(2 * time.Minute)
 
 	logger.Info("Database: Started successfully")
 

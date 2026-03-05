@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	"erupe-ce/network/mhfpacket"
 	"erupe-ce/common/stringsupport"
+	"erupe-ce/network/mhfpacket"
 )
 
 // --- handleMsgMhfOperateGuild tests ---

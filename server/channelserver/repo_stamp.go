@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // StampRepository centralizes all database access for the stamps table.
 type StampRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewStampRepository creates a new StampRepository.
-func NewStampRepository(db *sqlx.DB) *StampRepository {
+func NewStampRepository(db *dbutil.DB) *StampRepository {
 	return &StampRepository{db: db}
 }
 

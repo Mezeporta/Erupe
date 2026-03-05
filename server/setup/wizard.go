@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 
 	"github.com/lib/pq"
 )
@@ -31,6 +32,7 @@ type FinishRequest struct {
 	Language          string `json:"language"`
 	ClientMode        string `json:"clientMode"`
 	AutoCreateAccount bool   `json:"autoCreateAccount"`
+	Preset            string `json:"preset"`
 }
 
 // buildDefaultConfig produces a minimal config map with only user-provided values.
@@ -40,7 +42,7 @@ func buildDefaultConfig(req FinishRequest) map[string]interface{} {
 	if lang == "" {
 		lang = "jp"
 	}
-	return map[string]interface{}{
+	cfg := map[string]interface{}{
 		"Host":              req.Host,
 		"Language":          lang,
 		"ClientMode":        req.ClientMode,
@@ -51,6 +53,156 @@ func buildDefaultConfig(req FinishRequest) map[string]interface{} {
 			"User":     req.DBUser,
 			"Password": req.DBPassword,
 			"Database": req.DBName,
+		},
+	}
+
+	// Apply preset overrides. The "community" preset uses Viper defaults and
+	// adds nothing to the config file.
+	if overrides, ok := presetConfigs()[req.Preset]; ok {
+		for k, v := range overrides {
+			cfg[k] = v
+		}
+	}
+
+	return cfg
+}
+
+// presetConfigs returns config overrides keyed by preset ID.
+// The "community" preset is intentionally absent — it relies entirely on
+// Viper defaults.
+func presetConfigs() map[string]map[string]interface{} {
+	return map[string]map[string]interface{}{
+		"solo": {
+			"GameplayOptions": map[string]interface{}{
+				"HRPMultiplier":       3.0,
+				"SRPMultiplier":       3.0,
+				"GRPMultiplier":       3.0,
+				"GSRPMultiplier":      3.0,
+				"ZennyMultiplier":     2.0,
+				"GZennyMultiplier":    2.0,
+				"MaterialMultiplier":  2.0,
+				"GMaterialMultiplier": 2.0,
+				"ExtraCarves":         2,
+				"GExtraCarves":        2,
+			},
+			"Entrance": map[string]interface{}{
+				"Entries": []map[string]interface{}{
+					{
+						"Name": "Solo",
+						"Type": 1,
+						"Channels": []map[string]interface{}{
+							{"Port": 54001, "MaxPlayers": 100},
+						},
+					},
+				},
+			},
+		},
+		"small": {
+			"Entrance": map[string]interface{}{
+				"Entries": []map[string]interface{}{
+					{
+						"Name": "World 1",
+						"Type": 1,
+						"Channels": []map[string]interface{}{
+							{"Port": 54001, "MaxPlayers": 100},
+							{"Port": 54002, "MaxPlayers": 100},
+						},
+					},
+				},
+			},
+		},
+		"rebalanced": {
+			"GameplayOptions": map[string]interface{}{
+				"HRPMultiplier":  2.0,
+				"SRPMultiplier":  2.0,
+				"GRPMultiplier":  2.0,
+				"GSRPMultiplier": 2.0,
+				"ExtraCarves":    1,
+				"GExtraCarves":   1,
+			},
+			"Entrance": map[string]interface{}{
+				"Entries": []map[string]interface{}{
+					{
+						"Name": "Normal",
+						"Type": 1,
+						"Channels": []map[string]interface{}{
+							{"Port": 54001, "MaxPlayers": 100},
+							{"Port": 54002, "MaxPlayers": 100},
+						},
+					},
+					{
+						"Name": "Cities",
+						"Type": 2,
+						"Channels": []map[string]interface{}{
+							{"Port": 54003, "MaxPlayers": 100},
+							{"Port": 54004, "MaxPlayers": 100},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// QuestStatus holds the result of a quest files check.
+type QuestStatus struct {
+	QuestsFound bool `json:"questsFound"`
+	QuestCount  int  `json:"questCount"`
+}
+
+// checkQuestFiles checks if quest files exist in the bin/quests/ directory.
+func checkQuestFiles(binPath string) QuestStatus {
+	if binPath == "" {
+		binPath = "bin"
+	}
+	questDir := filepath.Join(binPath, "quests")
+	entries, err := os.ReadDir(questDir)
+	if err != nil {
+		return QuestStatus{QuestsFound: false, QuestCount: 0}
+	}
+	count := 0
+	for _, e := range entries {
+		if !e.IsDir() {
+			count++
+		}
+	}
+	return QuestStatus{QuestsFound: count > 0, QuestCount: count}
+}
+
+// PresetInfo describes a gameplay preset for the wizard UI.
+type PresetInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Channels    int    `json:"channels"`
+}
+
+// availablePresets returns the list of gameplay presets shown in the wizard.
+func availablePresets() []PresetInfo {
+	return []PresetInfo{
+		{
+			ID:          "solo",
+			Name:        "Solo / Testing",
+			Description: "Single channel, boosted XP rates (3x), relaxed grind. Ideal for solo play or development testing.",
+			Channels:    1,
+		},
+		{
+			ID:          "small",
+			Name:        "Small Group (2-8 players)",
+			Description: "Two channels with vanilla rates. Good for friends playing together.",
+			Channels:    2,
+		},
+		{
+			ID:          "community",
+			Name:        "Community Server",
+			Description: "Full 8-channel topology with vanilla rates. Ready for a public community.",
+			Channels:    8,
+		},
+		{
+			ID:          "rebalanced",
+			Name:        "Rebalanced",
+			Description: "Community-tuned rates: 2x GRP, 2x HRP, extra carves. Addresses G-Rank grind without trivializing content.",
+			Channels:    4,
 		},
 	}
 }

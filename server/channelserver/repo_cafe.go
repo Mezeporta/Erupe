@@ -1,16 +1,16 @@
 package channelserver
 
 import (
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // CafeRepository centralizes all database access for cafe-related tables.
 type CafeRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewCafeRepository creates a new CafeRepository.
-func NewCafeRepository(db *sqlx.DB) *CafeRepository {
+func NewCafeRepository(db *dbutil.DB) *CafeRepository {
 	return &CafeRepository{db: db}
 }
 

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	dbutil "erupe-ce/common/db"
 	"erupe-ce/server/channelserver/compression/nullcomp"
 	"erupe-ce/server/migrations"
 	"github.com/jmoiron/sqlx"
@@ -330,25 +331,26 @@ func CreateTestGachaItem(t *testing.T, db *sqlx.DB, entryID uint32, itemType uin
 // Use this in integration tests instead of setting s.server.db directly.
 func SetTestDB(s *Server, db *sqlx.DB) {
 	s.db = db
-	s.charRepo = NewCharacterRepository(db)
-	s.guildRepo = NewGuildRepository(db)
-	s.userRepo = NewUserRepository(db)
-	s.gachaRepo = NewGachaRepository(db)
-	s.houseRepo = NewHouseRepository(db)
-	s.festaRepo = NewFestaRepository(db)
-	s.towerRepo = NewTowerRepository(db)
-	s.rengokuRepo = NewRengokuRepository(db)
-	s.mailRepo = NewMailRepository(db)
-	s.stampRepo = NewStampRepository(db)
-	s.distRepo = NewDistributionRepository(db)
-	s.sessionRepo = NewSessionRepository(db)
-	s.eventRepo = NewEventRepository(db)
-	s.achievementRepo = NewAchievementRepository(db)
-	s.shopRepo = NewShopRepository(db)
-	s.cafeRepo = NewCafeRepository(db)
-	s.goocooRepo = NewGoocooRepository(db)
-	s.divaRepo = NewDivaRepository(db)
-	s.miscRepo = NewMiscRepository(db)
-	s.scenarioRepo = NewScenarioRepository(db)
-	s.mercenaryRepo = NewMercenaryRepository(db)
+	wdb := dbutil.Wrap(db)
+	s.charRepo = NewCharacterRepository(wdb)
+	s.guildRepo = NewGuildRepository(wdb)
+	s.userRepo = NewUserRepository(wdb)
+	s.gachaRepo = NewGachaRepository(wdb)
+	s.houseRepo = NewHouseRepository(wdb)
+	s.festaRepo = NewFestaRepository(wdb)
+	s.towerRepo = NewTowerRepository(wdb)
+	s.rengokuRepo = NewRengokuRepository(wdb)
+	s.mailRepo = NewMailRepository(wdb)
+	s.stampRepo = NewStampRepository(wdb)
+	s.distRepo = NewDistributionRepository(wdb)
+	s.sessionRepo = NewSessionRepository(wdb)
+	s.eventRepo = NewEventRepository(wdb)
+	s.achievementRepo = NewAchievementRepository(wdb)
+	s.shopRepo = NewShopRepository(wdb)
+	s.cafeRepo = NewCafeRepository(wdb)
+	s.goocooRepo = NewGoocooRepository(wdb)
+	s.divaRepo = NewDivaRepository(wdb)
+	s.miscRepo = NewMiscRepository(wdb)
+	s.scenarioRepo = NewScenarioRepository(wdb)
+	s.mercenaryRepo = NewMercenaryRepository(wdb)
 }

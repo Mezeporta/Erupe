@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // MercenaryRepository centralizes database access for mercenary/rasta/airou sequences and queries.
 type MercenaryRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewMercenaryRepository creates a new MercenaryRepository.
-func NewMercenaryRepository(db *sqlx.DB) *MercenaryRepository {
+func NewMercenaryRepository(db *dbutil.DB) *MercenaryRepository {
 	return &MercenaryRepository{db: db}
 }
 

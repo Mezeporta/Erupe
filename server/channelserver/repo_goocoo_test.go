@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -11,7 +12,7 @@ func setupGoocooRepo(t *testing.T) (*GoocooRepository, *sqlx.DB, uint32) {
 	db := SetupTestDB(t)
 	userID := CreateTestUser(t, db, "goocoo_test_user")
 	charID := CreateTestCharacter(t, db, userID, "GoocooChar")
-	repo := NewGoocooRepository(db)
+	repo := NewGoocooRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID
 }

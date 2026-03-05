@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	dbutil "erupe-ce/common/db"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
@@ -33,6 +35,7 @@ type APIServer struct {
 	sessionRepo    APISessionRepo
 	eventRepo      APIEventRepo
 	httpServer     *http.Server
+	startTime      time.Time
 	isShuttingDown bool
 }
 
@@ -45,18 +48,25 @@ func NewAPIServer(config *Config) *APIServer {
 		httpServer:  &http.Server{},
 	}
 	if config.DB != nil {
-		s.userRepo = NewAPIUserRepository(config.DB)
-		s.charRepo = NewAPICharacterRepository(config.DB)
-		s.sessionRepo = NewAPISessionRepository(config.DB)
-		s.eventRepo = NewAPIEventRepository(config.DB)
+		wdb := dbutil.Wrap(config.DB)
+		s.userRepo = NewAPIUserRepository(wdb)
+		s.charRepo = NewAPICharacterRepository(wdb)
+		s.sessionRepo = NewAPISessionRepository(wdb)
+		s.eventRepo = NewAPIEventRepository(wdb)
 	}
 	return s
 }
 
 // Start starts the server in a new goroutine.
 func (s *APIServer) Start() error {
+	s.startTime = time.Now()
+
 	// Set up the routes responsible for serving the launcher HTML, serverlist, unique name check, and JP auth.
 	r := mux.NewRouter()
+
+	// Dashboard routes (before catch-all)
+	r.HandleFunc("/dashboard", s.Dashboard)
+	r.HandleFunc("/api/dashboard/stats", s.DashboardStatsJSON).Methods("GET")
 
 	// Legacy routes (unchanged, no method enforcement)
 	r.HandleFunc("/launcher", s.Launcher)

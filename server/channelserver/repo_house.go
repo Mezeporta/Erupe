@@ -3,17 +3,17 @@ package channelserver
 import (
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // HouseRepository centralizes all database access for house-related tables
 // (user_binary house columns, warehouse, titles).
 type HouseRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewHouseRepository creates a new HouseRepository.
-func NewHouseRepository(db *sqlx.DB) *HouseRepository {
+func NewHouseRepository(db *dbutil.DB) *HouseRepository {
 	return &HouseRepository{db: db}
 }
 

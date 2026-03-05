@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"erupe-ce/common/byteframe"
-	"erupe-ce/network/mhfpacket"
 	cfg "erupe-ce/config"
+	"erupe-ce/network/mhfpacket"
 )
 
 func TestHandleMsgMhfLoadLegendDispatch(t *testing.T) {

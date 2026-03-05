@@ -12,18 +12,18 @@ import (
 
 // mockSession implements the Session interface for testing.
 type mockSession struct {
-	openErr                error
-	channelResult          *discordgo.Channel
-	channelErr             error
-	userResults            map[string]*discordgo.User
-	userErr                error
-	messageSentTo          string
-	messageSentContent     string
-	messageErr             error
-	addHandlerCalls        int
-	bulkOverwriteAppID     string
-	bulkOverwriteCommands  []*discordgo.ApplicationCommand
-	bulkOverwriteErr       error
+	openErr               error
+	channelResult         *discordgo.Channel
+	channelErr            error
+	userResults           map[string]*discordgo.User
+	userErr               error
+	messageSentTo         string
+	messageSentContent    string
+	messageErr            error
+	addHandlerCalls       int
+	bulkOverwriteAppID    string
+	bulkOverwriteCommands []*discordgo.ApplicationCommand
+	bulkOverwriteErr      error
 }
 
 func (m *mockSession) Open() error {

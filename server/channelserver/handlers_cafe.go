@@ -170,8 +170,8 @@ func handleMsgMhfPostCafeDurationBonusReceived(s *Session, p mhfpacket.MHFPacket
 		if err == nil {
 			if itemType == 17 {
 				if err := addPointNetcafe(s, int(quantity)); err != nil {
-				s.logger.Error("Failed to add cafe bonus netcafe points", zap.Error(err))
-			}
+					s.logger.Error("Failed to add cafe bonus netcafe points", zap.Error(err))
+				}
 			}
 		}
 		if err := s.server.cafeRepo.AcceptBonus(cbID, s.charID); err != nil {

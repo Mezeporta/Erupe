@@ -156,13 +156,13 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 				// 	|5|1|1|7|9|3|0|0|0|0|0|null|
 				// 	|8|1|100|7|1|4|1000|0|0|0|0|null|
 				// 	|9|1|100|7|2|5|9000|0|0|0|0|null|
-				bf.WriteUint8(ge.EntryType)     
-				bf.WriteUint32(ge.ID)           
-				bf.WriteUint8(ge.ItemType)      
-				bf.WriteUint32(ge.ItemNumber)   
-				bf.WriteUint16(ge.ItemQuantity) 
+				bf.WriteUint8(ge.EntryType)
+				bf.WriteUint32(ge.ID)
+				bf.WriteUint8(ge.ItemType)
+				bf.WriteUint32(ge.ItemNumber)
+				bf.WriteUint16(ge.ItemQuantity)
 				var weightPr uint16
-				if gachaType >= 4 { // If box   
+				if gachaType >= 4 { // If box
 					weightPr = 1
 				} else {
 					weightPr = uint16(ge.Weight / divisor)

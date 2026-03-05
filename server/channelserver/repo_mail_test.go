@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -13,7 +14,7 @@ func setupMailRepo(t *testing.T) (*MailRepository, *sqlx.DB, uint32, uint32) {
 	senderID := CreateTestCharacter(t, db, userID, "Sender")
 	userID2 := CreateTestUser(t, db, "mail_recipient")
 	recipientID := CreateTestCharacter(t, db, userID2, "Recipient")
-	repo := NewMailRepository(db)
+	repo := NewMailRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, senderID, recipientID
 }

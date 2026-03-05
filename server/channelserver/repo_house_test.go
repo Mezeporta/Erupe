@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -12,7 +13,7 @@ func setupHouseRepo(t *testing.T) (*HouseRepository, *sqlx.DB, uint32) {
 	userID := CreateTestUser(t, db, "house_test_user")
 	charID := CreateTestCharacter(t, db, userID, "HouseChar")
 	CreateTestUserBinary(t, db, charID)
-	repo := NewHouseRepository(db)
+	repo := NewHouseRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID
 }

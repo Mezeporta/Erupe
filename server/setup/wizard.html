@@ -87,12 +87,16 @@ h1{font-size:1.75rem;margin-bottom:.5rem;color:#e94560;text-align:center}
   <div class="progress-step" id="prog-2"></div>
   <div class="progress-step" id="prog-3"></div>
   <div class="progress-step" id="prog-4"></div>
+  <div class="progress-step" id="prog-5"></div>
+  <div class="progress-step" id="prog-6"></div>
 </div>
 <div class="step-labels">
   <span id="lbl-1">1. Database</span>
   <span id="lbl-2">2. Schema</span>
-  <span id="lbl-3">3. Server</span>
-  <span id="lbl-4">4. Finish</span>
+  <span id="lbl-3">3. Quest Files</span>
+  <span id="lbl-4">4. Preset</span>
+  <span id="lbl-5">5. Server</span>
+  <span id="lbl-6">6. Finish</span>
 </div>
 
 <!-- Step 1: Database Connection -->
@@ -134,8 +138,39 @@ h1{font-size:1.75rem;margin-bottom:.5rem;color:#e94560;text-align:center}
   </div>
 </div>
 
-<!-- Step 3: Server Settings -->
+<!-- Step 3: Quest Files Check -->
 <div class="card step hidden" id="step-3">
+  <h2>Quest Files</h2>
+  <p style="font-size:.85rem;color:#888;margin-bottom:1rem">Quest files are needed for gameplay. The server checks the <code>bin/quests/</code> directory.</p>
+  <div id="quest-status" class="status status-info">Checking quest files...</div>
+  <div id="quest-warning" class="hidden" style="margin-top:1rem">
+    <p style="font-size:.85rem;color:#e94560;margin-bottom:.7rem"><strong>No quest files found.</strong></p>
+    <p style="font-size:.85rem;color:#aaa;margin-bottom:.5rem">Download the quest archive:</p>
+    <a href="https://files.catbox.moe/xf0l7w.7z" target="_blank" rel="noopener" style="color:#4ecdc4;font-size:.9rem;word-break:break-all">https://files.catbox.moe/xf0l7w.7z</a>
+    <p style="font-size:.85rem;color:#aaa;margin-top:.7rem">Download the archive, extract it, and place the <code>quests/</code> and <code>scenarios/</code> folders into the <code>bin/</code> directory next to the server binary.</p>
+  </div>
+  <div style="margin-top:1rem">
+    <button class="btn btn-secondary" id="btn-recheck-quests" onclick="checkQuests()">Re-check</button>
+  </div>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="goToStep(2)">Back</button>
+    <button class="btn btn-primary" id="btn-step3-next" onclick="goToStep(4)">Next</button>
+  </div>
+</div>
+
+<!-- Step 4: Gameplay Preset -->
+<div class="card step hidden" id="step-4">
+  <h2>Gameplay Preset</h2>
+  <p style="font-size:.85rem;color:#888;margin-bottom:1rem">Choose a preset that matches your intended use. This configures channels and gameplay rates.</p>
+  <div id="preset-cards" style="display:flex;flex-direction:column;gap:.7rem"></div>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="goToStep(3)">Back</button>
+    <button class="btn btn-primary" id="btn-step4-next" onclick="goToStep(5)">Next</button>
+  </div>
+</div>
+
+<!-- Step 5: Server Settings -->
+<div class="card step hidden" id="step-5">
   <h2>Server Settings</h2>
   <div class="field">
     <label>Host IP Address</label>
@@ -162,19 +197,19 @@ h1{font-size:1.75rem;margin-bottom:.5rem;color:#e94560;text-align:center}
   </div>
   <label class="checkbox" style="margin-top:1rem"><input type="checkbox" id="srv-auto-create" checked> Auto-create accounts (recommended for private servers)</label>
   <div class="actions">
-    <button class="btn btn-secondary" onclick="goToStep(2)">Back</button>
-    <button class="btn btn-primary" onclick="goToStep(4)">Next</button>
+    <button class="btn btn-secondary" onclick="goToStep(4)">Back</button>
+    <button class="btn btn-primary" onclick="goToStep(6)">Next</button>
   </div>
 </div>
 
-<!-- Step 4: Review & Finish -->
-<div class="card step hidden" id="step-4">
+<!-- Step 6: Review & Finish -->
+<div class="card step hidden" id="step-6">
   <h2>Review &amp; Finish</h2>
   <p style="font-size:.85rem;color:#888;margin-bottom:1rem">Verify your settings before creating config.json.</p>
   <table class="review-table" id="review-table"></table>
   <div id="finish-status" class="hidden"></div>
   <div class="actions">
-    <button class="btn btn-secondary" onclick="goToStep(3)">Back</button>
+    <button class="btn btn-secondary" onclick="goToStep(5)">Back</button>
     <button class="btn btn-success" id="btn-finish" onclick="finish()">Create config &amp; Start Server</button>
   </div>
 </div>
@@ -184,10 +219,13 @@ h1{font-size:1.75rem;margin-bottom:.5rem;color:#e94560;text-align:center}
 <script>
 let currentStep = 1;
 let dbTestResult = null;
+let selectedPreset = 'community';
 
 function goToStep(n) {
-  if (n === 4) buildReview();
+  if (n === 6) buildReview();
   if (n === 2) updateSchemaOptions();
+  if (n === 3) checkQuests();
+  if (n === 4) loadPresets();
   document.querySelectorAll('.step').forEach(el => el.classList.add('hidden'));
   document.getElementById('step-' + n).classList.remove('hidden');
   currentStep = n;
@@ -195,7 +233,7 @@ function goToStep(n) {
 }
 
 function updateProgress() {
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 6; i++) {
     const p = document.getElementById('prog-' + i);
     const l = document.getElementById('lbl-' + i);
     p.className = 'progress-step';
@@ -339,6 +377,78 @@ async function detectIP() {
   btn.textContent = 'Auto-detect';
 }
 
+async function checkQuests() {
+  const status = document.getElementById('quest-status');
+  const warning = document.getElementById('quest-warning');
+  const btn = document.getElementById('btn-recheck-quests');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Checking...';
+  status.className = 'status status-info';
+  status.textContent = 'Checking quest files...';
+  warning.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/setup/check-quests');
+    const data = await res.json();
+    if (data.questsFound) {
+      status.className = 'status status-ok';
+      status.textContent = data.questCount + ' quest file' + (data.questCount !== 1 ? 's' : '') + ' found.';
+      warning.classList.add('hidden');
+    } else {
+      status.className = 'status status-warn';
+      status.textContent = 'No quest files found in bin/quests/.';
+      warning.classList.remove('hidden');
+    }
+  } catch (e) {
+    status.className = 'status status-warn';
+    status.textContent = 'Could not check quest files: ' + e.message;
+    warning.classList.remove('hidden');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Re-check';
+}
+
+let presetsLoaded = false;
+async function loadPresets() {
+  if (presetsLoaded) { highlightPreset(); return; }
+  try {
+    const res = await fetch('/api/setup/presets');
+    const data = await res.json();
+    const container = document.getElementById('preset-cards');
+    container.innerHTML = '';
+    data.presets.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'preset-card';
+      card.dataset.id = p.id;
+      card.style.cssText = 'padding:1rem 1.2rem;background:#0f3460;border:2px solid #1a3a6e;border-radius:8px;cursor:pointer;transition:border-color .2s,background .2s';
+      card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">'
+        + '<strong style="color:#e0e0e0;font-size:.95rem">' + p.name + '</strong>'
+        + '<span style="font-size:.75rem;color:#888">' + p.channels + ' channel' + (p.channels !== 1 ? 's' : '') + '</span>'
+        + '</div>'
+        + '<div style="font-size:.82rem;color:#aaa">' + p.description + '</div>';
+      card.onclick = function() {
+        selectedPreset = p.id;
+        highlightPreset();
+      };
+      container.appendChild(card);
+    });
+    presetsLoaded = true;
+    highlightPreset();
+  } catch (e) { /* ignore */ }
+}
+
+function highlightPreset() {
+  document.querySelectorAll('.preset-card').forEach(c => {
+    if (c.dataset.id === selectedPreset) {
+      c.style.borderColor = '#e94560';
+      c.style.background = 'rgba(233,69,96,.1)';
+    } else {
+      c.style.borderColor = '#1a3a6e';
+      c.style.background = '#0f3460';
+    }
+  });
+}
+
 function buildReview() {
   const table = document.getElementById('review-table');
   const password = document.getElementById('db-password').value;
@@ -352,6 +462,7 @@ function buildReview() {
     ['Language', document.getElementById('srv-language').value],
     ['Client Mode', document.getElementById('srv-client-mode').value],
     ['Auto-create Accounts', document.getElementById('srv-auto-create').checked ? 'Yes' : 'No'],
+    ['Gameplay Preset', selectedPreset],
   ];
   table.innerHTML = rows.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
 }
@@ -376,6 +487,7 @@ async function finish() {
         language: document.getElementById('srv-language').value,
         clientMode: document.getElementById('srv-client-mode').value,
         autoCreateAccount: document.getElementById('srv-auto-create').checked,
+        preset: selectedPreset,
       })
     });
     const data = await res.json();

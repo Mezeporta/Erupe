@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"testing"
 	"time"
 
@@ -13,7 +14,7 @@ func setupFestaRepo(t *testing.T) (*FestaRepository, *sqlx.DB, uint32, uint32) {
 	userID := CreateTestUser(t, db, "festa_test_user")
 	charID := CreateTestCharacter(t, db, userID, "FestaChar")
 	guildID := CreateTestGuild(t, db, charID, "FestaGuild")
-	repo := NewFestaRepository(db)
+	repo := NewFestaRepository(dbutil.Wrap(db))
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID, guildID
 }

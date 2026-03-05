@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Erupe Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#1a1a2e;color:#e0e0e0;min-height:100vh;padding:2rem}
+.header{text-align:center;margin-bottom:2rem}
+.header h1{font-size:2rem;color:#e94560;margin-bottom:.25rem}
+.header .version{font-size:.9rem;color:#888}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem}
+.card{background:#16213e;border-radius:10px;padding:1.25rem;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.card .label{font-size:.8rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem}
+.card .value{font-size:1.75rem;font-weight:700;color:#4ecdc4}
+.card .value.accent{color:#e94560}
+.card .value.ok{color:#4ecdc4}
+.card .value.fail{color:#e94560}
+.channels{background:#16213e;border-radius:10px;padding:1.5rem;box-shadow:0 4px 16px rgba(0,0,0,.3);margin-bottom:1.5rem}
+.channels h2{font-size:1.1rem;color:#e94560;margin-bottom:1rem}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;padding:.5rem .75rem;border-bottom:1px solid #0f3460}
+td{padding:.6rem .75rem;border-bottom:1px solid rgba(15,52,96,.5)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.5rem;vertical-align:middle}
+.dot.active{background:#4ecdc4}
+.dot.empty{background:#555}
+.footer{text-align:center;font-size:.8rem;color:#555}
+.no-channels{color:#888;font-style:italic;padding:1rem 0}
+.error-banner{background:#e94560;color:#fff;text-align:center;padding:.75rem;border-radius:8px;margin-bottom:1rem;display:none}
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>Erupe Dashboard</h1>
+    <div class="version" id="version">Loading...</div>
+</div>
+
+<div id="error-banner" class="error-banner">Failed to fetch server stats</div>
+
+<div class="cards">
+    <div class="card">
+        <div class="label">Uptime</div>
+        <div class="value" id="uptime" style="font-size:1.25rem">--</div>
+    </div>
+    <div class="card">
+        <div class="label">Online Players</div>
+        <div class="value accent" id="online-players">--</div>
+    </div>
+    <div class="card">
+        <div class="label">Total Accounts</div>
+        <div class="value" id="total-accounts">--</div>
+    </div>
+    <div class="card">
+        <div class="label">Total Characters</div>
+        <div class="value" id="total-characters">--</div>
+    </div>
+    <div class="card">
+        <div class="label">Database</div>
+        <div class="value" id="db-status">--</div>
+    </div>
+</div>
+
+<div class="channels">
+    <h2>Channels</h2>
+    <div id="channels-content">
+        <div class="no-channels">Loading...</div>
+    </div>
+</div>
+
+<div class="footer">
+    Last updated: <span id="last-updated">never</span> | Auto-refreshes every 5s
+</div>
+
+<script>
+(function() {
+    var lastUpdated = null;
+
+    function updateStats() {
+        fetch("/api/dashboard/stats")
+            .then(function(r) {
+                if (!r.ok) throw new Error("HTTP " + r.status);
+                return r.json();
+            })
+            .then(function(d) {
+                document.getElementById("error-banner").style.display = "none";
+                document.getElementById("version").textContent = d.serverVersion + " - " + d.clientMode;
+                document.getElementById("uptime").textContent = d.uptime;
+                document.getElementById("online-players").textContent = d.onlinePlayers;
+                document.getElementById("total-accounts").textContent = d.totalAccounts;
+                document.getElementById("total-characters").textContent = d.totalCharacters;
+
+                var dbEl = document.getElementById("db-status");
+                if (d.databaseOK) {
+                    dbEl.textContent = "OK";
+                    dbEl.className = "value ok";
+                } else {
+                    dbEl.textContent = "DOWN";
+                    dbEl.className = "value fail";
+                }
+
+                var container = document.getElementById("channels-content");
+                if (!d.channels || d.channels.length === 0) {
+                    container.innerHTML = '<div class="no-channels">No channels registered</div>';
+                } else {
+                    var html = '<table><thead><tr><th>Status</th><th>Name</th><th>Port</th><th>Players</th></tr></thead><tbody>';
+                    for (var i = 0; i < d.channels.length; i++) {
+                        var ch = d.channels[i];
+                        var dotClass = ch.players > 0 ? "active" : "empty";
+                        html += '<tr><td><span class="dot ' + dotClass + '"></span></td>';
+                        html += '<td>' + escapeHtml(ch.name) + '</td>';
+                        html += '<td>' + ch.port + '</td>';
+                        html += '<td>' + ch.players + '</td></tr>';
+                    }
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                }
+
+                lastUpdated = new Date();
+            })
+            .catch(function() {
+                document.getElementById("error-banner").style.display = "block";
+            });
+    }
+
+    function updateTimer() {
+        if (lastUpdated) {
+            var ago = Math.floor((Date.now() - lastUpdated.getTime()) / 1000);
+            document.getElementById("last-updated").textContent = ago + "s ago";
+        }
+    }
+
+    function escapeHtml(s) {
+        var div = document.createElement("div");
+        div.appendChild(document.createTextNode(s));
+        return div.innerHTML;
+    }
+
+    updateStats();
+    setInterval(updateStats, 5000);
+    setInterval(updateTimer, 1000);
+})();
+</script>
+</body>
+</html>

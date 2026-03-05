@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	dbutil "erupe-ce/common/db"
 	"fmt"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ func setupGuildRepo(t *testing.T) (*GuildRepository, *sqlx.DB, uint32, uint32) {
 	db := SetupTestDB(t)
 	userID := CreateTestUser(t, db, "guild_test_user")
 	charID := CreateTestCharacter(t, db, userID, "GuildLeader")
-	repo := NewGuildRepository(db)
+	repo := NewGuildRepository(dbutil.Wrap(db))
 	guildID := CreateTestGuild(t, db, charID, "TestGuild")
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, guildID, charID
@@ -82,7 +83,7 @@ func TestGetByCharIDNotFound(t *testing.T) {
 func TestCreate(t *testing.T) {
 	db := SetupTestDB(t)
 	defer TeardownTestDB(t, db)
-	repo := NewGuildRepository(db)
+	repo := NewGuildRepository(dbutil.Wrap(db))
 	userID := CreateTestUser(t, db, "create_guild_user")
 	charID := CreateTestCharacter(t, db, userID, "CreateLeader")
 

@@ -3,16 +3,16 @@ package api
 import (
 	"context"
 
-	"github.com/jmoiron/sqlx"
+	dbutil "erupe-ce/common/db"
 )
 
 // APICharacterRepository implements APICharacterRepo with PostgreSQL.
 type APICharacterRepository struct {
-	db *sqlx.DB
+	db *dbutil.DB
 }
 
 // NewAPICharacterRepository creates a new APICharacterRepository.
-func NewAPICharacterRepository(db *sqlx.DB) *APICharacterRepository {
+func NewAPICharacterRepository(db *dbutil.DB) *APICharacterRepository {
 	return &APICharacterRepository{db: db}
 }
 
