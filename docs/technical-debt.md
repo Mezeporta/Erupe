@@ -1,6 +1,6 @@
 # Erupe Technical Debt & Suggested Next Steps
 
-> Last updated: 2026-02-27
+> Last updated: 2026-03-05
 
 This document tracks actionable technical debt items discovered during a codebase audit. It complements `anti-patterns.md` (which covers structural patterns) by focusing on specific, fixable items with file paths and line numbers.
 
@@ -82,6 +82,11 @@ Items resolved since the original audit:
 | — | **`db != nil` guard** (`handlers_session.go:322`) | Investigated — this guard is intentional. Test servers run without repos; the guard protects the entire logout path from nil repo dereferences. Not a leaky abstraction. |
 | ~~2~~ | **Repo test coverage (17 files)** | All 20 repo source files now have `_test.go` files with mock-based unit tests. |
 | — | **Bookshelf data pointer** ([#164](https://github.com/Mezeporta/Erupe/issues/164)) | Corrected `pBookshelfData` offsets for G1–Z2 (103928), F4–F5 (71928), S6 (23928). Validated via inter-version delta analysis and Ghidra decompilation of ZZ `snj_db_get_housedata`. |
+| — | **Guild nil panics** ([#171](https://github.com/Mezeporta/Erupe/issues/171)) | Three fixes merged post-RC1: nil guards for alliance guild lookups (aee5353), variable shadowing fix in scout list (8e79fe6), nil guards in cancel/answer scout handlers (8717fb9). Clan hall softlock resolved. |
+| — | **ecdMagic byte order** ([#174](https://github.com/Mezeporta/Erupe/issues/174)) | Corrected constant byte order in `crypt_conn.go` (10ac803). |
+| — | **Rengoku caching** | Cached `rengoku_data.bin` at startup to avoid repeated disk reads (5b631d1). |
+| — | **rasta_id=0 save issue** ([#163](https://github.com/Mezeporta/Erupe/issues/163)) | `SaveMercenary` now skips rasta_id update when value is 0, preserving NULL for characters without a mercenary. |
+| — | **fmt.Printf in setup wizard** | Replaced `fmt.Printf` in `server/setup/setup.go` with structured `zap` logging. |
 
 ---
 
@@ -94,5 +99,5 @@ Based on remaining impact:
 3. **Fix achievement rank-up notifications** ([#165](https://github.com/Mezeporta/Erupe/issues/165)) — needs protocol research on `MhfDisplayedAchievement`
 4. ~~**Add coverage threshold** to CI~~ — **Done.** 50% floor enforced via `go tool cover` in CI; Codecov removed.
 5. ~~**Fix guild alliance toggle** ([#166](https://github.com/Mezeporta/Erupe/issues/166))~~ — **Done.** `recruiting` column + `OperateJoint` allow/deny actions + DB toggle
-6. **Fix session handler retail mismatches** ([#167](https://github.com/Mezeporta/Erupe/issues/167)) — log key off-by-one, version boundary, player count
+6. ~~**Fix session handler retail mismatches** ([#167](https://github.com/Mezeporta/Erupe/issues/167))~~ — **Documented.** RE'd from ZZ DLL; log key off-by-one is benign server-side, player count fixed via `QuestReserved`.
 7. **Reverse-engineer MhfAddUdPoint fields** ([#168](https://github.com/Mezeporta/Erupe/issues/168)) — needs packet captures

@@ -208,3 +208,72 @@ func TestReadMigrations(t *testing.T) {
 		t.Errorf("first migration filename = %q, want 0001_init.sql", migrations[0].filename)
 	}
 }
+
+func TestReadMigrations_Sorted(t *testing.T) {
+	migrations, err := readMigrations()
+	if err != nil {
+		t.Fatalf("readMigrations failed: %v", err)
+	}
+	for i := 1; i < len(migrations); i++ {
+		if migrations[i].version <= migrations[i-1].version {
+			t.Errorf("migrations not sorted: version %d at index %d follows version %d at index %d",
+				migrations[i].version, i, migrations[i-1].version, i-1)
+		}
+	}
+}
+
+func TestReadMigrations_AllHaveSQL(t *testing.T) {
+	migrations, err := readMigrations()
+	if err != nil {
+		t.Fatalf("readMigrations failed: %v", err)
+	}
+	for _, m := range migrations {
+		if m.sql == "" {
+			t.Errorf("migration %s has empty SQL", m.filename)
+		}
+	}
+}
+
+func TestReadMigrations_BaselineIsLargest(t *testing.T) {
+	migrations, err := readMigrations()
+	if err != nil {
+		t.Fatalf("readMigrations failed: %v", err)
+	}
+	if len(migrations) < 2 {
+		t.Skip("not enough migrations to compare sizes")
+	}
+	// The baseline (0001_init.sql) should be the largest migration.
+	baselineLen := len(migrations[0].sql)
+	for _, m := range migrations[1:] {
+		if len(m.sql) > baselineLen {
+			t.Errorf("migration %s (%d bytes) is larger than baseline (%d bytes)",
+				m.filename, len(m.sql), baselineLen)
+		}
+	}
+}
+
+func TestParseVersion_Comprehensive(t *testing.T) {
+	tests := []struct {
+		filename string
+		want     int
+		wantErr  bool
+	}{
+		{"0001_init.sql", 1, false},
+		{"0002_add_users.sql", 2, false},
+		{"0100_big_change.sql", 100, false},
+		{"9999_final.sql", 9999, false},
+		{"bad.sql", 0, true},
+		{"noseparator", 0, true},
+		{"abc_description.sql", 0, true},
+	}
+	for _, tt := range tests {
+		got, err := parseVersion(tt.filename)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("parseVersion(%q) error = %v, wantErr %v", tt.filename, err, tt.wantErr)
+			continue
+		}
+		if got != tt.want {
+			t.Errorf("parseVersion(%q) = %d, want %d", tt.filename, got, tt.want)
+		}
+	}
+}

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `ecdMagic` constant byte order causing encryption failures on some platforms ([#174](https://github.com/Mezeporta/Erupe/issues/174))
+- Fixed guild nil panics: variable shadowing causing nil panic in scout list ([#171](https://github.com/Mezeporta/Erupe/issues/171))
+- Fixed guild nil panics: added nil guards in cancel and answer scout handlers ([#171](https://github.com/Mezeporta/Erupe/issues/171))
+- Fixed guild nil panics: added nil guards for alliance guild lookups ([#171](https://github.com/Mezeporta/Erupe/issues/171))
+- Fixed `rasta_id=0` overwriting NULL in mercenary save, preventing game state saving ([#163](https://github.com/Mezeporta/Erupe/issues/163))
+- Fixed false race condition in `PacketDuringLogout` test
+
+### Changed
+
+- Cached `rengoku_data.bin` at startup for improved channel server performance
+
+### Added
+
+- Tests for `logoutPlayer`, `saveAllCharacterData`, and transit message handlers
+- Alliance `scanAllianceWithGuilds` test for missing guild (nil return from GetByID)
+- Handler dispatch table test verifying all expected packet IDs are mapped
+- Scenario binary format documentation (`docs/scenario-format.md`)
+
+### Infrastructure
+
+- Updated `go.mod` dependencies
+- Added `IF NOT EXISTS` guard to alliance recruiting column migration
+
 ## [9.3.0-rc1] - 2026-02-28
 
 900 commits, 860 files changed, ~100,000 lines of new code. The largest Erupe release ever.

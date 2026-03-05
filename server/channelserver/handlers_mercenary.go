@@ -194,7 +194,12 @@ func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	dumpSaveData(s, pkt.MercData, "mercenary")
 	if len(pkt.MercData) >= 4 {
 		temp := byteframe.NewByteFrameFromBytes(pkt.MercData)
-		if err := s.server.charRepo.SaveMercenary(s.charID, pkt.MercData, temp.ReadUint32()); err != nil {
+		rastaID := temp.ReadUint32()
+		if rastaID == 0 {
+			s.logger.Warn("Mercenary save with rasta_id=0, preserving existing value",
+				zap.Uint32("charID", s.charID))
+		}
+		if err := s.server.charRepo.SaveMercenary(s.charID, pkt.MercData, rastaID); err != nil {
 			s.logger.Error("Failed to save mercenary data", zap.Error(err))
 		}
 	}

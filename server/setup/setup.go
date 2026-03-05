@@ -30,8 +30,9 @@ func Run(logger *zap.Logger, port int) error {
 		Handler: r,
 	}
 
-	logger.Info(fmt.Sprintf("Setup wizard available at http://localhost:%d", port))
-	fmt.Printf("\n  >>> Open http://localhost:%d in your browser to configure Erupe <<<\n\n", port)
+	logger.Info("Setup wizard available",
+		zap.String("url", fmt.Sprintf("http://localhost:%d", port)))
+	logger.Warn("Open the URL above in your browser to configure Erupe")
 
 	// Start the HTTP server in a goroutine.
 	errCh := make(chan error, 1)

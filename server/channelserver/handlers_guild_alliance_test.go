@@ -505,3 +505,49 @@ func TestOperateJoint_NilAlliance(t *testing.T) {
 		t.Error("No response packet queued — would softlock the client")
 	}
 }
+
+// --- scanAllianceWithGuilds nil guild tests (issue #171) ---
+
+func TestInfoJoint_MissingSubGuild1(t *testing.T) {
+	// Verify that GetAllianceByID returns an error when sub guild 1 references
+	// a non-existent guild (nil return from GetByID). This is the scenario from
+	// issue #171 — a deleted guild causes a nil dereference in scanAllianceWithGuilds.
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		// GetAllianceByID returns an error for missing guilds because
+		// scanAllianceWithGuilds calls GetByID for each sub guild.
+		// With guild=nil and SubGuild1ID > 0, GetByID returns nil,
+		// and scanAllianceWithGuilds should return an error rather than panic.
+		getAllianceErr: errNotFound,
+	}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfInfoJoint{AckHandle: 100, AllianceID: 5}
+	handleMsgMhfInfoJoint(session, pkt)
+
+	// Handler should send a response even on error (not softlock)
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued — would softlock the client")
+	}
+}
+
+func TestInfoJoint_MissingSubGuild2(t *testing.T) {
+	server := createMockServer()
+	guildMock := &mockGuildRepo{
+		getAllianceErr: errNotFound,
+	}
+	server.guildRepo = guildMock
+	session := createMockSession(1, server)
+
+	pkt := &mhfpacket.MsgMhfInfoJoint{AckHandle: 100, AllianceID: 6}
+	handleMsgMhfInfoJoint(session, pkt)
+
+	select {
+	case <-session.sendPackets:
+	default:
+		t.Error("No response packet queued — would softlock the client")
+	}
+}

@@ -193,8 +193,15 @@ func (r *CharacterRepository) ReadGuildPostChecked(charID uint32) (time.Time, er
 	return t, err
 }
 
-// SaveMercenary updates savemercenary and rasta_id atomically.
+// SaveMercenary updates savemercenary and optionally rasta_id.
+// When rastaID is 0, only the mercenary blob is saved — the existing rasta_id
+// (typically NULL for characters without a mercenary) is preserved. Writing 0
+// would pollute GetMercenaryLoans queries that match on pact_id.
 func (r *CharacterRepository) SaveMercenary(charID uint32, data []byte, rastaID uint32) error {
+	if rastaID == 0 {
+		_, err := r.db.Exec("UPDATE characters SET savemercenary=$1 WHERE id=$2", data, charID)
+		return err
+	}
 	_, err := r.db.Exec("UPDATE characters SET savemercenary=$1, rasta_id=$2 WHERE id=$3", data, rastaID, charID)
 	return err
 }
