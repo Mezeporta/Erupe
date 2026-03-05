@@ -3,16 +3,16 @@ package channelserver
 import (
 	"fmt"
 
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // ScenarioRepository centralizes all database access for the scenario_counter table.
 type ScenarioRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewScenarioRepository creates a new ScenarioRepository.
-func NewScenarioRepository(db *dbutil.DB) *ScenarioRepository {
+func NewScenarioRepository(db *sqlx.DB) *ScenarioRepository {
 	return &ScenarioRepository{db: db}
 }
 

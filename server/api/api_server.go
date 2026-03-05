@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	dbutil "erupe-ce/common/db"
-
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
@@ -48,11 +46,10 @@ func NewAPIServer(config *Config) *APIServer {
 		httpServer:  &http.Server{},
 	}
 	if config.DB != nil {
-		wdb := dbutil.Wrap(config.DB)
-		s.userRepo = NewAPIUserRepository(wdb)
-		s.charRepo = NewAPICharacterRepository(wdb)
-		s.sessionRepo = NewAPISessionRepository(wdb)
-		s.eventRepo = NewAPIEventRepository(wdb)
+		s.userRepo = NewAPIUserRepository(config.DB)
+		s.charRepo = NewAPICharacterRepository(config.DB)
+		s.sessionRepo = NewAPISessionRepository(config.DB)
+		s.eventRepo = NewAPIEventRepository(config.DB)
 	}
 	return s
 }

@@ -1,17 +1,17 @@
 package channelserver
 
 import (
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // DistributionRepository centralizes all database access for the distribution,
 // distribution_items, and distributions_accepted tables.
 type DistributionRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewDistributionRepository creates a new DistributionRepository.
-func NewDistributionRepository(db *dbutil.DB) *DistributionRepository {
+func NewDistributionRepository(db *sqlx.DB) *DistributionRepository {
 	return &DistributionRepository{db: db}
 }
 

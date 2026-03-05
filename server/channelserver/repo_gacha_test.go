@@ -3,7 +3,6 @@ package channelserver
 import (
 	"database/sql"
 	"errors"
-	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -14,7 +13,7 @@ func setupGachaRepo(t *testing.T) (*GachaRepository, *sqlx.DB, uint32) {
 	db := SetupTestDB(t)
 	userID := CreateTestUser(t, db, "gacha_test_user")
 	charID := CreateTestCharacter(t, db, userID, "GachaChar")
-	repo := NewGachaRepository(dbutil.Wrap(db))
+	repo := NewGachaRepository(db)
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
-	_ "modernc.org/sqlite"
 )
 
 func testDB(t *testing.T) *sqlx.DB {
@@ -195,7 +194,7 @@ func TestParseVersion(t *testing.T) {
 }
 
 func TestReadMigrations(t *testing.T) {
-	migrations, err := readMigrations(false)
+	migrations, err := readMigrations()
 	if err != nil {
 		t.Fatalf("readMigrations failed: %v", err)
 	}
@@ -211,7 +210,7 @@ func TestReadMigrations(t *testing.T) {
 }
 
 func TestReadMigrations_Sorted(t *testing.T) {
-	migrations, err := readMigrations(false)
+	migrations, err := readMigrations()
 	if err != nil {
 		t.Fatalf("readMigrations failed: %v", err)
 	}
@@ -224,7 +223,7 @@ func TestReadMigrations_Sorted(t *testing.T) {
 }
 
 func TestReadMigrations_AllHaveSQL(t *testing.T) {
-	migrations, err := readMigrations(false)
+	migrations, err := readMigrations()
 	if err != nil {
 		t.Fatalf("readMigrations failed: %v", err)
 	}
@@ -236,7 +235,7 @@ func TestReadMigrations_AllHaveSQL(t *testing.T) {
 }
 
 func TestReadMigrations_BaselineIsLargest(t *testing.T) {
-	migrations, err := readMigrations(false)
+	migrations, err := readMigrations()
 	if err != nil {
 		t.Fatalf("readMigrations failed: %v", err)
 	}
@@ -249,61 +248,6 @@ func TestReadMigrations_BaselineIsLargest(t *testing.T) {
 		if len(m.sql) > baselineLen {
 			t.Errorf("migration %s (%d bytes) is larger than baseline (%d bytes)",
 				m.filename, len(m.sql), baselineLen)
-		}
-	}
-}
-
-func TestReadMigrations_SQLite(t *testing.T) {
-	migrations, err := readMigrations(true)
-	if err != nil {
-		t.Fatalf("readMigrations(sqlite) failed: %v", err)
-	}
-	if len(migrations) != 5 {
-		t.Fatalf("expected 5 SQLite migrations, got %d", len(migrations))
-	}
-	if migrations[0].filename != "0001_init.sql" {
-		t.Errorf("first SQLite migration = %q, want 0001_init.sql", migrations[0].filename)
-	}
-	for _, m := range migrations {
-		if m.sql == "" {
-			t.Errorf("SQLite migration %s has empty SQL", m.filename)
-		}
-	}
-}
-
-func TestSQLiteMigrateInMemory(t *testing.T) {
-	db, err := sqlx.Open("sqlite", ":memory:?_pragma=foreign_keys(1)")
-	if err != nil {
-		t.Fatalf("Failed to open in-memory SQLite: %v", err)
-	}
-	defer func() { _ = db.Close() }()
-
-	logger, _ := zap.NewDevelopment()
-	applied, err := Migrate(db, logger)
-	if err != nil {
-		t.Fatalf("Migrate to SQLite failed: %v", err)
-	}
-	if applied != 5 {
-		t.Errorf("expected 5 migrations applied, got %d", applied)
-	}
-
-	ver, err := Version(db)
-	if err != nil {
-		t.Fatalf("Version failed: %v", err)
-	}
-	if ver != 5 {
-		t.Errorf("expected version 5, got %d", ver)
-	}
-
-	// Verify a few key tables exist
-	for _, table := range []string{"users", "characters", "guilds", "guild_characters", "sign_sessions"} {
-		var count int
-		err := db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?", table).Scan(&count)
-		if err != nil {
-			t.Errorf("Failed to check table %s: %v", table, err)
-		}
-		if count != 1 {
-			t.Errorf("Table %s not found in SQLite schema", table)
 		}
 	}
 }

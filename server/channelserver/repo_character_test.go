@@ -1,7 +1,6 @@
 package channelserver
 
 import (
-	dbutil "erupe-ce/common/db"
 	"testing"
 	"time"
 
@@ -13,7 +12,7 @@ func setupCharRepo(t *testing.T) (*CharacterRepository, *sqlx.DB, uint32) {
 	db := SetupTestDB(t)
 	userID := CreateTestUser(t, db, "repo_test_user")
 	charID := CreateTestCharacter(t, db, userID, "RepoChar")
-	repo := NewCharacterRepository(dbutil.Wrap(db))
+	repo := NewCharacterRepository(db)
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID
 }

@@ -3,16 +3,16 @@ package api
 import (
 	"context"
 
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // APISessionRepository implements APISessionRepo with PostgreSQL.
 type APISessionRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewAPISessionRepository creates a new APISessionRepository.
-func NewAPISessionRepository(db *dbutil.DB) *APISessionRepository {
+func NewAPISessionRepository(db *sqlx.DB) *APISessionRepository {
 	return &APISessionRepository{db: db}
 }
 

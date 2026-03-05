@@ -1,16 +1,16 @@
 package channelserver
 
 import (
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // DivaRepository centralizes all database access for diva defense events.
 type DivaRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewDivaRepository creates a new DivaRepository.
-func NewDivaRepository(db *dbutil.DB) *DivaRepository {
+func NewDivaRepository(db *sqlx.DB) *DivaRepository {
 	return &DivaRepository{db: db}
 }
 

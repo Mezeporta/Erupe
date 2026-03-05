@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // EventQuest represents a row from the event_quests table.
@@ -22,11 +22,11 @@ type EventQuest struct {
 
 // EventRepository centralizes all database access for event-related tables.
 type EventRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewEventRepository creates a new EventRepository.
-func NewEventRepository(db *dbutil.DB) *EventRepository {
+func NewEventRepository(db *sqlx.DB) *EventRepository {
 	return &EventRepository{db: db}
 }
 

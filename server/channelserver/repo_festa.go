@@ -4,17 +4,17 @@ import (
 	"context"
 	"database/sql"
 
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // FestaRepository centralizes all database access for festa-related tables
 // (events, festa_registrations, festa_submissions, festa_prizes, festa_prizes_accepted, festa_trials, guild_characters).
 type FestaRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewFestaRepository creates a new FestaRepository.
-func NewFestaRepository(db *dbutil.DB) *FestaRepository {
+func NewFestaRepository(db *sqlx.DB) *FestaRepository {
 	return &FestaRepository{db: db}
 }
 

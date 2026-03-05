@@ -1,7 +1,6 @@
 package channelserver
 
 import (
-	dbutil "erupe-ce/common/db"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -18,7 +17,7 @@ func setupTowerRepo(t *testing.T) (*TowerRepository, *sqlx.DB, uint32, uint32) {
 	if _, err := db.Exec("INSERT INTO guild_characters (guild_id, character_id) VALUES ($1, $2)", guildID, charID); err != nil {
 		t.Fatalf("Failed to add char to guild: %v", err)
 	}
-	repo := NewTowerRepository(dbutil.Wrap(db))
+	repo := NewTowerRepository(db)
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID, guildID
 }

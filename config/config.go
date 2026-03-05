@@ -231,12 +231,8 @@ type Course struct {
 	Enabled bool
 }
 
-// Database holds the database config.
-// Driver can be "postgres" (default) or "sqlite".
-// When Driver is "sqlite", only Database (file path) is used;
-// Host, Port, User, and Password are ignored.
+// Database holds the postgres database config.
 type Database struct {
-	Driver   string // "postgres" or "sqlite"
 	Host     string
 	Port     int
 	User     string
@@ -458,8 +454,7 @@ func registerDefaults() {
 		{Name: "EXRenewing", Enabled: true},
 	})
 
-	// Database (Password deliberately has no default for postgres)
-	viper.SetDefault("Database.Driver", "postgres")
+	// Database (Password deliberately has no default)
 	viper.SetDefault("Database.Host", "localhost")
 	viper.SetDefault("Database.Port", 5432)
 	viper.SetDefault("Database.User", "postgres")

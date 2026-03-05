@@ -1,16 +1,16 @@
 package channelserver
 
 import (
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // MailRepository centralizes all database access for the mail table.
 type MailRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewMailRepository creates a new MailRepository.
-func NewMailRepository(db *dbutil.DB) *MailRepository {
+func NewMailRepository(db *sqlx.DB) *MailRepository {
 	return &MailRepository{db: db}
 }
 

@@ -3,16 +3,16 @@ package channelserver
 import (
 	"fmt"
 
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // GoocooRepository centralizes all database access for the goocoo table.
 type GoocooRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewGoocooRepository creates a new GoocooRepository.
-func NewGoocooRepository(db *dbutil.DB) *GoocooRepository {
+func NewGoocooRepository(db *sqlx.DB) *GoocooRepository {
 	return &GoocooRepository{db: db}
 }
 

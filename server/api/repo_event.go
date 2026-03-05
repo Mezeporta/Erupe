@@ -6,15 +6,15 @@ import (
 	"errors"
 	"time"
 
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 type apiEventRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewAPIEventRepository creates an APIEventRepo backed by PostgreSQL.
-func NewAPIEventRepository(db *dbutil.DB) APIEventRepo {
+func NewAPIEventRepository(db *sqlx.DB) APIEventRepo {
 	return &apiEventRepository{db: db}
 }
 

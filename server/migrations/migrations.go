@@ -8,17 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	dbutil "erupe-ce/common/db"
-
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
 //go:embed sql/*.sql
 var migrationFS embed.FS
-
-//go:embed sqlite/*.sql
-var sqliteMigrationFS embed.FS
 
 //go:embed seed/*.sql
 var seedFS embed.FS
@@ -27,17 +22,15 @@ var seedFS embed.FS
 // (auto-marks baseline as applied), then runs all pending migrations in order.
 // Each migration runs in its own transaction.
 func Migrate(db *sqlx.DB, logger *zap.Logger) (int, error) {
-	sqlite := dbutil.IsSQLite(db)
-
-	if err := ensureVersionTable(db, sqlite); err != nil {
+	if err := ensureVersionTable(db); err != nil {
 		return 0, fmt.Errorf("creating schema_version table: %w", err)
 	}
 
-	if err := detectExistingDB(db, logger, sqlite); err != nil {
+	if err := detectExistingDB(db, logger); err != nil {
 		return 0, fmt.Errorf("detecting existing database: %w", err)
 	}
 
-	migrations, err := readMigrations(sqlite)
+	migrations, err := readMigrations()
 	if err != nil {
 		return 0, fmt.Errorf("reading migration files: %w", err)
 	}
@@ -53,7 +46,7 @@ func Migrate(db *sqlx.DB, logger *zap.Logger) (int, error) {
 			continue
 		}
 		logger.Info(fmt.Sprintf("Applying migration %04d: %s", m.version, m.filename))
-		if err := applyMigration(db, m, sqlite); err != nil {
+		if err := applyMigration(db, m); err != nil {
 			return count, fmt.Errorf("applying %s: %w", m.filename, err)
 		}
 		count++
@@ -65,7 +58,6 @@ func Migrate(db *sqlx.DB, logger *zap.Logger) (int, error) {
 // ApplySeedData runs all seed/*.sql files. Not tracked in schema_version.
 // Safe to run multiple times if seed files use ON CONFLICT DO NOTHING.
 func ApplySeedData(db *sqlx.DB, logger *zap.Logger) (int, error) {
-	sqlite := dbutil.IsSQLite(db)
 	files, err := fs.ReadDir(seedFS, "seed")
 	if err != nil {
 		return 0, fmt.Errorf("reading seed directory: %w", err)
@@ -86,11 +78,7 @@ func ApplySeedData(db *sqlx.DB, logger *zap.Logger) (int, error) {
 			return count, fmt.Errorf("reading seed file %s: %w", name, err)
 		}
 		logger.Info(fmt.Sprintf("Applying seed data: %s", name))
-		sql := string(data)
-		if sqlite {
-			sql = dbutil.Adapt(db, sql)
-		}
-		if _, err := db.Exec(sql); err != nil {
+		if _, err := db.Exec(string(data)); err != nil {
 			return count, fmt.Errorf("executing seed file %s: %w", name, err)
 		}
 		count++
@@ -100,30 +88,20 @@ func ApplySeedData(db *sqlx.DB, logger *zap.Logger) (int, error) {
 
 // Version returns the highest applied migration number, or 0 if none.
 func Version(db *sqlx.DB) (int, error) {
-	sqlite := dbutil.IsSQLite(db)
-
 	var exists bool
-	if sqlite {
-		err := db.QueryRow(`SELECT COUNT(*) > 0 FROM sqlite_master
-			WHERE type='table' AND name='schema_version'`).Scan(&exists)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		err := db.QueryRow(`SELECT EXISTS(
-			SELECT 1 FROM information_schema.tables
-			WHERE table_schema = 'public' AND table_name = 'schema_version'
-		)`).Scan(&exists)
-		if err != nil {
-			return 0, err
-		}
+	err := db.QueryRow(`SELECT EXISTS(
+		SELECT 1 FROM information_schema.tables
+		WHERE table_schema = 'public' AND table_name = 'schema_version'
+	)`).Scan(&exists)
+	if err != nil {
+		return 0, err
 	}
 	if !exists {
 		return 0, nil
 	}
 
 	var version int
-	err := db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM schema_version").Scan(&version)
+	err = db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM schema_version").Scan(&version)
 	return version, err
 }
 
@@ -133,26 +111,18 @@ type migration struct {
 	sql      string
 }
 
-func ensureVersionTable(db *sqlx.DB, sqlite bool) error {
-	q := `CREATE TABLE IF NOT EXISTS schema_version (
+func ensureVersionTable(db *sqlx.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_version (
 		version    INTEGER PRIMARY KEY,
 		filename   TEXT NOT NULL,
 		applied_at TIMESTAMPTZ DEFAULT now()
-	)`
-	if sqlite {
-		q = `CREATE TABLE IF NOT EXISTS schema_version (
-			version    INTEGER PRIMARY KEY,
-			filename   TEXT NOT NULL,
-			applied_at TEXT DEFAULT CURRENT_TIMESTAMP
-		)`
-	}
-	_, err := db.Exec(q)
+	)`)
 	return err
 }
 
 // detectExistingDB checks if the database has tables but no schema_version rows.
 // If so, it marks the baseline migration (version 1) as already applied.
-func detectExistingDB(db *sqlx.DB, logger *zap.Logger, sqlite bool) error {
+func detectExistingDB(db *sqlx.DB, logger *zap.Logger) error {
 	var count int
 	if err := db.QueryRow("SELECT COUNT(*) FROM schema_version").Scan(&count); err != nil {
 		return err
@@ -163,18 +133,10 @@ func detectExistingDB(db *sqlx.DB, logger *zap.Logger, sqlite bool) error {
 
 	// Check if the database has any user tables (beyond schema_version itself)
 	var tableCount int
-	if sqlite {
-		err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master
-			WHERE type='table' AND name != 'schema_version'`).Scan(&tableCount)
-		if err != nil {
-			return err
-		}
-	} else {
-		err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.tables
-			WHERE table_schema = 'public' AND table_name != 'schema_version'`).Scan(&tableCount)
-		if err != nil {
-			return err
-		}
+	err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.tables
+		WHERE table_schema = 'public' AND table_name != 'schema_version'`).Scan(&tableCount)
+	if err != nil {
+		return err
 	}
 	if tableCount == 0 {
 		return nil // Fresh database
@@ -182,22 +144,12 @@ func detectExistingDB(db *sqlx.DB, logger *zap.Logger, sqlite bool) error {
 
 	// Existing database without migration tracking — mark baseline as applied
 	logger.Info("Detected existing database without schema_version tracking, marking baseline as applied")
-	_, err := db.Exec("INSERT INTO schema_version (version, filename) VALUES (1, '0001_init.sql')")
+	_, err = db.Exec("INSERT INTO schema_version (version, filename) VALUES (1, '0001_init.sql')")
 	return err
 }
 
-func readMigrations(sqlite bool) ([]migration, error) {
-	var embedFS embed.FS
-	var dir string
-	if sqlite {
-		embedFS = sqliteMigrationFS
-		dir = "sqlite"
-	} else {
-		embedFS = migrationFS
-		dir = "sql"
-	}
-
-	files, err := fs.ReadDir(embedFS, dir)
+func readMigrations() ([]migration, error) {
+	files, err := fs.ReadDir(migrationFS, "sql")
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +163,7 @@ func readMigrations(sqlite bool) ([]migration, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parsing version from %s: %w", f.Name(), err)
 		}
-		data, err := embedFS.ReadFile(dir + "/" + f.Name())
+		data, err := migrationFS.ReadFile("sql/" + f.Name())
 		if err != nil {
 			return nil, err
 		}
@@ -254,7 +206,7 @@ func appliedVersions(db *sqlx.DB) (map[int]bool, error) {
 	return applied, rows.Err()
 }
 
-func applyMigration(db *sqlx.DB, m migration, sqlite bool) error {
+func applyMigration(db *sqlx.DB, m migration) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -265,11 +217,10 @@ func applyMigration(db *sqlx.DB, m migration, sqlite bool) error {
 		return err
 	}
 
-	insertQ := "INSERT INTO schema_version (version, filename) VALUES ($1, $2)"
-	if sqlite {
-		insertQ = "INSERT INTO schema_version (version, filename) VALUES (?, ?)"
-	}
-	if _, err := tx.Exec(insertQ, m.version, m.filename); err != nil {
+	if _, err := tx.Exec(
+		"INSERT INTO schema_version (version, filename) VALUES ($1, $2)",
+		m.version, m.filename,
+	); err != nil {
 		_ = tx.Rollback()
 		return err
 	}

@@ -3,16 +3,16 @@ package channelserver
 import (
 	"fmt"
 
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // AchievementRepository centralizes all database access for the achievements table.
 type AchievementRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewAchievementRepository creates a new AchievementRepository.
-func NewAchievementRepository(db *dbutil.DB) *AchievementRepository {
+func NewAchievementRepository(db *sqlx.DB) *AchievementRepository {
 	return &AchievementRepository{db: db}
 }
 

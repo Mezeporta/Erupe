@@ -6,19 +6,17 @@ import (
 	"errors"
 	"fmt"
 
-	dbutil "erupe-ce/common/db"
-
 	"github.com/jmoiron/sqlx"
 )
 
 // GuildRepository centralizes all database access for guild-related tables
 // (guilds, guild_characters, guild_applications).
 type GuildRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewGuildRepository creates a new GuildRepository.
-func NewGuildRepository(db *dbutil.DB) *GuildRepository {
+func NewGuildRepository(db *sqlx.DB) *GuildRepository {
 	return &GuildRepository{db: db}
 }
 

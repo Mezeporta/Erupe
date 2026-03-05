@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"erupe-ce/common/byteframe"
-	dbutil "erupe-ce/common/db"
 	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/binpacket"
@@ -143,28 +142,27 @@ func NewServer(config *Config) *Server {
 		handlerTable: buildHandlerTable(),
 	}
 
-	wdb := dbutil.Wrap(config.DB)
-	s.charRepo = NewCharacterRepository(wdb)
-	s.guildRepo = NewGuildRepository(wdb)
-	s.userRepo = NewUserRepository(wdb)
-	s.gachaRepo = NewGachaRepository(wdb)
-	s.houseRepo = NewHouseRepository(wdb)
-	s.festaRepo = NewFestaRepository(wdb)
-	s.towerRepo = NewTowerRepository(wdb)
-	s.rengokuRepo = NewRengokuRepository(wdb)
-	s.mailRepo = NewMailRepository(wdb)
-	s.stampRepo = NewStampRepository(wdb)
-	s.distRepo = NewDistributionRepository(wdb)
-	s.sessionRepo = NewSessionRepository(wdb)
-	s.eventRepo = NewEventRepository(wdb)
-	s.achievementRepo = NewAchievementRepository(wdb)
-	s.shopRepo = NewShopRepository(wdb)
-	s.cafeRepo = NewCafeRepository(wdb)
-	s.goocooRepo = NewGoocooRepository(wdb)
-	s.divaRepo = NewDivaRepository(wdb)
-	s.miscRepo = NewMiscRepository(wdb)
-	s.scenarioRepo = NewScenarioRepository(wdb)
-	s.mercenaryRepo = NewMercenaryRepository(wdb)
+	s.charRepo = NewCharacterRepository(config.DB)
+	s.guildRepo = NewGuildRepository(config.DB)
+	s.userRepo = NewUserRepository(config.DB)
+	s.gachaRepo = NewGachaRepository(config.DB)
+	s.houseRepo = NewHouseRepository(config.DB)
+	s.festaRepo = NewFestaRepository(config.DB)
+	s.towerRepo = NewTowerRepository(config.DB)
+	s.rengokuRepo = NewRengokuRepository(config.DB)
+	s.mailRepo = NewMailRepository(config.DB)
+	s.stampRepo = NewStampRepository(config.DB)
+	s.distRepo = NewDistributionRepository(config.DB)
+	s.sessionRepo = NewSessionRepository(config.DB)
+	s.eventRepo = NewEventRepository(config.DB)
+	s.achievementRepo = NewAchievementRepository(config.DB)
+	s.shopRepo = NewShopRepository(config.DB)
+	s.cafeRepo = NewCafeRepository(config.DB)
+	s.goocooRepo = NewGoocooRepository(config.DB)
+	s.divaRepo = NewDivaRepository(config.DB)
+	s.miscRepo = NewMiscRepository(config.DB)
+	s.scenarioRepo = NewScenarioRepository(config.DB)
+	s.mercenaryRepo = NewMercenaryRepository(config.DB)
 
 	s.mailService = NewMailService(s.mailRepo, s.guildRepo, s.logger)
 	s.guildService = NewGuildService(s.guildRepo, s.mailService, s.charRepo, s.logger)

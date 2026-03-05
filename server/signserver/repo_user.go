@@ -3,16 +3,16 @@ package signserver
 import (
 	"time"
 
-	dbutil "erupe-ce/common/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // SignUserRepository implements SignUserRepo with PostgreSQL.
 type SignUserRepository struct {
-	db *dbutil.DB
+	db *sqlx.DB
 }
 
 // NewSignUserRepository creates a new SignUserRepository.
-func NewSignUserRepository(db *dbutil.DB) *SignUserRepository {
+func NewSignUserRepository(db *sqlx.DB) *SignUserRepository {
 	return &SignUserRepository{db: db}
 }
 
