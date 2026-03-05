@@ -1,7 +1,7 @@
 package main
 
 import (
-	cfg "erupe-ce/config"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -9,9 +9,11 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
+	cfg "erupe-ce/config"
 	"erupe-ce/common/gametime"
 	"erupe-ce/server/api"
 	"erupe-ce/server/channelserver"
@@ -20,10 +22,9 @@ import (
 	"erupe-ce/server/migrations"
 	"erupe-ce/server/setup"
 	"erupe-ce/server/signserver"
-	"strings"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -148,13 +149,44 @@ func main() {
 
 	db, err := sqlx.Open("postgres", connectString)
 	if err != nil {
-		preventClose(config, fmt.Sprintf("Database: Failed to open, %s", err.Error()))
+		preventClose(config, fmt.Sprintf(
+			"Database: Failed to open connection to %s:%d\nError: %s",
+			config.Database.Host, config.Database.Port, err.Error(),
+		))
 	}
 
 	// Test the DB connection.
 	err = db.Ping()
 	if err != nil {
-		preventClose(config, fmt.Sprintf("Database: Failed to ping, %s", err.Error()))
+		dbAddr := fmt.Sprintf("%s:%d", config.Database.Host, config.Database.Port)
+		var hint string
+		var pqErr *pq.Error
+		var netErr *net.OpError
+		switch {
+		case errors.As(err, &netErr):
+			hint = fmt.Sprintf(
+				"Database: PostgreSQL is not reachable at %s\n"+
+					"  Check that PostgreSQL is running: systemctl status postgresql (or docker ps)\n"+
+					"  Using Docker? Run: cd docker && docker compose up db -d",
+				dbAddr,
+			)
+		case errors.As(err, &pqErr) && pqErr.Code == "28P01":
+			hint = fmt.Sprintf(
+				"Database: Wrong password for user '%s' at %s\n"+
+					"  Update Database.Password in config.json to match your PostgreSQL password.",
+				config.Database.User, dbAddr,
+			)
+		case errors.As(err, &pqErr) && pqErr.Code == "3D000":
+			hint = fmt.Sprintf(
+				"Database: Database '%s' does not exist on %s\n"+
+					"  Create it with: createdb -U %s %s",
+				config.Database.Database, dbAddr,
+				config.Database.User, config.Database.Database,
+			)
+		default:
+			hint = fmt.Sprintf("Database: Failed to connect to %s — %s", dbAddr, err.Error())
+		}
+		preventClose(config, hint)
 	}
 
 	// Configure connection pool to avoid exhausting PostgreSQL under load.
