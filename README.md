@@ -9,40 +9,9 @@ Erupe is a community-maintained server emulator for Monster Hunter Frontier writ
 
 ## Quick Start
 
-Pick one of three installation methods, then continue to [Quest & Scenario Files](#quest--scenario-files).
+Pick one of two installation methods, then continue to [Quest & Scenario Files](#quest--scenario-files).
 
-### Option A: Docker (recommended)
-
-Docker handles the database automatically. You only need to provide quest files and a config.
-
-1. Clone the repository and enter the Docker directory:
-
-   ```bash
-   git clone https://github.com/Mezeporta/Erupe.git
-   cd Erupe
-   ```
-
-2. Copy and edit the config (set your database password to match `docker-compose.yml`):
-
-   ```bash
-   cp config.example.json docker/config.json
-   # Edit docker/config.json — set Database.Host to "db"
-   ```
-
-3. Download [quest/scenario files](#quest--scenario-files) and extract them to `docker/bin/`
-
-4. Start everything:
-
-   ```bash
-   cd docker
-   docker compose up
-   ```
-
-   pgAdmin is available at `http://localhost:5050` for database management.
-
-   See [docker/README.md](./docker/README.md) for more details (local builds, troubleshooting).
-
-### Option B: Pre-compiled Binary
+### Option A: Pre-compiled Binary
 
 1. Download the latest release for your platform from [GitHub Releases](https://github.com/Mezeporta/Erupe/releases/latest):
    - `erupe-ce` for Linux
@@ -67,7 +36,7 @@ Docker handles the database automatically. You only need to provide quest files 
 
 5. Run: `./erupe-ce`
 
-### Option C: From Source
+### Option B: From Source
 
 Requires [Go 1.25+](https://go.dev/dl/) and [PostgreSQL](https://www.postgresql.org/download/).
 
@@ -80,7 +49,7 @@ Requires [Go 1.25+](https://go.dev/dl/) and [PostgreSQL](https://www.postgresql.
    go build -o erupe-ce
    ```
 
-2. Set up the database (same as Option B, steps 2–3)
+2. Set up the database (same as Option A, steps 2–3)
 
 3. Copy and edit the config:
 
@@ -110,8 +79,6 @@ If you have an **installed** copy of Monster Hunter Frontier on an old hard driv
 
 ## Updating
 
-### From Source
-
 ```bash
 git pull origin main
 go mod tidy
@@ -120,14 +87,7 @@ go build -o erupe-ce
 
 Database schema migrations are applied automatically when the server starts — no manual SQL steps needed.
 
-### Docker
-
-```bash
-cd docker
-docker compose down
-docker compose build
-docker compose up
-```
+For Docker users, see [docker/README.md](./docker/README.md).
 
 ## Configuration
 
