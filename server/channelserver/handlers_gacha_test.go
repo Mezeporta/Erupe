@@ -186,7 +186,10 @@ func TestHandleMsgMhfReceiveGachaItem_Freeze(t *testing.T) {
 
 func TestHandleMsgMhfPlayNormalGacha_TransactError(t *testing.T) {
 	server := createMockServer()
-	gachaRepo := &mockGachaRepo{txErr: errors.New("transact failed")}
+	gachaRepo := &mockGachaRepo{
+		txErr:      errors.New("transact failed"),
+		rewardPool: []GachaEntry{{ID: 10, Weight: 100}},
+	}
 	server.gachaRepo = gachaRepo
 	server.userRepo = &mockUserRepoGacha{}
 	ensureGachaService(server)
@@ -269,7 +272,10 @@ func TestHandleMsgMhfPlayNormalGacha_Success(t *testing.T) {
 
 func TestHandleMsgMhfPlayStepupGacha_TransactError(t *testing.T) {
 	server := createMockServer()
-	gachaRepo := &mockGachaRepo{txErr: errors.New("transact failed")}
+	gachaRepo := &mockGachaRepo{
+		txErr:      errors.New("transact failed"),
+		rewardPool: []GachaEntry{{ID: 10, Weight: 100}},
+	}
 	server.gachaRepo = gachaRepo
 	server.userRepo = &mockUserRepoGacha{}
 	ensureGachaService(server)
@@ -473,7 +479,10 @@ func TestHandleMsgMhfGetBoxGachaInfo_Success(t *testing.T) {
 
 func TestHandleMsgMhfPlayBoxGacha_TransactError(t *testing.T) {
 	server := createMockServer()
-	gachaRepo := &mockGachaRepo{txErr: errors.New("transact failed")}
+	gachaRepo := &mockGachaRepo{
+		txErr:      errors.New("transact failed"),
+		rewardPool: []GachaEntry{{ID: 10, Weight: 100}},
+	}
 	server.gachaRepo = gachaRepo
 	server.userRepo = &mockUserRepoGacha{}
 	ensureGachaService(server)

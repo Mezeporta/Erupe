@@ -29,10 +29,14 @@ func (r *GachaRepository) GetEntryForTransaction(gachaID uint32, rollID uint8) (
 }
 
 // GetRewardPool returns the entry_type=100 reward pool for a gacha, ordered by weight descending.
+// Entries with no corresponding items in gacha_items are excluded.
 func (r *GachaRepository) GetRewardPool(gachaID uint32) ([]GachaEntry, error) {
 	var entries []GachaEntry
 	rows, err := r.db.Queryx(
-		`SELECT id, weight, rarity FROM gacha_entries WHERE gacha_id = $1 AND entry_type = 100 ORDER BY weight DESC`,
+		`SELECT e.id, e.weight, e.rarity FROM gacha_entries e
+		 WHERE e.gacha_id = $1 AND e.entry_type = 100
+		   AND EXISTS (SELECT 1 FROM gacha_items gi WHERE gi.entry_id = e.id)
+		 ORDER BY e.weight DESC`,
 		gachaID,
 	)
 	if err != nil {

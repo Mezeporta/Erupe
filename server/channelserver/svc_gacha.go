@@ -164,14 +164,17 @@ func rewardsToItems(rewards []GachaReward) []GachaItem {
 	return items
 }
 
-// PlayNormalGacha processes a normal gacha roll: deducts cost, selects random
-// rewards, saves items, and returns the result.
+// PlayNormalGacha processes a normal gacha roll: validates the reward pool,
+// deducts cost, selects random rewards, saves items, and returns the result.
 func (svc *GachaService) PlayNormalGacha(userID, charID, gachaID uint32, rollType uint8) (*GachaPlayResult, error) {
-	rolls, err := svc.transact(userID, charID, gachaID, rollType)
+	entries, err := svc.gachaRepo.GetRewardPool(gachaID)
 	if err != nil {
 		return nil, err
 	}
-	entries, err := svc.gachaRepo.GetRewardPool(gachaID)
+	if len(entries) == 0 {
+		return nil, errors.New("gacha has no valid reward entries")
+	}
+	rolls, err := svc.transact(userID, charID, gachaID, rollType)
 	if err != nil {
 		return nil, err
 	}
@@ -180,9 +183,17 @@ func (svc *GachaService) PlayNormalGacha(userID, charID, gachaID uint32, rollTyp
 	return &GachaPlayResult{Rewards: rewards}, nil
 }
 
-// PlayStepupGacha processes a stepup gacha roll: deducts cost, advances step,
-// awards frontier points, selects random + guaranteed rewards, and saves items.
+// PlayStepupGacha processes a stepup gacha roll: validates the reward pool,
+// deducts cost, advances step, awards frontier points, selects random +
+// guaranteed rewards, and saves items.
 func (svc *GachaService) PlayStepupGacha(userID, charID, gachaID uint32, rollType uint8) (*StepupPlayResult, error) {
+	entries, err := svc.gachaRepo.GetRewardPool(gachaID)
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) == 0 {
+		return nil, errors.New("gacha has no valid reward entries")
+	}
 	rolls, err := svc.transact(userID, charID, gachaID, rollType)
 	if err != nil {
 		return nil, err
@@ -195,11 +206,6 @@ func (svc *GachaService) PlayStepupGacha(userID, charID, gachaID uint32, rollTyp
 	}
 	if err := svc.gachaRepo.InsertStepup(gachaID, rollType+1, charID); err != nil {
 		svc.logger.Error("Failed to insert gacha stepup state", zap.Error(err))
-	}
-
-	entries, err := svc.gachaRepo.GetRewardPool(gachaID)
-	if err != nil {
-		return nil, err
 	}
 
 	guaranteedItems, _ := svc.gachaRepo.GetGuaranteedItems(rollType, gachaID)
@@ -223,14 +229,18 @@ func (svc *GachaService) PlayStepupGacha(userID, charID, gachaID uint32, rollTyp
 	}, nil
 }
 
-// PlayBoxGacha processes a box gacha roll: deducts cost, selects random entries
-// without replacement, records drawn entries, saves items, and returns the result.
+// PlayBoxGacha processes a box gacha roll: validates the reward pool, deducts
+// cost, selects random entries without replacement, records drawn entries,
+// saves items, and returns the result.
 func (svc *GachaService) PlayBoxGacha(userID, charID, gachaID uint32, rollType uint8) (*GachaPlayResult, error) {
-	rolls, err := svc.transact(userID, charID, gachaID, rollType)
+	entries, err := svc.gachaRepo.GetRewardPool(gachaID)
 	if err != nil {
 		return nil, err
 	}
-	entries, err := svc.gachaRepo.GetRewardPool(gachaID)
+	if len(entries) == 0 {
+		return nil, errors.New("gacha has no valid reward entries")
+	}
+	rolls, err := svc.transact(userID, charID, gachaID, rollType)
 	if err != nil {
 		return nil, err
 	}

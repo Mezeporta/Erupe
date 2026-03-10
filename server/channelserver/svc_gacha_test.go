@@ -27,6 +27,7 @@ func TestGachaService_PlayNormalGacha(t *testing.T) {
 	}{
 		{
 			name:    "transact error",
+			pool:    []GachaEntry{{ID: 10, Weight: 100}},
 			txErr:   errors.New("tx fail"),
 			wantErr: true,
 		},
@@ -34,6 +35,10 @@ func TestGachaService_PlayNormalGacha(t *testing.T) {
 			name:    "reward pool error",
 			txRolls: 1,
 			poolErr: errors.New("pool fail"),
+			wantErr: true,
+		},
+		{
+			name:    "empty reward pool",
 			wantErr: true,
 		},
 		{
@@ -95,6 +100,7 @@ func TestGachaService_PlayStepupGacha(t *testing.T) {
 	}{
 		{
 			name:    "transact error",
+			pool:    []GachaEntry{{ID: 10, Weight: 100}},
 			txErr:   errors.New("tx fail"),
 			wantErr: true,
 		},
@@ -102,6 +108,10 @@ func TestGachaService_PlayStepupGacha(t *testing.T) {
 			name:    "reward pool error",
 			txRolls: 1,
 			poolErr: errors.New("pool fail"),
+			wantErr: true,
+		},
+		{
+			name:    "empty reward pool",
 			wantErr: true,
 		},
 		{
