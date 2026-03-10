@@ -12,7 +12,7 @@ import (
 type MsgMhfGetStepupStatus struct {
 	AckHandle uint32
 	GachaID   uint32
-	Unk       uint8
+	GachaType uint8 // 0=normal, 1=stepup, 4=box (redundant — server derives from GachaID)
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -24,7 +24,7 @@ func (m *MsgMhfGetStepupStatus) Opcode() network.PacketID {
 func (m *MsgMhfGetStepupStatus) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
 	m.GachaID = bf.ReadUint32()
-	m.Unk = bf.ReadUint8()
+	m.GachaType = bf.ReadUint8()
 	return nil
 }
 
