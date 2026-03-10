@@ -597,6 +597,38 @@ func TestGetRandomEntries_Box(t *testing.T) {
 	}
 }
 
+func TestGetRandomEntries_BoxMoreRollsThanEntries(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 50},
+	}
+	result, err := getRandomEntries(entries, 5, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Should clamp to available entries instead of panicking
+	if len(result) != 1 {
+		t.Errorf("Expected 1 entry (clamped), got %d", len(result))
+	}
+}
+
+func TestGetRandomEntries_EmptyEntries(t *testing.T) {
+	_, err := getRandomEntries(nil, 1, false)
+	if err == nil {
+		t.Fatal("Expected error for empty entries, got nil")
+	}
+}
+
+func TestGetRandomEntries_ZeroWeight(t *testing.T) {
+	entries := []GachaEntry{
+		{ID: 1, Weight: 0},
+		{ID: 2, Weight: 0},
+	}
+	_, err := getRandomEntries(entries, 1, false)
+	if err == nil {
+		t.Fatal("Expected error for zero total weight, got nil")
+	}
+}
+
 func TestHandleMsgMhfPlayStepupGacha_RewardPoolError(t *testing.T) {
 	server := createMockServer()
 	charRepo := newMockCharacterRepo()

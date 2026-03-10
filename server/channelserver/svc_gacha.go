@@ -103,11 +103,17 @@ func (svc *GachaService) spendGachaCoin(userID uint32, quantity uint16) {
 
 // resolveRewards selects random entries and resolves them into rewards.
 func (svc *GachaService) resolveRewards(entries []GachaEntry, rolls int, isBox bool) []GachaReward {
-	rewardEntries, _ := getRandomEntries(entries, rolls, isBox)
+	rewardEntries, err := getRandomEntries(entries, rolls, isBox)
+	if err != nil {
+		svc.logger.Warn("Failed to select gacha entries", zap.Error(err))
+		return nil
+	}
 	var rewards []GachaReward
 	for i := range rewardEntries {
 		entryItems, err := svc.gachaRepo.GetItemsForEntry(rewardEntries[i].ID)
 		if err != nil {
+			svc.logger.Warn("Gacha entry has no items",
+				zap.Uint32("entryID", rewardEntries[i].ID), zap.Error(err))
 			continue
 		}
 		for _, item := range entryItems {
@@ -228,11 +234,17 @@ func (svc *GachaService) PlayBoxGacha(userID, charID, gachaID uint32, rollType u
 	if err != nil {
 		return nil, err
 	}
-	rewardEntries, _ := getRandomEntries(entries, rolls, true)
+	rewardEntries, err := getRandomEntries(entries, rolls, true)
+	if err != nil {
+		svc.logger.Warn("Failed to select box gacha entries", zap.Error(err))
+		return &GachaPlayResult{}, nil
+	}
 	var rewards []GachaReward
 	for i := range rewardEntries {
 		entryItems, err := svc.gachaRepo.GetItemsForEntry(rewardEntries[i].ID)
 		if err != nil {
+			svc.logger.Warn("Box gacha entry has no items",
+				zap.Uint32("entryID", rewardEntries[i].ID), zap.Error(err))
 			continue
 		}
 		if err := svc.gachaRepo.InsertBoxEntry(gachaID, rewardEntries[i].ID, charID); err != nil {
@@ -299,10 +311,20 @@ func (svc *GachaService) ResetBox(gachaID, charID uint32) error {
 // chosen with weighted probability (with replacement). In box mode, entries are
 // chosen uniformly without replacement.
 func getRandomEntries(entries []GachaEntry, rolls int, isBox bool) ([]GachaEntry, error) {
+	if len(entries) == 0 {
+		return nil, errors.New("no gacha entries available")
+	}
+	// Box mode draws without replacement, so clamp rolls to available entries.
+	if isBox && rolls > len(entries) {
+		rolls = len(entries)
+	}
 	var chosen []GachaEntry
 	var totalWeight float64
 	for i := range entries {
 		totalWeight += entries[i].Weight
+	}
+	if !isBox && totalWeight <= 0 {
+		return nil, errors.New("gacha entries have zero total weight")
 	}
 	for rolls != len(chosen) {
 		if !isBox {

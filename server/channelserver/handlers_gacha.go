@@ -88,8 +88,10 @@ func handleMsgMhfReceiveGachaItem(s *Session, p mhfpacket.MHFPacket) {
 		data = []byte{0x00}
 	}
 
-	// I think there are still some edge cases where rewards can be nulled via overflow
-	if data[0] > 36 || len(data) > 181 {
+	// Handle overflow: the client can only display 36 items (36 * 5 + 1 count byte = 181 bytes).
+	// If there are more, send the first 36 and keep the rest for next time.
+	isOverflow := len(data) > 181 && data[0] > 36
+	if isOverflow {
 		resp := byteframe.NewByteFrame()
 		resp.WriteUint8(36)
 		resp.WriteBytes(data[1:181])
@@ -99,7 +101,7 @@ func handleMsgMhfReceiveGachaItem(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	if !pkt.Freeze {
-		if data[0] > 36 || len(data) > 181 {
+		if isOverflow {
 			update := byteframe.NewByteFrame()
 			update.WriteUint8(uint8(len(data[181:]) / 5))
 			update.WriteBytes(data[181:])
