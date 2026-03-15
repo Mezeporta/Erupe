@@ -240,11 +240,17 @@ func main() {
 	if len(ownedServerIDs) > 0 {
 		idList := strings.Join(ownedServerIDs, ",")
 		if config.DebugOptions.ProxyPort == 0 {
-			_ = db.MustExec("DELETE FROM sign_sessions WHERE server_id IN (" + idList + ")")
+			if _, err := db.Exec("DELETE FROM sign_sessions WHERE server_id IN (" + idList + ")"); err != nil {
+				logger.Warn("Failed to clear stale sign sessions", zap.Error(err))
+			}
 		}
-		_ = db.MustExec("DELETE FROM servers WHERE server_id IN (" + idList + ")")
+		if _, err := db.Exec("DELETE FROM servers WHERE server_id IN (" + idList + ")"); err != nil {
+			logger.Warn("Failed to clear stale server entries", zap.Error(err))
+		}
 	}
-	_ = db.MustExec(`UPDATE guild_characters SET treasure_hunt=NULL`)
+	if _, err := db.Exec(`UPDATE guild_characters SET treasure_hunt=NULL`); err != nil {
+		logger.Warn("Failed to reset treasure hunts", zap.Error(err))
+	}
 
 	// Clean the DB if the option is on.
 	if config.DebugOptions.CleanDB {

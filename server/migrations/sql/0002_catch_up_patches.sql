@@ -15,6 +15,19 @@
 
 
 ------------------------------------------------------------------------
+-- Ensure tables that predate the patch series exist. These were always
+-- part of the base schema but may be missing from very old databases.
+------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.servers (
+    server_id integer NOT NULL,
+    current_players integer NOT NULL,
+    world_name text,
+    world_description text,
+    land integer
+);
+
+
+------------------------------------------------------------------------
 -- Patch 00: psn-id (sign_sessions primary key + psn columns)
 ------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.sign_sessions (
