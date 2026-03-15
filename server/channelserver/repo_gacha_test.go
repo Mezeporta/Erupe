@@ -104,12 +104,16 @@ func TestRepoGachaGetRewardPoolOrdering(t *testing.T) {
 	repo, db, _ := setupGachaRepo(t)
 
 	shopID := CreateTestGachaShop(t, db, "Pool Test", 1)
-	// entry_type=100 is the reward pool
-	CreateTestGachaEntry(t, db, shopID, 100, 50)
-	CreateTestGachaEntry(t, db, shopID, 100, 200)
-	CreateTestGachaEntry(t, db, shopID, 100, 100)
+	// entry_type=100 is the reward pool; each entry needs at least one item
+	e1 := CreateTestGachaEntry(t, db, shopID, 100, 50)
+	CreateTestGachaItem(t, db, e1, 1, 100, 1)
+	e2 := CreateTestGachaEntry(t, db, shopID, 100, 200)
+	CreateTestGachaItem(t, db, e2, 1, 101, 1)
+	e3 := CreateTestGachaEntry(t, db, shopID, 100, 100)
+	CreateTestGachaItem(t, db, e3, 1, 102, 1)
 	// entry_type=5 should NOT appear in reward pool
-	CreateTestGachaEntry(t, db, shopID, 5, 999)
+	e4 := CreateTestGachaEntry(t, db, shopID, 5, 999)
+	CreateTestGachaItem(t, db, e4, 1, 103, 1)
 
 	entries, err := repo.GetRewardPool(shopID)
 	if err != nil {
