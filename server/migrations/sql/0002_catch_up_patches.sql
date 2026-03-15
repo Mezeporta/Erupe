@@ -17,6 +17,15 @@
 ------------------------------------------------------------------------
 -- Patch 00: psn-id (sign_sessions primary key + psn columns)
 ------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.sign_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id integer,
+    char_id integer NOT NULL DEFAULT 0,
+    token character varying(16) NOT NULL,
+    server_id integer,
+    psn_id text
+);
+
 ALTER TABLE users ADD COLUMN IF NOT EXISTS psn_id TEXT;
 
 DO $$ BEGIN
