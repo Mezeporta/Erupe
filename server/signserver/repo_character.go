@@ -24,13 +24,19 @@ func (r *SignCharacterRepository) CountNewCharacters(uid uint32) (int, error) {
 }
 
 func (r *SignCharacterRepository) CreateCharacter(uid uint32, lastLogin uint32) error {
-	_, err := r.db.Exec(`
+	var charID int
+	err := r.db.QueryRow(`
 		INSERT INTO characters (
 			user_id, is_female, is_new_character, name, unk_desc_string,
 			hr, gr, weapon_type, last_login)
-		VALUES($1, False, True, '', '', 0, 0, 0, $2)`,
+		VALUES($1, False, True, '', '', 0, 0, 0, $2)
+		RETURNING id`,
 		uid, lastLogin,
-	)
+	).Scan(&charID)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec(`INSERT INTO user_binary (id) VALUES ($1)`, charID)
 	return err
 }
 

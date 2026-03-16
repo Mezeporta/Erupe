@@ -42,6 +42,10 @@ func (r *APICharacterRepository) Create(ctx context.Context, userID uint32, last
 		RETURNING id, name, is_female, weapon_type, hr, gr, last_login`,
 		userID, lastLogin,
 	)
+	if err != nil {
+		return character, err
+	}
+	_, err = r.db.ExecContext(ctx, `INSERT INTO user_binary (id) VALUES ($1)`, character.ID)
 	return character, err
 }
 
