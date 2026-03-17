@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Savedata corruption defense (tier 1): bounded decompression in nullcomp prevents OOM from crafted payloads, bounds-checked delta patching prevents buffer overflows, compressed payload size limits (512KB) and decompressed size limits (1MB) reject oversized saves, rotating savedata backups (3 slots, 30-minute interval) provide recovery points
+- Savedata corruption defense (tier 2): SHA-256 checksum on decompressed savedata verified on every load, atomic DB transactions wrapping character data + house data + hash + backup in a single commit, per-character save mutex preventing concurrent save races
+- Database migration `0007_savedata_integrity` (rotating backup table + integrity checksum column)
 - Tests for `logoutPlayer`, `saveAllCharacterData`, and transit message handlers
 - Alliance `scanAllianceWithGuilds` test for missing guild (nil return from GetByID)
 - Handler dispatch table test verifying all expected packet IDs are mapped
