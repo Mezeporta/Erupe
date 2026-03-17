@@ -2,8 +2,11 @@ package channelserver
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"sync"
+	"sync/atomic"
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
@@ -717,6 +720,132 @@ func TestBackupConstants(t *testing.T) {
 	if saveBackupInterval <= 0 {
 		t.Error("saveBackupInterval must be positive")
 	}
+}
+
+// =============================================================================
+// Tier 2 protection tests
+// =============================================================================
+
+func TestSaveDataChecksumRoundTrip(t *testing.T) {
+	// Verify that a hash computed over decompressed data matches after
+	// a compress → decompress round trip (the checksum covers decompressed data).
+	original := make([]byte, 1000)
+	for i := range original {
+		original[i] = byte(i % 256)
+	}
+
+	hash1 := sha256.Sum256(original)
+
+	compressed, err := nullcomp.Compress(original)
+	if err != nil {
+		t.Fatalf("compress: %v", err)
+	}
+
+	decompressed, err := nullcomp.Decompress(compressed)
+	if err != nil {
+		t.Fatalf("decompress: %v", err)
+	}
+
+	hash2 := sha256.Sum256(decompressed)
+
+	if hash1 != hash2 {
+		t.Error("checksum mismatch after compress/decompress round trip")
+	}
+}
+
+func TestSaveDataChecksumDetectsCorruption(t *testing.T) {
+	data := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
+	hash := sha256.Sum256(data)
+
+	// Flip a bit
+	corrupted := make([]byte, len(data))
+	copy(corrupted, data)
+	corrupted[2] ^= 0x01
+
+	corruptedHash := sha256.Sum256(corrupted)
+
+	if bytes.Equal(hash[:], corruptedHash[:]) {
+		t.Error("checksum should differ after bit flip")
+	}
+}
+
+func TestSaveAtomicParamsStructure(t *testing.T) {
+	params := SaveAtomicParams{
+		CharID:     42,
+		CompSave:   []byte{0x01},
+		Hash:       make([]byte, 32),
+		HR:         999,
+		GR:         100,
+		IsFemale:   true,
+		WeaponType: 7,
+		WeaponID:   1234,
+		HouseTier:  []byte{0x01, 0x00, 0x00, 0x00, 0x00},
+	}
+
+	if params.CharID != 42 {
+		t.Error("CharID mismatch")
+	}
+	if len(params.Hash) != 32 {
+		t.Errorf("hash should be 32 bytes, got %d", len(params.Hash))
+	}
+	if params.BackupData != nil {
+		t.Error("BackupData should be nil when no backup requested")
+	}
+}
+
+func TestCharacterLocks_SerializesSameCharacter(t *testing.T) {
+	var locks CharacterLocks
+	var counter int64
+
+	const goroutines = 100
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			unlock := locks.Lock(1) // same charID
+			// Non-atomic increment — if locks don't work, race detector will catch it
+			v := atomic.LoadInt64(&counter)
+			atomic.StoreInt64(&counter, v+1)
+			unlock()
+		}()
+	}
+	wg.Wait()
+
+	if atomic.LoadInt64(&counter) != goroutines {
+		t.Errorf("expected counter=%d, got %d", goroutines, atomic.LoadInt64(&counter))
+	}
+}
+
+func TestCharacterLocks_DifferentCharactersIndependent(t *testing.T) {
+	var locks CharacterLocks
+	var started, finished sync.WaitGroup
+
+	started.Add(1)
+	finished.Add(2)
+
+	// Lock char 1
+	unlock1 := locks.Lock(1)
+
+	// Goroutine trying to lock char 2 should succeed immediately
+	go func() {
+		defer finished.Done()
+		unlock2 := locks.Lock(2) // different char — should not block
+		started.Done()
+		unlock2()
+	}()
+
+	// Wait for char 2 lock to succeed (proves independence)
+	started.Wait()
+	unlock1()
+
+	// Goroutine for char 1 cleanup
+	go func() {
+		defer finished.Done()
+	}()
+
+	finished.Wait()
 }
 
 // =============================================================================

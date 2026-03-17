@@ -2,10 +2,35 @@ package channelserver
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 )
+
+// SaveAtomicParams bundles all fields needed for an atomic save transaction.
+type SaveAtomicParams struct {
+	CharID     uint32
+	CompSave   []byte
+	Hash       []byte // SHA-256 of decompressed savedata
+	HR         uint16
+	GR         uint16
+	IsFemale   bool
+	WeaponType uint8
+	WeaponID   uint16
+
+	// House data (written to user_binary)
+	HouseTier     []byte
+	HouseData     []byte
+	BookshelfData []byte
+	GalleryData   []byte
+	ToreData      []byte
+	GardenData    []byte
+
+	// Optional backup (nil means skip)
+	BackupSlot int
+	BackupData []byte
+}
 
 // CharacterRepository centralizes all database access for the characters table.
 type CharacterRepository struct {
@@ -236,6 +261,60 @@ func (r *CharacterRepository) GetLastBackupTime(charID uint32) (time.Time, error
 		return time.Time{}, nil
 	}
 	return t.Time, nil
+}
+
+// SaveCharacterDataAtomic performs all save-related writes in a single
+// database transaction. If any step fails, everything is rolled back.
+func (r *CharacterRepository) SaveCharacterDataAtomic(params SaveAtomicParams) error {
+	tx, err := r.db.Beginx()
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // rollback is no-op after commit
+
+	// 1. Save character data + hash
+	if _, err := tx.Exec(
+		`UPDATE characters SET savedata=$1, savedata_hash=$2, is_new_character=false, hr=$3, gr=$4, is_female=$5, weapon_type=$6, weapon_id=$7 WHERE id=$8`,
+		params.CompSave, params.Hash, params.HR, params.GR, params.IsFemale, params.WeaponType, params.WeaponID, params.CharID,
+	); err != nil {
+		return fmt.Errorf("save character data: %w", err)
+	}
+
+	// 2. Save house data
+	if _, err := tx.Exec(
+		`UPDATE user_binary SET house_tier=$1, house_data=$2, bookshelf=$3, gallery=$4, tore=$5, garden=$6 WHERE id=$7`,
+		params.HouseTier, params.HouseData, params.BookshelfData, params.GalleryData, params.ToreData, params.GardenData, params.CharID,
+	); err != nil {
+		return fmt.Errorf("save house data: %w", err)
+	}
+
+	// 3. Optional backup
+	if params.BackupData != nil {
+		if _, err := tx.Exec(
+			`INSERT INTO savedata_backups (char_id, slot, savedata, saved_at)
+			 VALUES ($1, $2, $3, now())
+			 ON CONFLICT (char_id, slot) DO UPDATE SET savedata = $3, saved_at = now()`,
+			params.CharID, params.BackupSlot, params.BackupData,
+		); err != nil {
+			return fmt.Errorf("save backup: %w", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// LoadSaveDataWithHash reads the core save columns plus the integrity hash.
+// The hash may be nil for characters saved before checksums were introduced.
+func (r *CharacterRepository) LoadSaveDataWithHash(charID uint32) (uint32, []byte, bool, string, []byte, error) {
+	var id uint32
+	var savedata []byte
+	var isNew bool
+	var name string
+	var hash []byte
+	err := r.db.QueryRow(
+		"SELECT id, savedata, is_new_character, name, savedata_hash FROM characters WHERE id = $1", charID,
+	).Scan(&id, &savedata, &isNew, &name, &hash)
+	return id, savedata, isNew, name, hash, err
 }
 
 // FindByRastaID looks up name and id by rasta_id.

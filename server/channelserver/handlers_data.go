@@ -28,6 +28,11 @@ const (
 func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavedata)
 
+	// Serialize saves for the same character to prevent concurrent operations
+	// from racing and defeating corruption detection.
+	unlock := s.server.charSaveLocks.Lock(s.charID)
+	defer unlock()
+
 	if len(pkt.RawDataPayload) > saveDataMaxCompressedPayload {
 		s.logger.Warn("Savedata payload exceeds size limit",
 			zap.Int("len", len(pkt.RawDataPayload)),

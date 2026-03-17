@@ -1,6 +1,8 @@
 package channelserver
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,9 +20,10 @@ const (
 	saveBackupInterval = 30 * time.Minute // minimum time between backups
 )
 
-// GetCharacterSaveData loads a character's save data from the database.
+// GetCharacterSaveData loads a character's save data from the database and
+// verifies its integrity checksum when one is stored.
 func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error) {
-	id, savedata, isNew, name, err := s.server.charRepo.LoadSaveData(charID)
+	id, savedata, isNew, name, storedHash, err := s.server.charRepo.LoadSaveDataWithHash(charID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			s.logger.Error("No savedata found", zap.Uint32("charID", charID))
@@ -47,6 +50,22 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 	if err != nil {
 		s.logger.Error("Failed to decompress savedata", zap.Error(err))
 		return nil, err
+	}
+
+	// Verify integrity checksum if one was stored with this save.
+	// A nil hash means the character was saved before checksums were introduced,
+	// so we skip verification (the next save will compute and store the hash).
+	if storedHash != nil {
+		computedHash := sha256.Sum256(saveData.decompSave)
+		if !bytes.Equal(storedHash, computedHash[:]) {
+			s.logger.Error("Savedata integrity check failed: hash mismatch",
+				zap.Uint32("charID", charID),
+				zap.Binary("stored_hash", storedHash),
+				zap.Binary("computed_hash", computedHash[:]),
+			)
+			// TODO: attempt recovery from savedata_backups here
+			return nil, errors.New("savedata integrity check failed")
+		}
 	}
 
 	saveData.updateStructWithSaveData()
@@ -85,56 +104,63 @@ func (save *CharacterSaveData) Save(s *Session) error {
 		save.compSave = save.decompSave
 	}
 
-	// Time-gated rotating backup: snapshot the previous compressed savedata
-	// before overwriting, but only if enough time has elapsed since the last
-	// backup. This keeps storage bounded (3 slots × blob size per character)
-	// while providing recovery points.
+	// Compute integrity hash over the decompressed save.
+	hash := sha256.Sum256(save.decompSave)
+
+	// Build the atomic save params — character data, house data, hash, and
+	// optionally a backup snapshot, all in one transaction.
+	params := SaveAtomicParams{
+		CharID:        save.CharID,
+		CompSave:      save.compSave,
+		Hash:          hash[:],
+		HR:            save.HR,
+		GR:            save.GR,
+		IsFemale:      save.Gender,
+		WeaponType:    save.WeaponType,
+		WeaponID:      save.WeaponID,
+		HouseTier:     save.HouseTier,
+		HouseData:     save.HouseData,
+		BookshelfData: save.BookshelfData,
+		GalleryData:   save.GalleryData,
+		ToreData:      save.ToreData,
+		GardenData:    save.GardenData,
+	}
+
+	// Time-gated rotating backup: include the previous compressed savedata
+	// in the transaction if enough time has elapsed since the last backup.
 	if len(prevCompSave) > 0 {
-		maybeSaveBackup(s, save.CharID, prevCompSave)
+		if slot, ok := shouldBackup(s, save.CharID); ok {
+			params.BackupSlot = slot
+			params.BackupData = prevCompSave
+		}
 	}
 
-	if err := s.server.charRepo.SaveCharacterData(save.CharID, save.compSave, save.HR, save.GR, save.Gender, save.WeaponType, save.WeaponID); err != nil {
-		s.logger.Error("Failed to update savedata", zap.Error(err), zap.Uint32("charID", save.CharID))
-		return fmt.Errorf("save character data: %w", err)
-	}
-
-	if err := s.server.charRepo.SaveHouseData(s.charID, save.HouseTier, save.HouseData, save.BookshelfData, save.GalleryData, save.ToreData, save.GardenData); err != nil {
-		s.logger.Error("Failed to update user binary house data", zap.Error(err))
-		return fmt.Errorf("save house data: %w", err)
+	if err := s.server.charRepo.SaveCharacterDataAtomic(params); err != nil {
+		s.logger.Error("Failed to save character data atomically",
+			zap.Error(err), zap.Uint32("charID", save.CharID))
+		return fmt.Errorf("atomic save: %w", err)
 	}
 
 	return nil
 }
 
-// maybeSaveBackup checks whether enough time has elapsed since the last backup
-// and, if so, writes the given compressed savedata into the next rotating slot.
-// Errors are logged but do not block the save — backups are best-effort.
-func maybeSaveBackup(s *Session, charID uint32, compSave []byte) {
+// shouldBackup checks whether enough time has elapsed since the last backup
+// and returns the target slot if a backup should be included in the save
+// transaction. Returns (slot, true) if a backup is due, (0, false) otherwise.
+func shouldBackup(s *Session, charID uint32) (int, bool) {
 	lastBackup, err := s.server.charRepo.GetLastBackupTime(charID)
 	if err != nil {
 		s.logger.Warn("Failed to query last backup time, skipping backup",
 			zap.Error(err), zap.Uint32("charID", charID))
-		return
+		return 0, false
 	}
 
 	if time.Since(lastBackup) < saveBackupInterval {
-		return
+		return 0, false
 	}
 
-	// Pick the next slot using a simple counter derived from the backup times.
-	// We rotate through slots 0, 1, 2 based on how many backups exist modulo
-	// the slot count. In practice this fills slots in order and then overwrites
-	// the oldest.
 	slot := int(lastBackup.Unix()/int64(saveBackupInterval.Seconds())) % saveBackupSlots
-
-	if err := s.server.charRepo.SaveBackup(charID, slot, compSave); err != nil {
-		s.logger.Warn("Failed to save backup",
-			zap.Error(err), zap.Uint32("charID", charID), zap.Int("slot", slot))
-		return
-	}
-
-	s.logger.Info("Savedata backup created",
-		zap.Uint32("charID", charID), zap.Int("slot", slot))
+	return slot, true
 }
 
 func handleMsgMhfSexChanger(s *Session, p mhfpacket.MHFPacket) {

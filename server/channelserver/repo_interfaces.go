@@ -41,6 +41,13 @@ type CharacterRepo interface {
 	LoadSaveData(charID uint32) (uint32, []byte, bool, string, error)
 	SaveBackup(charID uint32, slot int, data []byte) error
 	GetLastBackupTime(charID uint32) (time.Time, error)
+	// SaveCharacterDataAtomic performs all save-related writes in a single
+	// database transaction: character data, house data, checksum, and
+	// optionally a backup snapshot. If any step fails, everything is rolled back.
+	SaveCharacterDataAtomic(params SaveAtomicParams) error
+	// LoadSaveDataWithHash loads savedata along with its stored SHA-256 hash.
+	// The hash may be nil for characters saved before checksums were introduced.
+	LoadSaveDataWithHash(charID uint32) (id uint32, savedata []byte, isNew bool, name string, hash []byte, err error)
 }
 
 // GuildRepo defines the contract for guild data access.

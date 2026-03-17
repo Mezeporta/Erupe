@@ -96,6 +96,10 @@ type Server struct {
 	userBinary *UserBinaryStore
 	minidata   *MinidataStore
 
+	// Per-character save locks prevent concurrent save operations for the
+	// same character from racing and defeating corruption detection.
+	charSaveLocks CharacterLocks
+
 	// Semaphore
 	semaphoreLock  sync.RWMutex
 	semaphore      map[string]*Semaphore
