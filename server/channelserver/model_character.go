@@ -134,7 +134,7 @@ func (save *CharacterSaveData) Compress() error {
 
 func (save *CharacterSaveData) Decompress() error {
 	var err error
-	save.decompSave, err = nullcomp.Decompress(save.compSave)
+	save.decompSave, err = nullcomp.DecompressWithLimit(save.compSave, saveDataMaxDecompressedPayload)
 	if err != nil {
 		return err
 	}

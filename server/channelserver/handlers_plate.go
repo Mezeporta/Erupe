@@ -77,7 +77,7 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 		if len(data) > 0 {
 			// Decompress
 			s.logger.Debug("Decompressing PlateData", zap.Int("compressed_size", len(data)))
-			data, err = nullcomp.Decompress(data)
+			data, err = nullcomp.DecompressWithLimit(data, plateDataMaxPayload)
 			if err != nil {
 				s.logger.Error("Failed to decompress platedata",
 					zap.Error(err),
@@ -91,9 +91,18 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 			data = make([]byte, plateDataEmptySize)
 		}
 
-		// Perform diff and compress it to write back to db
+		// Perform diff with bounds checking and compress it to write back to db
 		s.logger.Debug("Applying PlateData diff", zap.Int("base_size", len(data)))
-		saveOutput, err := nullcomp.Compress(deltacomp.ApplyDataDiff(pkt.RawDataPayload, data))
+		patched, err := deltacomp.ApplyDataDiffWithLimit(pkt.RawDataPayload, data, plateDataMaxPayload)
+		if err != nil {
+			s.logger.Error("Failed to apply platedata diff",
+				zap.Error(err),
+				zap.Uint32("charID", s.charID),
+			)
+			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+			return
+		}
+		saveOutput, err := nullcomp.Compress(patched)
 		if err != nil {
 			s.logger.Error("Failed to diff and compress platedata",
 				zap.Error(err),
@@ -173,7 +182,7 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 		if len(data) > 0 {
 			// Decompress
 			s.logger.Info("Decompressing...")
-			data, err = nullcomp.Decompress(data)
+			data, err = nullcomp.DecompressWithLimit(data, plateBoxMaxPayload)
 			if err != nil {
 				s.logger.Error("Failed to decompress platebox", zap.Error(err))
 				doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -184,9 +193,15 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 			data = make([]byte, plateBoxEmptySize)
 		}
 
-		// Perform diff and compress it to write back to db
+		// Perform diff with bounds checking and compress it to write back to db
 		s.logger.Info("Diffing...")
-		saveOutput, err := nullcomp.Compress(deltacomp.ApplyDataDiff(pkt.RawDataPayload, data))
+		patched, err := deltacomp.ApplyDataDiffWithLimit(pkt.RawDataPayload, data, plateBoxMaxPayload)
+		if err != nil {
+			s.logger.Error("Failed to apply platebox diff", zap.Error(err))
+			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+			return
+		}
+		saveOutput, err := nullcomp.Compress(patched)
 		if err != nil {
 			s.logger.Error("Failed to diff and compress platebox", zap.Error(err))
 			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})

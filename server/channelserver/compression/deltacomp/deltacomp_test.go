@@ -75,6 +75,83 @@ func readTestDataFile(filename string) []byte {
 	return data
 }
 
+func TestApplyDataDiffWithLimit_BoundsCheck(t *testing.T) {
+	// Base data: 10 bytes
+	baseData := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A}
+
+	// Build a patch that tries to write at offset 8 with 5 different bytes,
+	// which would extend to offset 13 (beyond 10-byte base).
+	// Format: matchCount=9 (first is +1), differentCount=6 (is -1 = 5 bytes)
+	diff := []byte{
+		0x09,                               // matchCount (first is +1, so offset becomes -1+9=8)
+		0x06,                               // differentCount (6-1=5 different bytes)
+		0xAA, 0xBB, 0xCC, 0xDD, 0xEE,      // 5 patch bytes
+	}
+
+	t.Run("within_limit", func(t *testing.T) {
+		// Limit of 20 allows the growth
+		result, err := ApplyDataDiffWithLimit(diff, baseData, 20)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(result) < 13 {
+			t.Errorf("expected result length >= 13, got %d", len(result))
+		}
+	})
+
+	t.Run("exceeds_limit", func(t *testing.T) {
+		// Limit of 10 doesn't allow writing past the base
+		_, err := ApplyDataDiffWithLimit(diff, baseData, 10)
+		if err == nil {
+			t.Error("expected error for write past limit, got none")
+		}
+	})
+
+	t.Run("no_limit", func(t *testing.T) {
+		// maxOutput=0 means no limit (backwards compatible)
+		result, err := ApplyDataDiffWithLimit(diff, baseData, 0)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(result) < 13 {
+			t.Errorf("expected result length >= 13, got %d", len(result))
+		}
+	})
+}
+
+func TestApplyDataDiffWithLimit_TruncatedPatch(t *testing.T) {
+	baseData := []byte{0x01, 0x02, 0x03, 0x04}
+
+	// Patch claims 3 different bytes but only provides 1
+	diff := []byte{
+		0x02, // matchCount (offset = -1+2 = 1)
+		0x04, // differentCount (4-1=3 different bytes)
+		0xAA, // only 1 byte provided (missing 2)
+	}
+
+	_, err := ApplyDataDiffWithLimit(diff, baseData, 100)
+	if err == nil {
+		t.Error("expected error for truncated patch, got none")
+	}
+}
+
+func TestApplyDataDiff_ReturnsOriginalOnError(t *testing.T) {
+	baseData := []byte{0x01, 0x02, 0x03, 0x04}
+
+	// Truncated patch
+	diff := []byte{
+		0x02,
+		0x04,
+		0xAA, // only 1 of 3 expected bytes
+	}
+
+	result := ApplyDataDiff(diff, baseData)
+	// On error, ApplyDataDiff should return the original data unchanged
+	if !bytes.Equal(result, baseData) {
+		t.Errorf("expected original data on error, got %v", result)
+	}
+}
+
 func TestDeltaPatch(t *testing.T) {
 	for k, tt := range tests {
 		testname := fmt.Sprintf("delta_patch_test_%d", k)

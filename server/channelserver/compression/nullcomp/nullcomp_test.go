@@ -362,6 +362,110 @@ func TestDecompress_EdgeCases(t *testing.T) {
 	}
 }
 
+// === DecompressWithLimit tests ===
+
+func TestDecompressWithLimit_RespectsLimit(t *testing.T) {
+	// Compress data that decompresses to 1000 bytes
+	input := make([]byte, 1000)
+	for i := range input {
+		input[i] = byte(i % 256)
+	}
+	compressed, err := Compress(input)
+	if err != nil {
+		t.Fatalf("Compress() error = %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		maxOutput int
+		wantErr   bool
+	}{
+		{
+			name:      "limit larger than data",
+			maxOutput: 2000,
+			wantErr:   false,
+		},
+		{
+			name:      "limit equal to data",
+			maxOutput: 1000,
+			wantErr:   false,
+		},
+		{
+			name:      "limit smaller than data",
+			maxOutput: 500,
+			wantErr:   true,
+		},
+		{
+			name:      "limit of 1",
+			maxOutput: 1,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := DecompressWithLimit(compressed, tt.maxOutput)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if !bytes.Equal(result, input) {
+					t.Error("decompressed data doesn't match original")
+				}
+			}
+		})
+	}
+}
+
+func TestDecompressWithLimit_NullExpansionBomb(t *testing.T) {
+	// Craft a payload that would expand to a huge size via null runs:
+	// header + 0x00 0xFF repeated many times
+	var payload []byte
+	payload = append(payload, []byte("cmp\x2020110113\x20\x20\x20\x00")...)
+	for i := 0; i < 1000; i++ {
+		payload = append(payload, 0x00, 0xFF) // each pair = 255 null bytes
+	}
+	// Total decompressed would be 255,000 bytes
+
+	_, err := DecompressWithLimit(payload, 10000)
+	if err == nil {
+		t.Error("expected error for null expansion bomb, got none")
+	}
+}
+
+func TestDecompressWithLimit_UncompressedDataExceedsLimit(t *testing.T) {
+	// Data without cmp header that exceeds the limit
+	data := make([]byte, 100)
+	for i := range data {
+		data[i] = byte(i + 1) // non-zero so it's not confused with compressed
+	}
+
+	_, err := DecompressWithLimit(data, 50)
+	if err == nil {
+		t.Error("expected error for uncompressed data exceeding limit")
+	}
+}
+
+func TestDecompressWithLimit_RoundTrip(t *testing.T) {
+	input := []byte("Hello\x00\x00\x00World\x00\x00End")
+	compressed, err := Compress(input)
+	if err != nil {
+		t.Fatalf("Compress() error = %v", err)
+	}
+
+	result, err := DecompressWithLimit(compressed, 1024)
+	if err != nil {
+		t.Fatalf("DecompressWithLimit() error = %v", err)
+	}
+	if !bytes.Equal(result, input) {
+		t.Errorf("round trip failed: got %v, want %v", result, input)
+	}
+}
+
 func BenchmarkCompress(b *testing.B) {
 	data := make([]byte, 10000)
 	// Fill with some pattern (half nulls, half data)

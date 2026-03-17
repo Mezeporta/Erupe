@@ -2,6 +2,7 @@ package deltacomp
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"go.uber.org/zap"
@@ -49,8 +50,21 @@ func readCount(r *bytes.Reader) (int, error) {
 
 // ApplyDataDiff applies a delta data diff patch onto given base data.
 func ApplyDataDiff(diff []byte, baseData []byte) []byte {
-	// Make a copy of the base data to return,
-	// (probably just make this modify the given slice in the future).
+	result, err := ApplyDataDiffWithLimit(diff, baseData, 0)
+	if err != nil {
+		zap.L().Error("ApplyDataDiff failed", zap.Error(err))
+		// Return original data on error to avoid corruption
+		out := make([]byte, len(baseData))
+		copy(out, baseData)
+		return out
+	}
+	return result
+}
+
+// ApplyDataDiffWithLimit applies a delta data diff patch onto given base data.
+// If maxOutput > 0, the result is capped at that size; exceeding it returns an error.
+// If maxOutput == 0, no limit is enforced (backwards-compatible behavior).
+func ApplyDataDiffWithLimit(diff []byte, baseData []byte, maxOutput int) ([]byte, error) {
 	baseCopy := make([]byte, len(baseData))
 	copy(baseCopy, baseData)
 
@@ -76,32 +90,35 @@ func ApplyDataDiff(diff []byte, baseData []byte) []byte {
 		}
 		differentCount--
 
-		// Grow slice if it's required
-		if len(baseCopy) < dataOffset {
-			zap.L().Warn("Slice smaller than data offset, growing slice")
-			baseCopy = append(baseCopy, make([]byte, (dataOffset+differentCount)-len(baseData))...)
-		} else {
-			length := len(baseCopy[dataOffset:])
-			if length < differentCount {
-				length -= differentCount
-				baseCopy = append(baseCopy, make([]byte, length)...)
-			}
+		if dataOffset < 0 {
+			return nil, fmt.Errorf("negative data offset %d", dataOffset)
+		}
+		if differentCount < 0 {
+			return nil, fmt.Errorf("negative different count %d at offset %d", differentCount, dataOffset)
+		}
+
+		endOffset := dataOffset + differentCount
+		if maxOutput > 0 && endOffset > maxOutput {
+			return nil, fmt.Errorf("patch writes to offset %d, exceeds limit %d", endOffset, maxOutput)
+		}
+
+		// Grow slice if required
+		if endOffset > len(baseCopy) {
+			baseCopy = append(baseCopy, make([]byte, endOffset-len(baseCopy))...)
 		}
 
 		// Apply the patch bytes.
 		for i := 0; i < differentCount; i++ {
 			b, err := checkReadUint8(patch)
 			if err != nil {
-				zap.L().Error("Invalid or misunderstood patch format", zap.Int("dataOffset", dataOffset))
-				return baseCopy
+				return nil, fmt.Errorf("truncated patch at offset %d+%d: %w", dataOffset, i, err)
 			}
 
 			baseCopy[dataOffset+i] = b
 		}
 
 		dataOffset += differentCount - 1
-
 	}
 
-	return baseCopy
+	return baseCopy, nil
 }

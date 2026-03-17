@@ -17,8 +17,27 @@ import (
 	"go.uber.org/zap"
 )
 
+// Save data size limits.
+// The largest known decompressed savedata is ZZ at ~147KB. We use generous
+// ceilings to accommodate unknown versions while still catching runaway data.
+const (
+	saveDataMaxCompressedPayload   = 524288  // 512KB max compressed payload from client
+	saveDataMaxDecompressedPayload = 1048576 // 1MB max decompressed savedata
+)
+
 func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavedata)
+
+	if len(pkt.RawDataPayload) > saveDataMaxCompressedPayload {
+		s.logger.Warn("Savedata payload exceeds size limit",
+			zap.Int("len", len(pkt.RawDataPayload)),
+			zap.Int("max", saveDataMaxCompressedPayload),
+			zap.Uint32("charID", s.charID),
+		)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
+
 	characterSaveData, err := GetCharacterSaveData(s, s.charID)
 	if err != nil {
 		s.logger.Error("failed to retrieve character save data from db", zap.Error(err), zap.Uint32("charID", s.charID))
@@ -34,19 +53,25 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	if pkt.SaveType == 1 {
 		// Diff-based update.
 		// diffs themselves are also potentially compressed
-		diff, err := nullcomp.Decompress(pkt.RawDataPayload)
+		diff, err := nullcomp.DecompressWithLimit(pkt.RawDataPayload, saveDataMaxDecompressedPayload)
 		if err != nil {
 			s.logger.Error("Failed to decompress diff", zap.Error(err))
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
-		// Perform diff.
+		// Perform diff with bounds checking.
 		s.logger.Info("Diffing...")
-		characterSaveData.decompSave = deltacomp.ApplyDataDiff(diff, characterSaveData.decompSave)
+		patched, err := deltacomp.ApplyDataDiffWithLimit(diff, characterSaveData.decompSave, saveDataMaxDecompressedPayload)
+		if err != nil {
+			s.logger.Error("Failed to apply save diff", zap.Error(err), zap.Uint32("charID", s.charID))
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
+		characterSaveData.decompSave = patched
 	} else {
 		dumpSaveData(s, pkt.RawDataPayload, "savedata")
 		// Regular blob update.
-		saveData, err := nullcomp.Decompress(pkt.RawDataPayload)
+		saveData, err := nullcomp.DecompressWithLimit(pkt.RawDataPayload, saveDataMaxDecompressedPayload)
 		if err != nil {
 			s.logger.Error("Failed to decompress savedata from packet", zap.Error(err))
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -193,7 +218,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 	}
 	doAckBufSucceed(s, pkt.AckHandle, data)
 
-	decompSaveData, err := nullcomp.Decompress(data)
+	decompSaveData, err := nullcomp.DecompressWithLimit(data, saveDataMaxDecompressedPayload)
 	if err != nil {
 		s.logger.Error("Failed to decompress savedata", zap.Error(err))
 	}

@@ -228,6 +228,8 @@ func (m *mockCharacterRepo) SaveHouseData(_ uint32, _ []byte, _, _, _, _, _ []by
 func (m *mockCharacterRepo) LoadSaveData(_ uint32) (uint32, []byte, bool, string, error) {
 	return m.loadSaveDataID, m.loadSaveDataData, m.loadSaveDataNew, m.loadSaveDataName, m.loadSaveDataErr
 }
+func (m *mockCharacterRepo) SaveBackup(_ uint32, _ int, _ []byte) error    { return nil }
+func (m *mockCharacterRepo) GetLastBackupTime(_ uint32) (time.Time, error) { return time.Time{}, nil }
 
 // --- mockGoocooRepo ---
 

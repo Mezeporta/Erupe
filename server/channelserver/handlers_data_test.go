@@ -653,6 +653,73 @@ func TestConcurrentSaveData_Integration(t *testing.T) {
 }
 
 // =============================================================================
+// Tier 1 protection tests
+// =============================================================================
+
+func TestSaveDataSizeLimit(t *testing.T) {
+	// Verify the size constants are sensible
+	if saveDataMaxCompressedPayload <= 0 {
+		t.Error("saveDataMaxCompressedPayload must be positive")
+	}
+	if saveDataMaxDecompressedPayload <= 0 {
+		t.Error("saveDataMaxDecompressedPayload must be positive")
+	}
+	if saveDataMaxCompressedPayload > saveDataMaxDecompressedPayload {
+		t.Error("compressed limit should not exceed decompressed limit")
+	}
+}
+
+func TestSaveDataSizeLimitRejectsOversized(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	// Create a payload larger than the limit
+	oversized := make([]byte, saveDataMaxCompressedPayload+1)
+	pkt := &mhfpacket.MsgMhfSavedata{
+		SaveType:       0,
+		AckHandle:      1234,
+		AllocMemSize:   uint32(len(oversized)),
+		DataSize:       uint32(len(oversized)),
+		RawDataPayload: oversized,
+	}
+
+	// This should return early with a fail ACK, not panic
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("handleMsgMhfSavedata panicked on oversized payload: %v", r)
+		}
+	}()
+	handleMsgMhfSavedata(session, pkt)
+}
+
+func TestSaveDataSizeLimitAcceptsNormalPayload(t *testing.T) {
+	// Verify a normal-sized payload passes the size check
+	normalSize := 100000 // 100KB - typical save
+	if normalSize > saveDataMaxCompressedPayload {
+		t.Errorf("normal save size %d exceeds limit %d", normalSize, saveDataMaxCompressedPayload)
+	}
+}
+
+func TestDecompressWithLimitConstants(t *testing.T) {
+	// Verify limits are consistent with known save sizes
+	// ZZ save is ~147KB decompressed; limit should be well above that
+	zzSaveSize := 150000
+	if saveDataMaxDecompressedPayload < zzSaveSize*2 {
+		t.Errorf("decompressed limit %d is too close to known ZZ save size %d",
+			saveDataMaxDecompressedPayload, zzSaveSize)
+	}
+}
+
+func TestBackupConstants(t *testing.T) {
+	if saveBackupSlots <= 0 {
+		t.Error("saveBackupSlots must be positive")
+	}
+	if saveBackupInterval <= 0 {
+		t.Error("saveBackupInterval must be positive")
+	}
+}
+
+// =============================================================================
 // Tests consolidated from handlers_coverage4_test.go
 // =============================================================================
 

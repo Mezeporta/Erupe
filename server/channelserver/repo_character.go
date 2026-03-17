@@ -212,6 +212,32 @@ func (r *CharacterRepository) UpdateGCPAndPact(charID uint32, gcp uint32, pactID
 	return err
 }
 
+// SaveBackup upserts a savedata snapshot into the rotating backup table.
+func (r *CharacterRepository) SaveBackup(charID uint32, slot int, data []byte) error {
+	_, err := r.db.Exec(`
+		INSERT INTO savedata_backups (char_id, slot, savedata, saved_at)
+		VALUES ($1, $2, $3, now())
+		ON CONFLICT (char_id, slot) DO UPDATE SET savedata = $3, saved_at = now()
+	`, charID, slot, data)
+	return err
+}
+
+// GetLastBackupTime returns the most recent backup timestamp for a character.
+// Returns the zero time if no backups exist.
+func (r *CharacterRepository) GetLastBackupTime(charID uint32) (time.Time, error) {
+	var t sql.NullTime
+	err := r.db.QueryRow(
+		"SELECT MAX(saved_at) FROM savedata_backups WHERE char_id = $1", charID,
+	).Scan(&t)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if !t.Valid {
+		return time.Time{}, nil
+	}
+	return t.Time, nil
+}
+
 // FindByRastaID looks up name and id by rasta_id.
 func (r *CharacterRepository) FindByRastaID(rastaID int) (charID uint32, name string, err error) {
 	err = r.db.QueryRow("SELECT name, id FROM characters WHERE rasta_id=$1", rastaID).Scan(&name, &charID)

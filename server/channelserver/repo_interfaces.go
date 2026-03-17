@@ -39,6 +39,8 @@ type CharacterRepo interface {
 	SaveCharacterData(charID uint32, compSave []byte, hr, gr uint16, isFemale bool, weaponType uint8, weaponID uint16) error
 	SaveHouseData(charID uint32, houseTier []byte, houseData, bookshelf, gallery, tore, garden []byte) error
 	LoadSaveData(charID uint32) (uint32, []byte, bool, string, error)
+	SaveBackup(charID uint32, slot int, data []byte) error
+	GetLastBackupTime(charID uint32) (time.Time, error)
 }
 
 // GuildRepo defines the contract for guild data access.
