@@ -144,18 +144,21 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 		for _, ge := range entries {
 			var items []GachaItem
 			if s.server.erupeConfig.RealClientMode <= cfg.GG {
-				// If you need to configure the optional material list among the three options,Configure directly in gacha_detries,The same Entry Type can be merged and displayed in GG,In addition, the prizes are also directly configured in the gacha-entries table,
-				// MHFG1~GG does not use the gacha_items table throughout the entire process, which meets the lottery function of MHFG with a more single function
-				// In addition, the MHFG function itself is relatively simple,Example of lottery configuration for G1~GG:
-				// 	eg: gachaname:test
-				// 	entry: itemgroup: group1:(choose one of the two) ITEM_1_ID:7 COUNT:1  ITEM_1_ID:8 COUNT:2group2:ITEM_1_ID:9 COUNT:3 ; reward:reward1: ITEM_ID:1 COUNT:4 weight:10% reward1: ITEM_ID:2 COUNT:5 weight:90%
-				// 	table:gacha_shop |1|0|0|test|null|null|null|f|f|3|f|
-				// 	table:gacha_entries
-				// 	|1|1|0|7|7|1|0|0|0|0|0|null|
-				// 	|4|1|0|7|8|2|0|0|0|0|0|null|
-				// 	|5|1|1|7|9|3|0|0|0|0|0|null|
-				// 	|8|1|100|7|1|4|1000|0|0|0|0|null|
-				// 	|9|1|100|7|2|5|9000|0|0|0|0|null|
+				// G1–GG gacha format: rewards are defined directly in gacha_entries
+				// (item_type/item_number/item_quantity), NOT in gacha_items.
+				// This is a completely different format from G10+/ZZ.
+				//
+				// WARNING: Do NOT use these example values for ZZ servers.
+				// For ZZ, entry_type=100 rows must have item_type=0, item_number=0,
+				// item_quantity=0; actual rewards go in the gacha_items table only.
+				//
+				// G1–GG example gacha_entries:
+				// 	|id|gacha_id|entry_type|item_type|item_number|item_qty|weight|
+				// 	|1 |1       |0         |7        |7          |1       |0     |
+				// 	|4 |1       |0         |7        |8          |2       |0     |
+				// 	|5 |1       |1         |7        |9          |3       |0     |
+				// 	|8 |1       |100       |7        |1          |4       |1000  |
+				// 	|9 |1       |100       |7        |2          |5       |9000  |
 				bf.WriteUint8(ge.EntryType)
 				bf.WriteUint32(ge.ID)
 				bf.WriteUint8(ge.ItemType)
