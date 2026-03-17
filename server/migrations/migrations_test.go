@@ -58,20 +58,27 @@ func TestMigrateEmptyDB(t *testing.T) {
 
 	logger, _ := zap.NewDevelopment()
 
+	allMigrations, err := readMigrations()
+	if err != nil {
+		t.Fatalf("readMigrations failed: %v", err)
+	}
+	wantCount := len(allMigrations)
+	wantVersion := allMigrations[wantCount-1].version
+
 	applied, err := Migrate(db, logger)
 	if err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
-	if applied != 5 {
-		t.Errorf("expected 5 migrations applied, got %d", applied)
+	if applied != wantCount {
+		t.Errorf("expected %d migrations applied, got %d", wantCount, applied)
 	}
 
 	ver, err := Version(db)
 	if err != nil {
 		t.Fatalf("Version failed: %v", err)
 	}
-	if ver != 5 {
-		t.Errorf("expected version 5, got %d", ver)
+	if ver != wantVersion {
+		t.Errorf("expected version %d, got %d", wantVersion, ver)
 	}
 }
 
@@ -103,10 +110,18 @@ func TestMigrateExistingDBWithoutSchemaVersion(t *testing.T) {
 
 	logger, _ := zap.NewDevelopment()
 
+	allMigrations, err := readMigrations()
+	if err != nil {
+		t.Fatalf("readMigrations failed: %v", err)
+	}
+	// Baseline (0001) is auto-marked, remaining are applied
+	wantApplied := len(allMigrations) - 1
+	wantVersion := allMigrations[len(allMigrations)-1].version
+
 	// Simulate an existing database that has the full 0001 schema applied
 	// but no schema_version tracking yet (pre-migration-system installs).
 	// First, run all migrations normally to get the real schema...
-	_, err := Migrate(db, logger)
+	_, err = Migrate(db, logger)
 	if err != nil {
 		t.Fatalf("Initial Migrate failed: %v", err)
 	}
@@ -117,22 +132,21 @@ func TestMigrateExistingDBWithoutSchemaVersion(t *testing.T) {
 	}
 
 	// Migrate should detect existing DB and auto-mark baseline,
-	// then apply remaining migrations (0002-0005).
+	// then apply remaining migrations.
 	applied, err := Migrate(db, logger)
 	if err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
-	// Baseline (0001) is auto-marked, then 0002-0005 are applied = 4
-	if applied != 4 {
-		t.Errorf("expected 4 migrations applied (baseline auto-marked, 0002-0005 applied), got %d", applied)
+	if applied != wantApplied {
+		t.Errorf("expected %d migrations applied (baseline auto-marked, rest applied), got %d", wantApplied, applied)
 	}
 
 	ver, err := Version(db)
 	if err != nil {
 		t.Fatalf("Version failed: %v", err)
 	}
-	if ver != 5 {
-		t.Errorf("expected version 5, got %d", ver)
+	if ver != wantVersion {
+		t.Errorf("expected version %d, got %d", wantVersion, ver)
 	}
 }
 
