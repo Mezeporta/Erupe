@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Achievement rank-up notifications: the client now shows rank-up popups when achievements level up, using per-character tracking of last-displayed levels ([#165](https://github.com/Mezeporta/Erupe/issues/165))
+- Database migration `0008_achievement_displayed_levels` (tracks last-displayed achievement levels)
 - Savedata corruption defense (tier 1): bounded decompression in nullcomp prevents OOM from crafted payloads, bounds-checked delta patching prevents buffer overflows, compressed payload size limits (512KB) and decompressed size limits (1MB) reject oversized saves, rotating savedata backups (3 slots, 30-minute interval) provide recovery points
 - Savedata corruption defense (tier 2): SHA-256 checksum on decompressed savedata verified on every load, atomic DB transactions wrapping character data + house data + hash + backup in a single commit, per-character save mutex preventing concurrent save races
 - Database migration `0007_savedata_integrity` (rotating backup table + integrity checksum column)

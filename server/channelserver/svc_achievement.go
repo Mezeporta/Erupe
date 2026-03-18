@@ -23,6 +23,7 @@ const achievementEntryCount = uint8(33)
 type AchievementSummary struct {
 	Points       uint32
 	Achievements [33]Achievement
+	Notify       [33]bool
 }
 
 // GetAll ensures the achievement record exists, fetches all scores, and computes
@@ -38,13 +39,47 @@ func (svc *AchievementService) GetAll(charID uint32) (*AchievementSummary, error
 		return nil, err
 	}
 
+	displayed, err := svc.achievementRepo.GetDisplayedLevels(charID)
+	if err != nil {
+		svc.logger.Debug("No displayed levels found, all rank-ups will notify", zap.Error(err))
+	}
+
 	var summary AchievementSummary
 	for id := uint8(0); id < achievementEntryCount; id++ {
 		ach := GetAchData(id, scores[id])
 		summary.Points += ach.Value
 		summary.Achievements[id] = ach
+
+		// Notify if current level exceeds the last-displayed level.
+		if ach.Level > 0 {
+			if displayed == nil || int(id) >= len(displayed) {
+				summary.Notify[id] = true
+			} else if ach.Level > displayed[id] {
+				summary.Notify[id] = true
+			}
+		}
 	}
 	return &summary, nil
+}
+
+// MarkDisplayed snapshots the current achievement levels so that future
+// GET_ACHIEVEMENT responses only notify on new rank-ups since this point.
+func (svc *AchievementService) MarkDisplayed(charID uint32) error {
+	if err := svc.achievementRepo.EnsureExists(charID); err != nil {
+		svc.logger.Error("Failed to ensure achievements record", zap.Error(err))
+	}
+
+	scores, err := svc.achievementRepo.GetAllScores(charID)
+	if err != nil {
+		return err
+	}
+
+	levels := make([]byte, achievementEntryCount)
+	for id := uint8(0); id < achievementEntryCount; id++ {
+		ach := GetAchData(id, scores[id])
+		levels[id] = ach.Level
+	}
+	return svc.achievementRepo.SaveDisplayedLevels(charID, levels)
 }
 
 // Increment validates the achievement ID, ensures the record exists, and bumps

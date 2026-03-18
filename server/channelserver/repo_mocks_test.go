@@ -11,12 +11,16 @@ var errNotFound = errors.New("not found")
 // --- mockAchievementRepo ---
 
 type mockAchievementRepo struct {
-	scores        [33]int32
-	ensureCalled  bool
-	ensureErr     error
-	getScoresErr  error
-	incrementErr  error
-	incrementedID uint8
+	scores          [33]int32
+	ensureCalled    bool
+	ensureErr       error
+	getScoresErr    error
+	incrementErr    error
+	incrementedID   uint8
+	displayedLevels []byte
+	displayedErr    error
+	savedLevels     []byte
+	saveLevelsErr   error
 }
 
 func (m *mockAchievementRepo) EnsureExists(_ uint32) error {
@@ -31,6 +35,15 @@ func (m *mockAchievementRepo) GetAllScores(_ uint32) ([33]int32, error) {
 func (m *mockAchievementRepo) IncrementScore(_ uint32, id uint8) error {
 	m.incrementedID = id
 	return m.incrementErr
+}
+
+func (m *mockAchievementRepo) GetDisplayedLevels(_ uint32) ([]byte, error) {
+	return m.displayedLevels, m.displayedErr
+}
+
+func (m *mockAchievementRepo) SaveDisplayedLevels(_ uint32, levels []byte) error {
+	m.savedLevels = levels
+	return m.saveLevelsErr
 }
 
 // --- mockMailRepo ---

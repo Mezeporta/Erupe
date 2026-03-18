@@ -290,6 +290,8 @@ type AchievementRepo interface {
 	EnsureExists(charID uint32) error
 	GetAllScores(charID uint32) ([33]int32, error)
 	IncrementScore(charID uint32, achievementID uint8) error
+	GetDisplayedLevels(charID uint32) ([]byte, error)
+	SaveDisplayedLevels(charID uint32, levels []byte) error
 }
 
 // ShopRepo defines the contract for shop data access.

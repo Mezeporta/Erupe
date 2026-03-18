@@ -42,3 +42,18 @@ func (r *AchievementRepository) IncrementScore(charID uint32, achievementID uint
 	_, err := r.db.Exec(fmt.Sprintf("UPDATE achievements SET ach%d=ach%d+1 WHERE id=$1", achievementID, achievementID), charID)
 	return err
 }
+
+// GetDisplayedLevels returns the last-displayed achievement levels for a character.
+// Returns nil if never displayed (all rank-ups should trigger notifications).
+func (r *AchievementRepository) GetDisplayedLevels(charID uint32) ([]byte, error) {
+	var levels []byte
+	err := r.db.QueryRow("SELECT displayed_levels FROM achievements WHERE id=$1", charID).Scan(&levels)
+	return levels, err
+}
+
+// SaveDisplayedLevels stores the current achievement levels as "displayed",
+// so future GET_ACHIEVEMENT responses only notify on new rank-ups.
+func (r *AchievementRepository) SaveDisplayedLevels(charID uint32, levels []byte) error {
+	_, err := r.db.Exec("UPDATE achievements SET displayed_levels=$1 WHERE id=$2", levels, charID)
+	return err
+}

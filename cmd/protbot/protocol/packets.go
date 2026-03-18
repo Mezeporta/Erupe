@@ -215,6 +215,56 @@ func BuildEnumerateQuestPacket(ackHandle uint32, world uint8, counter, offset ui
 	return bf.Data()
 }
 
+// BuildGetAchievementPacket builds a MSG_MHF_GET_ACHIEVEMENT packet.
+// Layout mirrors Erupe's MsgMhfGetAchievement.Parse:
+//
+//	uint16 opcode
+//	uint32 ackHandle
+//	uint32 charID
+//	uint32 zeroed
+//	0x00 0x10 terminator
+func BuildGetAchievementPacket(ackHandle, charID uint32) []byte {
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(MSG_MHF_GET_ACHIEVEMENT)
+	bf.WriteUint32(ackHandle)
+	bf.WriteUint32(charID)
+	bf.WriteUint32(0) // Zeroed
+	bf.WriteBytes([]byte{0x00, 0x10})
+	return bf.Data()
+}
+
+// BuildAddAchievementPacket builds a MSG_MHF_ADD_ACHIEVEMENT packet (fire-and-forget, no ACK).
+// Layout mirrors Erupe's MsgMhfAddAchievement.Parse:
+//
+//	uint16 opcode
+//	uint8  achievementID
+//	uint16 unk1
+//	uint16 unk2
+//	0x00 0x10 terminator
+func BuildAddAchievementPacket(achievementID uint8) []byte {
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(MSG_MHF_ADD_ACHIEVEMENT)
+	bf.WriteUint8(achievementID)
+	bf.WriteUint16(0) // Unk1
+	bf.WriteUint16(0) // Unk2
+	bf.WriteBytes([]byte{0x00, 0x10})
+	return bf.Data()
+}
+
+// BuildDisplayedAchievementPacket builds a MSG_MHF_DISPLAYED_ACHIEVEMENT packet (fire-and-forget).
+// Layout mirrors Erupe's MsgMhfDisplayedAchievement.Parse:
+//
+//	uint16 opcode
+//	uint8  zeroed
+//	0x00 0x10 terminator
+func BuildDisplayedAchievementPacket() []byte {
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(MSG_MHF_DISPLAYED_ACHIEVEMENT)
+	bf.WriteUint8(0) // Zeroed
+	bf.WriteBytes([]byte{0x00, 0x10})
+	return bf.Data()
+}
+
 // BuildGetWeeklySchedulePacket builds a MSG_MHF_GET_WEEKLY_SCHEDULE packet.
 //
 //	uint16 opcode
