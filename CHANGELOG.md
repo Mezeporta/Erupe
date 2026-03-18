@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed guild nil panics: added nil guards for alliance guild lookups ([#171](https://github.com/Mezeporta/Erupe/issues/171))
 - Fixed `rasta_id=0` overwriting NULL in mercenary save, preventing game state saving ([#163](https://github.com/Mezeporta/Erupe/issues/163))
 - Fixed false race condition in `PacketDuringLogout` test
+- Fixed bookshelf save data pointers for non-ZZ client versions (G1–G10, F4–F5, S6.0)
+- Fixed Forward.5 festa crashes: skip trials referencing monsters added after em106 (Odibatorasu) and filter out item 7011 which does not exist before G1 ([#156](https://github.com/Mezeporta/Erupe/pull/156))
 
 ### Changed
 

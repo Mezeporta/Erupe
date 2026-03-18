@@ -212,6 +212,21 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	if err != nil {
 		s.logger.Error("Failed to query festa trials", zap.Error(err))
 	}
+	// em106 (Odibatorasu) is the last monster added in Forward.5; skip trials
+	// referencing monsters or items that don't exist in that version.
+	if s.server.erupeConfig.RealClientMode <= cfg.F5 {
+		filtered := trials[:0]
+		for _, t := range trials {
+			if (t.Objective == 1 || t.Objective == 2 || t.Objective == 3) && t.GoalID > 106 {
+				continue
+			}
+			if t.Objective == 4 && t.GoalID > 6430 {
+				continue
+			}
+			filtered = append(filtered, t)
+		}
+		trials = filtered
+	}
 	bf.WriteUint16(uint16(len(trials)))
 	for _, trial := range trials {
 		bf.WriteUint32(trial.ID)
@@ -227,7 +242,6 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	// The Winner and Loser Armor IDs are missing
-	// Item 7011 may not exist in older versions, remove to prevent crashes
 	// Fields: {Unk0, Unk1, ItemType, Quantity, ItemID, MinHR, MinSR, MinGR}
 	rewards := []FestaReward{
 		{1, 0, 7, 350, 1520, 0, 0, 0},
@@ -255,6 +269,18 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 		{5, 0, 12, 1000, 0, 0, 0, 0},
 		{5, 0, 13, 0, 0, 0, 0, 0},
 		//{5, 0, 1, 0, 0, 0, 0, 0},
+	}
+
+	// Item 7011 does not exist before G1 — filter it to prevent client crashes.
+	if s.server.erupeConfig.RealClientMode <= cfg.F5 {
+		filtered := rewards[:0]
+		for _, r := range rewards {
+			if r.ItemType == 7 && r.ItemID == 7011 {
+				continue
+			}
+			filtered = append(filtered, r)
+		}
+		rewards = filtered
 	}
 
 	bf.WriteUint16(uint16(len(rewards)))
