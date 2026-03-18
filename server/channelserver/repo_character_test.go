@@ -545,6 +545,61 @@ func TestSaveMercenary(t *testing.T) {
 	}
 }
 
+func TestSaveMercenary_ZeroRastaID_PreservesExisting(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	// Set an existing rasta_id on the character.
+	if _, err := db.Exec("UPDATE characters SET rasta_id=77 WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup rasta_id failed: %v", err)
+	}
+
+	// Save mercenary data with rastaID=0 — must NOT overwrite the existing rasta_id.
+	data := []byte{0xAA, 0xBB}
+	if err := repo.SaveMercenary(charID, data, 0); err != nil {
+		t.Fatalf("SaveMercenary(rastaID=0) failed: %v", err)
+	}
+
+	var gotData []byte
+	var gotRastaID uint32
+	if err := db.QueryRow("SELECT savemercenary, rasta_id FROM characters WHERE id=$1", charID).Scan(&gotData, &gotRastaID); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if len(gotData) != 2 || gotData[0] != 0xAA {
+		t.Errorf("Expected mercenary data [aa bb], got: %x", gotData)
+	}
+	if gotRastaID != 77 {
+		t.Errorf("Expected rasta_id to remain 77, got: %d", gotRastaID)
+	}
+}
+
+func TestSaveMercenary_ZeroRastaID_PreservesNULL(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	// Ensure rasta_id starts as NULL (the default for new characters).
+	if _, err := db.Exec("UPDATE characters SET rasta_id=NULL WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup NULL rasta_id failed: %v", err)
+	}
+
+	data := []byte{0xCC}
+	if err := repo.SaveMercenary(charID, data, 0); err != nil {
+		t.Fatalf("SaveMercenary(rastaID=0) failed: %v", err)
+	}
+
+	var gotData []byte
+	var rastaIDNull bool
+	if err := db.QueryRow(
+		"SELECT savemercenary, rasta_id IS NULL FROM characters WHERE id=$1", charID,
+	).Scan(&gotData, &rastaIDNull); err != nil {
+		t.Fatalf("Verification query failed: %v", err)
+	}
+	if len(gotData) != 1 || gotData[0] != 0xCC {
+		t.Errorf("Expected mercenary data [cc], got: %x", gotData)
+	}
+	if !rastaIDNull {
+		t.Error("Expected rasta_id to remain NULL, but it was set to a value")
+	}
+}
+
 func TestUpdateGCPAndPact(t *testing.T) {
 	repo, db, charID := setupCharRepo(t)
 
