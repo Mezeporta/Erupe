@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A second SIGINT/Ctrl+C during the shutdown countdown now force-stops the server immediately
 - Fixed `ecdMagic` constant byte order causing encryption failures on some platforms ([#174](https://github.com/Mezeporta/Erupe/issues/174))
 - Fixed guild nil panics: variable shadowing causing nil panic in scout list ([#171](https://github.com/Mezeporta/Erupe/issues/171))
 - Fixed guild nil panics: added nil guards in cancel and answer scout handlers ([#171](https://github.com/Mezeporta/Erupe/issues/171))
