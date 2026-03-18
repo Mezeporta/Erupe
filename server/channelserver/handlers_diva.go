@@ -151,6 +151,26 @@ func handleMsgMhfSetKiju(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAddUdPoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAddUdPoint)
+
+	// Find the current diva event to associate points with.
+	eventID := uint32(0)
+	if s.server.divaRepo != nil {
+		events, err := s.server.divaRepo.GetEvents()
+		if err == nil && len(events) > 0 {
+			eventID = events[len(events)-1].ID
+		}
+	}
+
+	if eventID != 0 && s.charID != 0 && (pkt.QuestPoints > 0 || pkt.BonusPoints > 0) {
+		if err := s.server.divaRepo.AddPoints(s.charID, eventID, pkt.QuestPoints, pkt.BonusPoints); err != nil {
+			s.logger.Warn("Failed to add diva points",
+				zap.Uint32("charID", s.charID),
+				zap.Uint32("questPoints", pkt.QuestPoints),
+				zap.Uint32("bonusPoints", pkt.BonusPoints),
+				zap.Error(err))
+		}
+	}
+
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 

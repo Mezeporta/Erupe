@@ -1094,11 +1094,57 @@ func (m *mockRengokuRepo) GetRanking(_ uint32, _ uint32) ([]RengokuScore, error)
 type mockDivaRepo struct {
 	events    []DivaEvent
 	eventsErr error
+
+	// Point tracking for tests
+	points   map[[2]uint32][2]int64 // [charID, eventID] -> [questPoints, bonusPoints]
+	addErr   error
+	getErr   error
+	totalErr error
 }
 
 func (m *mockDivaRepo) DeleteEvents() error             { return nil }
 func (m *mockDivaRepo) InsertEvent(_ uint32) error      { return nil }
 func (m *mockDivaRepo) GetEvents() ([]DivaEvent, error) { return m.events, m.eventsErr }
+
+func (m *mockDivaRepo) AddPoints(charID, eventID, questPoints, bonusPoints uint32) error {
+	if m.addErr != nil {
+		return m.addErr
+	}
+	if m.points == nil {
+		m.points = make(map[[2]uint32][2]int64)
+	}
+	key := [2]uint32{charID, eventID}
+	cur := m.points[key]
+	cur[0] += int64(questPoints)
+	cur[1] += int64(bonusPoints)
+	m.points[key] = cur
+	return nil
+}
+
+func (m *mockDivaRepo) GetPoints(charID, eventID uint32) (int64, int64, error) {
+	if m.getErr != nil {
+		return 0, 0, m.getErr
+	}
+	if m.points == nil {
+		return 0, 0, nil
+	}
+	p := m.points[[2]uint32{charID, eventID}]
+	return p[0], p[1], nil
+}
+
+func (m *mockDivaRepo) GetTotalPoints(eventID uint32) (int64, int64, error) {
+	if m.totalErr != nil {
+		return 0, 0, m.totalErr
+	}
+	var tq, tb int64
+	for k, v := range m.points {
+		if k[1] == eventID {
+			tq += v[0]
+			tb += v[1]
+		}
+	}
+	return tq, tb, nil
+}
 
 // --- mockEventRepo ---
 

@@ -324,6 +324,9 @@ type DivaRepo interface {
 	DeleteEvents() error
 	InsertEvent(startEpoch uint32) error
 	GetEvents() ([]DivaEvent, error)
+	AddPoints(charID uint32, eventID uint32, questPoints, bonusPoints uint32) error
+	GetPoints(charID uint32, eventID uint32) (questPoints, bonusPoints int64, err error)
+	GetTotalPoints(eventID uint32) (questPoints, bonusPoints int64, err error)
 }
 
 // MiscRepo defines the contract for miscellaneous data access.

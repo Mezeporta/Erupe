@@ -38,3 +38,40 @@ func (r *DivaRepository) GetEvents() ([]DivaEvent, error) {
 	err := r.db.Select(&result, "SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='diva'")
 	return result, err
 }
+
+// AddPoints atomically adds quest and bonus points for a character in a diva event.
+func (r *DivaRepository) AddPoints(charID, eventID, questPoints, bonusPoints uint32) error {
+	_, err := r.db.Exec(`
+		INSERT INTO diva_points (char_id, event_id, quest_points, bonus_points, updated_at)
+		VALUES ($1, $2, $3, $4, now())
+		ON CONFLICT (char_id, event_id) DO UPDATE
+		SET quest_points = diva_points.quest_points + EXCLUDED.quest_points,
+		    bonus_points = diva_points.bonus_points + EXCLUDED.bonus_points,
+		    updated_at = now()`,
+		charID, eventID, questPoints, bonusPoints)
+	return err
+}
+
+// GetPoints returns the accumulated quest and bonus points for a character in an event.
+func (r *DivaRepository) GetPoints(charID, eventID uint32) (int64, int64, error) {
+	var qp, bp int64
+	err := r.db.QueryRow(
+		"SELECT quest_points, bonus_points FROM diva_points WHERE char_id=$1 AND event_id=$2",
+		charID, eventID).Scan(&qp, &bp)
+	if err != nil {
+		return 0, 0, err
+	}
+	return qp, bp, nil
+}
+
+// GetTotalPoints returns the sum of all players' quest and bonus points for an event.
+func (r *DivaRepository) GetTotalPoints(eventID uint32) (int64, int64, error) {
+	var qp, bp int64
+	err := r.db.QueryRow(
+		"SELECT COALESCE(SUM(quest_points),0), COALESCE(SUM(bonus_points),0) FROM diva_points WHERE event_id=$1",
+		eventID).Scan(&qp, &bp)
+	if err != nil {
+		return 0, 0, err
+	}
+	return qp, bp, nil
+}

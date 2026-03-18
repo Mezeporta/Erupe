@@ -88,6 +88,78 @@ func TestHandleMsgMhfAddUdPoint(t *testing.T) {
 	}
 }
 
+func TestHandleMsgMhfAddUdPoint_AccumulatesPoints(t *testing.T) {
+	srv := createMockServer()
+	repo := &mockDivaRepo{
+		events: []DivaEvent{{ID: 42, StartTime: uint32(time.Now().Unix())}},
+	}
+	srv.divaRepo = repo
+	s := createMockSession(1, srv)
+	s.charID = 100
+
+	// First quest: 500 quest points + 50 bonus
+	pkt := &mhfpacket.MsgMhfAddUdPoint{AckHandle: 1, QuestPoints: 500, BonusPoints: 50}
+	handleMsgMhfAddUdPoint(s, pkt)
+	<-s.sendPackets
+
+	qp, bp, err := repo.GetPoints(100, 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if qp != 500 || bp != 50 {
+		t.Errorf("After first quest: quest=%d bonus=%d, want 500/50", qp, bp)
+	}
+
+	// Second quest: 300 quest points + 30 bonus
+	pkt2 := &mhfpacket.MsgMhfAddUdPoint{AckHandle: 2, QuestPoints: 300, BonusPoints: 30}
+	handleMsgMhfAddUdPoint(s, pkt2)
+	<-s.sendPackets
+
+	qp, bp, err = repo.GetPoints(100, 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if qp != 800 || bp != 80 {
+		t.Errorf("After second quest: quest=%d bonus=%d, want 800/80", qp, bp)
+	}
+}
+
+func TestHandleMsgMhfAddUdPoint_NoEvent(t *testing.T) {
+	srv := createMockServer()
+	repo := &mockDivaRepo{} // no events
+	srv.divaRepo = repo
+	s := createMockSession(1, srv)
+	s.charID = 100
+
+	pkt := &mhfpacket.MsgMhfAddUdPoint{AckHandle: 1, QuestPoints: 500, BonusPoints: 50}
+	handleMsgMhfAddUdPoint(s, pkt)
+	<-s.sendPackets
+
+	// Should still ACK successfully even with no event
+	if len(repo.points) != 0 {
+		t.Error("Should not store points when no event is active")
+	}
+}
+
+func TestHandleMsgMhfAddUdPoint_ZeroPoints(t *testing.T) {
+	srv := createMockServer()
+	repo := &mockDivaRepo{
+		events: []DivaEvent{{ID: 1, StartTime: uint32(time.Now().Unix())}},
+	}
+	srv.divaRepo = repo
+	s := createMockSession(1, srv)
+	s.charID = 100
+
+	pkt := &mhfpacket.MsgMhfAddUdPoint{AckHandle: 1, QuestPoints: 0, BonusPoints: 0}
+	handleMsgMhfAddUdPoint(s, pkt)
+	<-s.sendPackets
+
+	// Should not create a row for zero points
+	if len(repo.points) != 0 {
+		t.Error("Should not store zero points")
+	}
+}
+
 func TestHandleMsgMhfGetUdMyPoint(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)

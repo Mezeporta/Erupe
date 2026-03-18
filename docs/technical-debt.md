@@ -32,7 +32,7 @@ These TODOs represent features that are visibly broken for players.
 | ~~`handlers_session.go:410`~~ | ~~`TODO(Andoryuuta): log key index off-by-one`~~ | ~~Known off-by-one in log key indexing is unresolved~~ **Documented.** RE'd from ZZ DLL: `putRecord_log`/`putTerminal_log` don't embed the key (size 0), so the off-by-one only matters in pre-ZZ clients and is benign server-side. | [#167](https://github.com/Mezeporta/Erupe/issues/167) |
 | ~~`handlers_session.go:551`~~ | ~~`TODO: This case might be <=G2`~~ | ~~Uncertain version detection in switch case~~ **Documented.** RE'd ZZ per-entry parser (FUN_115868a0) confirms 40-byte padding. G2 DLL analysis inconclusive (stripped, no shared struct sizes). Kept <=G1 boundary with RE documentation. | [#167](https://github.com/Mezeporta/Erupe/issues/167) |
 | ~~`handlers_session.go:714`~~ | ~~`TODO: Retail returned the number of clients in quests`~~ | ~~Player count reported to clients does not match retail behavior~~ **Fixed.** Added `QuestReserved` field to `StageSnapshot` that counts only clients in "Qs" stages, pre-collected under server lock to respect lock ordering. | [#167](https://github.com/Mezeporta/Erupe/issues/167) |
-| `msg_mhf_add_ud_point.go:28` | `TODO: Parse is a stub` — field meanings unknown | UD point packet fields unnamed, `Build` not implemented | [#168](https://github.com/Mezeporta/Erupe/issues/168) |
+| ~~`msg_mhf_add_ud_point.go:28`~~ | ~~`TODO: Parse is a stub` — field meanings unknown~~ | ~~UD point packet fields unnamed, `Build` not implemented~~ **Fixed.** RE'd `putAdd_ud_point` from ZZ DLL: two uint32 fields are QuestPoints (sum of 11 category accumulators) and BonusPoints (kiju prayer multiplier extra). Added `diva_points` table, repo methods, handler accumulation, and migration 0009. | [#168](https://github.com/Mezeporta/Erupe/issues/168) |
 
 ### 2. Test gaps on critical paths
 
@@ -100,4 +100,4 @@ Based on remaining impact:
 4. ~~**Add coverage threshold** to CI~~ — **Done.** 50% floor enforced via `go tool cover` in CI; Codecov removed.
 5. ~~**Fix guild alliance toggle** ([#166](https://github.com/Mezeporta/Erupe/issues/166))~~ — **Done.** `recruiting` column + `OperateJoint` allow/deny actions + DB toggle
 6. ~~**Fix session handler retail mismatches** ([#167](https://github.com/Mezeporta/Erupe/issues/167))~~ — **Documented.** RE'd from ZZ DLL; log key off-by-one is benign server-side, player count fixed via `QuestReserved`.
-7. **Reverse-engineer MhfAddUdPoint fields** ([#168](https://github.com/Mezeporta/Erupe/issues/168)) — needs packet captures
+7. ~~**Reverse-engineer MhfAddUdPoint fields** ([#168](https://github.com/Mezeporta/Erupe/issues/168))~~ — **Done.** RE'd from ZZ DLL: QuestPoints + BonusPoints, added `diva_points` table + migration 0009
