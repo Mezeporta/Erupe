@@ -652,10 +652,10 @@ func TestBuildParseEnumerateEvent(t *testing.T) {
 // TestBuildParseAddUdTacticsPoint verifies Build/Parse round-trip for MsgMhfAddUdTacticsPoint.
 func TestBuildParseAddUdTacticsPoint(t *testing.T) {
 	tests := []struct {
-		name      string
-		ackHandle uint32
-		unk0      uint16
-		unk1      uint32
+		name          string
+		ackHandle     uint32
+		questID       uint16
+		tacticsPoints uint32
 	}{
 		{"typical", 1, 100, 50000},
 		{"zero", 0, 0, 0},
@@ -666,9 +666,9 @@ func TestBuildParseAddUdTacticsPoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			original := &MsgMhfAddUdTacticsPoint{
-				AckHandle: tt.ackHandle,
-				Unk0:      tt.unk0,
-				Unk1:      tt.unk1,
+				AckHandle:     tt.ackHandle,
+				QuestID:       tt.questID,
+				TacticsPoints: tt.tacticsPoints,
 			}
 
 			bf := byteframe.NewByteFrame()
@@ -685,11 +685,11 @@ func TestBuildParseAddUdTacticsPoint(t *testing.T) {
 			if parsed.AckHandle != original.AckHandle {
 				t.Errorf("AckHandle = 0x%X, want 0x%X", parsed.AckHandle, original.AckHandle)
 			}
-			if parsed.Unk0 != original.Unk0 {
-				t.Errorf("Unk0 = %d, want %d", parsed.Unk0, original.Unk0)
+			if parsed.QuestID != original.QuestID {
+				t.Errorf("QuestID = %d, want %d", parsed.QuestID, original.QuestID)
 			}
-			if parsed.Unk1 != original.Unk1 {
-				t.Errorf("Unk1 = %d, want %d", parsed.Unk1, original.Unk1)
+			if parsed.TacticsPoints != original.TacticsPoints {
+				t.Errorf("TacticsPoints = %d, want %d", parsed.TacticsPoints, original.TacticsPoints)
 			}
 		})
 	}

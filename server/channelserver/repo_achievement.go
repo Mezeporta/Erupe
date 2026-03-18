@@ -25,7 +25,10 @@ func (r *AchievementRepository) EnsureExists(charID uint32) error {
 // GetAllScores returns all 33 achievement scores for a character.
 func (r *AchievementRepository) GetAllScores(charID uint32) ([33]int32, error) {
 	var scores [33]int32
-	err := r.db.QueryRow("SELECT * FROM achievements WHERE id=$1", charID).Scan(&scores[0],
+	err := r.db.QueryRow(`SELECT ach0,ach1,ach2,ach3,ach4,ach5,ach6,ach7,ach8,ach9,
+		ach10,ach11,ach12,ach13,ach14,ach15,ach16,ach17,ach18,ach19,
+		ach20,ach21,ach22,ach23,ach24,ach25,ach26,ach27,ach28,ach29,
+		ach30,ach31,ach32 FROM achievements WHERE id=$1`, charID).Scan(
 		&scores[0], &scores[1], &scores[2], &scores[3], &scores[4], &scores[5], &scores[6], &scores[7], &scores[8],
 		&scores[9], &scores[10], &scores[11], &scores[12], &scores[13], &scores[14], &scores[15], &scores[16],
 		&scores[17], &scores[18], &scores[19], &scores[20], &scores[21], &scores[22], &scores[23], &scores[24],

@@ -152,6 +152,9 @@ func handleMsgMhfAddAchievement(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfPaymentAchievement(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfDisplayedAchievement(s *Session, p mhfpacket.MHFPacket) {
+	if s.server.achievementService == nil {
+		return
+	}
 	if err := s.server.achievementService.MarkDisplayed(s.charID); err != nil {
 		s.logger.Warn("Failed to mark achievements as displayed", zap.Error(err))
 	}
