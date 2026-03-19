@@ -109,21 +109,9 @@ func handleMsgMhfEnumerateCampaign(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteBool(event.End.Before(time.Now()))
 		ps.Uint8(bf, event.Title, true)
 		ps.Uint8(bf, event.Reward, true)
-		ps.Uint8(bf, "", false)
+		ps.Uint8(bf, event.Prefix, true)
 		ps.Uint8(bf, "", false)
 		ps.Uint8(bf, event.Link, true)
-	}
-
-	if len(events) > 255 {
-		bf.WriteUint8(255)
-		bf.WriteUint16(uint16(len(events)))
-	} else {
-		bf.WriteUint8(uint8(len(events)))
-	}
-	for _, event := range events {
-		bf.WriteUint32(event.ID)
-		bf.WriteUint8(uint8(campaignRequiredStamps(int(event.Stamps))))
-		bf.WriteBytes([]byte(event.Prefix))
 	}
 
 	if len(categories) > 255 {
