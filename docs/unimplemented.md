@@ -17,7 +17,7 @@ All empty handlers carry an inline comment — `// stub: unimplemented` for real
 
 ## Unimplemented (68 handlers)
 
-Grouped by handler file / game subsystem.
+Grouped by handler file / game subsystem. Handlers with an open branch are marked **[branch]**.
 
 ### Achievements (`handlers_achievement.go`)
 
@@ -44,7 +44,7 @@ Grouped by handler file / game subsystem.
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfShutClient` | Server-initiated client disconnect |
+| `handleMsgMhfShutClient` | Server-initiated client disconnect — partial draft in `fix/clan-invites` |
 | `handleMsgSysHideClient` | Hide a client session from the session list |
 
 ### Data / Auth (`handlers_data.go`)
@@ -57,14 +57,14 @@ Grouped by handler file / game subsystem.
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfGetRestrictionEvent` | Fetch event-based gameplay restrictions |
+| `handleMsgMhfGetRestrictionEvent` | Fetch event-based gameplay restrictions — **[`feature/enum-event`]** (4 commits), **[`feature/event-tent`]** (30 commits, most mature) |
 
 ### Guild (`handlers_guild.go`)
 
 | Handler | Notes |
 |---------|-------|
 | `handleMsgMhfUpdateForceGuildRank` | Force-set a guild's rank (admin/GM operation) |
-| `handleMsgMhfUpdateGuild` | Update generic guild metadata |
+| `handleMsgMhfUpdateGuild` | Update generic guild metadata — **[`feature/return-guild`]** (1 commit) |
 | `handleMsgMhfUpdateGuildcard` | Update guild card display data |
 
 ### House / My Room (`handlers_house.go`)
@@ -77,7 +77,7 @@ Grouped by handler file / game subsystem.
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfStampcardPrize` | Claim a stamp card prize |
+| `handleMsgMhfStampcardPrize` | Claim a stamp card prize — **[`feature/event-tent`]** (campaign stamp work) |
 
 ### Misc (`handlers_misc.go`)
 
@@ -93,7 +93,10 @@ Grouped by handler file / game subsystem.
 
 ### Mutex (`handlers_mutex.go`)
 
-All five mutex handlers are empty. MHF mutexes are distributed locks used for event coordination (Raviente, etc.). The server currently uses its own semaphore system instead.
+All five mutex handlers are empty. MHF mutexes are distributed locks used for event coordination
+(Raviente, etc.). The server currently uses its own semaphore system instead.
+**[`fix/mutex-rework`]** (2 commits) proposes replacing the semaphore system with proper
+protocol-level mutex handling.
 
 | Handler | Notes |
 |---------|-------|
@@ -105,7 +108,8 @@ All five mutex handlers are empty. MHF mutexes are distributed locks used for ev
 
 ### Object Sync (`handlers_object.go`)
 
-Object sync is partially implemented (create, position, binary set/notify work). The following secondary operations are stubs:
+Object sync is partially implemented (create, position, binary set/notify work). The following
+secondary operations are stubs:
 
 | Handler | Notes |
 |---------|-------|
@@ -125,7 +129,7 @@ Object sync is partially implemented (create, position, binary set/notify work).
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfEnterTournamentQuest` | Enter a tournament-mode quest |
+| `handleMsgMhfEnterTournamentQuest` | Enter a tournament-mode quest — **[`feature/hunting-tournament`]** (7 commits, actively rebased onto main) |
 
 ### Register (`handlers_register.go`)
 
@@ -137,13 +141,14 @@ Object sync is partially implemented (create, position, binary set/notify work).
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfUseRewardSong` | Use/activate a reward song buff |
-| `handleMsgMhfAddRewardSongCount` | Increment reward song usage counter |
+| `handleMsgMhfUseRewardSong` | Use/activate a reward song buff — **[`feature/diva`]** |
+| `handleMsgMhfAddRewardSongCount` | Increment reward song usage counter — **[`feature/diva`]** |
 | `handleMsgMhfAcceptReadReward` | Claim a reward for reading an in-game notice |
 
 ### Session (`handlers_session.go`)
 
-Some of these may be intentionally no-ops (e.g. `MsgSysAck` is a client-to-server confirmation that needs no reply). Others are genuine feature gaps.
+Some of these may be intentionally no-ops (e.g. `MsgSysAck` is a client-to-server confirmation
+that needs no reply). Others are genuine feature gaps.
 
 | Handler | Notes |
 |---------|-------|
@@ -190,10 +195,30 @@ Some of these may be intentionally no-ops (e.g. `MsgSysAck` is a client-to-serve
 
 ---
 
+## Open Branches Summary
+
+| Branch | Commits ahead | Handlers targeted |
+|--------|:---:|-------------------|
+| `feature/event-tent` | 30 | `GetRestrictionEvent`, `StampcardPrize` (campaign stamps) |
+| `feature/hunting-tournament` | 7 | `EnterTournamentQuest` |
+| `fix/mutex-rework` | 2 | All 5 Mutex handlers |
+| `feature/enum-event` | 4 | `GetRestrictionEvent` |
+| `feature/conquest` | 4 | Conquest quest handlers |
+| `feature/tower` | 4 | Tower handlers |
+| `feature/diva` | 6 | `UseRewardSong`, `AddRewardSongCount` |
+| `feature/return-guild` | 1 | `UpdateGuild` |
+| `fix/clan-invites` | 1 | `ShutClient` (unfinished draft) |
+
+---
+
 ## Reserved Protocol Slots (56 handlers)
 
-`handlers_reserve.go` contains 56 empty handlers for message IDs that are reserved in the MHF protocol but never sent by any known client version. These are **intentionally empty** and are not missing features.
+`handlers_reserve.go` contains 56 empty handlers for message IDs that are reserved in the MHF
+protocol but never sent by any known client version. These are **intentionally empty** and are
+not missing features.
 
-Two reserve IDs (`188`, `18B`) have partial implementations returning hardcoded responses — they appear in an unknown subsystem and are documented with inline comments in the source.
+Two reserve IDs (`188`, `18B`) have partial implementations returning hardcoded responses — they
+appear in an unknown subsystem and are documented with inline comments in the source.
 
-Full list: `handleMsgSysReserve01–07`, `0C–0E`, `4A–4F`, `55–57`, `5C`, `5E–5F`, `71–7C`, `7E`, `180`, `18E–18F`, `19B–19F`, `1A4`, `1A6–1AF`, `192–194`, `handleMsgMhfReserve10F`.
+Full list: `handleMsgSysReserve01–07`, `0C–0E`, `4A–4F`, `55–57`, `5C`, `5E–5F`, `71–7C`,
+`7E`, `180`, `18E–18F`, `19B–19F`, `1A4`, `1A6–1AF`, `192–194`, `handleMsgMhfReserve10F`.
