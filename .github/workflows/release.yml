@@ -114,6 +114,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts
+        pattern: '*-amd64'
 
     - name: Copy standalone schema for download
       run: cp server/migrations/sql/0001_init.sql SCHEMA.sql
