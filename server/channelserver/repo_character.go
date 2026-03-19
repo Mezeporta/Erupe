@@ -237,6 +237,38 @@ func (r *CharacterRepository) UpdateGCPAndPact(charID uint32, gcp uint32, pactID
 	return err
 }
 
+// SavedataBackup holds one row from the savedata_backups table.
+type SavedataBackup struct {
+	Slot    int
+	Data    []byte
+	SavedAt time.Time
+}
+
+// LoadBackupsByRecency returns all backup slots for a character, ordered
+// most-recent first. Returns an empty (non-nil) slice if no backups exist.
+func (r *CharacterRepository) LoadBackupsByRecency(charID uint32) ([]SavedataBackup, error) {
+	rows, err := r.db.Query(
+		`SELECT slot, savedata, saved_at FROM savedata_backups
+		 WHERE char_id = $1
+		 ORDER BY saved_at DESC`,
+		charID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck // rows.Close error is non-actionable here
+
+	backups := make([]SavedataBackup, 0)
+	for rows.Next() {
+		var b SavedataBackup
+		if err := rows.Scan(&b.Slot, &b.Data, &b.SavedAt); err != nil {
+			return nil, err
+		}
+		backups = append(backups, b)
+	}
+	return backups, rows.Err()
+}
+
 // SaveBackup upserts a savedata snapshot into the rotating backup table.
 func (r *CharacterRepository) SaveBackup(charID uint32, slot int, data []byte) error {
 	_, err := r.db.Exec(`

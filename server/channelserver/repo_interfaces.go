@@ -48,6 +48,9 @@ type CharacterRepo interface {
 	// LoadSaveDataWithHash loads savedata along with its stored SHA-256 hash.
 	// The hash may be nil for characters saved before checksums were introduced.
 	LoadSaveDataWithHash(charID uint32) (id uint32, savedata []byte, isNew bool, name string, hash []byte, err error)
+	// LoadBackupsByRecency returns all backup slots for a character ordered
+	// most-recent first. Returns an empty slice if no backups exist.
+	LoadBackupsByRecency(charID uint32) ([]SavedataBackup, error)
 }
 
 // GuildRepo defines the contract for guild data access.

@@ -165,4 +165,4 @@ golangci-lint run ./...       # Must pass with zero errors
 
 - Branch naming: `feature/`, `fix/`, `refactor/`, `docs/`
 - Commit messages: conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`)
-- Update `CHANGELOG.md` under "Unreleased" for all changes
+- Update `CHANGELOG.md` under "Unreleased" for every feature or fix — one concise line per change (two lines maximum)

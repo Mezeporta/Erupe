@@ -63,14 +63,71 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 				zap.Binary("stored_hash", storedHash),
 				zap.Binary("computed_hash", computedHash[:]),
 			)
-			// TODO: attempt recovery from savedata_backups here
-			return nil, errors.New("savedata integrity check failed")
+			return recoverFromBackups(s, saveData, charID)
 		}
 	}
 
 	saveData.updateStructWithSaveData()
 
 	return saveData, nil
+}
+
+// recoverFromBackups is called when the primary savedata fails its integrity check.
+// It queries savedata_backups in recency order and returns the first slot whose
+// compressed blob decompresses cleanly. It never writes to the database — the
+// next successful Save() will overwrite the primary with fresh data and a new hash,
+// self-healing the corruption without any extra recovery writes.
+func recoverFromBackups(s *Session, base *CharacterSaveData, charID uint32) (*CharacterSaveData, error) {
+	backups, err := s.server.charRepo.LoadBackupsByRecency(charID)
+	if err != nil {
+		s.logger.Error("Failed to load savedata backups during recovery",
+			zap.Uint32("charID", charID),
+			zap.Error(err),
+		)
+		return nil, errors.New("savedata integrity check failed")
+	}
+
+	if len(backups) == 0 {
+		s.logger.Error("Savedata corrupted and no backups available",
+			zap.Uint32("charID", charID),
+		)
+		return nil, errors.New("savedata integrity check failed: no backups available")
+	}
+
+	for _, backup := range backups {
+		candidate := &CharacterSaveData{
+			CharID:         base.CharID,
+			IsNewCharacter: base.IsNewCharacter,
+			Name:           base.Name,
+			Mode:           base.Mode,
+			Pointers:       base.Pointers,
+			compSave:       backup.Data,
+		}
+
+		if err := candidate.Decompress(); err != nil {
+			s.logger.Warn("Backup slot decompression failed during recovery, trying next",
+				zap.Uint32("charID", charID),
+				zap.Int("slot", backup.Slot),
+				zap.Time("saved_at", backup.SavedAt),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		s.logger.Warn("Savedata recovered from backup — primary was corrupt",
+			zap.Uint32("charID", charID),
+			zap.Int("slot", backup.Slot),
+			zap.Time("saved_at", backup.SavedAt),
+		)
+		candidate.updateStructWithSaveData()
+		return candidate, nil
+	}
+
+	s.logger.Error("Savedata corrupted and all backup slots failed decompression",
+		zap.Uint32("charID", charID),
+		zap.Int("backups_tried", len(backups)),
+	)
+	return nil, errors.New("savedata integrity check failed: all backup slots exhausted")
 }
 
 func (save *CharacterSaveData) Save(s *Session) error {

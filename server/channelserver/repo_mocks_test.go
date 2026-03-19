@@ -247,6 +247,9 @@ func (m *mockCharacterRepo) SaveCharacterDataAtomic(_ SaveAtomicParams) error { 
 func (m *mockCharacterRepo) LoadSaveDataWithHash(_ uint32) (uint32, []byte, bool, string, []byte, error) {
 	return m.loadSaveDataID, m.loadSaveDataData, m.loadSaveDataNew, m.loadSaveDataName, nil, m.loadSaveDataErr
 }
+func (m *mockCharacterRepo) LoadBackupsByRecency(_ uint32) ([]SavedataBackup, error) {
+	return []SavedataBackup{}, nil
+}
 
 // --- mockGoocooRepo ---
 
