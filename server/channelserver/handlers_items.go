@@ -55,7 +55,7 @@ func handleMsgMhfEnumerateOrder(s *Session, p mhfpacket.MHFPacket) {
 	stubEnumerateNoResults(s, pkt.AckHandle)
 }
 
-func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func userGetItems(s *Session) []mhfitem.MHFItemStack {
 	var items []mhfitem.MHFItemStack
@@ -91,7 +91,7 @@ func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgMhfGetCogInfo(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetCogInfo(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCheckWeeklyStamp)
@@ -235,4 +235,4 @@ func handleMsgMhfStampcardStamp(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func handleMsgMhfStampcardPrize(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfStampcardPrize(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

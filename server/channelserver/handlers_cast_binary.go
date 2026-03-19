@@ -162,4 +162,4 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	}
 }
 
-func handleMsgSysCastedBinary(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysCastedBinary(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

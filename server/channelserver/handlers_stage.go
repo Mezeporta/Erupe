@@ -23,7 +23,7 @@ func handleMsgSysCreateStage(s *Session, p mhfpacket.MHFPacket) {
 	}
 }
 
-func handleMsgSysStageDestruct(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysStageDestruct(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	stage, created := s.server.stages.GetOrCreate(stageID)
@@ -265,7 +265,7 @@ func handleMsgSysMoveStage(s *Session, p mhfpacket.MHFPacket) {
 	doStageTransfer(s, pkt.AckHandle, pkt.StageID)
 }
 
-func handleMsgSysLeaveStage(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysLeaveStage(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgSysLockStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysLockStage)

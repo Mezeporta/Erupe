@@ -75,7 +75,7 @@ func handleMsgMhfGetRyoudama(s *Session, p mhfpacket.MHFPacket) {
 	doAckEarthSucceed(s, pkt.AckHandle, data)
 }
 
-func handleMsgMhfPostRyoudama(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfPostRyoudama(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfGetTinyBin(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetTinyBin)

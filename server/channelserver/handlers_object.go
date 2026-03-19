@@ -38,7 +38,7 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 	s.stage.BroadcastMHF(dupObjUpdate, s)
 }
 
-func handleMsgSysDeleteObject(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysDeleteObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgSysPositionObject(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysPositionObject)
@@ -63,9 +63,9 @@ func handleMsgSysPositionObject(s *Session, p mhfpacket.MHFPacket) {
 	s.stage.BroadcastMHF(pkt, s)
 }
 
-func handleMsgSysRotateObject(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysRotateObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysDuplicateObject(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysDuplicateObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
 	_ = p.(*mhfpacket.MsgSysSetObjectBinary)
@@ -83,18 +83,18 @@ func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
 	*/
 }
 
-func handleMsgSysGetObjectBinary(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysGetObjectBinary(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysGetObjectOwner(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysGetObjectOwner(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysUpdateObjectBinary(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysUpdateObjectBinary(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysCleanupObject(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysCleanupObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysAddObject(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysAddObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysDelObject(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysDelObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysDispObject(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysDispObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysHideObject(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysHideObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

@@ -139,7 +139,7 @@ func handleMsgMhfSetCaAchievementHist(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
-func handleMsgMhfResetAchievement(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfResetAchievement(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfAddAchievement(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAddAchievement)
@@ -149,7 +149,7 @@ func handleMsgMhfAddAchievement(s *Session, p mhfpacket.MHFPacket) {
 	}
 }
 
-func handleMsgMhfPaymentAchievement(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfPaymentAchievement(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfDisplayedAchievement(s *Session, p mhfpacket.MHFPacket) {
 	if s.server.achievementService == nil {
@@ -160,6 +160,6 @@ func handleMsgMhfDisplayedAchievement(s *Session, p mhfpacket.MHFPacket) {
 	}
 }
 
-func handleMsgMhfGetCaAchievementHist(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetCaAchievementHist(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgMhfSetCaAchievement(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfSetCaAchievement(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

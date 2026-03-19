@@ -375,14 +375,14 @@ func handleMsgMhfEntryRookieGuild(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgMhfUpdateForceGuildRank(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfUpdateForceGuildRank(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfGenerateUdGuildMap(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGenerateUdGuildMap)
 	doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgMhfUpdateGuild(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfUpdateGuild(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfSetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetGuildManageRight)
@@ -447,7 +447,7 @@ func handleMsgMhfOperationInvGuild(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgMhfUpdateGuildcard(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfUpdateGuildcard(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 // guildGetItems reads and parses the guild item box.
 func guildGetItems(s *Session, guildID uint32) []mhfitem.MHFItemStack {

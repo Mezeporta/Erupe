@@ -213,7 +213,7 @@ func handleMsgMhfUseKeepLoginBoost(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func handleMsgMhfGetRestrictionEvent(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetRestrictionEvent(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfSetRestrictionEvent(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetRestrictionEvent)

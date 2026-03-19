@@ -66,7 +66,7 @@ func handleMsgMhfUnreserveSrg(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgMhfKickExportForce(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfKickExportForce(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfGetEarthStatus(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetEarthStatus)
@@ -89,7 +89,7 @@ func handleMsgMhfGetEarthStatus(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func handleMsgMhfRegistSpabiTime(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfRegistSpabiTime(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfGetEarthValue(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetEarthValue)
@@ -128,7 +128,7 @@ func handleMsgMhfGetEarthValue(s *Session, p mhfpacket.MHFPacket) {
 	doAckEarthSucceed(s, pkt.AckHandle, data)
 }
 
-func handleMsgMhfDebugPostValue(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfDebugPostValue(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfGetRandFromTable(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetRandFromTable)
@@ -147,11 +147,11 @@ func handleMsgMhfGetSenyuDailyCount(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func handleMsgMhfGetDailyMissionMaster(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetDailyMissionMaster(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgMhfGetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgMhfSetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfSetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 // Equip skin history buffer sizes per game version
 const (
@@ -215,7 +215,7 @@ func handleMsgMhfGetUdShopCoin(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func handleMsgMhfUseUdShopCoin(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfUseUdShopCoin(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfGetEnhancedMinidata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetEnhancedMinidata)

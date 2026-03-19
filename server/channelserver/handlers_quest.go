@@ -654,7 +654,7 @@ func getTuneValueRange(start uint16, value uint16) []tuneValue {
 	return tv
 }
 
-func handleMsgMhfEnterTournamentQuest(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfEnterTournamentQuest(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfGetUdBonusQuestInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetUdBonusQuestInfo)

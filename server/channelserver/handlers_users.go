@@ -5,9 +5,9 @@ import (
 	"go.uber.org/zap"
 )
 
-func handleMsgSysInsertUser(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysInsertUser(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysDeleteUser(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysDeleteUser(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgSysSetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysSetUserBinary)
@@ -35,4 +35,4 @@ func handleMsgSysGetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	}
 }
 
-func handleMsgSysNotifyUserBinary(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysNotifyUserBinary(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

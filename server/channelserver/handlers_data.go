@@ -244,4 +244,4 @@ func handleMsgMhfLoadScenarioData(s *Session, p mhfpacket.MHFPacket) {
 	loadCharacterData(s, pkt.AckHandle, "scenariodata", make([]byte, 10))
 }
 
-func handleMsgSysAuthData(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysAuthData(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

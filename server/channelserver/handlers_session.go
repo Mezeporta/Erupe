@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func handleMsgHead(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgHead(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgSysExtendThreshold(s *Session, p mhfpacket.MHFPacket) {
 	// No data aside from header, no resp required.
@@ -32,7 +32,7 @@ func handleMsgSysNop(s *Session, p mhfpacket.MHFPacket) {
 	// No data aside from header, no resp required.
 }
 
-func handleMsgSysAck(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysAck(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgSysTerminalLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysTerminalLog)
@@ -379,7 +379,7 @@ func logoutPlayer(s *Session) {
 	)
 }
 
-func handleMsgSysSetStatus(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysSetStatus(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgSysPing(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysPing)
@@ -458,7 +458,7 @@ func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgSysEcho(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysEcho(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgSysLockGlobalSema(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysLockGlobalSema)
@@ -481,11 +481,11 @@ func handleMsgSysUnlockGlobalSema(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgSysUpdateRight(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysUpdateRight(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysAuthQuery(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysAuthQuery(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysAuthTerminal(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysAuthTerminal(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgSysRightsReload(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysRightsReload)
@@ -752,9 +752,9 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
-func handleMsgCaExchangeItem(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgCaExchangeItem(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgMhfServerCommand(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfServerCommand(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfAnnounce(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAnnounce)
@@ -762,20 +762,20 @@ func handleMsgMhfAnnounce(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgMhfSetLoginwindow(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfSetLoginwindow(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysTransBinary(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysTransBinary(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysCollectBinary(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysCollectBinary(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysGetState(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysGetState(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysSerialize(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysSerialize(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysEnumlobby(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysEnumlobby(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysEnumuser(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysEnumuser(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysInfokyserver(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysInfokyserver(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgMhfGetCaUniqueID(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetCaUniqueID(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

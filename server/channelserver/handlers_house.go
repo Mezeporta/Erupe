@@ -344,7 +344,7 @@ func handleMsgMhfAcquireTitle(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgMhfResetTitle(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfResetTitle(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func initializeWarehouse(s *Session) {
 	if err := s.server.houseRepo.InitializeWarehouse(s.charID); err != nil {

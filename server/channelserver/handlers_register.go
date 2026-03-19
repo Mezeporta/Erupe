@@ -148,4 +148,4 @@ func (s *Session) notifyRavi() {
 	}
 }
 
-func handleMsgSysNotifyRegister(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysNotifyRegister(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

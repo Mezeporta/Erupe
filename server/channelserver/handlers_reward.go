@@ -30,9 +30,9 @@ func handleMsgMhfGetRewardSong(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
-func handleMsgMhfUseRewardSong(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfUseRewardSong(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgMhfAddRewardSongCount(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfAddRewardSongCount(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfAcquireMonthlyReward(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireMonthlyReward)
@@ -43,4 +43,4 @@ func handleMsgMhfAcquireMonthlyReward(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
-func handleMsgMhfAcceptReadReward(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfAcceptReadReward(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

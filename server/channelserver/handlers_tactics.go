@@ -60,6 +60,6 @@ func handleMsgMhfGetUdTacticsRanking(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
-func handleMsgMhfSetUdTacticsFollower(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfSetUdTacticsFollower(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgMhfGetUdTacticsLog(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetUdTacticsLog(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

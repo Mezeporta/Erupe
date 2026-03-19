@@ -109,6 +109,6 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
-func handleMsgMhfShutClient(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfShutClient(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysHideClient(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysHideClient(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
