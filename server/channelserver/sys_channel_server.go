@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"erupe-ce/common/byteframe"
+	"erupe-ce/common/decryption"
 	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/binpacket"
@@ -449,12 +450,11 @@ func (s *Server) Season() uint8 {
 	return uint8(((TimeAdjusted().Unix() / secsPerDay) + sid) % 3)
 }
 
-// ecdMagic is the ECD magic as read by binary.LittleEndian.Uint32.
-// On-disk bytes: 65 63 64 1A ("ecd\x1a"), LE-decoded: 0x1A646365.
-const ecdMagic = uint32(0x1A646365)
-
-// loadRengokuBinary reads and validates rengoku_data.bin from binPath.
-// Returns the raw bytes on success, or nil if the file is missing or invalid.
+// loadRengokuBinary reads, validates, and caches rengoku_data.bin from binPath.
+// The file is served to clients as-is (ECD-encrypted); decryption and parsing
+// are performed only for structural validation and startup logging.
+// Returns the raw encrypted bytes on success, or nil if the file is
+// missing or structurally invalid.
 func loadRengokuBinary(binPath string, logger *zap.Logger) []byte {
 	path := filepath.Join(binPath, "rengoku_data.bin")
 	data, err := os.ReadFile(path)
@@ -468,12 +468,35 @@ func loadRengokuBinary(binPath string, logger *zap.Logger) []byte {
 			zap.Int("bytes", len(data)))
 		return nil
 	}
-	if magic := binary.LittleEndian.Uint32(data[:4]); magic != ecdMagic {
+	if magic := binary.LittleEndian.Uint32(data[:4]); magic != decryption.ECDMagic {
 		logger.Warn("rengoku_data.bin has invalid ECD magic, ignoring",
-			zap.String("expected", "0x1a646365"),
+			zap.String("expected", fmt.Sprintf("0x%08x", decryption.ECDMagic)),
 			zap.String("got", fmt.Sprintf("0x%08x", magic)))
 		return nil
 	}
+
+	// Decrypt and decompress to validate the internal structure and emit a
+	// human-readable summary at startup. Failures here are non-fatal: the
+	// encrypted blob is still served to clients unchanged.
+	if plain, decErr := decryption.DecodeECD(data); decErr != nil {
+		logger.Warn("rengoku_data.bin ECD decryption failed — serving anyway",
+			zap.Error(decErr))
+	} else {
+		raw := decryption.UnpackSimple(plain)
+		if info, parseErr := parseRengokuBinary(raw); parseErr != nil {
+			logger.Warn("rengoku_data.bin structural validation failed",
+				zap.Error(parseErr))
+		} else {
+			logger.Info("Hunting Road config",
+				zap.Int("multi_floors", info.MultiFloors),
+				zap.Int("multi_spawn_tables", info.MultiSpawnTables),
+				zap.Int("solo_floors", info.SoloFloors),
+				zap.Int("solo_spawn_tables", info.SoloSpawnTables),
+				zap.Int("unique_monsters", info.UniqueMonsters),
+			)
+		}
+	}
+
 	logger.Info("Loaded rengoku_data.bin", zap.Int("bytes", len(data)))
 	return data
 }

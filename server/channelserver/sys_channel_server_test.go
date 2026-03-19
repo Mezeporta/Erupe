@@ -11,6 +11,7 @@ import (
 	"time"
 
 	cfg "erupe-ce/config"
+	"erupe-ce/common/decryption"
 	"erupe-ce/network/clientctx"
 	"erupe-ce/network/mhfpacket"
 
@@ -737,7 +738,7 @@ func TestLoadRengokuBinary_ValidECD(t *testing.T) {
 	dir := t.TempDir()
 	// Build a minimal valid ECD file: magic + some payload
 	data := make([]byte, 16)
-	binary.LittleEndian.PutUint32(data[:4], ecdMagic)
+	binary.LittleEndian.PutUint32(data[:4], decryption.ECDMagic)
 	if err := os.WriteFile(filepath.Join(dir, "rengoku_data.bin"), data, 0644); err != nil {
 		t.Fatal(err)
 	}
