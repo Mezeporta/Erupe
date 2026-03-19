@@ -59,7 +59,7 @@ From `technical-debt.md`: `model_character.go:88,101,113` has `TODO: fix bookshe
 
 **Fix:** Analyze save data from affected game versions to determine correct offsets. Apply fix and add regression test.
 
-**Status:** Pending.
+**Status:** **Done.** Correct offsets validated against real save data and applied for all affected versions (G1–G10, F4–F5, S6.0). See CHANGELOG [9.3.0].
 
 ---
 
