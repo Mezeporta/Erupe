@@ -126,9 +126,9 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			pkt.Filename = seasonConversion(s, pkt.Filename)
 		}
 
-		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
+		data, err := loadQuestBinary(s, pkt.Filename)
 		if err != nil {
-			s.logger.Error("Failed to open quest file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", pkt.Filename))
+			s.logger.Error("Failed to open quest file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", pkt.Filename), zap.Error(err))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
@@ -140,8 +140,32 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func questFileExists(s *Session, filename string) bool {
-	_, err := os.Stat(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", filename)))
+	base := filepath.Join(s.server.erupeConfig.BinPath, "quests", filename)
+	if _, err := os.Stat(base + ".bin"); err == nil {
+		return true
+	}
+	_, err := os.Stat(base + ".json")
 	return err == nil
+}
+
+// loadQuestBinary loads a quest file by name, trying .bin first then .json.
+// For .json files it compiles the JSON to the MHF binary wire format.
+func loadQuestBinary(s *Session, filename string) ([]byte, error) {
+	base := filepath.Join(s.server.erupeConfig.BinPath, "quests", filename)
+
+	if data, err := os.ReadFile(base + ".bin"); err == nil {
+		return data, nil
+	}
+
+	jsonData, err := os.ReadFile(base + ".json")
+	if err != nil {
+		return nil, err
+	}
+	compiled, err := CompileQuestJSON(jsonData)
+	if err != nil {
+		return nil, fmt.Errorf("compile quest JSON %s: %w", filename, err)
+	}
+	return compiled, nil
 }
 
 func seasonConversion(s *Session, questFile string) string {
