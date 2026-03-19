@@ -450,12 +450,15 @@ func (s *Server) Season() uint8 {
 	return uint8(((TimeAdjusted().Unix() / secsPerDay) + sid) % 3)
 }
 
-// loadRengokuBinary reads, validates, and caches rengoku_data.bin from binPath.
-// The file is served to clients as-is (ECD-encrypted); decryption and parsing
-// are performed only for structural validation and startup logging.
-// Returns the raw encrypted bytes on success, or nil if the file is
-// missing or structurally invalid.
+// loadRengokuBinary loads and caches Hunting Road config. It prefers
+// rengoku_data.json (human-readable, built on the fly) and falls back to the
+// pre-encrypted rengoku_data.bin. Returns ECD-encrypted bytes ready to serve,
+// or nil if no valid source is found.
 func loadRengokuBinary(binPath string, logger *zap.Logger) []byte {
+	if enc := loadRengokuFromJSON(binPath, logger); enc != nil {
+		return enc
+	}
+
 	path := filepath.Join(binPath, "rengoku_data.bin")
 	data, err := os.ReadFile(path)
 	if err != nil {
