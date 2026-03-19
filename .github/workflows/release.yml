@@ -51,7 +51,6 @@ jobs:
         cp ${{ matrix.binary }} staging/
         cp config.example.json staging/
         cp config.reference.json staging/
-        cp -r www/ staging/www/
         cp -r savedata/ staging/savedata/
         # Schema is now embedded in the binary via server/migrations/
         cd staging && zip -r ../erupe-${{ matrix.os_name }}.zip .
