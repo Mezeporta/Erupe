@@ -15,7 +15,7 @@ All empty handlers carry an inline comment — `// stub: unimplemented` for real
 
 ---
 
-## Unimplemented (70 handlers)
+## Unimplemented (68 handlers)
 
 Grouped by handler file / game subsystem.
 
@@ -77,8 +77,6 @@ Grouped by handler file / game subsystem.
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfGetExtraInfo` | Fetch supplemental item/character info |
-| `handleMsgMhfGetCogInfo` | Fetch Cog (partner Felyne) information |
 | `handleMsgMhfStampcardPrize` | Claim a stamp card prize |
 
 ### Misc (`handlers_misc.go`)

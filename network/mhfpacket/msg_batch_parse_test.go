@@ -1594,7 +1594,6 @@ func TestBatchParseNotImplemented(t *testing.T) {
 		&MsgSysDispObject{}, &MsgSysHideObject{},
 		&MsgMhfServerCommand{}, &MsgMhfSetLoginwindow{}, &MsgMhfShutClient{},
 		&MsgMhfUpdateGuildcard{},
-		&MsgMhfGetCogInfo{},
 		&MsgCaExchangeItem{},
 	}
 

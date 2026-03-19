@@ -290,8 +290,6 @@ func TestEmptyHandlers_NoDb(t *testing.T) {
 		{"handleMsgSysEnumuser", handleMsgSysEnumuser},
 		{"handleMsgSysInfokyserver", handleMsgSysInfokyserver},
 		{"handleMsgMhfGetCaUniqueID", handleMsgMhfGetCaUniqueID},
-		{"handleMsgMhfGetExtraInfo", handleMsgMhfGetExtraInfo},
-		{"handleMsgMhfGetCogInfo", handleMsgMhfGetCogInfo},
 		{"handleMsgMhfStampcardPrize", handleMsgMhfStampcardPrize},
 		{"handleMsgMhfKickExportForce", handleMsgMhfKickExportForce},
 		{"handleMsgSysSetStatus", handleMsgSysSetStatus},

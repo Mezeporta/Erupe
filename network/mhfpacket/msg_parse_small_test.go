@@ -25,7 +25,6 @@ func TestParseSmallNotImplemented(t *testing.T) {
 		{"MsgMhfGetCaUniqueID", &MsgMhfGetCaUniqueID{}},
 		{"MsgMhfGetDailyMissionMaster", &MsgMhfGetDailyMissionMaster{}},
 		{"MsgMhfGetDailyMissionPersonal", &MsgMhfGetDailyMissionPersonal{}},
-		{"MsgMhfGetExtraInfo", &MsgMhfGetExtraInfo{}},
 		{"MsgMhfGetRestrictionEvent", &MsgMhfGetRestrictionEvent{}},
 		{"MsgMhfKickExportForce", &MsgMhfKickExportForce{}},
 		{"MsgMhfPaymentAchievement", &MsgMhfPaymentAchievement{}},
@@ -192,6 +191,38 @@ func TestParseSmallEnumerateHouse(t *testing.T) {
 		}
 		if pkt.Name != "Test" {
 			t.Errorf("Name = %q, want %q", pkt.Name, "Test")
+		}
+	})
+}
+
+// TestParseSmallGetExtraInfoAndCogInfo tests that MsgMhfGetExtraInfo and
+// MsgMhfGetCogInfo correctly parse their AckHandle field.
+func TestParseSmallGetExtraInfoAndCogInfo(t *testing.T) {
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
+
+	t.Run("GetExtraInfo", func(t *testing.T) {
+		bf := byteframe.NewByteFrame()
+		bf.WriteUint32(0xDEADBEEF)
+		_, _ = bf.Seek(0, io.SeekStart)
+		pkt := &MsgMhfGetExtraInfo{}
+		if err := pkt.Parse(bf, ctx); err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if pkt.AckHandle != 0xDEADBEEF {
+			t.Errorf("AckHandle = 0x%X, want 0xDEADBEEF", pkt.AckHandle)
+		}
+	})
+
+	t.Run("GetCogInfo", func(t *testing.T) {
+		bf := byteframe.NewByteFrame()
+		bf.WriteUint32(0xCAFEBABE)
+		_, _ = bf.Seek(0, io.SeekStart)
+		pkt := &MsgMhfGetCogInfo{}
+		if err := pkt.Parse(bf, ctx); err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if pkt.AckHandle != 0xCAFEBABE {
+			t.Errorf("AckHandle = 0x%X, want 0xCAFEBABE", pkt.AckHandle)
 		}
 	})
 }

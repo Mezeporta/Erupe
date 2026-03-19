@@ -495,6 +495,8 @@ func TestAckHandlePacketsParse(t *testing.T) {
 		{"MsgMhfGetUdSchedule", network.MSG_MHF_GET_UD_SCHEDULE},
 		{"MsgMhfGetUdInfo", network.MSG_MHF_GET_UD_INFO},
 		{"MsgMhfGetKijuInfo", network.MSG_MHF_GET_KIJU_INFO},
+		{"MsgMhfGetExtraInfo", network.MSG_MHF_GET_EXTRA_INFO},
+		{"MsgMhfGetCogInfo", network.MSG_MHF_GET_COG_INFO},
 	}
 
 	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}

@@ -494,13 +494,8 @@ func TestHandleMsgMhfGetExtraInfo(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgMhfGetExtraInfo panicked: %v", r)
-		}
-	}()
-
-	handleMsgMhfGetExtraInfo(session, nil)
+	pkt := &mhfpacket.MsgMhfGetExtraInfo{AckHandle: 1}
+	handleMsgMhfGetExtraInfo(session, pkt)
 }
 
 func TestHandleMsgMhfTransferItem(t *testing.T) {

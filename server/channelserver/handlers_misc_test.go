@@ -336,13 +336,8 @@ func TestHandleMsgMhfGetCogInfo(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgMhfGetCogInfo panicked: %v", r)
-		}
-	}()
-
-	handleMsgMhfGetCogInfo(session, nil)
+	pkt := &mhfpacket.MsgMhfGetCogInfo{AckHandle: 1}
+	handleMsgMhfGetCogInfo(session, pkt)
 }
 
 // Additional handler tests for coverage
@@ -1032,7 +1027,7 @@ func TestEmptyHandlers_MiscFiles_Misc(t *testing.T) {
 		name string
 		fn   func()
 	}{
-		{"handleMsgMhfGetCogInfo", func() { handleMsgMhfGetCogInfo(session, nil) }},
+
 		{"handleMsgMhfUseUdShopCoin", func() { handleMsgMhfUseUdShopCoin(session, nil) }},
 		{"handleMsgMhfGetDailyMissionMaster", func() { handleMsgMhfGetDailyMissionMaster(session, nil) }},
 		{"handleMsgMhfGetDailyMissionPersonal", func() { handleMsgMhfGetDailyMissionPersonal(session, nil) }},

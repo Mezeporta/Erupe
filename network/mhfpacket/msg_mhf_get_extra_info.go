@@ -9,7 +9,9 @@ import (
 )
 
 // MsgMhfGetExtraInfo represents the MSG_MHF_GET_EXTRA_INFO
-type MsgMhfGetExtraInfo struct{}
+type MsgMhfGetExtraInfo struct {
+	AckHandle uint32
+}
 
 // Opcode returns the ID associated with this packet type.
 func (m *MsgMhfGetExtraInfo) Opcode() network.PacketID {
@@ -18,7 +20,8 @@ func (m *MsgMhfGetExtraInfo) Opcode() network.PacketID {
 
 // Parse parses the packet from binary
 func (m *MsgMhfGetExtraInfo) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	return errors.New("NOT IMPLEMENTED")
+	m.AckHandle = bf.ReadUint32()
+	return nil
 }
 
 // Build builds a binary packet from the current data.
