@@ -156,13 +156,14 @@ func TestBuildRengokuBinary_ValidationErrors(t *testing.T) {
 	}
 }
 
-// TestLoadRengokuBinary_JSONPreferredOverBin writes both a JSON file and a
-// .bin file and verifies that the JSON source is used (different monster IDs).
-func TestLoadRengokuBinary_JSONPreferredOverBin(t *testing.T) {
+// TestLoadRengokuBinary_BinPreferredOverJSON writes both a JSON file and a
+// .bin file and verifies that the .bin source is used (consistent with the
+// quest and scenario loaders).
+func TestLoadRengokuBinary_BinPreferredOverJSON(t *testing.T) {
 	dir := t.TempDir()
 	logger, _ := zap.NewDevelopment()
 
-	// Write a valid rengoku_data.json
+	// Write a valid rengoku_data.json (would produce a much larger binary).
 	cfg := sampleRengokuConfig()
 	jsonBytes, err := json.Marshal(cfg)
 	if err != nil {
@@ -172,8 +173,7 @@ func TestLoadRengokuBinary_JSONPreferredOverBin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Also write a minimal (but incompletely valid) rengoku_data.bin that
-	// would be returned if JSON loading was skipped.
+	// Write a minimal valid-magic .bin — should be preferred over JSON.
 	binData := make([]byte, 16) // 16-byte ECD header, zero payload
 	binData[0], binData[1], binData[2], binData[3] = 0x65, 0x63, 0x64, 0x1A
 	if err := os.WriteFile(filepath.Join(dir, "rengoku_data.bin"), binData, 0644); err != nil {
@@ -182,36 +182,35 @@ func TestLoadRengokuBinary_JSONPreferredOverBin(t *testing.T) {
 
 	result := loadRengokuBinary(dir, logger)
 	if result == nil {
-		t.Fatal("expected non-nil result from JSON loading")
+		t.Fatal("expected non-nil result")
 	}
-	// The JSON-built binary is longer than the 16-byte stub .bin.
-	if len(result) <= 16 {
-		t.Errorf("result is %d bytes — looks like .bin was used instead of JSON", len(result))
+	// The JSON-built binary would be much larger; 16 bytes confirms .bin was used.
+	if len(result) != 16 {
+		t.Errorf("result is %d bytes — looks like JSON was used instead of .bin", len(result))
 	}
 }
 
-// TestLoadRengokuBinary_JSONFallsThroughOnBadJSON verifies that a malformed
-// JSON file causes loadRengokuBinary to fall back to the .bin file.
-func TestLoadRengokuBinary_JSONFallsThroughOnBadJSON(t *testing.T) {
+// TestLoadRengokuBinary_JSONFallbackWhenNoBin verifies that when no .bin file
+// is present, loadRengokuBinary falls back to rengoku_data.json.
+func TestLoadRengokuBinary_JSONFallbackWhenNoBin(t *testing.T) {
 	dir := t.TempDir()
 	logger, _ := zap.NewDevelopment()
 
-	if err := os.WriteFile(filepath.Join(dir, "rengoku_data.json"), []byte("{invalid json"), 0644); err != nil {
-		t.Fatal(err)
+	cfg := sampleRengokuConfig()
+	jsonBytes, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
 	}
-
-	// Write a valid minimal .bin
-	binData := make([]byte, 16)
-	binData[0], binData[1], binData[2], binData[3] = 0x65, 0x63, 0x64, 0x1A
-	if err := os.WriteFile(filepath.Join(dir, "rengoku_data.bin"), binData, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "rengoku_data.json"), jsonBytes, 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	result := loadRengokuBinary(dir, logger)
 	if result == nil {
-		t.Fatal("expected fallback to .bin, got nil")
+		t.Fatal("expected fallback to JSON, got nil")
 	}
-	if len(result) != 16 {
-		t.Errorf("expected 16-byte .bin result, got %d bytes", len(result))
+	// JSON-built result is much larger than 16 bytes.
+	if len(result) <= 16 {
+		t.Errorf("result is %d bytes — JSON fallback likely did not run", len(result))
 	}
 }

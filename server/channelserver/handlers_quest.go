@@ -251,12 +251,22 @@ func loadQuestFile(s *Session, questId int) []byte {
 		return cached
 	}
 
-	file, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%05dd0.bin", questId)))
-	if err != nil {
+	base := filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%05dd0", questId))
+	var decrypted []byte
+	if data, err := os.ReadFile(base + ".bin"); err == nil {
+		decrypted = decryption.UnpackSimple(data)
+	} else if jsonData, err := os.ReadFile(base + ".json"); err == nil {
+		compiled, err := CompileQuestJSON(jsonData)
+		if err != nil {
+			s.logger.Error("loadQuestFile: failed to compile quest JSON",
+				zap.Int("questId", questId), zap.Error(err))
+			return nil
+		}
+		decrypted = compiled
+	} else {
 		return nil
 	}
 
-	decrypted := decryption.UnpackSimple(file)
 	if s.server.erupeConfig.RealClientMode <= cfg.Z1 && s.server.erupeConfig.DebugOptions.AutoQuestBackport {
 		decrypted = BackportQuest(decrypted, s.server.erupeConfig.RealClientMode)
 	}
