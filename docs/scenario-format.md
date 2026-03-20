@@ -54,6 +54,8 @@ Offset         Field
 
 The 8-byte header is always present. Chunks with size 0 are absent. Chunk2 is only read if at least 4 bytes remain after chunk0+chunk1.
 
+**Client-side size limits (confirmed from `FUN_11525c60` in `mhfo-hd.dll`):** each chunk is silently dropped (treated as size 0) if its size exceeds `0x8000` bytes (32 768). The client allocates three fixed 0x8000-byte buffers — one per chunk — so the server must not serve chunks larger than that limit.
+
 ## Chunk Formats
 
 ### Sub-header Format (flags 0x01, 0x02)
@@ -91,34 +93,47 @@ The metadata block is `MetadataSize` bytes long. Known sizes from real files:
 
 **Chunk0 metadata (20 bytes decoded from 145,000+ real scenario files):**
 
+Client parser (`FUN_1080d310` in `mhfo-hd.dll`) extracts only m[0]–m[6]; fields m[7]–m[9] are not read.
+
 | u16 index | Field | Notes |
 |-----------|-------|-------|
 | m[0] | CategoryID | Matches the first field of the filename (0=basic, 1=GR, 3=exchange, 6=pallone, 7=diva) |
 | m[1] | MainID | Matches the `S` field of the filename |
-| m[2–4] | 0x0000 | Reserved / always zero |
-| m[5] | str0_len | Byte length of string 0 in Shift-JIS including the null terminator; equals the byte offset from the start of the strings section to string 1 |
-| m[6] | SceneRef | `MainID` when CategoryID=0; `0xFFFF` when CategoryID≠0 — purpose unclear (possibly a chain or group reference) |
-| m[7] | 0x0000 | Reserved |
-| m[8] | 0x0005 | Constant; purpose unknown |
-| m[9] | varies | Purpose not yet confirmed; correlates loosely with total chunk size |
+| m[2] | 0x0000 | Always zero; used as offset to string 0 (i.e., strings section start = str0 start) |
+| m[3–4] | 0x0000 | Reserved / always zero; not used by client |
+| m[5] | str0_len | Byte length of string 0 in Shift-JIS including the null terminator; used as offset to string 1 |
+| m[6] | SceneRef | `MainID` when CategoryID=0; `0xFFFF` (−1 as s16) when CategoryID≠0 — stored in client struct as signed short; purpose unclear |
+| m[7] | 0x0000 | Not read by client parser |
+| m[8] | 0x0005 | Not read by client parser; constant whose purpose is unknown |
+| m[9] | varies | Not read by client parser |
 
 **Chunk1 metadata (44 bytes decoded from multi-dialog scenario files):**
 
-The 22 u16 fields in chunk1 metadata store a richer set of string offsets. When the chunk contains N dialog strings in the strings section, the cumulative byte offsets are stored non-sequentially:
+The 22 u16 fields encode string offsets and dialog script positions. Client parser (`FUN_1080d3b0`) interprets m[8]–m[17] as **signed** offsets: if the value is negative (as s16), the absolute position is `(~value) + dialog_base` where `dialog_base` is the start of the post-0xFF binary data; if non-negative, the position is `value + strings_base`.
 
 | u16 index | Field | Notes |
 |-----------|-------|-------|
-| m[0–1] | IDs | Carry contextual IDs; m[0] is typically 0, m[1] varies |
-| m[2–8] | 0 or varies | Partially unknown |
+| m[0] | ID byte 0 | Low byte only is read; typically 0 |
+| m[1] | ID byte 1 | High byte only is read; varies |
+| m[1] (u16) | TotalSize copy | Bytes 2–3 read as u16 LE; mirrors the sub-header TotalSize |
+| m[2] | EntryCount (s16) | Read as signed short; number of strings or related count |
+| m[3] | u16 at offset 6 | Read as u16 |
+| m[4–5] | u32 at offset 8 | Read as single u32 |
+| m[6] | u16 at offset 12 | Read as u16 |
+| m[7] | u16 at offset 14 | Read as u16 |
+| m[8] | signed offset | String/dialog pointer (see signed offset formula above) |
 | m[9] | cumOff[2] | Byte offset to string 2 from strings section start (= str0_len + str1_len) |
 | m[10] | cumOff[1] | Byte offset to string 1 = str0_len |
-| m[11–13] | Dialog positions | Offsets into the full C1 data section (strings + dialog script bytes beyond the 0xFF sentinel) |
+| m[11] | dialog offset | Offset into the post-0xFF dialog data section |
+| m[12] | dialog offset | Offset into the post-0xFF dialog data section |
+| m[13] | dialog offset | Offset into the post-0xFF dialog data section |
 | m[14] | cumOff[3] | Byte offset to string 3 |
 | m[15] | cumOff[4] | Total string bytes without the 0xFF sentinel |
-| m[16–17] | Dialog positions | Further offsets into the C1 data section |
-| m[18–19] | flags/type | Purpose unknown |
-| m[20] | 0x0005 | Constant (same as chunk0 m[8]) |
-| m[21] | DataSize − 4 | Approximately equal to `chunk1_size − 8 − MetadataSize + 4`; off-by-four not yet explained |
+| m[16] | dialog offset | Further offset into the post-0xFF dialog data section |
+| m[17] | signed offset | Final offset; if negative, `(~m[17]) + dialog_base`; byte at m[18]×2 is also read |
+| m[18–19] | byte fields | Individual bytes read (not as u16 pairs) |
+| m[20] | 0x0005 | Constant (same as chunk0 m[8]); not confirmed whether client reads this |
+| m[21] | DataSize − 4 | Approximately equal to `chunk1_size − 8 − MetadataSize + 4` |
 
 The metadata is preserved verbatim in JSON as a base64 blob so that clients receive correct values for all fields including those not yet fully understood.
 
