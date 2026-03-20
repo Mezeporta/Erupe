@@ -19,8 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed backup recovery panic: `recoverFromBackups` now rejects decompressed backup data smaller than the minimum save layout size, preventing a slice-bounds panic when nullcomp passes through garbage bytes as "already decompressed" data ([#182](https://github.com/Mezeporta/Erupe/pull/182)).
-- Fixed `rengoku_data.json` taking priority over `rengoku_data.bin` — all three loaders (quests, scenarios, Hunting Road) now consistently prefer `.bin` first with `.json` as fallback.
-- Fixed JSON-authored quests not appearing on the event quest board — `loadQuestFile` now falls back to `.json` when no `.bin` is present, matching the behaviour of the file-serve path.
 
 ## [9.3.0] - 2026-03-19
 
