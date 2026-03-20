@@ -313,7 +313,34 @@ func makeEventQuest(s *Session, eq EventQuest) ([]byte, error) {
 	}
 	bf.WriteUint8(eq.QuestType)
 	if eq.QuestType == QuestTypeSpecialTool {
-		bf.WriteBool(false)
+		var stamps, required int
+		var deadline time.Time
+		err := s.server.db.QueryRow(`SELECT COUNT(*) FROM campaign_state WHERE campaign_id = (
+			SELECT campaign_id
+			FROM campaign_rewards
+			WHERE item_type = 9
+			AND item_id = $1
+			LIMIT 1
+		) AND character_id = $2`, eq.QuestID, s.charID).Scan(&stamps)
+		if err != nil {
+			bf.WriteBool(false)
+		} else {
+			err = s.server.db.QueryRow(`SELECT stamps, end_time
+			FROM campaigns
+			WHERE id = (
+				SELECT campaign_id
+				FROM campaign_rewards
+				WHERE item_type = 9
+				AND item_id = $1
+				LIMIT 1
+			)`, eq.QuestID).Scan(&required, &deadline)
+			required = campaignRequiredStamps(required)
+			if err == nil && stamps >= required && deadline.After(time.Now()) {
+				bf.WriteBool(true)
+			} else {
+				bf.WriteBool(false)
+			}
+		}
 	} else {
 		bf.WriteBool(true)
 	}
