@@ -69,6 +69,18 @@ These files contain quest definitions and scenario data that the server sends to
 
 **Without these files, quests will not load and the client will crash.**
 
+### JSON Format Support
+
+As an alternative to opaque `.bin` files, Erupe supports human-readable `.json` files for quests, scenarios, and Hunting Road config. The server always tries `.bin` first and falls back to `.json` automatically — existing binary files work unchanged.
+
+| File type | Location | Documentation |
+|-----------|----------|---------------|
+| Quest | `bin/quests/<name>.json` | Erupe wiki |
+| Scenario | `bin/scenarios/<name>.json` | `docs/scenario-format.md` |
+| Hunting Road | `bin/rengoku_data.json` | Erupe wiki |
+
+JSON quests and scenarios use UTF-8 text (converted to Shift-JIS on the wire), making them diff-friendly and editable without binary tools.
+
 ## Client Setup
 
 1. Obtain a Monster Hunter Frontier client (version G10 or later recommended)
