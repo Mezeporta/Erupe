@@ -515,8 +515,8 @@ func TestBuildParseStateCampaign(t *testing.T) {
 			if parsed.CampaignID != tt.campaignID {
 				t.Errorf("CampaignID = %d, want %d", parsed.CampaignID, tt.campaignID)
 			}
-			if parsed.Unk1 != tt.unk1 {
-				t.Errorf("Unk1 = %d, want %d", parsed.Unk1, tt.unk1)
+			if parsed.NullPadding != tt.unk1 {
+				t.Errorf("NullPadding = %d, want %d", parsed.NullPadding, tt.unk1)
 			}
 		})
 	}
@@ -526,15 +526,14 @@ func TestBuildParseStateCampaign(t *testing.T) {
 // Build is NOT IMPLEMENTED, so we manually write the binary representation.
 func TestBuildParseApplyCampaign(t *testing.T) {
 	tests := []struct {
-		name      string
-		ackHandle uint32
-		unk0      uint32
-		unk1      uint16
-		unk2      []byte
+		name       string
+		ackHandle  uint32
+		campaignID uint32
+		code       string
 	}{
-		{"typical", 0x55667788, 5, 10, make([]byte, 16)},
-		{"zero", 0, 0, 0, make([]byte, 16)},
-		{"max", 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFF, make([]byte, 16)},
+		{"typical", 0x55667788, 5, "TESTCODE"},
+		{"zero", 0, 0, ""},
+		{"max", 0xFFFFFFFF, 0xFFFFFFFF, "MAXCODE"},
 	}
 
 	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
@@ -542,9 +541,11 @@ func TestBuildParseApplyCampaign(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint32(tt.ackHandle)
-			bf.WriteUint32(tt.unk0)
-			bf.WriteUint16(tt.unk1)
-			bf.WriteBytes(tt.unk2)
+			bf.WriteUint32(tt.campaignID)
+			bf.WriteUint16(0) // zeroed
+			codeBytes := make([]byte, 16)
+			copy(codeBytes, []byte(tt.code))
+			bf.WriteBytes(codeBytes)
 
 			_, _ = bf.Seek(0, io.SeekStart)
 			parsed := &MsgMhfApplyCampaign{}
@@ -555,14 +556,11 @@ func TestBuildParseApplyCampaign(t *testing.T) {
 			if parsed.AckHandle != tt.ackHandle {
 				t.Errorf("AckHandle = 0x%X, want 0x%X", parsed.AckHandle, tt.ackHandle)
 			}
-			if parsed.Unk0 != tt.unk0 {
-				t.Errorf("Unk0 = %d, want %d", parsed.Unk0, tt.unk0)
+			if parsed.CampaignID != tt.campaignID {
+				t.Errorf("CampaignID = %d, want %d", parsed.CampaignID, tt.campaignID)
 			}
-			if parsed.Unk1 != tt.unk1 {
-				t.Errorf("Unk1 = %d, want %d", parsed.Unk1, tt.unk1)
-			}
-			if len(parsed.Unk2) != len(tt.unk2) {
-				t.Errorf("Unk2 len = %d, want %d", len(parsed.Unk2), len(tt.unk2))
+			if parsed.Code != tt.code {
+				t.Errorf("Code = %q, want %q", parsed.Code, tt.code)
 			}
 		})
 	}

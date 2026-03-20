@@ -420,7 +420,7 @@ func TestBatchParseMultiField(t *testing.T) {
 		if err := pkt.Parse(bf, ctx); err != nil {
 			t.Fatal(err)
 		}
-		if pkt.Unk0 != 2 || pkt.Unk1 != 3 || pkt.Unk2 != 4 {
+		if pkt.QuestID != 2 || pkt.ItemType != 3 || pkt.Quantity != 4 {
 			t.Error("field mismatch")
 		}
 	})
