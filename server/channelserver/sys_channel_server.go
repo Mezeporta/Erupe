@@ -450,56 +450,52 @@ func (s *Server) Season() uint8 {
 	return uint8(((TimeAdjusted().Unix() / secsPerDay) + sid) % 3)
 }
 
-// loadRengokuBinary loads and caches Hunting Road config. It prefers
-// rengoku_data.json (human-readable, built on the fly) and falls back to the
-// pre-encrypted rengoku_data.bin. Returns ECD-encrypted bytes ready to serve,
-// or nil if no valid source is found.
+// loadRengokuBinary loads and caches Hunting Road config. It tries
+// rengoku_data.bin first and falls back to rengoku_data.json (built on the
+// fly). Returns ECD-encrypted bytes ready to serve, or nil if no valid source
+// is found.
 func loadRengokuBinary(binPath string, logger *zap.Logger) []byte {
+	path := filepath.Join(binPath, "rengoku_data.bin")
+	data, err := os.ReadFile(path)
+	if err == nil {
+		if len(data) < 4 {
+			logger.Warn("rengoku_data.bin too small, ignoring",
+				zap.Int("bytes", len(data)))
+		} else if magic := binary.LittleEndian.Uint32(data[:4]); magic != decryption.ECDMagic {
+			logger.Warn("rengoku_data.bin has invalid ECD magic, ignoring",
+				zap.String("expected", fmt.Sprintf("0x%08x", decryption.ECDMagic)),
+				zap.String("got", fmt.Sprintf("0x%08x", magic)))
+		} else {
+			// Decrypt and decompress to validate the internal structure and emit a
+			// human-readable summary at startup. Failures here are non-fatal: the
+			// encrypted blob is still served to clients unchanged.
+			if plain, decErr := decryption.DecodeECD(data); decErr != nil {
+				logger.Warn("rengoku_data.bin ECD decryption failed — serving anyway",
+					zap.Error(decErr))
+			} else {
+				raw := decryption.UnpackSimple(plain)
+				if info, parseErr := parseRengokuBinary(raw); parseErr != nil {
+					logger.Warn("rengoku_data.bin structural validation failed",
+						zap.Error(parseErr))
+				} else {
+					logger.Info("Hunting Road config",
+						zap.Int("multi_floors", info.MultiFloors),
+						zap.Int("multi_spawn_tables", info.MultiSpawnTables),
+						zap.Int("solo_floors", info.SoloFloors),
+						zap.Int("solo_spawn_tables", info.SoloSpawnTables),
+						zap.Int("unique_monsters", info.UniqueMonsters),
+					)
+				}
+			}
+			logger.Info("Loaded rengoku_data.bin", zap.Int("bytes", len(data)))
+			return data
+		}
+	}
+
 	if enc := loadRengokuFromJSON(binPath, logger); enc != nil {
 		return enc
 	}
 
-	path := filepath.Join(binPath, "rengoku_data.bin")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		logger.Warn("rengoku_data.bin not found, Hunting Road will be unavailable",
-			zap.String("path", path), zap.Error(err))
-		return nil
-	}
-	if len(data) < 4 {
-		logger.Warn("rengoku_data.bin too small, ignoring",
-			zap.Int("bytes", len(data)))
-		return nil
-	}
-	if magic := binary.LittleEndian.Uint32(data[:4]); magic != decryption.ECDMagic {
-		logger.Warn("rengoku_data.bin has invalid ECD magic, ignoring",
-			zap.String("expected", fmt.Sprintf("0x%08x", decryption.ECDMagic)),
-			zap.String("got", fmt.Sprintf("0x%08x", magic)))
-		return nil
-	}
-
-	// Decrypt and decompress to validate the internal structure and emit a
-	// human-readable summary at startup. Failures here are non-fatal: the
-	// encrypted blob is still served to clients unchanged.
-	if plain, decErr := decryption.DecodeECD(data); decErr != nil {
-		logger.Warn("rengoku_data.bin ECD decryption failed — serving anyway",
-			zap.Error(decErr))
-	} else {
-		raw := decryption.UnpackSimple(plain)
-		if info, parseErr := parseRengokuBinary(raw); parseErr != nil {
-			logger.Warn("rengoku_data.bin structural validation failed",
-				zap.Error(parseErr))
-		} else {
-			logger.Info("Hunting Road config",
-				zap.Int("multi_floors", info.MultiFloors),
-				zap.Int("multi_spawn_tables", info.MultiSpawnTables),
-				zap.Int("solo_floors", info.SoloFloors),
-				zap.Int("solo_spawn_tables", info.SoloSpawnTables),
-				zap.Int("unique_monsters", info.UniqueMonsters),
-			)
-		}
-	}
-
-	logger.Info("Loaded rengoku_data.bin", zap.Int("bytes", len(data)))
-	return data
+	logger.Warn("No Hunting Road config found (rengoku_data.bin or rengoku_data.json), Hunting Road will be unavailable")
+	return nil
 }
