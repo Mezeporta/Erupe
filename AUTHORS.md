@@ -156,6 +156,44 @@ This version focused on making the server accessible to the broader community an
 
 This version transformed Erupe from a proof-of-concept into a feature-complete, stable server emulator with extensive game system implementations and ongoing maintenance.
 
+### Houmgaor / Mogapédia (2025-present)
+
+<https://github.com/Mezeporta/Erupe> (continued from ZeruLight/Mezeporta)
+
+**Shift-left and production-readiness phase** (2025 - Present):
+
+Houmgaor, maintainer of the French MH community hub Mogapédia, took over active development with a focus on engineering quality and production reliability — moving quality gates earlier in the development cycle and hardening the server for real-world deployments.
+
+**Engineering infrastructure:**
+
+* Mandatory race-detector CI (`go test -race`) and coverage floor (≥50%)
+* `golangci-lint` v2 standard preset enforced on every PR
+* Integration test infrastructure with real PostgreSQL test database (docker-compose.test.yml)
+* Mock repository pattern enabling handler unit tests without a database
+* Conventional commits enforced; structured CHANGELOG
+
+**Production-readiness:**
+
+* Savedata integrity system: SHA-256 checksums on every save, rotating 3-slot backups (30-minute interval), transparent recovery from corrupt primary data
+* Savedata corruption defense: bounded decompression (OOM prevention), delta-patch bounds checking, size limits on compressed/decompressed payloads
+* Interactive setup wizard (6-step web UI) for first-time configuration
+* Live dashboard with auto-refreshing server stats
+* Protocol bot (`cmd/protbot/`) — headless MHF client for integration testing the full sign → entrance → channel flow
+
+**New game systems:**
+
+* Event Tent (campaign) system: code redemption, stamp-based progression, reward claiming, quest gating for special event quests (community contribution by stratick, reviewed and merged)
+* JSON quest files: human-readable `.json` alternative to opaque `.bin` quest format, with full binary round-trip; covers all 12 objective types, monster spawns, reward tables, and all other binary sections
+* JSON Hunting Road config (`rengoku_data.json`): human-readable alternative to `rengoku_data.bin`, assembled and ECD-encrypted at startup
+* Achievement rank-up notifications with per-character level tracking
+* Diva Defense per-character point accumulation
+
+**Technical Details:**
+
+* Fork base: Mezeporta/Erupe (January 2025)
+* Active development: 2025 - present
+* Community: French-language Monster Hunter community (Mogapédia)
+
 ### sekaiwish Fork (2024)
 
 <https://github.com/sekaiwish/Erupe>
