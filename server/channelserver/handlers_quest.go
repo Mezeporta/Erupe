@@ -106,10 +106,9 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			)
 		}
 		filename := fmt.Sprintf("%d_0_0_0_S%d_T%d_C%d", pkt.ScenarioIdentifer.CategoryID, pkt.ScenarioIdentifer.MainID, pkt.ScenarioIdentifer.Flags, pkt.ScenarioIdentifer.ChapterID)
-		// Read the scenario file.
-		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("scenarios/%s.bin", filename)))
+		data, err := loadScenarioBinary(s, filename)
 		if err != nil {
-			s.logger.Error("Failed to open scenario file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", filename))
+			s.logger.Error("Failed to open scenario file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", filename), zap.Error(err))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
@@ -164,6 +163,26 @@ func loadQuestBinary(s *Session, filename string) ([]byte, error) {
 	compiled, err := CompileQuestJSON(jsonData)
 	if err != nil {
 		return nil, fmt.Errorf("compile quest JSON %s: %w", filename, err)
+	}
+	return compiled, nil
+}
+
+// loadScenarioBinary loads a scenario file by name, trying .bin first then .json.
+// For .json files it compiles the JSON to the MHF binary wire format.
+func loadScenarioBinary(s *Session, filename string) ([]byte, error) {
+	base := filepath.Join(s.server.erupeConfig.BinPath, "scenarios", filename)
+
+	if data, err := os.ReadFile(base + ".bin"); err == nil {
+		return data, nil
+	}
+
+	jsonData, err := os.ReadFile(base + ".json")
+	if err != nil {
+		return nil, err
+	}
+	compiled, err := CompileScenarioJSON(jsonData)
+	if err != nil {
+		return nil, fmt.Errorf("compile scenario JSON %s: %w", filename, err)
 	}
 	return compiled, nil
 }
