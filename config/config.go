@@ -370,7 +370,7 @@ func LoadConfig() (*Config, error) {
 }
 
 func preventClose(text string) {
-	if ErupeConfig.DisableSoftCrash {
+	if ErupeConfig != nil && ErupeConfig.DisableSoftCrash {
 		os.Exit(0)
 	}
 	fmt.Println("\nFailed to start Erupe:\n" + text)
