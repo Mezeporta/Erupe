@@ -11,6 +11,18 @@ import (
 	"golang.org/x/text/transform"
 )
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+// jkrMagic is the little-endian magic number at the start of a JKR-compressed
+// blob: bytes 0x4A 0x4B 0x52 0x1A ('J','K','R',0x1A).
+const jkrMagic uint32 = 0x1A524B4A
+
+// scenarioChunkSizeLimit is the maximum byte length the client accepts for any
+// single chunk (chunk0, chunk1, or chunk2). Confirmed from the client's response
+// handler (FUN_11525c60 in mhfo-hd.dll): chunks larger than this are silently
+// discarded, so the server must never serve a chunk exceeding this limit.
+const scenarioChunkSizeLimit = 0x8000
+
 // ── JSON schema types ────────────────────────────────────────────────────────
 
 // ScenarioJSON is the open, human-editable representation of a scenario .bin file.
@@ -24,6 +36,8 @@ import (
 //	       [chunk1_data]
 //	       u32 BE  chunk2_size  (only present when non-zero)
 //	       [chunk2_data]
+//
+// Each chunk must not exceed scenarioChunkSizeLimit bytes.
 type ScenarioJSON struct {
 	// Chunk0 holds quest name/description data (sub-header or inline format).
 	Chunk0 *ScenarioChunk0JSON `json:"chunk0,omitempty"`
@@ -51,26 +65,45 @@ type ScenarioChunk1JSON struct {
 //
 // Sub-header binary layout (8 bytes, little-endian where applicable):
 //
-//	@0: u8   Type     (usually 0x01)
-//	@1: u8   0x00     (pad; distinguishes this format from inline)
-//	@2: u16  Size     (total chunk size including this header)
+//	@0: u8   Type     (usually 0x01; the client treats this as a compound-container tag)
+//	@1: u8   0x00     (pad; must be 0x00 — used by the server to detect this format vs inline)
+//	@2: u16  Size     (total chunk size including this header, LE)
 //	@4: u8   Count    (number of string entries)
-//	@5: u8   Unknown1
-//	@6: u8   MetaSize (total bytes of metadata block)
-//	@7: u8   Unknown2
-//	[MetaSize bytes: opaque metadata (string IDs, offsets, flags — partially unknown)]
+//	@5: u8   Unknown1 (purpose unconfirmed; preserved round-trip)
+//	@6: u8   MetaSize (byte length of the metadata block; 0x14 for chunk0, 0x2C for chunk1)
+//	@7: u8   Unknown2 (purpose unconfirmed; preserved round-trip)
+//	[MetaSize bytes: opaque metadata — see docs/scenario-format.md for field breakdown]
 //	[null-terminated Shift-JIS strings, one per entry]
 //	[0xFF end-of-strings sentinel]
+//
+// Chunk0 metadata (MetaSize=0x14, 10×u16 LE):
+//
+//	m[0]=CategoryID  m[1]=MainID  m[2]=0  m[3]=0  m[4]=0
+//	m[5]=str0_len    m[6]=SceneRef (MainID when cat=0, 0xFFFF otherwise)
+//	m[7..9]: not read by the client parser (FUN_1080d310 in mhfo-hd.dll)
+//
+// Chunk1 metadata (MetaSize=0x2C, 22×u16 LE):
+//
+//	m[8..17] are interpreted as signed offsets by the client (FUN_1080d3b0):
+//	  negative → (~value) + dialog_base  (into post-0xFF dialog script)
+//	  non-negative → value + strings_base (into strings section)
+//	m[18..19] are read as individual bytes, not u16 pairs.
 type ScenarioSubheaderJSON struct {
 	// Type is the chunk type byte (almost always 0x01).
-	Type     uint8 `json:"type"`
+	Type uint8 `json:"type"`
+	// Unknown1 is the byte at sub-header offset 5. Purpose not confirmed;
+	// always 0x00 in observed files.
 	Unknown1 uint8 `json:"unknown1"`
+	// Unknown2 is the byte at sub-header offset 7. Purpose not confirmed;
+	// always 0x00 in observed files.
 	Unknown2 uint8 `json:"unknown2"`
 	// Metadata is the opaque metadata block, base64-encoded.
-	// Preserving it unchanged ensures correct client behavior for fields
-	// whose meaning is not yet fully understood.
+	// It is preserved verbatim so the client receives correct values for all
+	// fields, including those the server does not need to interpret.
+	// For chunk0, the client only reads m[0]–m[6]; m[7]–m[9] are ignored.
 	Metadata string `json:"metadata"`
 	// Strings contains the human-editable text (UTF-8).
+	// The compiler converts each string to null-terminated Shift-JIS on the wire.
 	Strings []string `json:"strings"`
 }
 
@@ -168,8 +201,9 @@ func parseScenarioChunk0(data []byte) (*ScenarioChunk0JSON, error) {
 }
 
 // parseScenarioChunk1 parses chunk1 as JKR or sub-header depending on magic bytes.
+// JKR-compressed chunks start with the magic 'J','K','R',0x1A (LE u32 = jkrMagic).
 func parseScenarioChunk1(data []byte) (*ScenarioChunk1JSON, error) {
-	if len(data) >= 4 && binary.LittleEndian.Uint32(data[0:4]) == 0x1A524B4A {
+	if len(data) >= 4 && binary.LittleEndian.Uint32(data[0:4]) == jkrMagic {
 		return &ScenarioChunk1JSON{
 			JKR: &ScenarioRawChunkJSON{
 				Data: base64.StdEncoding.EncodeToString(data),
@@ -189,14 +223,14 @@ func parseScenarioSubheader(data []byte) (*ScenarioSubheaderJSON, error) {
 		return nil, fmt.Errorf("sub-header chunk too short: %d bytes", len(data))
 	}
 
-	// Sub-header fields
-	chunkType := data[0]
-	// data[1] is the 0x00 pad (not stored; implicit)
-	// data[2:4] is the u16 LE total size (recomputed on compile)
-	entryCount := int(data[4])
-	unknown1 := data[5]
-	metaSize := int(data[6])
-	unknown2 := data[7]
+	// 8-byte sub-header fields:
+	chunkType := data[0]       // @0: chunk type (0x01 = compound container)
+	// data[1]                 // @1: pad 0x00 (format detector; not stored)
+	// data[2:4]               // @2: u16 LE total size (recomputed on compile)
+	entryCount := int(data[4]) // @4: number of string entries
+	unknown1 := data[5]        // @5: purpose unknown; always 0x00 in observed files
+	metaSize := int(data[6])   // @6: byte length of metadata block (0x14=C0, 0x2C=C1)
+	unknown2 := data[7]        // @7: purpose unknown; always 0x00 in observed files
 
 	metaEnd := 8 + metaSize
 	if metaEnd > len(data) {
