@@ -82,14 +82,45 @@ Used for structured text chunks containing named strings with metadata.
 [0xFF end-of-strings sentinel]
 ```
 
-**Metadata block** (partially understood):
+**Metadata block** (partially decoded):
 
-The metadata block is `MetadataSize` bytes long and covers all entries collectively. Known sizes observed in real files:
+The metadata block is `MetadataSize` bytes long. Known sizes from real files:
 
-- Chunk0 (flag 0x01): `MetadataSize = 0x14` (20 bytes)
-- Chunk1 (flag 0x02): `MetadataSize = 0x2C` (44 bytes)
+- Chunk0 (flag 0x01): `MetadataSize = 0x14` (20 bytes = 10 × u16 LE)
+- Chunk1 (flag 0x02): `MetadataSize = 0x2C` (44 bytes = 22 × u16 LE)
 
-The internal structure of the metadata is not yet fully documented. It is preserved verbatim in the JSON format as a base64 blob so that clients receive correct values even for unknown fields.
+**Chunk0 metadata (20 bytes decoded from 145,000+ real scenario files):**
+
+| u16 index | Field | Notes |
+|-----------|-------|-------|
+| m[0] | CategoryID | Matches the first field of the filename (0=basic, 1=GR, 3=exchange, 6=pallone, 7=diva) |
+| m[1] | MainID | Matches the `S` field of the filename |
+| m[2–4] | 0x0000 | Reserved / always zero |
+| m[5] | str0_len | Byte length of string 0 in Shift-JIS including the null terminator; equals the byte offset from the start of the strings section to string 1 |
+| m[6] | SceneRef | `MainID` when CategoryID=0; `0xFFFF` when CategoryID≠0 — purpose unclear (possibly a chain or group reference) |
+| m[7] | 0x0000 | Reserved |
+| m[8] | 0x0005 | Constant; purpose unknown |
+| m[9] | varies | Purpose not yet confirmed; correlates loosely with total chunk size |
+
+**Chunk1 metadata (44 bytes decoded from multi-dialog scenario files):**
+
+The 22 u16 fields in chunk1 metadata store a richer set of string offsets. When the chunk contains N dialog strings in the strings section, the cumulative byte offsets are stored non-sequentially:
+
+| u16 index | Field | Notes |
+|-----------|-------|-------|
+| m[0–1] | IDs | Carry contextual IDs; m[0] is typically 0, m[1] varies |
+| m[2–8] | 0 or varies | Partially unknown |
+| m[9] | cumOff[2] | Byte offset to string 2 from strings section start (= str0_len + str1_len) |
+| m[10] | cumOff[1] | Byte offset to string 1 = str0_len |
+| m[11–13] | Dialog positions | Offsets into the full C1 data section (strings + dialog script bytes beyond the 0xFF sentinel) |
+| m[14] | cumOff[3] | Byte offset to string 3 |
+| m[15] | cumOff[4] | Total string bytes without the 0xFF sentinel |
+| m[16–17] | Dialog positions | Further offsets into the C1 data section |
+| m[18–19] | flags/type | Purpose unknown |
+| m[20] | 0x0005 | Constant (same as chunk0 m[8]) |
+| m[21] | DataSize − 4 | Approximately equal to `chunk1_size − 8 − MetadataSize + 4`; off-by-four not yet explained |
+
+The metadata is preserved verbatim in JSON as a base64 blob so that clients receive correct values for all fields including those not yet fully understood.
 
 **Format detection for chunk0:** if `chunk_data[1] == 0x00` → sub-header, else → inline.
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"os"
 	"testing"
 )
 
@@ -368,5 +369,104 @@ func TestScenarioRoundTrip_MetadataPreserved(t *testing.T) {
 	if sh2.Unknown1 != sh.Unknown1 || sh2.Unknown2 != sh.Unknown2 {
 		t.Errorf("unknown fields changed: unk1 %02X→%02X  unk2 %02X→%02X",
 			sh.Unknown1, sh2.Unknown1, sh.Unknown2, sh2.Unknown2)
+	}
+}
+
+// ── real-file round-trip tests ────────────────────────────────────────────────
+
+// scenarioBinPath is the relative path from the package to the scenario files.
+// These tests are skipped if the directory does not exist (CI without game data).
+const scenarioBinPath = "../../bin/scenarios"
+
+func TestScenarioRoundTrip_RealFiles(t *testing.T) {
+	samples := []struct {
+		name   string
+		wantC0 bool // expect chunk0 subheader
+		wantC1 bool // expect chunk1 (subheader or JKR)
+	}{
+		// cat=0 basic quest scenarios (chunk0 subheader, no chunk1)
+		{"0_0_0_0_S0_T101_C0", true, false},
+		{"0_0_0_0_S1_T101_C0", true, false},
+		{"0_0_0_0_S5_T101_C0", true, false},
+		// cat=1 GR scenarios (chunk0 subheader, T101 has no chunk1)
+		{"1_0_0_0_S0_T101_C0", true, false},
+		{"1_0_0_0_S1_T101_C0", true, false},
+		// cat=3 item exchange (chunk0 subheader, chunk1 subheader with extra data)
+		{"3_0_0_0_S0_T103_C0", true, true},
+		// multi-chapter file with chunk1 subheader
+		{"0_0_0_0_S0_T103_C0", true, true},
+	}
+
+	for _, tc := range samples {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			path := scenarioBinPath + "/" + tc.name + ".bin"
+			original, err := os.ReadFile(path)
+			if err != nil {
+				t.Skipf("scenario file not found (game data not present): %v", err)
+			}
+
+			// Parse binary → JSON schema
+			parsed, err := ParseScenarioBinary(original)
+			if err != nil {
+				t.Fatalf("ParseScenarioBinary: %v", err)
+			}
+
+			// Verify expected chunk presence
+			if tc.wantC0 && (parsed.Chunk0 == nil || parsed.Chunk0.Subheader == nil) {
+				t.Error("expected chunk0 subheader")
+			}
+			if tc.wantC1 && parsed.Chunk1 == nil {
+				t.Error("expected chunk1")
+			}
+
+			// Marshal to JSON
+			jsonData, err := json.Marshal(parsed)
+			if err != nil {
+				t.Fatalf("json.Marshal: %v", err)
+			}
+
+			// Compile JSON → binary
+			compiled, err := CompileScenarioJSON(jsonData)
+			if err != nil {
+				t.Fatalf("CompileScenarioJSON: %v", err)
+			}
+
+			// Re-parse compiled output
+			result, err := ParseScenarioBinary(compiled)
+			if err != nil {
+				t.Fatalf("ParseScenarioBinary on compiled output: %v", err)
+			}
+
+			// Verify strings survive round-trip unchanged
+			origStrings := extractStringsFromScenario(t, original)
+			gotStrings := extractStringsFromScenario(t, compiled)
+			if len(gotStrings) != len(origStrings) {
+				t.Fatalf("string count changed: %d → %d", len(origStrings), len(gotStrings))
+			}
+			for i := range origStrings {
+				if gotStrings[i] != origStrings[i] {
+					t.Errorf("[%d]: %q → %q", i, origStrings[i], gotStrings[i])
+				}
+			}
+
+			// Verify metadata is preserved byte-for-byte
+			if parsed.Chunk0 != nil && parsed.Chunk0.Subheader != nil {
+				if result.Chunk0 == nil || result.Chunk0.Subheader == nil {
+					t.Fatal("chunk0 subheader lost in round-trip")
+				}
+				if result.Chunk0.Subheader.Metadata != parsed.Chunk0.Subheader.Metadata {
+					t.Errorf("chunk0 metadata changed after round-trip")
+				}
+			}
+			if parsed.Chunk1 != nil && parsed.Chunk1.Subheader != nil {
+				if result.Chunk1 == nil || result.Chunk1.Subheader == nil {
+					t.Fatal("chunk1 subheader lost in round-trip")
+				}
+				if result.Chunk1.Subheader.Metadata != parsed.Chunk1.Subheader.Metadata {
+					t.Errorf("chunk1 metadata changed after round-trip")
+				}
+			}
+		})
 	}
 }
