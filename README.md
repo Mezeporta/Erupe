@@ -239,4 +239,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Authors
 
-A list of authors can be found at [AUTHORS.md](AUTHORS.md).
+A list of authors can be found at [HISTORY.md](HISTORY.md).

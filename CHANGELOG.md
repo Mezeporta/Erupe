@@ -502,6 +502,6 @@ Initial Community Edition and foundational work:
 
 This changelog documents all known changes from the Community Edition reupload (February 25, 2022) onwards. The period before this (Einherjar Team era, ~2020-2022) has no public git history.
 
-Earlier development by Cappuccino/Ellie42 (March 2020) focused on basic server infrastructure, multiplayer systems, and core functionality. See [AUTHORS.md](AUTHORS.md) for detailed development history.
+Earlier development by Cappuccino/Ellie42 (March 2020) focused on basic server infrastructure, multiplayer systems, and core functionality. See [HISTORY.md](HISTORY.md) for detailed development history.
 
 The project began following semantic versioning with v9.0.0 (August 3, 2022) and maintains tagged releases for stable versions. Development continues on the main branch with features merged from feature branches.
