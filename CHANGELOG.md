@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed backup recovery panic: `recoverFromBackups` now rejects decompressed backup data smaller than the minimum save layout size, preventing a slice-bounds panic when nullcomp passes through garbage bytes as "already decompressed" data ([#182](https://github.com/Mezeporta/Erupe/pull/182)).
+
 ### Added
 
+- Event Tent (campaign) system: code redemption, stamp tracking, reward claiming, and quest gating for special event quests, backed by 8 new database tables and seeded with community-researched live-game campaign data ([#182](https://github.com/Mezeporta/Erupe/pull/182), by stratick).
+- Database migration `0010_campaign` (campaigns, campaign_categories, campaign_category_links, campaign_rewards, campaign_rewards_claimed, campaign_state, campaign_codes, campaign_quest).
 - JSON Hunting Road config: `bin/rengoku_data.json` is now supported as a human-readable alternative to the opaque `rengoku_data.bin` — the server assembles and ECD-encrypts the binary at startup, with `.bin` used as a fallback ([#173](https://github.com/Mezeporta/Erupe/issues/173)).
 - JSON quest files: `.json` files in `bin/quests/` are now supported alongside `.bin` — the server tries `.bin` first (full backward compatibility), then compiles `.json` on the fly to the MHF binary wire format ([#160](https://github.com/Mezeporta/Erupe/issues/160)). Covers all binary sections: quest text (UTF-8 → Shift-JIS), all 12 objective types, monster spawns (large + minion), reward tables, supply box, loaded stages, rank requirements, variant flags, forced equipment, map sections, area transitions, coordinate mappings, map info, gathering points, gathering tables, and area facilities. A `ParseQuestBinary` reverse function allows existing `.bin` files to be inspected and exported to JSON.
 

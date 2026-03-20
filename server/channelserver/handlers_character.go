@@ -114,6 +114,19 @@ func recoverFromBackups(s *Session, base *CharacterSaveData, charID uint32) (*Ch
 			continue
 		}
 
+		// nullcomp passes through data without a "cmp" header as-is (legitimate for
+		// old uncompressed saves). Guard against garbage data that is too small to
+		// contain the minimum save layout (name field at offset 88–100).
+		const minSaveSize = saveFieldNameOffset + saveFieldNameLen
+		if len(candidate.decompSave) < minSaveSize {
+			s.logger.Warn("Backup slot data too small after decompression, skipping",
+				zap.Uint32("charID", charID),
+				zap.Int("slot", backup.Slot),
+				zap.Int("size", len(candidate.decompSave)),
+			)
+			continue
+		}
+
 		s.logger.Warn("Savedata recovered from backup — primary was corrupt",
 			zap.Uint32("charID", charID),
 			zap.Int("slot", backup.Slot),
