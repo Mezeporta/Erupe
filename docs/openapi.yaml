@@ -1,0 +1,576 @@
+openapi: 3.1.0
+info:
+  title: Erupe API
+  description: REST API for the Erupe Monster Hunter Frontier server emulator.
+  version: 2.0.0
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /v2/login:
+    post:
+      summary: Authenticate user
+      operationId: login
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthData"
+        "400":
+          description: Invalid credentials or malformed request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid_username:
+                  value:
+                    error: invalid_username
+                    message: Username not found
+                invalid_password:
+                  value:
+                    error: invalid_password
+                    message: Incorrect password
+                invalid_request:
+                  value:
+                    error: invalid_request
+                    message: Malformed request body
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v2/register:
+    post:
+      summary: Create new user account
+      operationId: register
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthData"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missing_fields:
+                  value:
+                    error: missing_fields
+                    message: Username and password required
+                username_exists:
+                  value:
+                    error: username_exists
+                    message: Username already taken
+                invalid_request:
+                  value:
+                    error: invalid_request
+                    message: Malformed request body
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v2/launcher:
+    get:
+      summary: Get launcher UI data
+      operationId: getLauncher
+      tags: [public]
+      responses:
+        "200":
+          description: Launcher banners, messages, and links
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LauncherResponse"
+
+  /v2/version:
+    get:
+      summary: Get server version
+      operationId: getVersion
+      tags: [public]
+      responses:
+        "200":
+          description: Server version information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+
+  /v2/health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      tags: [public]
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Server is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /v2/server/status:
+    get:
+      summary: Get server status
+      operationId: getServerStatus
+      tags: [public]
+      responses:
+        "200":
+          description: Current server status including events and MezFes schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerStatusResponse"
+
+  /v2/characters:
+    post:
+      summary: Create a new character
+      operationId: createCharacter
+      tags: [characters]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Character created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v2/characters/{id}/delete:
+    post:
+      summary: Delete a character (POST form)
+      operationId: deleteCharacterPost
+      tags: [characters]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/characterId"
+      responses:
+        "200":
+          description: Character deleted
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          description: Invalid character ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v2/characters/{id}:
+    delete:
+      summary: Delete a character
+      operationId: deleteCharacter
+      tags: [characters]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/characterId"
+      responses:
+        "200":
+          description: Character deleted
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          description: Invalid character ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v2/characters/{id}/export:
+    get:
+      summary: Export character save data
+      operationId: exportSave
+      tags: [characters]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/characterId"
+      responses:
+        "200":
+          description: Full character data for backup
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportData"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          description: Invalid character ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Session token returned by /v2/login or /v2/register
+
+  parameters:
+    characterId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: uint32
+      description: Character ID
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid Bearer token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: unauthorized
+            message: Invalid or expired token
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: internal_error
+            message: Internal server error
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+          examples:
+            - invalid_username
+            - invalid_password
+            - username_exists
+            - missing_fields
+            - invalid_request
+            - unauthorized
+            - internal_error
+        message:
+          type: string
+          description: Human-readable error description
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    RegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthData:
+      type: object
+      required:
+        - currentTs
+        - expiryTs
+        - entranceCount
+        - notices
+        - user
+        - characters
+        - courses
+        - mezFes
+        - patchServer
+      properties:
+        currentTs:
+          type: integer
+          format: uint32
+          description: Current server timestamp (Unix seconds)
+        expiryTs:
+          type: integer
+          format: uint32
+          description: Return expiry timestamp (Unix seconds)
+        entranceCount:
+          type: integer
+          format: uint32
+        notices:
+          type: array
+          items:
+            type: string
+        user:
+          $ref: "#/components/schemas/User"
+        characters:
+          type: array
+          items:
+            $ref: "#/components/schemas/Character"
+        courses:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseInfo"
+        mezFes:
+          oneOf:
+            - $ref: "#/components/schemas/MezFes"
+            - type: "null"
+        patchServer:
+          type: string
+
+    User:
+      type: object
+      required: [tokenId, token, rights]
+      properties:
+        tokenId:
+          type: integer
+          format: uint32
+        token:
+          type: string
+        rights:
+          type: integer
+          format: uint32
+
+    Character:
+      type: object
+      required: [id, name, isFemale, weapon, hr, gr, lastLogin, returning]
+      properties:
+        id:
+          type: integer
+          format: uint32
+        name:
+          type: string
+        isFemale:
+          type: boolean
+        weapon:
+          type: integer
+          format: uint32
+        hr:
+          type: integer
+          format: uint32
+        gr:
+          type: integer
+          format: uint32
+        lastLogin:
+          type: integer
+          format: int32
+          description: Unix timestamp of last login
+        returning:
+          type: boolean
+          description: True if character has not logged in for 90+ days
+
+    CourseInfo:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          format: uint16
+        name:
+          type: string
+
+    MezFes:
+      type: object
+      required: [id, start, end, soloTickets, groupTickets, stalls]
+      properties:
+        id:
+          type: integer
+          format: uint32
+        start:
+          type: integer
+          format: uint32
+        end:
+          type: integer
+          format: uint32
+        soloTickets:
+          type: integer
+          format: uint32
+        groupTickets:
+          type: integer
+          format: uint32
+        stalls:
+          type: array
+          items:
+            type: integer
+            format: uint32
+
+    LauncherResponse:
+      type: object
+      required: [banners, messages, links]
+      properties:
+        banners:
+          type: array
+          items:
+            $ref: "#/components/schemas/Banner"
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/Link"
+
+    Banner:
+      type: object
+      required: [src, link]
+      properties:
+        src:
+          type: string
+          description: Displayed image URL
+        link:
+          type: string
+          description: Link accessed on click
+
+    Message:
+      type: object
+      required: [message, date, kind, link]
+      properties:
+        message:
+          type: string
+          description: Displayed message
+        date:
+          type: integer
+          format: int64
+          description: Displayed date (Unix timestamp)
+        kind:
+          type: integer
+          description: "0 = Default, 1 = New"
+          enum: [0, 1]
+        link:
+          type: string
+          description: Link accessed on click
+
+    Link:
+      type: object
+      required: [name, icon, link]
+      properties:
+        name:
+          type: string
+          description: Displayed name
+        icon:
+          type: string
+          description: Displayed icon (rendered as monochrome if transparent)
+        link:
+          type: string
+          description: Link accessed on click
+
+    VersionResponse:
+      type: object
+      required: [clientMode, name]
+      properties:
+        clientMode:
+          type: string
+          description: Supported game client version (e.g. "ZZ")
+        name:
+          type: string
+          description: Server software name
+          examples: ["Erupe-CE"]
+
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unhealthy]
+        error:
+          type: string
+          description: Error description (present only when unhealthy)
+
+    ServerStatusResponse:
+      type: object
+      required: [mezFes, featuredWeapon, events]
+      properties:
+        mezFes:
+          oneOf:
+            - $ref: "#/components/schemas/MezFes"
+            - type: "null"
+        featuredWeapon:
+          oneOf:
+            - $ref: "#/components/schemas/FeatureWeaponInfo"
+            - type: "null"
+        events:
+          $ref: "#/components/schemas/EventStatus"
+
+    FeatureWeaponInfo:
+      type: object
+      required: [startTime, activeFeatures]
+      properties:
+        startTime:
+          type: integer
+          format: uint32
+          description: Unix timestamp
+        activeFeatures:
+          type: integer
+          format: uint32
+          description: Bitmask of active featured weapons
+
+    EventStatus:
+      type: object
+      required: [festaActive, divaActive]
+      properties:
+        festaActive:
+          type: boolean
+        divaActive:
+          type: boolean
+
+    ExportData:
+      type: object
+      required: [character]
+      properties:
+        character:
+          type: object
+          additionalProperties: true
+          description: Full character database row as key-value pairs

@@ -43,6 +43,7 @@ type Session struct {
 	stagePass        string // Temporary storage
 	prevGuildID      uint32 // Stores the last GuildID used in InfoGuild
 	charID           uint32
+	userID           uint32
 	logKey           []byte
 	sessionStart     int64
 	courses          []mhfcourse.Course
@@ -81,7 +82,7 @@ func NewSession(server *Server, conn net.Conn) *Session {
 		rawConn:        conn,
 		cryptConn:      network.NewCryptConn(conn),
 		sendPackets:    make(chan packet, 20),
-		clientContext:  &clientctx.ClientContext{}, // Unused
+		clientContext:  &clientctx.ClientContext{RealClientMode: server.erupeConfig.RealClientMode},
 		lastPacket:     time.Now(),
 		sessionStart:   TimeAdjusted().Unix(),
 		stageMoveStack: stringstack.New(),

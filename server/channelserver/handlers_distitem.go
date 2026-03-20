@@ -3,13 +3,14 @@ package channelserver
 import (
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"time"
 
 	"go.uber.org/zap"
 )
 
+// Distribution represents an item distribution event.
 type Distribution struct {
 	ID              uint32    `db:"id"`
 	Deadline        time.Time `db:"deadline"`
@@ -30,31 +31,10 @@ type Distribution struct {
 func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateDistItem)
 
-	var itemDists []Distribution
 	bf := byteframe.NewByteFrame()
-	rows, err := s.server.db.Queryx(`
-		SELECT d.id, event_name, description, COALESCE(rights, 0) AS rights, COALESCE(selection, false) AS selection, times_acceptable,
-		COALESCE(min_hr, -1) AS min_hr, COALESCE(max_hr, -1) AS max_hr,
-		COALESCE(min_sr, -1) AS min_sr, COALESCE(max_sr, -1) AS max_sr,
-		COALESCE(min_gr, -1) AS min_gr, COALESCE(max_gr, -1) AS max_gr,
-		(
-    		SELECT count(*) FROM distributions_accepted da
-    		WHERE d.id = da.distribution_id AND da.character_id = $1
-		) AS times_accepted,
-		COALESCE(deadline, TO_TIMESTAMP(0)) AS deadline
-		FROM distribution d
-		WHERE character_id = $1 AND type = $2 OR character_id IS NULL AND type = $2 ORDER BY id DESC
-	`, s.charID, pkt.DistType)
-
-	if err == nil {
-		var itemDist Distribution
-		for rows.Next() {
-			err = rows.StructScan(&itemDist)
-			if err != nil {
-				continue
-			}
-			itemDists = append(itemDists, itemDist)
-		}
+	itemDists, err := s.server.distRepo.List(s.charID, pkt.DistType)
+	if err != nil {
+		s.logger.Error("Failed to list item distributions", zap.Error(err))
 	}
 
 	bf.WriteUint16(uint16(len(itemDists)))
@@ -64,7 +44,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(dist.Rights)
 		bf.WriteUint16(dist.TimesAcceptable)
 		bf.WriteUint16(dist.TimesAccepted)
-		if _config.ErupeConfig.RealClientMode >= _config.G9 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G9 {
 			bf.WriteUint16(0) // Unk
 		}
 		bf.WriteInt16(dist.MinHR)
@@ -73,29 +53,29 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteInt16(dist.MaxSR)
 		bf.WriteInt16(dist.MinGR)
 		bf.WriteInt16(dist.MaxGR)
-		if _config.ErupeConfig.RealClientMode >= _config.G7 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G7 {
 			bf.WriteUint8(0) // Unk
 		}
-		if _config.ErupeConfig.RealClientMode >= _config.G6 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G6 {
 			bf.WriteUint16(0) // Unk
 		}
-		if _config.ErupeConfig.RealClientMode >= _config.G8 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G8 {
 			if dist.Selection {
 				bf.WriteUint8(2) // Selection
 			} else {
 				bf.WriteUint8(0)
 			}
 		}
-		if _config.ErupeConfig.RealClientMode >= _config.G7 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G7 {
 			bf.WriteUint16(0) // Unk
 			bf.WriteUint16(0) // Unk
 		}
-		if _config.ErupeConfig.RealClientMode >= _config.G10 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G10 {
 			bf.WriteUint8(0) // Unk
 		}
 		ps.Uint8(bf, dist.EventName, true)
 		k := 6
-		if _config.ErupeConfig.RealClientMode >= _config.G8 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G8 {
 			k = 13
 		}
 		for i := 0; i < 6; i++ {
@@ -104,7 +84,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteUint32(0)
 			}
 		}
-		if _config.ErupeConfig.RealClientMode >= _config.Z2 {
+		if s.server.erupeConfig.RealClientMode >= cfg.Z2 {
 			i := uint8(0)
 			bf.WriteUint8(i)
 			if i <= 10 {
@@ -119,6 +99,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
+// DistributionItem represents a single item in a distribution.
 type DistributionItem struct {
 	ItemType uint8  `db:"item_type"`
 	ID       uint32 `db:"id"`
@@ -126,33 +107,20 @@ type DistributionItem struct {
 	Quantity uint32 `db:"quantity"`
 }
 
-func getDistributionItems(s *Session, i uint32) []DistributionItem {
-	var distItems []DistributionItem
-	rows, err := s.server.db.Queryx(`SELECT id, item_type, COALESCE(item_id, 0) AS item_id, COALESCE(quantity, 0) AS quantity FROM distribution_items WHERE distribution_id=$1`, i)
-	if err == nil {
-		var distItem DistributionItem
-		for rows.Next() {
-			err = rows.StructScan(&distItem)
-			if err != nil {
-				continue
-			}
-			distItems = append(distItems, distItem)
-		}
-	}
-	return distItems
-}
-
 func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfApplyDistItem)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(pkt.DistributionID)
-	distItems := getDistributionItems(s, pkt.DistributionID)
+	distItems, err := s.server.distRepo.GetItems(pkt.DistributionID)
+	if err != nil {
+		s.logger.Error("Failed to get distribution items", zap.Error(err))
+	}
 	bf.WriteUint16(uint16(len(distItems)))
 	for _, item := range distItems {
 		bf.WriteUint8(item.ItemType)
 		bf.WriteUint32(item.ItemID)
 		bf.WriteUint32(item.Quantity)
-		if _config.ErupeConfig.RealClientMode >= _config.G8 {
+		if s.server.erupeConfig.RealClientMode >= cfg.G8 {
 			bf.WriteUint32(item.ID)
 		}
 	}
@@ -162,19 +130,36 @@ func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireDistItem)
 	if pkt.DistributionID > 0 {
-		_, err := s.server.db.Exec(`INSERT INTO public.distributions_accepted VALUES ($1, $2)`, pkt.DistributionID, s.charID)
+		err := s.server.distRepo.RecordAccepted(pkt.DistributionID, s.charID)
 		if err == nil {
-			distItems := getDistributionItems(s, pkt.DistributionID)
+			userID, err := s.server.charRepo.GetUserID(s.charID)
+			if err != nil {
+				s.logger.Error("Failed to get user ID for dist item acquisition", zap.Error(err))
+				doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+				return
+			}
+			distItems, err := s.server.distRepo.GetItems(pkt.DistributionID)
+			if err != nil {
+				s.logger.Error("Failed to get distribution items for acquisition", zap.Error(err))
+			}
 			for _, item := range distItems {
 				switch item.ItemType {
 				case 17:
-					_ = addPointNetcafe(s, int(item.Quantity))
+					if err := addPointNetcafe(s, int(item.Quantity)); err != nil {
+						s.logger.Error("Failed to add dist item netcafe points", zap.Error(err))
+					}
 				case 19:
-					s.server.db.Exec("UPDATE users u SET gacha_premium=gacha_premium+$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", item.Quantity, s.charID)
+					if err := s.server.userRepo.AddPremiumCoins(userID, item.Quantity); err != nil {
+						s.logger.Error("Failed to update gacha premium", zap.Error(err))
+					}
 				case 20:
-					s.server.db.Exec("UPDATE users u SET gacha_trial=gacha_trial+$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", item.Quantity, s.charID)
+					if err := s.server.userRepo.AddTrialCoins(userID, item.Quantity); err != nil {
+						s.logger.Error("Failed to update gacha trial", zap.Error(err))
+					}
 				case 21:
-					s.server.db.Exec("UPDATE users u SET frontier_points=frontier_points+$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", item.Quantity, s.charID)
+					if err := s.server.userRepo.AddFrontierPoints(userID, item.Quantity); err != nil {
+						s.logger.Error("Failed to update frontier points", zap.Error(err))
+					}
 				case 23:
 					saveData, err := GetCharacterSaveData(s, s.charID)
 					if err == nil {
@@ -190,8 +175,7 @@ func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetDistDescription(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetDistDescription)
-	var desc string
-	err := s.server.db.QueryRow("SELECT description FROM distribution WHERE id = $1", pkt.DistributionID).Scan(&desc)
+	desc, err := s.server.distRepo.GetDescription(pkt.DistributionID)
 	if err != nil {
 		s.logger.Error("Error parsing item distribution description", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))

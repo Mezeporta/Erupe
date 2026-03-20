@@ -1,0 +1,138 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+  attestations: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.os_name }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            os_name: Linux-amd64
+            binary: erupe-ce
+          - goos: windows
+            goarch: amd64
+            os_name: Windows-amd64
+            binary: erupe-ce.exe
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25'
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Build
+      run: env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v -o ${{ matrix.binary }}
+
+    - name: Prepare release archive
+      run: |
+        mkdir -p staging
+        cp ${{ matrix.binary }} staging/
+        cp config.example.json staging/
+        cp config.reference.json staging/
+        cp -r savedata/ staging/savedata/
+        # Schema is now embedded in the binary via server/migrations/
+        cd staging && zip -r ../erupe-${{ matrix.os_name }}.zip .
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os_name }}
+        path: erupe-${{ matrix.os_name }}.zip
+        retention-days: 1
+
+  docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+
+    - name: Build and push Docker image
+      id: push
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    - name: Generate artifact attestation
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        subject-digest: ${{ steps.push.outputs.digest }}
+        push-to-registry: true
+
+  release:
+    name: Create Release
+    needs: [build, docker]
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        pattern: '*-amd64'
+
+    - name: Copy standalone schema for download
+      run: cp server/migrations/sql/0001_init.sql SCHEMA.sql
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        generate_release_notes: true
+        body: |
+          ## Docker Image
+
+          This release is also available as a Docker image:
+
+          ```bash
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          ```
+        append_body: true
+        files: |
+          artifacts/Linux-amd64/erupe-Linux-amd64.zip
+          artifacts/Windows-amd64/erupe-Windows-amd64.zip
+          SCHEMA.sql

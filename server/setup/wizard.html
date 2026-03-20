@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Erupe Setup Wizard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#1a1a2e;color:#e0e0e0;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:2rem 1rem}
+.wizard{max-width:680px;width:100%}
+h1{font-size:1.75rem;margin-bottom:.5rem;color:#e94560;text-align:center}
+.subtitle{text-align:center;color:#888;margin-bottom:2rem;font-size:.9rem}
+
+/* Progress bar */
+.progress{display:flex;gap:4px;margin-bottom:2rem}
+.progress-step{flex:1;height:6px;border-radius:3px;background:#0f3460;transition:background .3s}
+.progress-step.active{background:#e94560}
+.progress-step.done{background:#4ecdc4}
+
+/* Steps */
+.step-labels{display:flex;justify-content:space-between;margin-bottom:1.5rem;font-size:.75rem;color:#666}
+.step-labels span.active{color:#e94560;font-weight:600}
+.step-labels span.done{color:#4ecdc4}
+
+/* Cards */
+.card{background:#16213e;border-radius:12px;padding:2rem;box-shadow:0 8px 32px rgba(0,0,0,.4);margin-bottom:1rem}
+.card h2{font-size:1.2rem;margin-bottom:1.2rem;color:#e94560}
+
+/* Form */
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:.85rem;color:#aaa;margin-bottom:.3rem}
+.field input,.field select{width:100%;padding:.6rem .8rem;background:#0f3460;border:1px solid #1a3a6e;border-radius:6px;color:#e0e0e0;font-size:.9rem;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:#e94560}
+.field input::placeholder{color:#556}
+.field-row{display:flex;gap:1rem}
+.field-row .field{flex:1}
+.field-sm{max-width:120px}
+
+/* Checkbox */
+.checkbox{display:flex;align-items:center;gap:.5rem;margin-bottom:.7rem;cursor:pointer;font-size:.9rem}
+.checkbox input{accent-color:#e94560;width:16px;height:16px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.4rem;border:none;border-radius:6px;font-size:.9rem;cursor:pointer;transition:background .2s,opacity .2s}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:#e94560;color:#fff}
+.btn-primary:hover:not(:disabled){background:#c73651}
+.btn-secondary{background:#0f3460;color:#e0e0e0;border:1px solid #1a3a6e}
+.btn-secondary:hover:not(:disabled){background:#1a3a6e}
+.btn-success{background:#4ecdc4;color:#1a1a2e;font-weight:600}
+.btn-success:hover:not(:disabled){background:#3dbdb5}
+.actions{display:flex;justify-content:space-between;margin-top:1.5rem}
+
+/* Status indicators */
+.status{font-size:.85rem;padding:.5rem .8rem;border-radius:6px;margin-top:.7rem}
+.status-ok{background:rgba(78,205,196,.15);color:#4ecdc4}
+.status-warn{background:rgba(233,69,96,.15);color:#e94560}
+.status-info{background:rgba(15,52,96,.5);color:#aaa}
+
+/* Log area */
+.log{background:#0a0e1a;border-radius:6px;padding:.8rem;max-height:250px;overflow-y:auto;font-family:"Cascadia Code",Consolas,monospace;font-size:.8rem;line-height:1.5;margin-top:.7rem}
+.log-line{color:#8892b0}
+.log-line.error{color:#e94560}
+.log-line.success{color:#4ecdc4}
+
+/* Review table */
+.review-table{width:100%;border-collapse:collapse}
+.review-table td{padding:.4rem 0;font-size:.9rem;border-bottom:1px solid rgba(255,255,255,.05)}
+.review-table td:first-child{color:#888;width:40%}
+.review-table td:last-child{color:#e0e0e0;word-break:break-all}
+
+/* Spinner */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #e94560;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Hidden */
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+<div class="wizard">
+<h1>Erupe Setup Wizard</h1>
+<p class="subtitle">First-run configuration — let's get your server running</p>
+
+<div class="progress">
+  <div class="progress-step" id="prog-1"></div>
+  <div class="progress-step" id="prog-2"></div>
+  <div class="progress-step" id="prog-3"></div>
+  <div class="progress-step" id="prog-4"></div>
+  <div class="progress-step" id="prog-5"></div>
+  <div class="progress-step" id="prog-6"></div>
+</div>
+<div class="step-labels">
+  <span id="lbl-1">1. Database</span>
+  <span id="lbl-2">2. Schema</span>
+  <span id="lbl-3">3. Quest Files</span>
+  <span id="lbl-4">4. Preset</span>
+  <span id="lbl-5">5. Server</span>
+  <span id="lbl-6">6. Finish</span>
+</div>
+
+<!-- Step 1: Database Connection -->
+<div class="card step" id="step-1">
+  <h2>Database Connection</h2>
+  <p style="font-size:.85rem;color:#888;margin-bottom:1rem">Enter your PostgreSQL connection details.</p>
+  <div class="field-row">
+    <div class="field"><label>Host</label><input id="db-host" type="text" value="localhost" placeholder="localhost"></div>
+    <div class="field field-sm"><label>Port</label><input id="db-port" type="number" value="5432"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>User</label><input id="db-user" type="text" value="postgres" placeholder="postgres"></div>
+    <div class="field"><label>Password</label><input id="db-password" type="password" placeholder="Enter password"></div>
+  </div>
+  <div class="field"><label>Database Name</label><input id="db-name" type="text" value="erupe" placeholder="erupe"></div>
+  <button class="btn btn-secondary" id="btn-test-db" onclick="testConnection()">Test Connection</button>
+  <div id="db-status" class="hidden"></div>
+  <div class="actions">
+    <div></div>
+    <button class="btn btn-primary" id="btn-step1-next" onclick="goToStep(2)">Next</button>
+  </div>
+</div>
+
+<!-- Step 2: Database Setup -->
+<div class="card step hidden" id="step-2">
+  <h2>Database Setup</h2>
+  <p style="font-size:.85rem;color:#888;margin-bottom:1rem">Select which schema operations to perform.</p>
+  <div id="schema-options">
+    <label class="checkbox" id="chk-create-db-label"><input type="checkbox" id="chk-create-db" checked> Create database</label>
+    <label class="checkbox"><input type="checkbox" id="chk-schema" checked> Apply database schema (required for new databases)</label>
+    <label class="checkbox"><input type="checkbox" id="chk-bundled" checked> Apply bundled data (shops, events, gacha — recommended)</label>
+  </div>
+  <button class="btn btn-primary" id="btn-init-db" onclick="initDB()">Initialize Database</button>
+  <div id="init-log" class="log hidden"></div>
+  <div id="init-status" class="hidden"></div>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="goToStep(1)">Back</button>
+    <button class="btn btn-primary" id="btn-step2-next" onclick="goToStep(3)">Next</button>
+  </div>
+</div>
+
+<!-- Step 3: Quest Files Check -->
+<div class="card step hidden" id="step-3">
+  <h2>Quest Files</h2>
+  <p style="font-size:.85rem;color:#888;margin-bottom:1rem">Quest files are needed for gameplay. The server checks the <code>bin/quests/</code> directory.</p>
+  <div id="quest-status" class="status status-info">Checking quest files...</div>
+  <div id="quest-warning" class="hidden" style="margin-top:1rem">
+    <p style="font-size:.85rem;color:#e94560;margin-bottom:.7rem"><strong>No quest files found.</strong></p>
+    <p style="font-size:.85rem;color:#aaa;margin-bottom:.5rem">Download the quest archive:</p>
+    <a href="https://files.catbox.moe/xf0l7w.7z" target="_blank" rel="noopener" style="color:#4ecdc4;font-size:.9rem;word-break:break-all">https://files.catbox.moe/xf0l7w.7z</a>
+    <p style="font-size:.85rem;color:#aaa;margin-top:.7rem">Download the archive, extract it, and place the <code>quests/</code> and <code>scenarios/</code> folders into the <code>bin/</code> directory next to the server binary.</p>
+  </div>
+  <div style="margin-top:1rem">
+    <button class="btn btn-secondary" id="btn-recheck-quests" onclick="checkQuests()">Re-check</button>
+  </div>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="goToStep(2)">Back</button>
+    <button class="btn btn-primary" id="btn-step3-next" onclick="goToStep(4)">Next</button>
+  </div>
+</div>
+
+<!-- Step 4: Gameplay Preset -->
+<div class="card step hidden" id="step-4">
+  <h2>Gameplay Preset</h2>
+  <p style="font-size:.85rem;color:#888;margin-bottom:1rem">Choose a preset that matches your intended use. This configures channels and gameplay rates.</p>
+  <div id="preset-cards" style="display:flex;flex-direction:column;gap:.7rem"></div>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="goToStep(3)">Back</button>
+    <button class="btn btn-primary" id="btn-step4-next" onclick="goToStep(5)">Next</button>
+  </div>
+</div>
+
+<!-- Step 5: Server Settings -->
+<div class="card step hidden" id="step-5">
+  <h2>Server Settings</h2>
+  <div class="field">
+    <label>Host IP Address</label>
+    <div style="display:flex;gap:.5rem">
+      <input id="srv-host" type="text" value="127.0.0.1" placeholder="127.0.0.1" style="flex:1">
+      <button class="btn btn-secondary" id="btn-detect-ip" onclick="detectIP()">Auto-detect</button>
+    </div>
+    <div style="font-size:.75rem;color:#666;margin-top:.3rem">Use 127.0.0.1 for local play, or auto-detect for LAN/internet play.</div>
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label>Client Mode</label>
+      <select id="srv-client-mode"></select>
+      <div style="font-size:.75rem;color:#666;margin-top:.3rem">Must match your game client version. ZZ is the latest.</div>
+    </div>
+    <div class="field field-sm">
+      <label>Language</label>
+      <select id="srv-language">
+        <option value="jp" selected>jp</option>
+        <option value="en">en</option>
+      </select>
+      <div style="font-size:.75rem;color:#666;margin-top:.3rem">Game text language.</div>
+    </div>
+  </div>
+  <label class="checkbox" style="margin-top:1rem"><input type="checkbox" id="srv-auto-create" checked> Auto-create accounts (recommended for private servers)</label>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="goToStep(4)">Back</button>
+    <button class="btn btn-primary" onclick="goToStep(6)">Next</button>
+  </div>
+</div>
+
+<!-- Step 6: Review & Finish -->
+<div class="card step hidden" id="step-6">
+  <h2>Review &amp; Finish</h2>
+  <p style="font-size:.85rem;color:#888;margin-bottom:1rem">Verify your settings before creating config.json.</p>
+  <table class="review-table" id="review-table"></table>
+  <div id="finish-status" class="hidden"></div>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="goToStep(5)">Back</button>
+    <button class="btn btn-success" id="btn-finish" onclick="finish()">Create config &amp; Start Server</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+let currentStep = 1;
+let dbTestResult = null;
+let selectedPreset = 'community';
+
+function goToStep(n) {
+  if (n === 6) buildReview();
+  if (n === 2) updateSchemaOptions();
+  if (n === 3) checkQuests();
+  if (n === 4) loadPresets();
+  document.querySelectorAll('.step').forEach(el => el.classList.add('hidden'));
+  document.getElementById('step-' + n).classList.remove('hidden');
+  currentStep = n;
+  updateProgress();
+}
+
+function updateProgress() {
+  for (let i = 1; i <= 6; i++) {
+    const p = document.getElementById('prog-' + i);
+    const l = document.getElementById('lbl-' + i);
+    p.className = 'progress-step';
+    l.className = '';
+    if (i < currentStep) { p.classList.add('done'); l.classList.add('done'); }
+    else if (i === currentStep) { p.classList.add('active'); l.classList.add('active'); }
+  }
+}
+
+function updateSchemaOptions() {
+  const createLabel = document.getElementById('chk-create-db-label');
+  const createCheck = document.getElementById('chk-create-db');
+  if (dbTestResult && dbTestResult.databaseExists) {
+    createCheck.checked = false;
+    createCheck.disabled = true;
+    createLabel.style.opacity = '0.5';
+  } else {
+    createCheck.disabled = false;
+    createLabel.style.opacity = '1';
+  }
+  // If tables already exist, uncheck schema (migrations will detect and skip)
+  if (dbTestResult && dbTestResult.tablesExist) {
+    document.getElementById('chk-schema').checked = false;
+  }
+}
+
+async function testConnection() {
+  const btn = document.getElementById('btn-test-db');
+  const status = document.getElementById('db-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Testing...';
+  status.className = 'status status-info';
+  status.classList.remove('hidden');
+  status.textContent = 'Connecting...';
+
+  try {
+    const res = await fetch('/api/setup/test-db', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        host: document.getElementById('db-host').value,
+        port: parseInt(document.getElementById('db-port').value),
+        user: document.getElementById('db-user').value,
+        password: document.getElementById('db-password').value,
+        dbName: document.getElementById('db-name').value,
+      })
+    });
+    const data = await res.json();
+    if (data.error) {
+      status.className = 'status status-warn';
+      status.textContent = 'Connection failed: ' + data.error;
+      dbTestResult = null;
+    } else {
+      dbTestResult = data.status;
+      let msg = 'Connected to PostgreSQL.';
+      if (data.status.databaseExists) {
+        msg += ' Database exists';
+        if (data.status.tablesExist) msg += ' (' + data.status.tableCount + ' tables).';
+        else msg += ' (no tables yet).';
+      } else {
+        msg += ' Database does not exist yet (will be created in next step).';
+      }
+      status.className = 'status status-ok';
+      status.textContent = msg;
+    }
+  } catch (e) {
+    status.className = 'status status-warn';
+    status.textContent = 'Request failed: ' + e.message;
+    dbTestResult = null;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Test Connection';
+}
+
+async function initDB() {
+  const btn = document.getElementById('btn-init-db');
+  const logEl = document.getElementById('init-log');
+  const status = document.getElementById('init-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Initializing...';
+  logEl.classList.remove('hidden');
+  logEl.innerHTML = '';
+  status.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/setup/init-db', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        host: document.getElementById('db-host').value,
+        port: parseInt(document.getElementById('db-port').value),
+        user: document.getElementById('db-user').value,
+        password: document.getElementById('db-password').value,
+        dbName: document.getElementById('db-name').value,
+        createDB: document.getElementById('chk-create-db').checked,
+        applySchema: document.getElementById('chk-schema').checked,
+        applyBundled: document.getElementById('chk-bundled').checked,
+      })
+    });
+    const data = await res.json();
+    if (data.log) {
+      data.log.forEach(line => {
+        const div = document.createElement('div');
+        div.className = 'log-line';
+        if (line.startsWith('ERROR')) div.classList.add('error');
+        if (line.includes('successfully') || line.includes('complete')) div.classList.add('success');
+        div.textContent = line;
+        logEl.appendChild(div);
+      });
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    if (data.success) {
+      status.className = 'status status-ok';
+      status.textContent = 'Database initialized successfully!';
+    } else {
+      status.className = 'status status-warn';
+      status.textContent = 'Database initialization failed. Check the log above.';
+    }
+    status.classList.remove('hidden');
+  } catch (e) {
+    status.className = 'status status-warn';
+    status.textContent = 'Request failed: ' + e.message;
+    status.classList.remove('hidden');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Initialize Database';
+}
+
+async function detectIP() {
+  const btn = document.getElementById('btn-detect-ip');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const res = await fetch('/api/setup/detect-ip');
+    const data = await res.json();
+    if (data.ip) {
+      document.getElementById('srv-host').value = data.ip;
+    }
+  } catch (e) { /* ignore */ }
+  btn.disabled = false;
+  btn.textContent = 'Auto-detect';
+}
+
+async function checkQuests() {
+  const status = document.getElementById('quest-status');
+  const warning = document.getElementById('quest-warning');
+  const btn = document.getElementById('btn-recheck-quests');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Checking...';
+  status.className = 'status status-info';
+  status.textContent = 'Checking quest files...';
+  warning.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/setup/check-quests');
+    const data = await res.json();
+    if (data.questsFound) {
+      status.className = 'status status-ok';
+      status.textContent = data.questCount + ' quest file' + (data.questCount !== 1 ? 's' : '') + ' found.';
+      warning.classList.add('hidden');
+    } else {
+      status.className = 'status status-warn';
+      status.textContent = 'No quest files found in bin/quests/.';
+      warning.classList.remove('hidden');
+    }
+  } catch (e) {
+    status.className = 'status status-warn';
+    status.textContent = 'Could not check quest files: ' + e.message;
+    warning.classList.remove('hidden');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Re-check';
+}
+
+let presetsLoaded = false;
+async function loadPresets() {
+  if (presetsLoaded) { highlightPreset(); return; }
+  try {
+    const res = await fetch('/api/setup/presets');
+    const data = await res.json();
+    const container = document.getElementById('preset-cards');
+    container.innerHTML = '';
+    data.presets.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'preset-card';
+      card.dataset.id = p.id;
+      card.style.cssText = 'padding:1rem 1.2rem;background:#0f3460;border:2px solid #1a3a6e;border-radius:8px;cursor:pointer;transition:border-color .2s,background .2s';
+      card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">'
+        + '<strong style="color:#e0e0e0;font-size:.95rem">' + p.name + '</strong>'
+        + '<span style="font-size:.75rem;color:#888">' + p.channels + ' channel' + (p.channels !== 1 ? 's' : '') + '</span>'
+        + '</div>'
+        + '<div style="font-size:.82rem;color:#aaa">' + p.description + '</div>';
+      card.onclick = function() {
+        selectedPreset = p.id;
+        highlightPreset();
+      };
+      container.appendChild(card);
+    });
+    presetsLoaded = true;
+    highlightPreset();
+  } catch (e) { /* ignore */ }
+}
+
+function highlightPreset() {
+  document.querySelectorAll('.preset-card').forEach(c => {
+    if (c.dataset.id === selectedPreset) {
+      c.style.borderColor = '#e94560';
+      c.style.background = 'rgba(233,69,96,.1)';
+    } else {
+      c.style.borderColor = '#1a3a6e';
+      c.style.background = '#0f3460';
+    }
+  });
+}
+
+function buildReview() {
+  const table = document.getElementById('review-table');
+  const password = document.getElementById('db-password').value;
+  const masked = password ? '\u2022'.repeat(Math.min(password.length, 12)) : '(empty)';
+  const rows = [
+    ['Database Host', document.getElementById('db-host').value + ':' + document.getElementById('db-port').value],
+    ['Database User', document.getElementById('db-user').value],
+    ['Database Password', masked],
+    ['Database Name', document.getElementById('db-name').value],
+    ['Server Host', document.getElementById('srv-host').value],
+    ['Language', document.getElementById('srv-language').value],
+    ['Client Mode', document.getElementById('srv-client-mode').value],
+    ['Auto-create Accounts', document.getElementById('srv-auto-create').checked ? 'Yes' : 'No'],
+    ['Gameplay Preset', selectedPreset],
+  ];
+  table.innerHTML = rows.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
+}
+
+async function finish() {
+  const btn = document.getElementById('btn-finish');
+  const status = document.getElementById('finish-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Creating config...';
+
+  try {
+    const res = await fetch('/api/setup/finish', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        dbHost: document.getElementById('db-host').value,
+        dbPort: parseInt(document.getElementById('db-port').value),
+        dbUser: document.getElementById('db-user').value,
+        dbPassword: document.getElementById('db-password').value,
+        dbName: document.getElementById('db-name').value,
+        host: document.getElementById('srv-host').value,
+        language: document.getElementById('srv-language').value,
+        clientMode: document.getElementById('srv-client-mode').value,
+        autoCreateAccount: document.getElementById('srv-auto-create').checked,
+        preset: selectedPreset,
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      status.className = 'status status-ok';
+      status.innerHTML = '<strong>config.json created!</strong> The server is now starting. You can close this page.';
+      status.classList.remove('hidden');
+      btn.textContent = 'Done!';
+      btn.disabled = true;
+    } else {
+      status.className = 'status status-warn';
+      status.textContent = 'Error: ' + (data.error || 'unknown error');
+      status.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Create config & Start Server';
+    }
+  } catch (e) {
+    status.className = 'status status-warn';
+    status.textContent = 'Request failed: ' + e.message;
+    status.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Create config & Start Server';
+  }
+}
+
+// Load client modes on startup
+(async function() {
+  try {
+    const res = await fetch('/api/setup/client-modes');
+    const data = await res.json();
+    const select = document.getElementById('srv-client-mode');
+    data.modes.forEach(mode => {
+      const opt = document.createElement('option');
+      opt.value = mode;
+      opt.textContent = mode;
+      if (mode === 'ZZ') opt.selected = true;
+      select.appendChild(opt);
+    });
+  } catch (e) {
+    const select = document.getElementById('srv-client-mode');
+    const opt = document.createElement('option');
+    opt.value = 'ZZ';
+    opt.textContent = 'ZZ';
+    select.appendChild(opt);
+  }
+  updateProgress();
+})();
+</script>
+</body>
+</html>

@@ -2,14 +2,16 @@ package channelserver
 
 import (
 	"erupe-ce/common/token"
-	_config "erupe-ce/config"
+	cfg "erupe-ce/config"
 	"math"
 	"time"
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
+	"go.uber.org/zap"
 )
 
+// Event represents an in-game event entry.
 type Event struct {
 	EventType    uint16
 	Unk1         uint16
@@ -63,13 +65,14 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	for _, t := range times {
-		var temp activeFeature
-		err := s.server.db.QueryRowx(`SELECT start_time, featured FROM feature_weapon WHERE start_time=$1`, t).StructScan(&temp)
+		temp, err := s.server.eventRepo.GetFeatureWeapon(t)
 		if err != nil || temp.StartTime.IsZero() {
 			weapons := token.RNG.Intn(s.server.erupeConfig.GameplayOptions.MaxFeatureWeapons-s.server.erupeConfig.GameplayOptions.MinFeatureWeapons+1) + s.server.erupeConfig.GameplayOptions.MinFeatureWeapons
-			temp = generateFeatureWeapons(weapons)
+			temp = generateFeatureWeapons(weapons, s.server.erupeConfig.RealClientMode)
 			temp.StartTime = t
-			s.server.db.Exec(`INSERT INTO feature_weapon VALUES ($1, $2)`, temp.StartTime, temp.ActiveFeatures)
+			if err := s.server.eventRepo.InsertFeatureWeapon(temp.StartTime, temp.ActiveFeatures); err != nil {
+				s.logger.Error("Failed to insert feature weapon", zap.Error(err))
+			}
 		}
 		features = append(features, temp)
 	}
@@ -85,15 +88,15 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func generateFeatureWeapons(count int) activeFeature {
+func generateFeatureWeapons(count int, mode cfg.Mode) activeFeature {
 	_max := 14
-	if _config.ErupeConfig.RealClientMode < _config.ZZ {
+	if mode < cfg.ZZ {
 		_max = 13
 	}
-	if _config.ErupeConfig.RealClientMode < _config.G10 {
+	if mode < cfg.G10 {
 		_max = 12
 	}
-	if _config.ErupeConfig.RealClientMode < _config.GG {
+	if mode < cfg.GG {
 		_max = 11
 	}
 	if count > _max {
@@ -133,17 +136,10 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 
 	bf := byteframe.NewByteFrame()
 
-	var loginBoosts []loginBoost
-	rows, err := s.server.db.Queryx("SELECT week_req, expiration, reset FROM login_boost WHERE char_id=$1 ORDER BY week_req", s.charID)
+	loginBoosts, err := s.server.eventRepo.GetLoginBoosts(s.charID)
 	if err != nil || s.server.erupeConfig.GameplayOptions.DisableLoginBoost {
-		rows.Close()
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 35))
 		return
-	}
-	for rows.Next() {
-		var temp loginBoost
-		rows.StructScan(&temp)
-		loginBoosts = append(loginBoosts, temp)
 	}
 	if len(loginBoosts) == 0 {
 		temp := TimeWeekStart()
@@ -155,7 +151,9 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 			{WeekReq: 5, Expiration: temp},
 		}
 		for _, boost := range loginBoosts {
-			s.server.db.Exec(`INSERT INTO login_boost VALUES ($1, $2, $3, $4)`, s.charID, boost.WeekReq, boost.Expiration, time.Time{})
+			if err := s.server.eventRepo.InsertLoginBoost(s.charID, boost.WeekReq, boost.Expiration, time.Time{}); err != nil {
+				s.logger.Error("Failed to insert login boost", zap.Error(err))
+			}
 		}
 	}
 
@@ -164,10 +162,12 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 		if !boost.Reset.IsZero() && boost.Reset.Before(TimeAdjusted()) {
 			boost.Expiration = TimeWeekStart()
 			boost.Reset = time.Time{}
-			s.server.db.Exec(`UPDATE login_boost SET expiration=$1, reset=$2 WHERE char_id=$3 AND week_req=$4`, boost.Expiration, boost.Reset, s.charID, boost.WeekReq)
+			if err := s.server.eventRepo.UpdateLoginBoost(s.charID, boost.WeekReq, boost.Expiration, boost.Reset); err != nil {
+				s.logger.Error("Failed to reset login boost", zap.Error(err))
+			}
 		}
 
-		boost.WeekCount = uint8((TimeAdjusted().Unix()-boost.Expiration.Unix())/604800 + 1)
+		boost.WeekCount = uint8((TimeAdjusted().Unix()-boost.Expiration.Unix())/secsPerWeek + 1)
 
 		if boost.WeekCount >= boost.WeekReq {
 			boost.Active = true
@@ -207,11 +207,13 @@ func handleMsgMhfUseKeepLoginBoost(s *Session, p mhfpacket.MHFPacket) {
 		expiration = TimeAdjusted().Add(240 * time.Minute)
 	}
 	bf.WriteUint32(uint32(expiration.Unix()))
-	s.server.db.Exec(`UPDATE login_boost SET expiration=$1, reset=$2 WHERE char_id=$3 AND week_req=$4`, expiration, TimeWeekNext(), s.charID, pkt.BoostWeekUsed)
+	if err := s.server.eventRepo.UpdateLoginBoost(s.charID, pkt.BoostWeekUsed, expiration, TimeWeekNext()); err != nil {
+		s.logger.Error("Failed to use login boost", zap.Error(err))
+	}
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func handleMsgMhfGetRestrictionEvent(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetRestrictionEvent(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfSetRestrictionEvent(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetRestrictionEvent)

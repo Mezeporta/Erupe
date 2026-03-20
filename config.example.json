@@ -1,0 +1,12 @@
+{
+  "Host": "",
+  "Database": {
+    "Host": "localhost",
+    "Port": 5432,
+    "User": "postgres",
+    "Password": "",
+    "Database": "erupe"
+  },
+  "ClientMode": "ZZ",
+  "AutoCreateAccount": true
+}

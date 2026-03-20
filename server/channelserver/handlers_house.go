@@ -446,7 +446,7 @@ func addWarehouseEquipment(s *Session, equipment mhfitem.MHFEquipment) {
 	giftBox := warehouseGetEquipment(s, 10)
 	equipment.WarehouseID = token.RNG.Uint32()
 	giftBox = append(giftBox, equipment)
-	s.server.db.Exec("UPDATE warehouse SET equip10=$1 WHERE character_id=$2", mhfitem.SerializeWarehouseEquipment(giftBox), s.charID)
+	s.server.db.Exec("UPDATE warehouse SET equip10=$1 WHERE character_id=$2", mhfitem.SerializeWarehouseEquipment(giftBox, s.server.erupeConfig.RealClientMode), s.charID)
 }
 
 func warehouseGetItems(s *Session, index uint8) []mhfitem.MHFItemStack {
@@ -474,7 +474,7 @@ func warehouseGetEquipment(s *Session, index uint8) []mhfitem.MHFEquipment {
 		numStacks := box.ReadUint16()
 		box.ReadUint16() // Unused
 		for i := 0; i < int(numStacks); i++ {
-			equipment = append(equipment, mhfitem.ReadWarehouseEquipment(box))
+			equipment = append(equipment, mhfitem.ReadWarehouseEquipment(box, s.server.erupeConfig.RealClientMode))
 		}
 	}
 	return equipment
@@ -489,7 +489,7 @@ func handleMsgMhfEnumerateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteBytes(mhfitem.SerializeWarehouseItems(items))
 	case 1:
 		equipment := warehouseGetEquipment(s, pkt.BoxIndex)
-		bf.WriteBytes(mhfitem.SerializeWarehouseEquipment(equipment))
+		bf.WriteBytes(mhfitem.SerializeWarehouseEquipment(equipment, s.server.erupeConfig.RealClientMode))
 	}
 	if bf.Index() > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
@@ -527,7 +527,7 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 				fEquip = append(fEquip, oEquip)
 			}
 		}
-		s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET equip%d=$1 WHERE character_id=$2`, pkt.BoxIndex), mhfitem.SerializeWarehouseEquipment(fEquip), s.charID)
+		s.server.db.Exec(fmt.Sprintf(`UPDATE warehouse SET equip%d=$1 WHERE character_id=$2`, pkt.BoxIndex), mhfitem.SerializeWarehouseEquipment(fEquip, s.server.erupeConfig.RealClientMode), s.charID)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
