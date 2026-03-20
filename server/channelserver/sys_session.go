@@ -72,6 +72,10 @@ type Session struct {
 	// Contains the mail list that maps accumulated indexes to mail IDs
 	mailList []int
 
+	// currentBeadIndex is the bead slot selected by the player via MsgMhfSetKiju.
+	// A value of -1 means no bead is currently assigned this session.
+	currentBeadIndex int
+
 	Name           string
 	closed         atomic.Bool
 	ackStart       map[uint32]time.Time
@@ -86,20 +90,21 @@ func NewSession(server *Server, conn net.Conn) *Session {
 	cryptConn, captureConn, captureCleanup := startCapture(server, cryptConn, conn.RemoteAddr(), pcap.ServerTypeChannel)
 
 	s := &Session{
-		logger:         server.logger.Named(conn.RemoteAddr().String()),
-		server:         server,
-		rawConn:        conn,
-		cryptConn:      cryptConn,
-		sendPackets:    make(chan packet, 20),
-		clientContext:  &clientctx.ClientContext{RealClientMode: server.erupeConfig.RealClientMode},
-		lastPacket:     time.Now(),
-		objectID:       server.getObjectId(),
-		sessionStart:   TimeAdjusted().Unix(),
-		stageMoveStack: stringstack.New(),
-		ackStart:       make(map[uint32]time.Time),
-		semaphoreID:    make([]uint16, 2),
-		captureConn:    captureConn,
-		captureCleanup: captureCleanup,
+		logger:           server.logger.Named(conn.RemoteAddr().String()),
+		server:           server,
+		rawConn:          conn,
+		cryptConn:        cryptConn,
+		sendPackets:      make(chan packet, 20),
+		clientContext:    &clientctx.ClientContext{RealClientMode: server.erupeConfig.RealClientMode},
+		lastPacket:       time.Now(),
+		objectID:         server.getObjectId(),
+		sessionStart:     TimeAdjusted().Unix(),
+		stageMoveStack:   stringstack.New(),
+		ackStart:         make(map[uint32]time.Time),
+		semaphoreID:      make([]uint16, 2),
+		captureConn:      captureConn,
+		captureCleanup:   captureCleanup,
+		currentBeadIndex: -1,
 	}
 	return s
 }

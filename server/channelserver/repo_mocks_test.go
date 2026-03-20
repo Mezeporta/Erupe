@@ -1149,6 +1149,22 @@ func (m *mockDivaRepo) GetTotalPoints(eventID uint32) (int64, int64, error) {
 	return tq, tb, nil
 }
 
+func (m *mockDivaRepo) GetBeads() ([]int, error)                      { return nil, nil }
+func (m *mockDivaRepo) AssignBead(_ uint32, _ int, _ time.Time) error { return nil }
+func (m *mockDivaRepo) AddBeadPoints(_ uint32, _ int, _ int) error    { return nil }
+func (m *mockDivaRepo) GetCharacterBeadPoints(_ uint32) (map[int]int, error) {
+	return map[int]int{}, nil
+}
+func (m *mockDivaRepo) GetTotalBeadPoints() (int64, error)      { return 0, nil }
+func (m *mockDivaRepo) GetTopBeadPerDay(_ int) (int, error)     { return 0, nil }
+func (m *mockDivaRepo) CleanupBeads() error                     { return nil }
+func (m *mockDivaRepo) GetPersonalPrizes() ([]DivaPrize, error) { return nil, nil }
+func (m *mockDivaRepo) GetGuildPrizes() ([]DivaPrize, error)    { return nil, nil }
+func (m *mockDivaRepo) GetCharacterInterceptionPoints(_ uint32) (map[string]int, error) {
+	return map[string]int{}, nil
+}
+func (m *mockDivaRepo) AddInterceptionPoints(_ uint32, _ int, _ int) error { return nil }
+
 // --- mockEventRepo ---
 
 type mockEventRepo struct {

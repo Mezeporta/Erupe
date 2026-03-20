@@ -1,6 +1,35 @@
 package channelserver
 
+// Bead holds the display strings for a single kiju prayer bead type.
+type Bead struct {
+	ID          int
+	Name        string
+	Description string
+}
+
+// beadName returns the localised name for a bead type, falling back to a
+// generic label if the type is not in the table.
+func (i *i18n) beadName(beadType int) string {
+	for _, b := range i.beads {
+		if b.ID == beadType {
+			return b.Name
+		}
+	}
+	return ""
+}
+
+// beadDescription returns the localised description for a bead type.
+func (i *i18n) beadDescription(beadType int) string {
+	for _, b := range i.beads {
+		if b.ID == beadType {
+			return b.Description
+		}
+	}
+	return ""
+}
+
 type i18n struct {
+	beads    []Bead
 	language string
 	cafe     struct {
 		reset string
@@ -168,6 +197,27 @@ func getLangStrings(s *Server) i18n {
 
 		i.guild.invite.declined.title = "辞退しました"
 		i.guild.invite.declined.body = "招待した狩人が「%s」への招待を辞退しました。"
+
+		i.beads = []Bead{
+			{1, "暴風の祈珠", "暴風の力を宿した祈珠。\n嵐を呼ぶ力で仲間を鼓舞する。"},
+			{3, "断力の祈珠", "断力の力を宿した祈珠。\n斬撃の力を仲間に授ける。"},
+			{4, "活力の祈珠", "活力の力を宿した祈珠。\n体力を高める力で仲間を鼓舞する。"},
+			{8, "癒しの祈珠", "癒しの力を宿した祈珠。\n回復の力で仲間を守る。"},
+			{9, "激昂の祈珠", "激昂の力を宿した祈珠。\n怒りの力を仲間に与える。"},
+			{10, "瘴気の祈珠", "瘴気の力を宿した祈珠。\n毒霧の力を仲間に与える。"},
+			{11, "剛力の祈珠", "剛力の力を宿した祈珠。\n強大な力を仲間に授ける。"},
+			{14, "雷光の祈珠", "雷光の力を宿した祈珠。\n稲妻の力を仲間に与える。"},
+			{15, "氷結の祈珠", "氷結の力を宿した祈珠。\n冷気の力を仲間に与える。"},
+			{17, "炎熱の祈珠", "炎熱の力を宿した祈珠。\n炎の力を仲間に与える。"},
+			{18, "水流の祈珠", "水流の力を宿した祈珠。\n水の力を仲間に与える。"},
+			{19, "龍気の祈珠", "龍気の力を宿した祈珠。\n龍属性の力を仲間に与える。"},
+			{20, "大地の祈珠", "大地の力を宿した祈珠。\n大地の力を仲間に与える。"},
+			{21, "疾風の祈珠", "疾風の力を宿した祈珠。\n素早さを高める力を仲間に与える。"},
+			{22, "光輝の祈珠", "光輝の力を宿した祈珠。\n光の力で仲間を鼓舞する。"},
+			{23, "暗影の祈珠", "暗影の力を宿した祈珠。\n闇の力を仲間に与える。"},
+			{24, "鋼鉄の祈珠", "鋼鉄の力を宿した祈珠。\n防御力を高める力を仲間に与える。"},
+			{25, "封属の祈珠", "封属の力を宿した祈珠。\n属性を封じる力を仲間に与える。"},
+		}
 	default:
 		i.language = "English"
 		i.cafe.reset = "Resets on %d/%d"
@@ -236,6 +286,27 @@ func getLangStrings(s *Server) i18n {
 
 		i.guild.invite.declined.title = "Declined"
 		i.guild.invite.declined.body = "The recipient declined your invitation to join\n「%s」."
+
+		i.beads = []Bead{
+			{1, "Bead of Storms", "A prayer bead imbued with the power of storms.\nSummons raging winds to bolster allies."},
+			{3, "Bead of Severing", "A prayer bead imbued with severing power.\nGrants allies increased cutting strength."},
+			{4, "Bead of Vitality", "A prayer bead imbued with vitality.\nBoosts the health of those around it."},
+			{8, "Bead of Healing", "A prayer bead imbued with healing power.\nProtects allies with restorative energy."},
+			{9, "Bead of Fury", "A prayer bead imbued with furious energy.\nFuels allies with battle rage."},
+			{10, "Bead of Blight", "A prayer bead imbued with miasma.\nInfuses allies with poisonous power."},
+			{11, "Bead of Power", "A prayer bead imbued with raw might.\nGrants allies overwhelming strength."},
+			{14, "Bead of Thunder", "A prayer bead imbued with lightning.\nCharges allies with electric force."},
+			{15, "Bead of Ice", "A prayer bead imbued with freezing cold.\nGrants allies chilling elemental power."},
+			{17, "Bead of Fire", "A prayer bead imbued with searing heat.\nIgnites allies with fiery elemental power."},
+			{18, "Bead of Water", "A prayer bead imbued with flowing water.\nGrants allies water elemental power."},
+			{19, "Bead of Dragon", "A prayer bead imbued with dragon energy.\nGrants allies dragon elemental power."},
+			{20, "Bead of Earth", "A prayer bead imbued with earth power.\nGrounds allies with elemental earth force."},
+			{21, "Bead of Wind", "A prayer bead imbued with swift wind.\nGrants allies increased agility."},
+			{22, "Bead of Light", "A prayer bead imbued with radiant light.\nInspires allies with luminous energy."},
+			{23, "Bead of Shadow", "A prayer bead imbued with darkness.\nInfuses allies with shadowy power."},
+			{24, "Bead of Iron", "A prayer bead imbued with iron strength.\nGrants allies fortified defence."},
+			{25, "Bead of Immunity", "A prayer bead imbued with sealing power.\nNullifies elemental weaknesses for allies."},
+		}
 	}
 	return i
 }

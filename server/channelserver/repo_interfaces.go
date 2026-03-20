@@ -322,6 +322,18 @@ type GoocooRepo interface {
 	SaveSlot(charID uint32, slot uint32, data []byte) error
 }
 
+// DivaPrize represents a single reward milestone for the personal or guild track.
+type DivaPrize struct {
+	ID         int
+	Type       string
+	PointsReq  int
+	ItemType   int
+	ItemID     int
+	Quantity   int
+	GR         bool
+	Repeatable bool
+}
+
 // DivaRepo defines the contract for diva event data access.
 type DivaRepo interface {
 	DeleteEvents() error
@@ -330,6 +342,23 @@ type DivaRepo interface {
 	AddPoints(charID uint32, eventID uint32, questPoints, bonusPoints uint32) error
 	GetPoints(charID uint32, eventID uint32) (questPoints, bonusPoints int64, err error)
 	GetTotalPoints(eventID uint32) (questPoints, bonusPoints int64, err error)
+
+	// Bead management
+	GetBeads() ([]int, error)
+	AssignBead(characterID uint32, beadIndex int, expiry time.Time) error
+	AddBeadPoints(characterID uint32, beadIndex int, points int) error
+	GetCharacterBeadPoints(characterID uint32) (map[int]int, error)
+	GetTotalBeadPoints() (int64, error)
+	GetTopBeadPerDay(day int) (int, error)
+	CleanupBeads() error
+
+	// Prize rewards
+	GetPersonalPrizes() ([]DivaPrize, error)
+	GetGuildPrizes() ([]DivaPrize, error)
+
+	// Interception points (guild_characters.interception_points JSON)
+	GetCharacterInterceptionPoints(characterID uint32) (map[string]int, error)
+	AddInterceptionPoints(characterID uint32, questFileID int, points int) error
 }
 
 // MiscRepo defines the contract for miscellaneous data access.

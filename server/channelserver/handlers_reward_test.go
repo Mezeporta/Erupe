@@ -70,13 +70,17 @@ func TestHandleMsgMhfUseRewardSong(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgMhfUseRewardSong panicked: %v", r)
-		}
-	}()
+	pkt := &mhfpacket.MsgMhfUseRewardSong{AckHandle: 12345}
+	handleMsgMhfUseRewardSong(session, pkt)
 
-	handleMsgMhfUseRewardSong(session, nil)
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
 }
 
 func TestHandleMsgMhfAddRewardSongCount(t *testing.T) {
@@ -193,16 +197,16 @@ func TestEmptyHandlers_MiscFiles_Reward(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	tests := []struct {
+	// Handlers that accept nil and take no action (no AckHandle).
+	nilSafeTests := []struct {
 		name string
 		fn   func()
 	}{
-		{"handleMsgMhfUseRewardSong", func() { handleMsgMhfUseRewardSong(session, nil) }},
 		{"handleMsgMhfAddRewardSongCount", func() { handleMsgMhfAddRewardSongCount(session, nil) }},
 		{"handleMsgMhfAcceptReadReward", func() { handleMsgMhfAcceptReadReward(session, nil) }},
 	}
 
-	for _, tt := range tests {
+	for _, tt := range nilSafeTests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r != nil {
@@ -212,4 +216,18 @@ func TestEmptyHandlers_MiscFiles_Reward(t *testing.T) {
 			tt.fn()
 		})
 	}
+
+	// handleMsgMhfUseRewardSong is a real handler (requires a typed packet).
+	t.Run("handleMsgMhfUseRewardSong", func(t *testing.T) {
+		pkt := &mhfpacket.MsgMhfUseRewardSong{AckHandle: 1}
+		handleMsgMhfUseRewardSong(session, pkt)
+		select {
+		case p := <-session.sendPackets:
+			if len(p.data) == 0 {
+				t.Error("handleMsgMhfUseRewardSong: response should have data")
+			}
+		default:
+			t.Error("handleMsgMhfUseRewardSong: no response queued")
+		}
+	})
 }
