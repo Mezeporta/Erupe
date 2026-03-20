@@ -1,5 +1,4 @@
-BEGIN;
-
+-- Campaign / Event Tent system tables.
 CREATE TABLE IF NOT EXISTS public.campaigns (
   id INTEGER PRIMARY KEY,
   min_hr INTEGER,
@@ -65,5 +64,3 @@ CREATE TABLE IF NOT EXISTS public.campaign_quest (
   character_id INTEGER REFERENCES public.characters(id) ON DELETE CASCADE,
   PRIMARY KEY (campaign_id, character_id)
 );
-
-END;
