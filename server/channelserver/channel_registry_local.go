@@ -57,13 +57,14 @@ func (r *LocalChannelRegistry) DisconnectUser(cids []uint32) {
 func (r *LocalChannelRegistry) FindChannelForStage(stageSuffix string) string {
 	for _, channel := range r.channels {
 		var gid string
-		channel.stages.Range(func(id string, _ *Stage) bool {
+		channel.stagesLock.RLock()
+		for id := range channel.stages {
 			if strings.HasSuffix(id, stageSuffix) {
 				gid = channel.GlobalID
-				return false // stop iteration
+				break
 			}
-			return true
-		})
+		}
+		channel.stagesLock.RUnlock()
 		if gid != "" {
 			return gid
 		}
@@ -91,7 +92,9 @@ func (r *LocalChannelRegistry) SearchSessions(predicate func(SessionSnapshot) bo
 			if session.stage != nil {
 				snap.StageID = session.stage.id
 			}
-			snap.UserBinary3 = c.userBinary.GetCopy(session.charID, 3)
+			c.userBinaryPartsLock.RLock()
+		snap.UserBinary3 = c.userBinaryParts[userBinaryPartID{charID: session.charID, index: 3}]
+		c.userBinaryPartsLock.RUnlock()
 			if predicate(snap) {
 				results = append(results, snap)
 			}
@@ -122,12 +125,13 @@ func (r *LocalChannelRegistry) SearchStages(stagePrefix string, max int) []Stage
 
 		cIP := net.ParseIP(c.IP).To4()
 		cPort := c.Port
-		c.stages.Range(func(_ string, stage *Stage) bool {
+		c.stagesLock.RLock()
+		for _, stage := range c.stages {
 			if len(results) >= max {
-				return false
+				break
 			}
 			if !strings.HasPrefix(stage.id, stagePrefix) {
-				return true
+				continue
 			}
 			stage.RLock()
 			bin0 := stage.rawBinaryData[stageBinaryKey{1, 0}]
@@ -160,8 +164,8 @@ func (r *LocalChannelRegistry) SearchStages(stagePrefix string, max int) []Stage
 				RawBinData3:   bin3Copy,
 			})
 			stage.RUnlock()
-			return true
-		})
+		}
+		c.stagesLock.RUnlock()
 	}
 	return results
 }

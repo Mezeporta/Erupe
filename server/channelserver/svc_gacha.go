@@ -3,7 +3,6 @@ package channelserver
 import (
 	"database/sql"
 	"errors"
-	"math/rand"
 	"time"
 
 	"erupe-ce/common/byteframe"
@@ -317,41 +316,3 @@ func (svc *GachaService) ResetBox(gachaID, charID uint32) error {
 	return svc.gachaRepo.DeleteBoxEntries(gachaID, charID)
 }
 
-// getRandomEntries selects random gacha entries. In non-box mode, entries are
-// chosen with weighted probability (with replacement). In box mode, entries are
-// chosen uniformly without replacement.
-func getRandomEntries(entries []GachaEntry, rolls int, isBox bool) ([]GachaEntry, error) {
-	if len(entries) == 0 {
-		return nil, errors.New("no gacha entries available")
-	}
-	// Box mode draws without replacement, so clamp rolls to available entries.
-	if isBox && rolls > len(entries) {
-		rolls = len(entries)
-	}
-	var chosen []GachaEntry
-	var totalWeight float64
-	for i := range entries {
-		totalWeight += entries[i].Weight
-	}
-	if !isBox && totalWeight <= 0 {
-		return nil, errors.New("gacha entries have zero total weight")
-	}
-	for rolls != len(chosen) {
-		if !isBox {
-			result := rand.Float64() * totalWeight
-			for _, entry := range entries {
-				result -= entry.Weight
-				if result < 0 {
-					chosen = append(chosen, entry)
-					break
-				}
-			}
-		} else {
-			result := rand.Intn(len(entries))
-			chosen = append(chosen, entries[result])
-			entries[result] = entries[len(entries)-1]
-			entries = entries[:len(entries)-1]
-		}
-	}
-	return chosen, nil
-}

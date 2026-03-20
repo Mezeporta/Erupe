@@ -58,37 +58,6 @@ SELECT
 	JOIN characters c on leader_id = c.id
 `
 
-const guildMembersSelectSQL = `
-SELECT
-	COALESCE(g.id, 0) AS guild_id,
-	joined_at,
-	COALESCE((SELECT SUM(souls) FROM festa_submissions fs WHERE fs.character_id=c.id), 0) AS souls,
-	COALESCE(rp_today, 0) AS rp_today,
-	COALESCE(rp_yesterday, 0) AS rp_yesterday,
-	c.name,
-	c.id AS character_id,
-	COALESCE(order_index, 0) AS order_index,
-	c.last_login,
-	COALESCE(recruiter, false) AS recruiter,
-	COALESCE(avoid_leadership, false) AS avoid_leadership,
-	c.hr,
-	c.gr,
-	c.weapon_id,
-	c.weapon_type,
-	CASE WHEN g.leader_id = c.id THEN true ELSE false END AS is_leader,
-	character.is_applicant
-	FROM (
-		SELECT character_id, true as is_applicant, guild_id
-		FROM guild_applications ga
-		WHERE ga.application_type = 'applied'
-		UNION
-		SELECT character_id, false as is_applicant, guild_id
-		FROM guild_characters gc
-	) character
-	JOIN characters c on character.character_id = c.id
-	LEFT JOIN guild_characters gc ON gc.character_id = character.character_id
-	LEFT JOIN guilds g ON g.id = gc.guild_id
-`
 
 func scanGuild(rows *sqlx.Rows) (*Guild, error) {
 	guild := &Guild{}

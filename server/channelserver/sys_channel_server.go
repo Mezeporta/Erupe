@@ -38,6 +38,7 @@ type userBinaryPartID struct {
 // Server is a MHF channel server.
 type Server struct {
 	sync.Mutex
+	Registry       ChannelRegistry
 	Channels       []*Server
 	ID             uint16
 	GlobalID       string
@@ -78,6 +79,37 @@ type Server struct {
 	questCacheLock sync.RWMutex
 	questCacheData map[int][]byte
 	questCacheTime map[int]time.Time
+
+	// Repository layer
+	charRepo        CharacterRepo
+	guildRepo       GuildRepo
+	userRepo        UserRepo
+	gachaRepo       GachaRepo
+	houseRepo       HouseRepo
+	festaRepo       FestaRepo
+	towerRepo       TowerRepo
+	rengokuRepo     RengokuRepo
+	mailRepo        MailRepo
+	stampRepo       StampRepo
+	distRepo        DistributionRepo
+	sessionRepo     SessionRepo
+	eventRepo       EventRepo
+	achievementRepo AchievementRepo
+	shopRepo        ShopRepo
+	cafeRepo        CafeRepo
+	goocooRepo      GoocooRepo
+	divaRepo        DivaRepo
+	miscRepo        MiscRepo
+	scenarioRepo    ScenarioRepo
+	mercenaryRepo   MercenaryRepo
+
+	// Service layer
+	mailService        *MailService
+	guildService       *GuildService
+	achievementService *AchievementService
+	gachaService       *GachaService
+	towerService       *TowerService
+	festaService       *FestaService
 }
 
 type Raviente struct {
@@ -194,6 +226,37 @@ func NewServer(config *Config) *Server {
 	s.stages["sl1Ns462p0a0u0"] = NewStage("sl1Ns462p0a0u0")
 
 	s.i18n = getLangStrings(s)
+
+	// Wire up repositories.
+	s.charRepo = NewCharacterRepository(config.DB)
+	s.guildRepo = NewGuildRepository(config.DB)
+	s.userRepo = NewUserRepository(config.DB)
+	s.gachaRepo = NewGachaRepository(config.DB)
+	s.houseRepo = NewHouseRepository(config.DB)
+	s.festaRepo = NewFestaRepository(config.DB)
+	s.towerRepo = NewTowerRepository(config.DB)
+	s.rengokuRepo = NewRengokuRepository(config.DB)
+	s.mailRepo = NewMailRepository(config.DB)
+	s.stampRepo = NewStampRepository(config.DB)
+	s.distRepo = NewDistributionRepository(config.DB)
+	s.sessionRepo = NewSessionRepository(config.DB)
+	s.eventRepo = NewEventRepository(config.DB)
+	s.achievementRepo = NewAchievementRepository(config.DB)
+	s.shopRepo = NewShopRepository(config.DB)
+	s.cafeRepo = NewCafeRepository(config.DB)
+	s.goocooRepo = NewGoocooRepository(config.DB)
+	s.divaRepo = NewDivaRepository(config.DB)
+	s.miscRepo = NewMiscRepository(config.DB)
+	s.scenarioRepo = NewScenarioRepository(config.DB)
+	s.mercenaryRepo = NewMercenaryRepository(config.DB)
+
+	// Wire up services.
+	s.mailService = NewMailService(s.mailRepo, s.guildRepo, s.logger)
+	s.guildService = NewGuildService(s.guildRepo, s.mailService, s.charRepo, s.logger)
+	s.achievementService = NewAchievementService(s.achievementRepo, s.logger)
+	s.gachaService = NewGachaService(s.gachaRepo, s.userRepo, s.charRepo, s.logger, config.ErupeConfig.GameplayOptions.MaximumNP)
+	s.towerService = NewTowerService(s.towerRepo, s.logger)
+	s.festaService = NewFestaService(s.festaRepo, s.logger)
 
 	return s
 }

@@ -813,9 +813,11 @@ func handleMsgMhfEnumerateOrder(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {}
 
 func userGetItems(s *Session) []mhfitem.MHFItemStack {
-	var data []byte
 	var items []mhfitem.MHFItemStack
-	s.server.db.QueryRow(`SELECT item_box FROM users u WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)`, s.charID).Scan(&data)
+	data, err := s.server.userRepo.GetItemBox(s.userID)
+	if err != nil {
+		s.logger.Warn("Failed to load user item box", zap.Error(err))
+	}
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
 		numStacks := box.ReadUint16()
@@ -876,7 +878,7 @@ func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeWeeklyStamp)
 	var total, redeemed uint16
 	var tktStack mhfitem.MHFItemStack
-	if pkt.Unk1 == 10 { // Yearly Sub Ex
+	if pkt.ExchangeType == 10 { // Yearly Sub Ex
 		s.server.db.QueryRow("UPDATE stamps SET hl_total=hl_total-48, hl_redeemed=hl_redeemed-48 WHERE character_id=$1 RETURNING hl_total, hl_redeemed", s.charID).Scan(&total, &redeemed)
 		tktStack = mhfitem.MHFItemStack{Item: mhfitem.MHFItem{ItemID: 2210}, Quantity: 1}
 	} else {

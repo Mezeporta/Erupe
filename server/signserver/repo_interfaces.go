@@ -5,26 +5,6 @@ import "time"
 // Repository interfaces decouple sign server business logic from concrete
 // PostgreSQL implementations, enabling mock/stub injection for unit tests.
 
-// character represents a player character record from the characters table.
-type character struct {
-	ID             uint32 `db:"id"`
-	IsFemale       bool   `db:"is_female"`
-	IsNewCharacter bool   `db:"is_new_character"`
-	Name           string `db:"name"`
-	UnkDescString  string `db:"unk_desc_string"`
-	HR             uint16 `db:"hr"`
-	GR             uint16 `db:"gr"`
-	WeaponType     uint16 `db:"weapon_type"`
-	LastLogin      uint32 `db:"last_login"`
-}
-
-// members represents a friend or guildmate entry used in the sign response.
-type members struct {
-	CID  uint32 // Local character ID
-	ID   uint32 `db:"id"`
-	Name string `db:"name"`
-}
-
 // SignUserRepo defines the contract for user-related data access (users, bans tables).
 type SignUserRepo interface {
 	GetCredentials(username string) (uid uint32, passwordHash string, err error)
