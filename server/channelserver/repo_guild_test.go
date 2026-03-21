@@ -533,66 +533,77 @@ func TestAddMemberDailyRP(t *testing.T) {
 
 // --- Invitation / Scout tests ---
 
-func TestCancelInvitation(t *testing.T) {
+func TestCancelInvite(t *testing.T) {
 	repo, db, guildID, leaderID := setupGuildRepo(t)
 
 	user2 := CreateTestUser(t, db, "invite_user")
 	char2 := CreateTestCharacter(t, db, user2, "Invited")
 
-	if err := repo.CreateApplication(guildID, char2, leaderID, GuildApplicationTypeInvited); err != nil {
-		t.Fatalf("CreateApplication (invited) failed: %v", err)
+	if err := repo.CreateInviteWithMail(guildID, char2, leaderID, leaderID, char2, "Invite", "body"); err != nil {
+		t.Fatalf("CreateInviteWithMail failed: %v", err)
 	}
 
-	if err := repo.CancelInvitation(guildID, char2); err != nil {
-		t.Fatalf("CancelInvitation failed: %v", err)
+	invites, err := repo.ListInvites(guildID)
+	if err != nil || len(invites) != 1 {
+		t.Fatalf("Expected 1 invite, got %d (err: %v)", len(invites), err)
 	}
 
-	has, err := repo.HasApplication(guildID, char2)
+	if err := repo.CancelInvite(invites[0].ID); err != nil {
+		t.Fatalf("CancelInvite failed: %v", err)
+	}
+
+	has, err := repo.HasInvite(guildID, char2)
 	if err != nil {
-		t.Fatalf("HasApplication failed: %v", err)
+		t.Fatalf("HasInvite failed: %v", err)
 	}
 	if has {
-		t.Error("Expected no application after cancellation")
+		t.Error("Expected no invite after cancellation")
 	}
 }
 
-func TestListInvitedCharacters(t *testing.T) {
+func TestListInvites(t *testing.T) {
 	repo, db, guildID, leaderID := setupGuildRepo(t)
 
 	user2 := CreateTestUser(t, db, "scout_user")
 	char2 := CreateTestCharacter(t, db, user2, "Scouted")
 
-	if err := repo.CreateApplication(guildID, char2, leaderID, GuildApplicationTypeInvited); err != nil {
-		t.Fatalf("CreateApplication failed: %v", err)
+	if err := repo.CreateInviteWithMail(guildID, char2, leaderID, leaderID, char2, "Invite", "body"); err != nil {
+		t.Fatalf("CreateInviteWithMail failed: %v", err)
 	}
 
-	chars, err := repo.ListInvitedCharacters(guildID)
+	invites, err := repo.ListInvites(guildID)
 	if err != nil {
-		t.Fatalf("ListInvitedCharacters failed: %v", err)
+		t.Fatalf("ListInvites failed: %v", err)
 	}
-	if len(chars) != 1 {
-		t.Fatalf("Expected 1 invited character, got %d", len(chars))
+	if len(invites) != 1 {
+		t.Fatalf("Expected 1 invite, got %d", len(invites))
 	}
-	if chars[0].CharID != char2 {
-		t.Errorf("Expected char ID %d, got %d", char2, chars[0].CharID)
+	if invites[0].CharID != char2 {
+		t.Errorf("Expected char ID %d, got %d", char2, invites[0].CharID)
 	}
-	if chars[0].Name != "Scouted" {
-		t.Errorf("Expected name 'Scouted', got %q", chars[0].Name)
+	if invites[0].Name != "Scouted" {
+		t.Errorf("Expected name 'Scouted', got %q", invites[0].Name)
 	}
-	if chars[0].ActorID != leaderID {
-		t.Errorf("Expected actor ID %d, got %d", leaderID, chars[0].ActorID)
+	if invites[0].ActorID != leaderID {
+		t.Errorf("Expected actor ID %d, got %d", leaderID, invites[0].ActorID)
+	}
+	if invites[0].ID == 0 {
+		t.Error("Expected non-zero invite ID")
+	}
+	if invites[0].InvitedAt.IsZero() {
+		t.Error("Expected non-zero InvitedAt timestamp")
 	}
 }
 
-func TestListInvitedCharactersEmpty(t *testing.T) {
+func TestListInvitesEmpty(t *testing.T) {
 	repo, _, guildID, _ := setupGuildRepo(t)
 
-	chars, err := repo.ListInvitedCharacters(guildID)
+	invites, err := repo.ListInvites(guildID)
 	if err != nil {
-		t.Fatalf("ListInvitedCharacters failed: %v", err)
+		t.Fatalf("ListInvites failed: %v", err)
 	}
-	if len(chars) != 0 {
-		t.Errorf("Expected 0 invited characters, got %d", len(chars))
+	if len(invites) != 0 {
+		t.Errorf("Expected 0 invites, got %d", len(invites))
 	}
 }
 
@@ -1486,28 +1497,26 @@ func TestDisbandCleansUpAlliance(t *testing.T) {
 	}
 }
 
-// --- CreateApplicationWithMail ---
+// --- CreateInviteWithMail ---
 
-func TestCreateApplicationWithMail(t *testing.T) {
+func TestCreateInviteWithMail(t *testing.T) {
 	repo, db, guildID, leaderID := setupGuildRepo(t)
 
 	user2 := CreateTestUser(t, db, "scout_mail_user")
 	char2 := CreateTestCharacter(t, db, user2, "ScoutTarget")
 
-	err := repo.CreateApplicationWithMail(
-		guildID, char2, leaderID, GuildApplicationTypeInvited,
-		leaderID, char2, "Guild Invite", "You have been invited!")
+	err := repo.CreateInviteWithMail(guildID, char2, leaderID, leaderID, char2, "Guild Invite", "You have been invited!")
 	if err != nil {
-		t.Fatalf("CreateApplicationWithMail failed: %v", err)
+		t.Fatalf("CreateInviteWithMail failed: %v", err)
 	}
 
-	// Verify application was created
-	has, err := repo.HasApplication(guildID, char2)
+	// Verify invite was created
+	has, err := repo.HasInvite(guildID, char2)
 	if err != nil {
-		t.Fatalf("HasApplication failed: %v", err)
+		t.Fatalf("HasInvite failed: %v", err)
 	}
 	if !has {
-		t.Error("Expected application to exist after CreateApplicationWithMail")
+		t.Error("Expected invite to exist after CreateInviteWithMail")
 	}
 
 	// Verify mail was sent

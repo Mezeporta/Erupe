@@ -280,16 +280,16 @@ func (svc *GuildService) PostScout(actorCharID, targetCharID uint32, strings Sco
 		return fmt.Errorf("guild lookup: %w", err)
 	}
 
-	hasApp, err := svc.guildRepo.HasApplication(guild.ID, targetCharID)
+	hasInvite, err := svc.guildRepo.HasInvite(guild.ID, targetCharID)
 	if err != nil {
-		return fmt.Errorf("check application: %w", err)
+		return fmt.Errorf("check invite: %w", err)
 	}
-	if hasApp {
+	if hasInvite {
 		return ErrAlreadyInvited
 	}
 
-	err = svc.guildRepo.CreateApplicationWithMail(
-		guild.ID, targetCharID, actorCharID, GuildApplicationTypeInvited,
+	err = svc.guildRepo.CreateInviteWithMail(
+		guild.ID, targetCharID, actorCharID,
 		actorCharID, targetCharID,
 		strings.Title,
 		fmt.Sprintf(strings.Body, guild.Name))
@@ -309,8 +309,8 @@ func (svc *GuildService) AnswerScout(charID, leaderID uint32, accept bool, strin
 		return nil, fmt.Errorf("guild lookup for leader %d: %w", leaderID, err)
 	}
 
-	app, err := svc.guildRepo.GetApplication(guild.ID, charID, GuildApplicationTypeInvited)
-	if app == nil || err != nil {
+	hasInvite, err := svc.guildRepo.HasInvite(guild.ID, charID)
+	if err != nil || !hasInvite {
 		return &AnswerScoutResult{
 			GuildID: guild.ID,
 			Success: false,
@@ -319,13 +319,13 @@ func (svc *GuildService) AnswerScout(charID, leaderID uint32, accept bool, strin
 
 	var mails []Mail
 	if accept {
-		err = svc.guildRepo.AcceptApplication(guild.ID, charID)
+		err = svc.guildRepo.AcceptInvite(guild.ID, charID)
 		mails = []Mail{
 			{SenderID: 0, RecipientID: charID, Subject: strings.SuccessTitle, Body: fmt.Sprintf(strings.SuccessBody, guild.Name), IsSystemMessage: true},
 			{SenderID: charID, RecipientID: leaderID, Subject: strings.AcceptedTitle, Body: fmt.Sprintf(strings.AcceptedBody, guild.Name), IsSystemMessage: true},
 		}
 	} else {
-		err = svc.guildRepo.RejectApplication(guild.ID, charID)
+		err = svc.guildRepo.DeclineInvite(guild.ID, charID)
 		mails = []Mail{
 			{SenderID: 0, RecipientID: charID, Subject: strings.RejectedTitle, Body: fmt.Sprintf(strings.RejectedBody, guild.Name), IsSystemMessage: true},
 			{SenderID: charID, RecipientID: leaderID, Subject: strings.DeclinedTitle, Body: fmt.Sprintf(strings.DeclinedBody, guild.Name), IsSystemMessage: true},

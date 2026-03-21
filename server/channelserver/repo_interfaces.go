@@ -64,8 +64,11 @@ type GuildRepo interface {
 	RemoveCharacter(charID uint32) error
 	AcceptApplication(guildID, charID uint32) error
 	CreateApplication(guildID, charID, actorID uint32, appType GuildApplicationType) error
-	CreateApplicationWithMail(guildID, charID, actorID uint32, appType GuildApplicationType, mailSenderID, mailRecipientID uint32, mailSubject, mailBody string) error
-	CancelInvitation(guildID, charID uint32) error
+	CreateInviteWithMail(guildID, charID, actorID uint32, mailSenderID, mailRecipientID uint32, mailSubject, mailBody string) error
+	HasInvite(guildID, charID uint32) (bool, error)
+	CancelInvite(inviteID uint32) error
+	AcceptInvite(guildID, charID uint32) error
+	DeclineInvite(guildID, charID uint32) error
 	RejectApplication(guildID, charID uint32) error
 	ArrangeCharacters(charIDs []uint32) error
 	GetApplication(guildID, charID uint32, appType GuildApplicationType) (*GuildApplication, error)
@@ -120,7 +123,7 @@ type GuildRepo interface {
 	CountGuildKills(guildID, charID uint32) (int, error)
 	ClearTreasureHunt(charID uint32) error
 	InsertKillLog(charID uint32, monster int, quantity uint8, timestamp time.Time) error
-	ListInvitedCharacters(guildID uint32) ([]*ScoutedCharacter, error)
+	ListInvites(guildID uint32) ([]*GuildInvite, error)
 	RolloverDailyRP(guildID uint32, noon time.Time) error
 	AddWeeklyBonusUsers(guildID uint32, numUsers uint8) error
 }

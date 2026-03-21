@@ -308,8 +308,10 @@ type mockGuildRepo struct {
 	removeErr     error
 	createAppErr  error
 	getMemberErr  error
-	hasAppResult  bool
-	hasAppErr     error
+	hasAppResult   bool
+	hasAppErr      error
+	hasInviteResult bool
+	hasInviteErr    error
 	listPostsErr  error
 	createPostErr error
 	deletePostErr error
@@ -317,8 +319,10 @@ type mockGuildRepo struct {
 	// State tracking
 	disbandedID    uint32
 	removedCharID  uint32
-	acceptedCharID uint32
-	rejectedCharID uint32
+	acceptedCharID    uint32
+	rejectedCharID    uint32
+	acceptInviteCharID uint32
+	declineInviteCharID uint32
 	savedGuild     *Guild
 	savedMembers   []*GuildMember
 	createdAppArgs []interface{}
@@ -571,10 +575,19 @@ func (m *mockGuildRepo) CountGuildKills(_, _ uint32) (int, error) {
 // No-op stubs for remaining GuildRepo interface methods.
 func (m *mockGuildRepo) ListAll() ([]*Guild, error)               { return nil, nil }
 func (m *mockGuildRepo) Create(_ uint32, _ string) (int32, error) { return 0, nil }
-func (m *mockGuildRepo) CreateApplicationWithMail(_, _, _ uint32, _ GuildApplicationType, _, _ uint32, _, _ string) error {
-	return nil
+func (m *mockGuildRepo) CreateInviteWithMail(_, _, _, _, _ uint32, _, _ string) error { return nil }
+func (m *mockGuildRepo) HasInvite(_, _ uint32) (bool, error) {
+	return m.hasInviteResult, m.hasInviteErr
 }
-func (m *mockGuildRepo) CancelInvitation(_, _ uint32) error                        { return nil }
+func (m *mockGuildRepo) CancelInvite(_ uint32) error { return nil }
+func (m *mockGuildRepo) AcceptInvite(_, charID uint32) error {
+	m.acceptInviteCharID = charID
+	return m.acceptErr
+}
+func (m *mockGuildRepo) DeclineInvite(_, charID uint32) error {
+	m.declineInviteCharID = charID
+	return m.rejectErr
+}
 func (m *mockGuildRepo) ArrangeCharacters(_ []uint32) error                        { return nil }
 func (m *mockGuildRepo) GetItemBox(_ uint32) ([]byte, error)                       { return nil, nil }
 func (m *mockGuildRepo) SaveItemBox(_ uint32, _ []byte) error                      { return nil }
@@ -597,9 +610,7 @@ func (m *mockGuildRepo) CountNewPosts(_ uint32, _ time.Time) (int, error)       
 func (m *mockGuildRepo) ListAlliances() ([]*GuildAlliance, error)                  { return nil, nil }
 func (m *mockGuildRepo) ClearTreasureHunt(_ uint32) error                          { return nil }
 func (m *mockGuildRepo) InsertKillLog(_ uint32, _ int, _ uint8, _ time.Time) error { return nil }
-func (m *mockGuildRepo) ListInvitedCharacters(_ uint32) ([]*ScoutedCharacter, error) {
-	return nil, nil
-}
+func (m *mockGuildRepo) ListInvites(_ uint32) ([]*GuildInvite, error) { return nil, nil }
 func (m *mockGuildRepo) RolloverDailyRP(_ uint32, _ time.Time) error { return nil }
 func (m *mockGuildRepo) AddWeeklyBonusUsers(_ uint32, _ uint8) error { return nil }
 

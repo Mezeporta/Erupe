@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Guild scout invitations now use a dedicated `guild_invites` table (migration `0012_guild_invites`), giving each invitation a real serial PK; the scout list response now returns accurate invite IDs and timestamps, and `CancelGuildScout` uses the correct PK instead of the character ID.
 - Event Tent (campaign) system: code redemption, stamp tracking, reward claiming, and quest gating for special event quests, backed by 8 new database tables and seeded with community-researched live-game campaign data ([#182](https://github.com/Mezeporta/Erupe/pull/182), by stratick).
 - Database migration `0010_campaign` (campaigns, campaign_categories, campaign_category_links, campaign_rewards, campaign_rewards_claimed, campaign_state, campaign_codes, campaign_quest).
 - JSON Hunting Road config: `bin/rengoku_data.json` is now supported as a human-readable alternative to the opaque `rengoku_data.bin` — the server assembles and ECD-encrypts the binary at startup, with `.bin` used as a fallback ([#173](https://github.com/Mezeporta/Erupe/issues/173)).

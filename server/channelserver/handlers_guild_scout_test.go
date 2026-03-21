@@ -12,7 +12,7 @@ func TestAnswerGuildScout_Accept(t *testing.T) {
 	server := createMockServer()
 	mailMock := &mockMailRepo{}
 	guildMock := &mockGuildRepo{
-		application: &GuildApplication{GuildID: 10, CharID: 1},
+		hasInviteResult: true,
 	}
 	guildMock.guild = &Guild{ID: 10, Name: "TestGuild"}
 	guildMock.guild.LeaderCharID = 50
@@ -29,8 +29,8 @@ func TestAnswerGuildScout_Accept(t *testing.T) {
 
 	handleMsgMhfAnswerGuildScout(session, pkt)
 
-	if guildMock.acceptedCharID != 1 {
-		t.Errorf("AcceptApplication charID = %d, want 1", guildMock.acceptedCharID)
+	if guildMock.acceptInviteCharID != 1 {
+		t.Errorf("AcceptInvite charID = %d, want 1", guildMock.acceptInviteCharID)
 	}
 	if len(mailMock.sentMails) != 2 {
 		t.Fatalf("Expected 2 mails (self + leader), got %d", len(mailMock.sentMails))
@@ -47,7 +47,7 @@ func TestAnswerGuildScout_Decline(t *testing.T) {
 	server := createMockServer()
 	mailMock := &mockMailRepo{}
 	guildMock := &mockGuildRepo{
-		application: &GuildApplication{GuildID: 10, CharID: 1},
+		hasInviteResult: true,
 	}
 	guildMock.guild = &Guild{ID: 10, Name: "TestGuild"}
 	guildMock.guild.LeaderCharID = 50
@@ -64,8 +64,8 @@ func TestAnswerGuildScout_Decline(t *testing.T) {
 
 	handleMsgMhfAnswerGuildScout(session, pkt)
 
-	if guildMock.rejectedCharID != 1 {
-		t.Errorf("RejectApplication charID = %d, want 1", guildMock.rejectedCharID)
+	if guildMock.declineInviteCharID != 1 {
+		t.Errorf("DeclineInvite charID = %d, want 1", guildMock.declineInviteCharID)
 	}
 	if len(mailMock.sentMails) != 2 {
 		t.Fatalf("Expected 2 mails (self + leader), got %d", len(mailMock.sentMails))
@@ -101,7 +101,7 @@ func TestAnswerGuildScout_ApplicationMissing(t *testing.T) {
 	server := createMockServer()
 	mailMock := &mockMailRepo{}
 	guildMock := &mockGuildRepo{
-		application: nil, // no application found
+		hasInviteResult: false, // no invite found
 	}
 	guildMock.guild = &Guild{ID: 10, Name: "TestGuild"}
 	guildMock.guild.LeaderCharID = 50
@@ -134,7 +134,7 @@ func TestAnswerGuildScout_MailError(t *testing.T) {
 	server := createMockServer()
 	mailMock := &mockMailRepo{sendErr: errNotFound}
 	guildMock := &mockGuildRepo{
-		application: &GuildApplication{GuildID: 10, CharID: 1},
+		hasInviteResult: true,
 	}
 	guildMock.guild = &Guild{ID: 10, Name: "TestGuild"}
 	guildMock.guild.LeaderCharID = 50
