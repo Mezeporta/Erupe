@@ -372,7 +372,39 @@ func handleMsgMhfReadGuildcard(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfEntryRookieGuild(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEntryRookieGuild)
-	doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+
+	// pkt.Unk==0: fresh rookie entering a rookie guild (return_type=1).
+	// pkt.Unk>=1: returning player entering a comeback/return guild (return_type=2).
+	returnType := uint8(1)
+	nameTemplate := s.server.i18n.guild.rookieGuildName
+	if pkt.Unk >= 1 {
+		returnType = 2
+		nameTemplate = s.server.i18n.guild.returnGuildName
+	}
+
+	guildID, err := s.server.guildRepo.FindOrCreateReturnGuild(returnType, nameTemplate)
+	if err != nil {
+		s.logger.Error("failed to find/create return guild",
+			zap.Uint32("charID", s.charID),
+			zap.Error(err),
+		)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
+
+	if err := s.server.guildRepo.AddMember(guildID, s.charID); err != nil {
+		s.logger.Error("failed to add character to return guild",
+			zap.Uint32("charID", s.charID),
+			zap.Uint32("guildID", guildID),
+			zap.Error(err),
+		)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint32(guildID)
+	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 }
 
 func handleMsgMhfUpdateForceGuildRank(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented

@@ -35,6 +35,7 @@ SELECT
 	leader_id,
 	c.name AS leader_name,
 	comment,
+	return_type,
 	COALESCE(pugi_name_1, '') AS pugi_name_1,
 	COALESCE(pugi_name_2, '') AS pugi_name_2,
 	COALESCE(pugi_name_3, '') AS pugi_name_3,
@@ -194,6 +195,62 @@ func (r *GuildRepository) Create(leaderCharID uint32, guildName string) (int32, 
 		return 0, err
 	}
 	return guildID, nil
+}
+
+// FindOrCreateReturnGuild finds an existing return guild of the given type with fewer
+// than 60 members, or creates a new one. The name template receives the guild count+1
+// as its single %d argument. Returns the guild ID.
+func (r *GuildRepository) FindOrCreateReturnGuild(returnType uint8, nameTemplate string) (uint32, error) {
+	var guildID uint32
+	err := r.db.QueryRow(`
+		SELECT g.id FROM guilds g
+		WHERE g.return_type = $1
+		AND (SELECT COUNT(1) FROM guild_characters gc WHERE gc.guild_id = g.id) < 60
+		LIMIT 1
+	`, returnType).Scan(&guildID)
+	if err == nil {
+		return guildID, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, err
+	}
+
+	// No suitable guild — count existing ones and create a new one.
+	var count int
+	if err := r.db.QueryRow(
+		`SELECT COUNT(1) FROM guilds WHERE return_type = $1`, returnType,
+	).Scan(&count); err != nil {
+		return 0, err
+	}
+
+	tx, err := r.db.BeginTxx(context.Background(), nil)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	name := fmt.Sprintf(nameTemplate, count+1)
+	if err := tx.QueryRow(
+		`INSERT INTO guilds (name, leader_id, return_type, rank_rp) VALUES ($1, 0, $2, 1200) RETURNING id`,
+		name, returnType,
+	).Scan(&guildID); err != nil {
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return guildID, nil
+}
+
+// AddMember inserts a character into a guild's member list.
+func (r *GuildRepository) AddMember(guildID, charID uint32) error {
+	_, err := r.db.Exec(`
+		INSERT INTO guild_characters (guild_id, character_id, order_index)
+		VALUES ($1, $2, (SELECT COALESCE(MAX(order_index), 0) + 1 FROM guild_characters WHERE guild_id = $1))
+		ON CONFLICT (guild_id, character_id) DO NOTHING
+	`, guildID, charID)
+	return err
 }
 
 // Save persists guild metadata changes.

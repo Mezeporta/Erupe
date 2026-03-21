@@ -126,6 +126,8 @@ type GuildRepo interface {
 	ListInvites(guildID uint32) ([]*GuildInvite, error)
 	RolloverDailyRP(guildID uint32, noon time.Time) error
 	AddWeeklyBonusUsers(guildID uint32, numUsers uint8) error
+	FindOrCreateReturnGuild(returnType uint8, nameTemplate string) (uint32, error)
+	AddMember(guildID, charID uint32) error
 }
 
 // UserRepo defines the contract for user account data access.

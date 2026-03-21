@@ -108,7 +108,9 @@ type i18n struct {
 		berserkSmall   string
 	}
 	guild struct {
-		invite struct {
+		rookieGuildName string
+		returnGuildName string
+		invite          struct {
 			title   string
 			body    string
 			success struct {
@@ -182,6 +184,9 @@ func getLangStrings(s *Server) i18n {
 		i.raviente.extreme = "<大討伐：猛狂期【極】>が開催されました！"
 		i.raviente.extremeLimited = "<大討伐：猛狂期【極】(制限付)>が開催されました！"
 		i.raviente.berserkSmall = "<大討伐：猛狂期(小数)>が開催されました！"
+
+		i.guild.rookieGuildName = "新米猟団%d"
+		i.guild.returnGuildName = "復帰猟団%d"
 
 		i.guild.invite.title = "猟団勧誘のご案内"
 		i.guild.invite.body = "猟団「%s」からの勧誘通知です。\n「勧誘に返答」より、返答を行ってください。"
@@ -271,6 +276,9 @@ func getLangStrings(s *Server) i18n {
 		i.raviente.extreme = "<Great Slaying: Extreme> is being held!"
 		i.raviente.extremeLimited = "<Great Slaying: Extreme (Limited)> is being held!"
 		i.raviente.berserkSmall = "<Great Slaying: Berserk (Small)> is being held!"
+
+		i.guild.rookieGuildName = "Rookie Clan %d"
+		i.guild.returnGuildName = "Return Clan %d"
 
 		i.guild.invite.title = "Invitation!"
 		i.guild.invite.body = "You have been invited to join\n「%s」\nDo you want to accept?"

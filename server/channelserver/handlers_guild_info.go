@@ -98,9 +98,9 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteInt8(int8(FestivalColorCodes[guild.FestivalColor]))
 		bf.WriteUint32(guild.RankRP)
 		bf.WriteBytes(guildLeaderName)
-		bf.WriteUint32(0)   // Unk
-		bf.WriteBool(false) // isReturnGuild
-		bf.WriteBool(false) // earnedSpecialHall
+		bf.WriteUint32(0)                  // Unk
+		bf.WriteBool(guild.ReturnType > 0) // isReturnGuild
+		bf.WriteBool(false)                // earnedSpecialHall
 		bf.WriteUint8(2)
 		bf.WriteUint8(2)
 		bf.WriteUint32(guild.EventRP) // Skipped if last byte is <2?

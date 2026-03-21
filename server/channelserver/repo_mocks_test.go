@@ -613,6 +613,10 @@ func (m *mockGuildRepo) InsertKillLog(_ uint32, _ int, _ uint8, _ time.Time) err
 func (m *mockGuildRepo) ListInvites(_ uint32) ([]*GuildInvite, error) { return nil, nil }
 func (m *mockGuildRepo) RolloverDailyRP(_ uint32, _ time.Time) error { return nil }
 func (m *mockGuildRepo) AddWeeklyBonusUsers(_ uint32, _ uint8) error { return nil }
+func (m *mockGuildRepo) FindOrCreateReturnGuild(_ uint8, _ string) (uint32, error) {
+	return 1, nil
+}
+func (m *mockGuildRepo) AddMember(_, _ uint32) error { return nil }
 
 // --- mockUserRepoForItems ---
 
