@@ -72,6 +72,10 @@ type mockAPICharacterRepo struct {
 
 	exportResult map[string]interface{}
 	exportErr    error
+
+	grantImportTokenErr  error
+	revokeImportTokenErr error
+	importSaveErr        error
 }
 
 func (m *mockAPICharacterRepo) GetNewCharacter(_ context.Context, _ uint32) (Character, error) {
@@ -104,6 +108,18 @@ func (m *mockAPICharacterRepo) GetForUser(_ context.Context, _ uint32) ([]Charac
 
 func (m *mockAPICharacterRepo) ExportSave(_ context.Context, _, _ uint32) (map[string]interface{}, error) {
 	return m.exportResult, m.exportErr
+}
+
+func (m *mockAPICharacterRepo) GrantImportToken(_ context.Context, _, _ uint32, _ string, _ time.Time) error {
+	return m.grantImportTokenErr
+}
+
+func (m *mockAPICharacterRepo) RevokeImportToken(_ context.Context, _, _ uint32) error {
+	return m.revokeImportTokenErr
+}
+
+func (m *mockAPICharacterRepo) ImportSave(_ context.Context, _, _ uint32, _ string, _ SaveBlobs) error {
+	return m.importSaveErr
 }
 
 // mockAPIEventRepo implements APIEventRepo for testing.

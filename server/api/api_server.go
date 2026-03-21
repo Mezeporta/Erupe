@@ -94,6 +94,7 @@ func (s *APIServer) Start() error {
 	v2Auth.HandleFunc("/characters/{id}/delete", s.DeleteCharacter).Methods("POST")
 	v2Auth.HandleFunc("/characters/{id}", s.DeleteCharacter).Methods("DELETE")
 	v2Auth.HandleFunc("/characters/{id}/export", s.ExportSave).Methods("GET")
+	v2Auth.HandleFunc("/characters/{id}/import", s.ImportSave).Methods("POST")
 
 	handler := handlers.CORS(
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
