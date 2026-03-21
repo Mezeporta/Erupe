@@ -87,13 +87,17 @@ func TestHandleMsgMhfAddRewardSongCount(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgMhfAddRewardSongCount panicked: %v", r)
-		}
-	}()
+	pkt := &mhfpacket.MsgMhfAddRewardSongCount{AckHandle: 42}
+	handleMsgMhfAddRewardSongCount(session, pkt)
 
-	handleMsgMhfAddRewardSongCount(session, nil)
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
 }
 
 func TestHandleMsgMhfAcquireMonthlyReward(t *testing.T) {
@@ -202,7 +206,6 @@ func TestEmptyHandlers_MiscFiles_Reward(t *testing.T) {
 		name string
 		fn   func()
 	}{
-		{"handleMsgMhfAddRewardSongCount", func() { handleMsgMhfAddRewardSongCount(session, nil) }},
 		{"handleMsgMhfAcceptReadReward", func() { handleMsgMhfAcceptReadReward(session, nil) }},
 	}
 

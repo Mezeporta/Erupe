@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -393,8 +394,12 @@ func main() {
 	<-sig
 
 	if !config.DisableSoftCrash {
-		for i := 0; i < 10; i++ {
-			message := fmt.Sprintf("Shutting down in %d...", 10-i)
+		countdown := config.ShutdownCountdownSeconds
+		if countdown <= 0 {
+			countdown = 10
+		}
+		for i := 0; i < countdown; i++ {
+			message := fmt.Sprintf("Shutting down in %d...", countdown-i)
 			for _, c := range channels {
 				c.BroadcastChatMessage(message)
 			}
@@ -409,8 +414,10 @@ func main() {
 	}
 
 	if config.Channel.Enabled {
+		drainCtx, drainCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer drainCancel()
 		for _, c := range channels {
-			c.Shutdown()
+			c.ShutdownAndDrain(drainCtx)
 		}
 	}
 

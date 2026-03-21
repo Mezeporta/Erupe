@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -244,6 +245,51 @@ func (s *Server) Shutdown() {
 		_ = s.listener.Close()
 	}
 
+}
+
+// ShutdownAndDrain stops accepting new connections, force-closes every active
+// session so that their logoutPlayer cleanup runs (saves character data, removes
+// from stages, etc.), then waits until all sessions have been removed from the
+// sessions map or ctx is cancelled.  It is safe to call multiple times.
+func (s *Server) ShutdownAndDrain(ctx context.Context) {
+	s.Shutdown()
+
+	// Snapshot all active connections while holding the lock, then close them
+	// outside the lock so we don't hold it during I/O.  Closing a connection
+	// causes the session's recvLoop to see io.EOF and call logoutPlayer(), which
+	// in turn deletes the entry from s.sessions under the server mutex.
+	s.Lock()
+	conns := make([]net.Conn, 0, len(s.sessions))
+	for conn := range s.sessions {
+		conns = append(conns, conn)
+	}
+	s.Unlock()
+
+	for _, conn := range conns {
+		_ = conn.Close()
+	}
+
+	// Poll until logoutPlayer has removed every session or the deadline passes.
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			s.Lock()
+			remaining := len(s.sessions)
+			s.Unlock()
+			s.logger.Warn("Shutdown drain timed out", zap.Int("remaining_sessions", remaining))
+			return
+		case <-ticker.C:
+			s.Lock()
+			n := len(s.sessions)
+			s.Unlock()
+			if n == 0 {
+				s.logger.Info("Shutdown drain complete")
+				return
+			}
+		}
+	}
 }
 
 func (s *Server) acceptClients() {

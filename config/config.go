@@ -67,7 +67,8 @@ type Config struct {
 	Host                   string `mapstructure:"Host"`
 	BinPath                string `mapstructure:"BinPath"`
 	Language               string
-	DisableSoftCrash       bool     // Disables the 'Press Return to exit' dialog allowing scripts to reboot the server automatically
+	DisableSoftCrash            bool // Disables the 'Press Return to exit' dialog allowing scripts to reboot the server automatically
+	ShutdownCountdownSeconds    int  // Seconds to count down before shutting down (default 10; ignored when DisableSoftCrash is true)
 	HideLoginNotice        bool     // Hide the Erupe notice on login
 	LoginNotices           []string // MHFML string of the login notices displayed
 	PatchServerManifest    string   // Manifest patch server override
@@ -353,6 +354,7 @@ func registerDefaults() {
 	viper.SetDefault("CommandPrefix", "!")
 	viper.SetDefault("AutoCreateAccount", true)
 	viper.SetDefault("LoopDelay", 50)
+	viper.SetDefault("ShutdownCountdownSeconds", 10)
 	viper.SetDefault("DefaultCourses", []uint16{1, 23, 24})
 	viper.SetDefault("EarthMonsters", []int32{0, 0, 0, 0})
 
