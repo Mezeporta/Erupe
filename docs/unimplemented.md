@@ -15,7 +15,7 @@ All empty handlers carry an inline comment — `// stub: unimplemented` for real
 
 ---
 
-## Unimplemented (68 handlers)
+## Unimplemented (66 handlers)
 
 Grouped by handler file / game subsystem. Handlers with an open branch are marked **[branch]**.
 
@@ -57,7 +57,7 @@ Grouped by handler file / game subsystem. Handlers with an open branch are marke
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfGetRestrictionEvent` | Fetch event-based gameplay restrictions — **[`feature/enum-event`]** (4 commits), **[`feature/event-tent`]** (30 commits, most mature) |
+| `handleMsgMhfGetRestrictionEvent` | Fetch event-based gameplay restrictions — **[`feature/enum-event`]** (4 commits) |
 
 ### Guild (`handlers_guild.go`)
 
@@ -77,7 +77,7 @@ Grouped by handler file / game subsystem. Handlers with an open branch are marke
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfStampcardPrize` | Claim a stamp card prize — **[`feature/event-tent`]** (campaign stamp work) |
+| `handleMsgMhfStampcardPrize` | Claim a stamp card prize |
 
 ### Misc (`handlers_misc.go`)
 
@@ -141,8 +141,6 @@ secondary operations are stubs:
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfUseRewardSong` | Use/activate a reward song buff — **[`feature/diva`]** |
-| `handleMsgMhfAddRewardSongCount` | Increment reward song usage counter — **[`feature/diva`]** |
 | `handleMsgMhfAcceptReadReward` | Claim a reward for reading an in-game notice |
 
 ### Session (`handlers_session.go`)
@@ -199,13 +197,11 @@ that needs no reply). Others are genuine feature gaps.
 
 | Branch | Commits ahead | Handlers targeted |
 |--------|:---:|-------------------|
-| `feature/event-tent` | 30 | `GetRestrictionEvent`, `StampcardPrize` (campaign stamps) |
 | `feature/hunting-tournament` | 7 | `EnterTournamentQuest` |
 | `fix/mutex-rework` | 2 | All 5 Mutex handlers |
 | `feature/enum-event` | 4 | `GetRestrictionEvent` |
 | `feature/conquest` | 4 | Conquest quest handlers |
 | `feature/tower` | 4 | Tower handlers |
-| `feature/diva` | 6 | `UseRewardSong`, `AddRewardSongCount` |
 | `feature/return-guild` | 1 | `UpdateGuild` |
 | `fix/clan-invites` | 1 | `ShutClient` (unfinished draft) |
 
