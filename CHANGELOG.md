@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `DisableSaveIntegrityCheck` config flag: when `true`, the SHA-256 savedata integrity check is skipped on load. Intended for cross-server save transfers where the stored hash in the database does not match the imported save blob. Defaults to `false`. Affected characters can alternatively be unblocked per-character with `UPDATE characters SET savedata_hash = NULL WHERE id = <id>`.
+
 ## [9.3.0] - 2026-03-19
 
 ### Fixed

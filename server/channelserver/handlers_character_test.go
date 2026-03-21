@@ -747,3 +747,68 @@ func TestGetCharacterSaveData_ConfigMode(t *testing.T) {
 		})
 	}
 }
+
+// TestGetCharacterSaveData_IntegrityCheck verifies the SHA-256 hash guard and
+// that DisableSaveIntegrityCheck bypasses it without returning an error.
+func TestGetCharacterSaveData_IntegrityCheck(t *testing.T) {
+	// Build a minimal valid savedata blob and compress it.
+	rawSave := make([]byte, 150000)
+	copy(rawSave[88:], []byte("TestChar\x00"))
+	compressed, err := nullcomp.Compress(rawSave)
+	if err != nil {
+		t.Fatalf("compress: %v", err)
+	}
+
+	// A hash that deliberately does NOT match rawSave.
+	wrongHash := bytes.Repeat([]byte{0xDE}, 32)
+
+	tests := []struct {
+		name    string
+		disable bool
+		hash    []byte
+		wantErr bool
+	}{
+		{
+			name:    "nil hash skips check",
+			disable: false,
+			hash:    nil,
+			wantErr: false,
+		},
+		{
+			name:    "mismatched hash fails when check enabled",
+			disable: false,
+			hash:    wrongHash,
+			wantErr: true,
+		},
+		{
+			name:    "mismatched hash passes when check disabled",
+			disable: true,
+			hash:    wrongHash,
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mock := newMockCharacterRepo()
+			mock.loadSaveDataID = 1
+			mock.loadSaveDataData = compressed
+			mock.loadSaveDataName = "TestChar"
+			mock.loadSaveDataHash = tc.hash
+
+			server := createMockServer()
+			server.erupeConfig.RealClientMode = cfg.ZZ
+			server.erupeConfig.DisableSaveIntegrityCheck = tc.disable
+			server.charRepo = mock
+			session := createMockSession(1, server)
+
+			_, err := GetCharacterSaveData(session, 1)
+			if tc.wantErr && err == nil {
+				t.Error("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}

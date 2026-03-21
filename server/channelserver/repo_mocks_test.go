@@ -133,6 +133,7 @@ type mockCharacterRepo struct {
 	loadSaveDataData []byte
 	loadSaveDataNew  bool
 	loadSaveDataName string
+	loadSaveDataHash []byte
 	loadSaveDataErr  error
 
 	// ReadEtcPoints mock fields
@@ -245,7 +246,7 @@ func (m *mockCharacterRepo) SaveBackup(_ uint32, _ int, _ []byte) error       { 
 func (m *mockCharacterRepo) GetLastBackupTime(_ uint32) (time.Time, error)    { return time.Time{}, nil }
 func (m *mockCharacterRepo) SaveCharacterDataAtomic(_ SaveAtomicParams) error { return nil }
 func (m *mockCharacterRepo) LoadSaveDataWithHash(_ uint32) (uint32, []byte, bool, string, []byte, error) {
-	return m.loadSaveDataID, m.loadSaveDataData, m.loadSaveDataNew, m.loadSaveDataName, nil, m.loadSaveDataErr
+	return m.loadSaveDataID, m.loadSaveDataData, m.loadSaveDataNew, m.loadSaveDataName, m.loadSaveDataHash, m.loadSaveDataErr
 }
 
 // --- mockGoocooRepo ---

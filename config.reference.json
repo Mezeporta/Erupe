@@ -17,6 +17,7 @@
     "UploadQuality":100
   },
   "DeleteOnSaveCorruption": false,
+  "DisableSaveIntegrityCheck": false,
   "ClientMode": "ZZ",
   "QuestCacheExpiry": 300,
   "CommandPrefix": "!",

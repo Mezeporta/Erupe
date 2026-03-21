@@ -55,7 +55,8 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 	// Verify integrity checksum if one was stored with this save.
 	// A nil hash means the character was saved before checksums were introduced,
 	// so we skip verification (the next save will compute and store the hash).
-	if storedHash != nil {
+	// DisableSaveIntegrityCheck bypasses this entirely for cross-server save transfers.
+	if storedHash != nil && !s.server.erupeConfig.DisableSaveIntegrityCheck {
 		computedHash := sha256.Sum256(saveData.decompSave)
 		if !bytes.Equal(storedHash, computedHash[:]) {
 			s.logger.Error("Savedata integrity check failed: hash mismatch",
@@ -66,6 +67,10 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 			// TODO: attempt recovery from savedata_backups here
 			return nil, errors.New("savedata integrity check failed")
 		}
+	} else if storedHash != nil && s.server.erupeConfig.DisableSaveIntegrityCheck {
+		s.logger.Warn("Savedata integrity check skipped (DisableSaveIntegrityCheck=true)",
+			zap.Uint32("charID", charID),
+		)
 	}
 
 	saveData.updateStructWithSaveData()
