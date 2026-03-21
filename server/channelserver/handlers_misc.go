@@ -147,11 +147,39 @@ func handleMsgMhfGetSenyuDailyCount(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func handleMsgMhfGetDailyMissionMaster(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+// handleMsgMhfGetDailyMissionMaster returns an empty daily mission master list.
+// The full response format is not yet reverse-engineered; count=0 is safe.
+func handleMsgMhfGetDailyMissionMaster(s *Session, p mhfpacket.MHFPacket) {
+	if p == nil {
+		return
+	}
+	pkt := p.(*mhfpacket.MsgMhfGetDailyMissionMaster)
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint32(0) // entry count = 0
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+}
 
-func handleMsgMhfGetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+// handleMsgMhfGetDailyMissionPersonal returns an empty personal daily mission progress list.
+// The full response format is not yet reverse-engineered; count=0 is safe.
+func handleMsgMhfGetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {
+	if p == nil {
+		return
+	}
+	pkt := p.(*mhfpacket.MsgMhfGetDailyMissionPersonal)
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint32(0) // entry count = 0
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+}
 
-func handleMsgMhfSetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+// handleMsgMhfSetDailyMissionPersonal acknowledges a personal daily mission progress write.
+// The full request/response format is not yet reverse-engineered.
+func handleMsgMhfSetDailyMissionPersonal(s *Session, p mhfpacket.MHFPacket) {
+	if p == nil {
+		return
+	}
+	pkt := p.(*mhfpacket.MsgMhfSetDailyMissionPersonal)
+	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+}
 
 // Equip skin history buffer sizes per game version
 const (

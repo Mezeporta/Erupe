@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -49,10 +50,24 @@ func (r *CharacterRepository) LoadColumn(charID uint32, column string) ([]byte, 
 	return data, err
 }
 
+// ErrCharacterNotFound is returned by write methods when no character row is matched.
+var ErrCharacterNotFound = errors.New("character not found")
+
 // SaveColumn writes a single []byte column by character ID.
+// Returns ErrCharacterNotFound if no row was updated (character does not exist).
 func (r *CharacterRepository) SaveColumn(charID uint32, column string, data []byte) error {
-	_, err := r.db.Exec("UPDATE characters SET "+column+"=$1 WHERE id=$2", data, charID)
-	return err
+	result, err := r.db.Exec("UPDATE characters SET "+column+"=$1 WHERE id=$2", data, charID)
+	if err != nil {
+		return err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("SaveColumn %s for char %d: %w", column, charID, ErrCharacterNotFound)
+	}
+	return nil
 }
 
 // ReadInt reads a single integer column (0 for NULL) by character ID.
@@ -222,13 +237,26 @@ func (r *CharacterRepository) ReadGuildPostChecked(charID uint32) (time.Time, er
 // When rastaID is 0, only the mercenary blob is saved — the existing rasta_id
 // (typically NULL for characters without a mercenary) is preserved. Writing 0
 // would pollute GetMercenaryLoans queries that match on pact_id.
+// Returns ErrCharacterNotFound if no row was updated.
 func (r *CharacterRepository) SaveMercenary(charID uint32, data []byte, rastaID uint32) error {
+	var result sql.Result
+	var err error
 	if rastaID == 0 {
-		_, err := r.db.Exec("UPDATE characters SET savemercenary=$1 WHERE id=$2", data, charID)
+		result, err = r.db.Exec("UPDATE characters SET savemercenary=$1 WHERE id=$2", data, charID)
+	} else {
+		result, err = r.db.Exec("UPDATE characters SET savemercenary=$1, rasta_id=$2 WHERE id=$3", data, rastaID, charID)
+	}
+	if err != nil {
 		return err
 	}
-	_, err := r.db.Exec("UPDATE characters SET savemercenary=$1, rasta_id=$2 WHERE id=$3", data, rastaID, charID)
-	return err
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("SaveMercenary for char %d: %w", charID, ErrCharacterNotFound)
+	}
+	return nil
 }
 
 // UpdateGCPAndPact updates gcp and pact_id atomically.
