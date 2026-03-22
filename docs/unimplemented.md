@@ -190,7 +190,7 @@ that needs no reply). Others are genuine feature gaps.
 | Branch | Commits ahead | Handlers targeted |
 |--------|:---:|-------------------|
 | `feature/enum-event` | 4 | `EnumerateEvent` scheduling only — not mergeable, see `docs/fort-attack-event.md` |
-| `feature/conquest` | 4 | Conquest quest handlers |
+| `feature/conquest` | 4 | Conquest quest handlers — not mergeable, see `docs/conquest-war.md` |
 | `feature/tower` | 4 | Tower handlers |
 
 ---
