@@ -1,6 +1,8 @@
 package channelserver
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 
 	cfg "erupe-ce/config"
@@ -90,5 +92,38 @@ func TestGetLangStrings_EmptyLanguage(t *testing.T) {
 	// Empty language should default to English
 	if lang.language != "English" {
 		t.Errorf("Empty language should default to English, got %q", lang.language)
+	}
+}
+
+// checkNoEmptyStrings recursively walks v and fails the test for any empty string field.
+func checkNoEmptyStrings(t *testing.T, v reflect.Value, path string) {
+	t.Helper()
+	switch v.Kind() {
+	case reflect.String:
+		if v.String() == "" {
+			t.Errorf("missing translation: %s is empty", path)
+		}
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			checkNoEmptyStrings(t, v.Field(i), path+"."+v.Type().Field(i).Name)
+		}
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			checkNoEmptyStrings(t, v.Index(i), fmt.Sprintf("%s[%d]", path, i))
+		}
+	}
+}
+
+func TestLangCompleteness(t *testing.T) {
+	languages := map[string]i18n{
+		"en": langEnglish(),
+		"jp": langJapanese(),
+		"fr": langFrench(),
+		"es": langSpanish(),
+	}
+	for code, lang := range languages {
+		t.Run(code, func(t *testing.T) {
+			checkNoEmptyStrings(t, reflect.ValueOf(lang), code)
+		})
 	}
 }

@@ -34,6 +34,11 @@ func langJapanese() i18n {
 	i.commands.ban.error = "Error in command. Format: %s <id> [length]"
 	i.commands.ban.length = " until %s"
 
+	i.commands.playtime = "プレイ時間：%d時間%d分%d秒"
+
+	i.commands.timer.enabled = "クエストタイマーが有効になりました"
+	i.commands.timer.disabled = "クエストタイマーが無効になりました"
+
 	i.commands.ravi.noCommand = "ラヴィコマンドが指定されていません"
 	i.commands.ravi.start.success = "大討伐を開始します"
 	i.commands.ravi.start.error = "大討伐は既に開催されています"
