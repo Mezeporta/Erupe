@@ -604,17 +604,16 @@ func TestQuestFileLoadingErrors(t *testing.T) {
 	}
 }
 
-// TestTournamentQuestEntryStub tests the stub tournament quest handler
-func TestTournamentQuestEntryStub(t *testing.T) {
+// TestTournamentQuestEntryHandler tests the tournament quest entry handler.
+func TestTournamentQuestEntryHandler(t *testing.T) {
 	mockConn := &MockCryptConn{sentPackets: make([][]byte, 0)}
 	s := createTestSession(mockConn)
+	s.server.tournamentRepo = &mockTournamentRepo{}
 
-	pkt := &mhfpacket.MsgMhfEnterTournamentQuest{}
+	pkt := &mhfpacket.MsgMhfEnterTournamentQuest{AckHandle: 1}
 
-	// This tests that the stub function doesn't panic
 	handleMsgMhfEnterTournamentQuest(s, pkt)
 
-	// Verify no crash occurred (pass if we reach here)
 	if s.logger == nil {
 		t.Errorf("Session corrupted")
 	}

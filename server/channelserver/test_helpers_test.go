@@ -48,9 +48,10 @@ func createMockServer() *Server {
 			state:    make([]uint32, 30),
 			support:  make([]uint32, 30),
 		},
-		// divaRepo default prevents nil-deref in diva handler tests that don't
-		// need specific repo behaviour. Tests that need controlled data override it.
-		divaRepo: &mockDivaRepo{},
+		// divaRepo and tournamentRepo defaults prevent nil-deref in handler tests
+		// that don't need specific repo behaviour. Tests that need controlled data override them.
+		divaRepo:       &mockDivaRepo{},
+		tournamentRepo: &mockTournamentRepo{},
 	}
 	s.i18n = getLangStrings(s)
 	s.Registry = NewLocalChannelRegistry([]*Server{s})

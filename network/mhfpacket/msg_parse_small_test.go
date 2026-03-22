@@ -19,7 +19,6 @@ func TestParseSmallNotImplemented(t *testing.T) {
 		// MHF packets - NOT IMPLEMENTED
 		{"MsgMhfAcceptReadReward", &MsgMhfAcceptReadReward{}},
 		{"MsgMhfDebugPostValue", &MsgMhfDebugPostValue{}},
-		{"MsgMhfEnterTournamentQuest", &MsgMhfEnterTournamentQuest{}},
 		{"MsgMhfGetCaAchievementHist", &MsgMhfGetCaAchievementHist{}},
 		{"MsgMhfGetCaUniqueID", &MsgMhfGetCaUniqueID{}},
 		{"MsgMhfGetRestrictionEvent", &MsgMhfGetRestrictionEvent{}},

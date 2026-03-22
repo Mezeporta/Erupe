@@ -1265,3 +1265,35 @@ func (m *mockCafeRepo) GetBonusItem(_ uint32) (uint32, uint32, error) {
 	return m.bonusItemType, m.bonusItemQty, m.bonusItemErr
 }
 func (m *mockCafeRepo) AcceptBonus(_, _ uint32) error { return nil }
+
+// --- mockTournamentRepo ---
+
+type mockTournamentRepo struct {
+	active      *Tournament
+	activeErr   error
+	cups        []TournamentCup
+	subEvents   []TournamentSubEvent
+	ranks       []TournamentRankEntry
+	registerID  uint32
+	registerErr error
+	entry       *TournamentEntry
+	entryErr    error
+}
+
+func (m *mockTournamentRepo) GetActive(_ int64) (*Tournament, error) {
+	return m.active, m.activeErr
+}
+func (m *mockTournamentRepo) GetCups(_ uint32) ([]TournamentCup, error) { return m.cups, nil }
+func (m *mockTournamentRepo) GetSubEvents() ([]TournamentSubEvent, error) {
+	return m.subEvents, nil
+}
+func (m *mockTournamentRepo) Register(_, _ uint32) (uint32, error) {
+	return m.registerID, m.registerErr
+}
+func (m *mockTournamentRepo) GetEntry(_, _ uint32) (*TournamentEntry, error) {
+	return m.entry, m.entryErr
+}
+func (m *mockTournamentRepo) SubmitResult(_, _, _, _, _ uint32) error { return nil }
+func (m *mockTournamentRepo) GetLeaderboard(_ uint32) ([]TournamentRankEntry, error) {
+	return m.ranks, nil
+}

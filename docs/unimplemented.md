@@ -15,7 +15,7 @@ All empty handlers carry an inline comment — `// stub: unimplemented` for real
 
 ---
 
-## Unimplemented (66 handlers)
+## Unimplemented (65 handlers)
 
 Grouped by handler file / game subsystem. Handlers with an open branch are marked **[branch]**.
 
@@ -95,8 +95,6 @@ Grouped by handler file / game subsystem. Handlers with an open branch are marke
 
 All five mutex handlers are empty. MHF mutexes are distributed locks used for event coordination
 (Raviente, etc.). The server currently uses its own semaphore system instead.
-**[`fix/mutex-rework`]** (2 commits) proposes replacing the semaphore system with proper
-protocol-level mutex handling.
 
 | Handler | Notes |
 |---------|-------|
@@ -124,12 +122,6 @@ secondary operations are stubs:
 | `handleMsgSysDelObject` | Remove an object from the stage |
 | `handleMsgSysDispObject` | Display/show a previously hidden object |
 | `handleMsgSysHideObject` | Hide an object from other clients |
-
-### Quests (`handlers_quest.go`)
-
-| Handler | Notes |
-|---------|-------|
-| `handleMsgMhfEnterTournamentQuest` | Enter a tournament-mode quest — **[`feature/hunting-tournament`]** (7 commits, actively rebased onto main) |
 
 ### Register (`handlers_register.go`)
 
@@ -197,8 +189,6 @@ that needs no reply). Others are genuine feature gaps.
 
 | Branch | Commits ahead | Handlers targeted |
 |--------|:---:|-------------------|
-| `feature/hunting-tournament` | 7 | `EnterTournamentQuest` |
-| `fix/mutex-rework` | 2 | All 5 Mutex handlers |
 | `feature/enum-event` | 4 | `GetRestrictionEvent` |
 | `feature/conquest` | 4 | Conquest quest handlers |
 | `feature/tower` | 4 | Tower handlers |

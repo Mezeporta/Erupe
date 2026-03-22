@@ -385,3 +385,61 @@ type MercenaryRepo interface {
 	GetGuildHuntCatsUsed(charID uint32) ([]GuildHuntCatUsage, error)
 	GetGuildAirou(guildID uint32) ([][]byte, error)
 }
+
+// Tournament represents a tournament schedule entry.
+type Tournament struct {
+	ID         uint32 `db:"id"`
+	Name       string `db:"name"`
+	StartTime  int64  `db:"start_time"`
+	EntryEnd   int64  `db:"entry_end"`
+	RankingEnd int64  `db:"ranking_end"`
+	RewardEnd  int64  `db:"reward_end"`
+}
+
+// TournamentCup represents a competition category within a tournament.
+type TournamentCup struct {
+	ID          uint32 `db:"id"`
+	CupGroup    int16  `db:"cup_group"`
+	CupType     int16  `db:"cup_type"`
+	Unk         int16  `db:"unk"`
+	Name        string `db:"name"`
+	Description string `db:"description"`
+}
+
+// TournamentSubEvent represents a specific hunt/fish target within a cup group.
+type TournamentSubEvent struct {
+	ID           uint32 `db:"id"`
+	CupGroup     int16  `db:"cup_group"`
+	EventSubType int16  `db:"event_sub_type"`
+	QuestFileID  uint32 `db:"quest_file_id"`
+	Name         string `db:"name"`
+}
+
+// TournamentRankEntry is a single entry in a leaderboard.
+type TournamentRankEntry struct {
+	CharID    uint32
+	Rank      uint32
+	Grade     uint16
+	HR        uint16
+	GR        uint16
+	CharName  string
+	GuildName string
+}
+
+// TournamentEntry represents a player's registration for a tournament.
+type TournamentEntry struct {
+	ID           uint32 `db:"id"`
+	CharID       uint32 `db:"char_id"`
+	TournamentID uint32 `db:"tournament_id"`
+}
+
+// TournamentRepo defines the contract for tournament schedule and result data access.
+type TournamentRepo interface {
+	GetActive(now int64) (*Tournament, error)
+	GetCups(tournamentID uint32) ([]TournamentCup, error)
+	GetSubEvents() ([]TournamentSubEvent, error)
+	Register(charID, tournamentID uint32) (entryID uint32, err error)
+	GetEntry(charID, tournamentID uint32) (*TournamentEntry, error)
+	SubmitResult(charID, tournamentID, eventID, questSlot, stageHandle uint32) error
+	GetLeaderboard(eventID uint32) ([]TournamentRankEntry, error)
+}
