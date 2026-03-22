@@ -57,7 +57,7 @@ Grouped by handler file / game subsystem. Handlers with an open branch are marke
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfGetRestrictionEvent` | Fetch event-based gameplay restrictions — **[`feature/enum-event`]** (4 commits) |
+| `handleMsgMhfGetRestrictionEvent` | Fetch event-based gameplay restrictions — see `docs/fort-attack-event.md` |
 
 ### Guild (`handlers_guild.go`)
 
@@ -189,7 +189,7 @@ that needs no reply). Others are genuine feature gaps.
 
 | Branch | Commits ahead | Handlers targeted |
 |--------|:---:|-------------------|
-| `feature/enum-event` | 4 | `GetRestrictionEvent` |
+| `feature/enum-event` | 4 | `EnumerateEvent` scheduling only — not mergeable, see `docs/fort-attack-event.md` |
 | `feature/conquest` | 4 | Conquest quest handlers |
 | `feature/tower` | 4 | Tower handlers |
 
