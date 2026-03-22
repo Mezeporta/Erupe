@@ -336,6 +336,7 @@ func main() {
 		si := 0
 		ci := 0
 		count := 1
+		seenPorts := make(map[uint16]string)
 		for j, ee := range config.Entrance.Entries {
 			for i, ce := range ee.Channels {
 				sid := (4096 + si*256) + (16 + ci)
@@ -345,6 +346,13 @@ func main() {
 					count++
 					continue
 				}
+				if prev, exists := seenPorts[ce.Port]; exists {
+					preventClose(config, fmt.Sprintf("Channel %d: port %d already used by %s", count, ce.Port, prev))
+					ci++
+					count++
+					continue
+				}
+				seenPorts[ce.Port] = fmt.Sprintf("channel %d", count)
 				c := *channelserver.NewServer(&channelserver.Config{
 					ID:          uint16(sid),
 					Logger:      logger.Named("channel-" + fmt.Sprint(count)),
