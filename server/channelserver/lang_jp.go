@@ -7,13 +7,13 @@ func langJapanese() i18n {
 	i.cafe.reset = "%d/%dにリセット"
 	i.timer = "タイマー：%02d'%02d\"%02d.%03d (%df)"
 
-	i.commands.noOp = "You don't have permission to use this command"
+	i.commands.noOp = "このコマンドを使用する権限がありません"
 	i.commands.disabled = "%sのコマンドは無効です"
 	i.commands.reload = "リロードします"
 	i.commands.kqf.get = "現在のキークエストフラグ：%x"
 	i.commands.kqf.set.error = "キークエコマンドエラー　例：%s set xxxxxxxxxxxxxxxx"
 	i.commands.kqf.set.success = "キークエストのフラグが更新されました。ワールド／ランドを移動してください"
-	i.commands.kqf.version = "This command is disabled prior to MHFG10"
+	i.commands.kqf.version = "このコマンドはMHFG10以前では無効です"
 	i.commands.rights.error = "コース更新コマンドエラー　例：%s x"
 	i.commands.rights.success = "コース情報を更新しました：%d"
 	i.commands.course.error = "コース確認コマンドエラー　例：%s <name>"
@@ -28,11 +28,11 @@ func langJapanese() i18n {
 
 	i.commands.discord.success = "あなたのDiscordトークン：%s"
 
-	i.commands.ban.noUser = "Could not find user"
-	i.commands.ban.success = "Successfully banned %s"
-	i.commands.ban.invalid = "Invalid Character ID"
-	i.commands.ban.error = "Error in command. Format: %s <id> [length]"
-	i.commands.ban.length = " until %s"
+	i.commands.ban.noUser = "ユーザーが見つかりません"
+	i.commands.ban.success = "%sをBANしました"
+	i.commands.ban.invalid = "無効なキャラクターIDです"
+	i.commands.ban.error = "コマンドエラー　例：%s <id> [期間]"
+	i.commands.ban.length = " ～%sまで"
 
 	i.commands.playtime = "プレイ時間：%d時間%d分%d秒"
 
@@ -49,7 +49,7 @@ func langJapanese() i18n {
 	i.commands.ravi.request = "鎮静支援を要請します"
 	i.commands.ravi.error = "ラヴィコマンドが認識されません"
 	i.commands.ravi.noPlayers = "誰も大討伐に参加していません"
-	i.commands.ravi.version = "This command is disabled outside of MHFZZ"
+	i.commands.ravi.version = "このコマンドはMHFZZ以外では無効です"
 
 	i.raviente.berserk = "<大討伐：猛狂期>が開催されました！"
 	i.raviente.extreme = "<大討伐：猛狂期【極】>が開催されました！"
