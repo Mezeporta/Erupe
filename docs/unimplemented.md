@@ -44,7 +44,7 @@ Grouped by handler file / game subsystem. Handlers with an open branch are marke
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfShutClient` | Server-initiated client disconnect — partial draft in `fix/clan-invites` |
+| `handleMsgMhfShutClient` | Server-initiated client disconnect |
 | `handleMsgSysHideClient` | Hide a client session from the session list |
 
 ### Data / Auth (`handlers_data.go`)
@@ -192,8 +192,6 @@ that needs no reply). Others are genuine feature gaps.
 | `feature/enum-event` | 4 | `GetRestrictionEvent` |
 | `feature/conquest` | 4 | Conquest quest handlers |
 | `feature/tower` | 4 | Tower handlers |
-| `feature/return-guild` | 1 | `UpdateGuild` |
-| `fix/clan-invites` | 1 | `ShutClient` (unfinished draft) |
 
 ---
 
