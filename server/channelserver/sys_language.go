@@ -138,6 +138,10 @@ func getLangStrings(s *Server) i18n {
 	switch s.erupeConfig.Language {
 	case "jp":
 		return langJapanese()
+	case "fr":
+		return langFrench()
+	case "es":
+		return langSpanish()
 	default:
 		return langEnglish()
 	}
