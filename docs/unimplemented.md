@@ -192,7 +192,7 @@ that needs no reply). Others are genuine feature gaps.
 | `feature/enum-event` | 4 | `EnumerateEvent` scheduling only — not mergeable, see `docs/fort-attack-event.md` |
 | `feature/conquest` | 4 | Conquest quest handlers — not mergeable, see `docs/conquest-war.md` |
 | `feature/hunting-tournament` | 7 | `EnumerateRanking` / `EnumerateOrder` — not mergeable (duplicates handlers_tournament.go), see `docs/hunting-tournament.md` |
-| `feature/tower` | 4 | Tower handlers |
+| `feature/tower` | 4 | Tower handlers — superseded by direct integration; see `docs/tower.md` for gaps |
 
 ---
 
