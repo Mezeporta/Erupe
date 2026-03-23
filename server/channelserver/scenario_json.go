@@ -349,6 +349,12 @@ func compileScenario(s *ScenarioJSON) ([]byte, error) {
 		}
 	}
 
+	for i, chunk := range [][]byte{chunk0, chunk1, chunk2} {
+		if len(chunk) > scenarioChunkSizeLimit {
+			return nil, fmt.Errorf("chunk%d size %d exceeds client limit of %d bytes", i, len(chunk), scenarioChunkSizeLimit)
+		}
+	}
+
 	var buf bytes.Buffer
 	// Container header: c0_size, c1_size (big-endian u32)
 	_ = binary.Write(&buf, binary.BigEndian, uint32(len(chunk0)))
