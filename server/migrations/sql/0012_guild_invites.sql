@@ -1,5 +1,3 @@
-BEGIN;
-
 -- Dedicated table for guild-initiated scout invitations, separate from
 -- player-initiated applications. This gives each invitation a real serial PK
 -- so the client's InvitationID field can map to an actual database row
@@ -19,5 +17,3 @@ FROM guild_applications
 WHERE application_type = 'invited';
 
 DELETE FROM guild_applications WHERE application_type = 'invited';
-
-COMMIT;

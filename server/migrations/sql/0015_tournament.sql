@@ -1,5 +1,3 @@
-BEGIN;
-
 CREATE TABLE IF NOT EXISTS tournaments (
     id          SERIAL PRIMARY KEY,
     name        VARCHAR(64) NOT NULL,
@@ -44,5 +42,3 @@ CREATE TABLE IF NOT EXISTS tournament_results (
     stage_handle  INTEGER NOT NULL DEFAULT 0,
     submitted_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
-COMMIT;
