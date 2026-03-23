@@ -98,7 +98,7 @@ func TestRolloverDailyRP_Idempotent(t *testing.T) {
 	defer TeardownTestDB(t, db)
 
 	userID := CreateTestUser(t, db, "idem_rollover_user")
-	charID := CreateTestCharacter(t, db, userID, "Idem_Rollover_Leader")
+	charID := CreateTestCharacter(t, db, userID, "IdemRollLeader")
 	guildID := CreateTestGuild(t, db, charID, "Idem_Rollover_Guild")
 	repo := NewGuildRepository(db)
 

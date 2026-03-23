@@ -2,7 +2,7 @@
 -- player-initiated applications. This gives each invitation a real serial PK
 -- so the client's InvitationID field can map to an actual database row
 -- instead of being aliased to the character ID.
-CREATE TABLE guild_invites (
+CREATE TABLE IF NOT EXISTS guild_invites (
     id           serial PRIMARY KEY,
     guild_id     integer REFERENCES guilds(id),
     character_id integer REFERENCES characters(id),
