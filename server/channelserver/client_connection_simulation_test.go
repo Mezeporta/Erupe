@@ -153,13 +153,11 @@ func TestClientConnection_GracefulLoginLogout(t *testing.T) {
 		RawDataPayload: compressed,
 	}
 	handleMsgMhfSavedata(session, savePkt)
-	time.Sleep(100 * time.Millisecond)
 
 	// Client sends logout packet (graceful)
 	t.Log("Client sending logout packet")
 	logoutPkt := &mhfpacket.MsgSysLogout{}
 	handleMsgSysLogout(session, logoutPkt)
-	time.Sleep(100 * time.Millisecond)
 
 	// Verify connection closed
 	if !mockConn.IsClosed() {
@@ -220,13 +218,11 @@ func TestClientConnection_UngracefulDisconnect(t *testing.T) {
 		RawDataPayload: compressed,
 	}
 	handleMsgMhfSavedata(session, savePkt)
-	time.Sleep(100 * time.Millisecond)
 
 	// Simulate network failure - connection drops without logout packet
 	t.Log("Simulating network failure (no logout packet sent)")
 	// In real scenario, recvLoop would detect io.EOF and call logoutPlayer
 	logoutPlayer(session)
-	time.Sleep(100 * time.Millisecond)
 
 	// Verify data was saved despite ungraceful disconnect
 	var savedCompressed []byte
@@ -274,7 +270,6 @@ func TestClientConnection_SessionTimeout(t *testing.T) {
 		RawDataPayload: compressed,
 	}
 	handleMsgMhfSavedata(session, savePkt)
-	time.Sleep(100 * time.Millisecond)
 
 	// Simulate timeout by setting lastPacket to long ago
 	session.lastPacket = time.Now().Add(-35 * time.Second)
@@ -283,7 +278,6 @@ func TestClientConnection_SessionTimeout(t *testing.T) {
 	// and call logoutPlayer(session)
 	t.Log("Session timed out (>30s since last packet)")
 	logoutPlayer(session)
-	time.Sleep(100 * time.Millisecond)
 
 	// Verify data saved
 	var savedCompressed []byte
@@ -346,11 +340,9 @@ func TestClientConnection_MultipleClientsSimultaneous(t *testing.T) {
 				RawDataPayload: compressed,
 			}
 			handleMsgMhfSavedata(session, savePkt)
-			time.Sleep(50 * time.Millisecond)
 
 			// Graceful logout
 			logoutPlayer(session)
-			time.Sleep(50 * time.Millisecond)
 
 			// Verify individual client's data
 			var savedCompressed []byte
@@ -416,12 +408,10 @@ func TestClientConnection_SaveDuringCombat(t *testing.T) {
 		RawDataPayload: compressed,
 	}
 	handleMsgMhfSavedata(session, savePkt)
-	time.Sleep(100 * time.Millisecond)
 
 	// Disconnect while in stage
 	t.Log("Player disconnects during quest")
 	logoutPlayer(session)
-	time.Sleep(100 * time.Millisecond)
 
 	// Verify data saved even during combat
 	var savedCompressed []byte
@@ -474,12 +464,10 @@ func TestClientConnection_ReconnectAfterCrash(t *testing.T) {
 		RawDataPayload: compressed,
 	}
 	handleMsgMhfSavedata(session1, savePkt)
-	time.Sleep(50 * time.Millisecond)
 
 	// Client crashes (ungraceful disconnect)
 	t.Log("Client crashes (no logout packet)")
 	logoutPlayer(session1)
-	time.Sleep(100 * time.Millisecond)
 
 	// Client reconnects immediately
 	t.Log("Client reconnects after crash")
@@ -492,7 +480,6 @@ func TestClientConnection_ReconnectAfterCrash(t *testing.T) {
 		AckHandle: 18001,
 	}
 	handleMsgMhfLoaddata(session2, loadPkt)
-	time.Sleep(50 * time.Millisecond)
 
 	// Verify data from before crash
 	var savedCompressed []byte

@@ -84,15 +84,9 @@ func TestSessionLifecycle_BasicSaveLoadCycle(t *testing.T) {
 	t.Log("Sending savedata packet")
 	handleMsgMhfSavedata(session1, savePkt)
 
-	// Drain ACK
-	time.Sleep(100 * time.Millisecond)
-
 	// Now trigger logout via the actual logout flow
 	t.Log("Triggering logout via logoutPlayer")
 	logoutPlayer(session1)
-
-	// Give logout time to complete
-	time.Sleep(100 * time.Millisecond)
 
 	// ===== SESSION 2: Login again and verify data =====
 	t.Log("--- Starting Session 2: Login and verify data persists ---")
@@ -105,8 +99,6 @@ func TestSessionLifecycle_BasicSaveLoadCycle(t *testing.T) {
 		AckHandle: 2001,
 	}
 	handleMsgMhfLoaddata(session2, loadPkt)
-
-	time.Sleep(50 * time.Millisecond)
 
 	// Verify savedata persisted
 	var savedCompressed []byte
@@ -189,7 +181,6 @@ func TestSessionLifecycle_WarehouseDataPersistence(t *testing.T) {
 
 	// Logout
 	logoutPlayer(session1)
-	time.Sleep(100 * time.Millisecond)
 
 	// ===== SESSION 2: Verify warehouse contents =====
 	session2 := createTestSessionForServerWithChar(server, charID, "WarehouseChar")
@@ -240,7 +231,6 @@ func TestSessionLifecycle_KoryoPointsPersistence(t *testing.T) {
 
 	t.Logf("Adding %d Koryo points", addPoints)
 	handleMsgMhfAddKouryouPoint(session1, pkt)
-	time.Sleep(50 * time.Millisecond)
 
 	// Verify points were added in session 1
 	var points1 uint32
@@ -252,7 +242,6 @@ func TestSessionLifecycle_KoryoPointsPersistence(t *testing.T) {
 
 	// Logout
 	logoutPlayer(session1)
-	time.Sleep(100 * time.Millisecond)
 
 	// ===== SESSION 2: Verify Koryo points persist =====
 	session2 := createTestSessionForServerWithChar(server, charID, "KoryoChar")
@@ -341,14 +330,10 @@ func TestSessionLifecycle_MultipleDataTypesPersistence(t *testing.T) {
 	}
 	handleMsgMhfSavedata(session1, savePkt)
 
-	// Give handlers time to process
-	time.Sleep(100 * time.Millisecond)
-
 	t.Log("Modified all data types in session 1")
 
 	// Logout
 	logoutPlayer(session1)
-	time.Sleep(100 * time.Millisecond)
 
 	// ===== SESSION 2: Verify all data persists =====
 	session2 := createTestSessionForServerWithChar(server, charID, "MultiChar")
@@ -358,7 +343,6 @@ func TestSessionLifecycle_MultipleDataTypesPersistence(t *testing.T) {
 		AckHandle: 5001,
 	}
 	handleMsgMhfLoaddata(session2, loadPkt)
-	time.Sleep(50 * time.Millisecond)
 
 	allPassed := true
 
@@ -472,13 +456,11 @@ func TestSessionLifecycle_DisconnectWithoutLogout(t *testing.T) {
 		RawDataPayload: compressed,
 	}
 	handleMsgMhfSavedata(session1, savePkt)
-	time.Sleep(100 * time.Millisecond)
 
 	// Simulate disconnect by calling logoutPlayer (which is called by recvLoop on EOF)
 	// In real scenario, this is triggered by connection close
 	t.Log("Simulating ungraceful disconnect")
 	logoutPlayer(session1)
-	time.Sleep(100 * time.Millisecond)
 
 	// ===== SESSION 2: Verify data saved despite ungraceful disconnect =====
 	session2 := createTestSessionForServerWithChar(server, charID, "DisconnectChar")
@@ -544,7 +526,6 @@ func TestSessionLifecycle_RapidReconnect(t *testing.T) {
 
 		// Logout quickly
 		logoutPlayer(session)
-		time.Sleep(30 * time.Millisecond)
 
 		// Verify points persisted
 		var loadedPoints uint32

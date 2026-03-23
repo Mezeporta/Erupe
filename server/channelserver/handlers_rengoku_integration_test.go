@@ -229,7 +229,6 @@ func TestRengokuData_SaveLoadRoundTrip_AcrossSessions(t *testing.T) {
 
 	// Logout session 1
 	logoutPlayer(session1)
-	time.Sleep(100 * time.Millisecond)
 
 	// === SESSION 2: Load data in new session ===
 	session2 := createTestSessionForServerWithChar(server, charID, "RengokuChar2")
@@ -348,7 +347,6 @@ func TestRengokuData_SkillRegionPreserved(t *testing.T) {
 	handleMsgMhfSaveRengokuData(session1, savePkt)
 	drainAck(t, session1)
 	logoutPlayer(session1)
-	time.Sleep(100 * time.Millisecond)
 
 	// === SESSION 2: Load and verify skill region ===
 	session2 := createTestSessionForServerWithChar(server, charID, "SkillChar")
