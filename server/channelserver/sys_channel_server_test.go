@@ -278,13 +278,26 @@ func TestBroadcastMHFAllSessions(t *testing.T) {
 	testPkt := &mhfpacket.MsgSysNop{}
 	server.BroadcastMHF(testPkt, nil)
 
-	time.Sleep(100 * time.Millisecond)
+	// Poll until all sessions have received the packet or the deadline is reached.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		receivedCount := 0
+		for _, sess := range server.sessions {
+			mock := sess.cryptConn.(*MockCryptConn)
+			if mock.PacketCount() > 0 {
+				receivedCount++
+			}
+		}
+		if receivedCount == sessionCount {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 
 	// Stop all sessions
 	for _, sess := range sessions {
 		sess.closed.Store(true)
 	}
-	time.Sleep(50 * time.Millisecond)
 
 	// Verify all sessions received the packet
 	receivedCount := 0
