@@ -59,7 +59,9 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 	if storedHash != nil && !s.server.erupeConfig.DisableSaveIntegrityCheck {
 		computedHash := sha256.Sum256(saveData.decompSave)
 		if !bytes.Equal(storedHash, computedHash[:]) {
-			s.logger.Error("Savedata integrity check failed: hash mismatch",
+			s.logger.Error("Savedata integrity check failed: hash mismatch — "+
+				"if this character was imported from another server, set DisableSaveIntegrityCheck=true in config.json "+
+				"or run: UPDATE characters SET savedata_hash = NULL WHERE id = <charID>",
 				zap.Uint32("charID", charID),
 				zap.Binary("stored_hash", storedHash),
 				zap.Binary("computed_hash", computedHash[:]),
