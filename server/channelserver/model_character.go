@@ -148,6 +148,11 @@ func (save *CharacterSaveData) updateSaveDataWithStruct() {
 	if save.Mode >= cfg.F4 {
 		copy(save.decompSave[save.Pointers[pRP]:save.Pointers[pRP]+saveFieldRP], rpBytes)
 	}
+	if save.Mode >= cfg.S6 {
+		playtimeBytes := make([]byte, 4)
+		binary.LittleEndian.PutUint32(playtimeBytes, save.Playtime)
+		copy(save.decompSave[save.Pointers[pPlaytime]:save.Pointers[pPlaytime]+saveFieldPlaytime], playtimeBytes)
+	}
 	if save.Mode >= cfg.G10 {
 		copy(save.decompSave[save.Pointers[pKQF]:save.Pointers[pKQF]+saveFieldKQF], save.KQF)
 	}

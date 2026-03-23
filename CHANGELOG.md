@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed playtime regression across sessions: `updateSaveDataWithStruct` now writes the accumulated playtime back into the binary save blob, preventing each reconnect from loading a stale in-game counter and rolling back progress.
+
 ## [9.3.1] - 2026-03-23
 
 ### Added
