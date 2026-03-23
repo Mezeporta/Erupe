@@ -281,7 +281,6 @@ func TestEmptyHandlers_NoDb(t *testing.T) {
 		{"handleMsgSysUpdateRight", handleMsgSysUpdateRight},
 		{"handleMsgSysAuthQuery", handleMsgSysAuthQuery},
 		{"handleMsgSysAuthTerminal", handleMsgSysAuthTerminal},
-		{"handleMsgCaExchangeItem", handleMsgCaExchangeItem},
 		{"handleMsgMhfServerCommand", handleMsgMhfServerCommand},
 		{"handleMsgMhfSetLoginwindow", handleMsgMhfSetLoginwindow},
 		{"handleMsgSysTransBinary", handleMsgSysTransBinary},
@@ -296,7 +295,6 @@ func TestEmptyHandlers_NoDb(t *testing.T) {
 		{"handleMsgMhfKickExportForce", handleMsgMhfKickExportForce},
 		{"handleMsgSysSetStatus", handleMsgSysSetStatus},
 		{"handleMsgSysEcho", handleMsgSysEcho},
-		{"handleMsgMhfUseUdShopCoin", handleMsgMhfUseUdShopCoin},
 	}
 
 	for _, tt := range tests {

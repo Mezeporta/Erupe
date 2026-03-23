@@ -526,13 +526,8 @@ func TestHandleMsgMhfUseUdShopCoin(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgMhfUseUdShopCoin panicked: %v", r)
-		}
-	}()
-
-	handleMsgMhfUseUdShopCoin(session, nil)
+	pkt := &mhfpacket.MsgMhfUseUdShopCoin{AckHandle: 1}
+	handleMsgMhfUseUdShopCoin(session, pkt)
 }
 
 func TestHandleMsgMhfGetLobbyCrowd(t *testing.T) {
@@ -1028,7 +1023,6 @@ func TestEmptyHandlers_MiscFiles_Misc(t *testing.T) {
 		fn   func()
 	}{
 
-		{"handleMsgMhfUseUdShopCoin", func() { handleMsgMhfUseUdShopCoin(session, nil) }},
 		{"handleMsgMhfGetDailyMissionMaster", func() { handleMsgMhfGetDailyMissionMaster(session, nil) }},
 		{"handleMsgMhfGetDailyMissionPersonal", func() { handleMsgMhfGetDailyMissionPersonal(session, nil) }},
 		{"handleMsgMhfSetDailyMissionPersonal", func() { handleMsgMhfSetDailyMissionPersonal(session, nil) }},

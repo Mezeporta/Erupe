@@ -9,7 +9,9 @@ import (
 )
 
 // MsgMhfUseUdShopCoin represents the MSG_MHF_USE_UD_SHOP_COIN
-type MsgMhfUseUdShopCoin struct{}
+type MsgMhfUseUdShopCoin struct {
+	AckHandle uint32 // TODO: complete reverse-engineering of request fields
+}
 
 // Opcode returns the ID associated with this packet type.
 func (m *MsgMhfUseUdShopCoin) Opcode() network.PacketID {
@@ -18,7 +20,8 @@ func (m *MsgMhfUseUdShopCoin) Opcode() network.PacketID {
 
 // Parse parses the packet from binary
 func (m *MsgMhfUseUdShopCoin) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	return errors.New("NOT IMPLEMENTED")
+	m.AckHandle = bf.ReadUint32()
+	return nil
 }
 
 // Build builds a binary packet from the current data.

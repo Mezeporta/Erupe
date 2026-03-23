@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<<<<<<< HEAD
 ### Added
 
 - French (`fr`) and Spanish (`es`) server language translations. Set `"Language": "fr"` or `"Language": "es"` in `config.json` to activate.
@@ -30,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed backup recovery panic: `recoverFromBackups` now rejects decompressed backup data smaller than the minimum save layout size, preventing a slice-bounds panic when nullcomp passes through garbage bytes as "already decompressed" data ([#182](https://github.com/Mezeporta/Erupe/pull/182)).
+- Fixed playtime regression across sessions: `updateSaveDataWithStruct` now writes the accumulated playtime back into the binary save blob, preventing each reconnect from loading a stale in-game counter and rolling back progress.
+- Fixed player softlock when buying items at the forge: `MSG_CA_EXCHANGE_ITEM` `Parse()` was returning `NOT IMPLEMENTED`, causing the dispatch loop to drop the packet without sending an ACK. Now parses the `AckHandle` and responds with `doAckBufFail` so the client's error branch exits cleanly.
+- Fixed player softlock on N-points (Hunting Road) interactions: same root cause for `MSG_MHF_USE_UD_SHOP_COIN` — `Parse()` now reads the `AckHandle` and responds with `doAckBufFail`.
 
 ## [9.3.1] - 2026-03-23
 

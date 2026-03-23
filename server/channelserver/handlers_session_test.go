@@ -559,13 +559,8 @@ func TestHandleMsgCaExchangeItem(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgCaExchangeItem panicked: %v", r)
-		}
-	}()
-
-	handleMsgCaExchangeItem(session, nil)
+	pkt := &mhfpacket.MsgCaExchangeItem{AckHandle: 1}
+	handleMsgCaExchangeItem(session, pkt)
 }
 
 func TestHandleMsgMhfServerCommand(t *testing.T) {
@@ -1068,7 +1063,6 @@ func TestEmptyHandlers_HandlersGo(t *testing.T) {
 		{"handleMsgSysUpdateRight", func() { handleMsgSysUpdateRight(session, nil) }},
 		{"handleMsgSysAuthQuery", func() { handleMsgSysAuthQuery(session, nil) }},
 		{"handleMsgSysAuthTerminal", func() { handleMsgSysAuthTerminal(session, nil) }},
-		{"handleMsgCaExchangeItem", func() { handleMsgCaExchangeItem(session, nil) }},
 		{"handleMsgMhfServerCommand", func() { handleMsgMhfServerCommand(session, nil) }},
 		{"handleMsgMhfSetLoginwindow", func() { handleMsgMhfSetLoginwindow(session, nil) }},
 		{"handleMsgSysTransBinary", func() { handleMsgSysTransBinary(session, nil) }},
@@ -1106,7 +1100,6 @@ func TestEmptyHandlers_Concurrent(t *testing.T) {
 		handleMsgSysUpdateRight,
 		handleMsgSysAuthQuery,
 		handleMsgSysAuthTerminal,
-		handleMsgCaExchangeItem,
 		handleMsgMhfServerCommand,
 		handleMsgMhfSetLoginwindow,
 		handleMsgSysTransBinary,
