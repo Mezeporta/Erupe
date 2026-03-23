@@ -752,7 +752,13 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
-func handleMsgCaExchangeItem(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+func handleMsgCaExchangeItem(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgCaExchangeItem)
+	// TODO: full response format is not yet reverse-engineered.
+	// doAckBufFail sends a well-formed buf-type ACK with error code 1.
+	// The client's fail branch exits cleanly without reading response fields.
+	doAckBufFail(s, pkt.AckHandle, nil)
+}
 
 func handleMsgMhfServerCommand(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
