@@ -3,7 +3,6 @@ package channelserver
 import (
 	"bytes"
 	"testing"
-	"time"
 
 	"erupe-ce/common/mhfitem"
 	cfg "erupe-ce/config"
@@ -616,9 +615,6 @@ func TestPlateDataPersistenceDuringLogout(t *testing.T) {
 	// 4. Simulate logout (this should call savePlateDataToDatabase via saveAllCharacterData)
 	t.Log("Triggering logout via logoutPlayer")
 	logoutPlayer(session)
-
-	// Give logout time to complete
-	time.Sleep(100 * time.Millisecond)
 
 	// ===== VERIFICATION: Check all plate data was saved =====
 	t.Log("--- Verifying plate data persisted ---")

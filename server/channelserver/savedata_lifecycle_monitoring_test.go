@@ -155,13 +155,11 @@ func TestMonitored_SaveHandlerInvocationDuringLogout(t *testing.T) {
 	t.Log("Calling handleMsgMhfSavedata during session")
 	handleMsgMhfSavedata(session, savePkt)
 	monitor.RecordSavedata()
-	time.Sleep(100 * time.Millisecond)
 
 	// Now trigger logout
 	t.Log("Triggering logout - monitoring if save handlers are called")
 	monitor.RecordLogout()
 	logoutPlayer(session)
-	time.Sleep(100 * time.Millisecond)
 
 	// Report statistics
 	t.Log(monitor.GetStats())
@@ -233,12 +231,10 @@ func TestWithLogging_LogoutFlowAnalysis(t *testing.T) {
 		RawDataPayload: compressed,
 	}
 	handleMsgMhfSavedata(session, savePkt)
-	time.Sleep(50 * time.Millisecond)
 
 	// Trigger logout
 	t.Log("Triggering logout with logging enabled")
 	logoutPlayer(session)
-	time.Sleep(100 * time.Millisecond)
 
 	// Analyze logs
 	allLogs := logs.All()
@@ -317,11 +313,9 @@ func TestConcurrent_MultipleSessionsSaving(t *testing.T) {
 				RawDataPayload: compressed,
 			}
 			handleMsgMhfSavedata(session, savePkt)
-			time.Sleep(50 * time.Millisecond)
 
 			// Logout
 			logoutPlayer(session)
-			time.Sleep(50 * time.Millisecond)
 
 			// Verify data saved
 			var savedCompressed []byte
@@ -376,11 +370,9 @@ func TestSequential_RepeatedLogoutLoginCycles(t *testing.T) {
 			RawDataPayload: compressed,
 		}
 		handleMsgMhfSavedata(session, savePkt)
-		time.Sleep(50 * time.Millisecond)
 
 		// Logout
 		logoutPlayer(session)
-		time.Sleep(50 * time.Millisecond)
 
 		// Verify data after each cycle
 		var savedCompressed []byte
@@ -452,7 +444,6 @@ func TestRealtime_SaveDataTimestamps(t *testing.T) {
 	events = append(events, SaveEvent{time.Now(), "logout_start"})
 	logoutPlayer(session)
 	events = append(events, SaveEvent{time.Now(), "logout_end"})
-	time.Sleep(50 * time.Millisecond)
 
 	// Print timeline
 	t.Log("Save event timeline:")

@@ -73,7 +73,8 @@ type Config struct {
 	LoginNotices           []string // MHFML string of the login notices displayed
 	PatchServerManifest    string   // Manifest patch server override
 	PatchServerFile        string   // File patch server override
-	DeleteOnSaveCorruption bool     // Attempts to save corrupted data will flag the save for deletion
+	DeleteOnSaveCorruption    bool // Attempts to save corrupted data will flag the save for deletion
+	DisableSaveIntegrityCheck bool // Skip SHA-256 hash verification on load (needed for cross-server save transfers)
 	ClientMode             string
 	RealClientMode         Mode
 	QuestCacheExpiry       int    // Number of seconds to keep quest data cached
