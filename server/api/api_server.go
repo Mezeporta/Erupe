@@ -86,6 +86,7 @@ func (s *APIServer) Start() error {
 	v2.HandleFunc("/version", s.Version).Methods("GET")
 	v2.HandleFunc("/health", s.Health).Methods("GET")
 	v2.HandleFunc("/server/status", s.ServerStatus).Methods("GET")
+	v2.HandleFunc("/server/info", s.ServerInfo).Methods("GET")
 
 	// V2 authenticated routes
 	v2Auth := v2.PathPrefix("").Subrouter()

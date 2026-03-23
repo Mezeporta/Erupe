@@ -156,6 +156,32 @@ func (s *APIServer) Version(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+// ServerInfoResponse is the JSON payload returned by GET /v2/server/info.
+// It exposes the server's configured game version in a form that launcher
+// tools (e.g. mhf-outpost) can use to check version compatibility.
+type ServerInfoResponse struct {
+	// ClientMode is the version string as configured in Erupe (e.g. "ZZ", "G10.1").
+	ClientMode string `json:"clientMode"`
+	// ManifestID is the normalized form of ClientMode (lowercase, dots removed)
+	// matching mhf-outpost manifest IDs (e.g. "zz", "g101").
+	ManifestID string `json:"manifestId"`
+	// Name is the server software name.
+	Name string `json:"name"`
+}
+
+// ServerInfo handles GET /v2/server/info, returning the server's configured
+// game version in a format compatible with mhf-outpost manifest IDs.
+func (s *APIServer) ServerInfo(w http.ResponseWriter, r *http.Request) {
+	clientMode := s.erupeConfig.ClientMode
+	resp := ServerInfoResponse{
+		ClientMode: clientMode,
+		ManifestID: strings.ToLower(strings.ReplaceAll(clientMode, ".", "")),
+		Name:       "Erupe-CE",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
 // Launcher handles GET /launcher and returns banners, messages, and links for the launcher UI.
 func (s *APIServer) Launcher(w http.ResponseWriter, r *http.Request) {
 	var respData LauncherResponse

@@ -44,6 +44,56 @@ func TestVersionEndpoint(t *testing.T) {
 	}
 }
 
+func TestServerInfoEndpoint(t *testing.T) {
+	tests := []struct {
+		clientMode string
+		wantID     string
+	}{
+		{"ZZ", "zz"},
+		{"GG", "gg"},
+		{"G10.1", "g101"},
+		{"G9.1", "g91"},
+		{"FW.5", "fw5"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.clientMode, func(t *testing.T) {
+			logger := NewTestLogger(t)
+			c := NewTestConfig()
+			c.ClientMode = tt.clientMode
+
+			server := &APIServer{
+				logger:      logger,
+				erupeConfig: c,
+			}
+
+			req := httptest.NewRequest("GET", "/v2/server/info", nil)
+			rec := httptest.NewRecorder()
+			server.ServerInfo(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("status = %d, want 200", rec.Code)
+			}
+			if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
+				t.Errorf("Content-Type = %q, want application/json", ct)
+			}
+
+			var resp ServerInfoResponse
+			if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+				t.Fatalf("decode error: %v", err)
+			}
+			if resp.ClientMode != tt.clientMode {
+				t.Errorf("ClientMode = %q, want %q", resp.ClientMode, tt.clientMode)
+			}
+			if resp.ManifestID != tt.wantID {
+				t.Errorf("ManifestID = %q, want %q", resp.ManifestID, tt.wantID)
+			}
+			if resp.Name != "Erupe-CE" {
+				t.Errorf("Name = %q, want Erupe-CE", resp.Name)
+			}
+		})
+	}
+}
+
 func TestLandingPageEndpoint_Enabled(t *testing.T) {
 	logger := NewTestLogger(t)
 	c := NewTestConfig()
