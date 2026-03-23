@@ -121,7 +121,7 @@ func TestPacketQueueIndividualSending(t *testing.T) {
 				if mock.PacketCount() >= tt.wantPackets {
 					break
 				}
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(1 * time.Millisecond)
 			}
 
 			// Stop the session
@@ -131,7 +131,7 @@ func TestPacketQueueIndividualSending(t *testing.T) {
 				if mock.PacketCount() >= tt.wantPackets {
 					break
 				}
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(1 * time.Millisecond)
 			}
 
 			// Verify packet count
@@ -182,7 +182,7 @@ func TestPacketQueueNoConcatenation(t *testing.T) {
 		if mock.PacketCount() >= 3 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 	s.closed.Store(true)
 	deadline = time.Now().Add(2 * time.Second)
@@ -190,7 +190,7 @@ func TestPacketQueueNoConcatenation(t *testing.T) {
 		if mock.PacketCount() >= 3 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	sentPackets := mock.GetSentPackets()
@@ -228,7 +228,7 @@ func TestQueueSendUsesQueue(t *testing.T) {
 	s.QueueSend(testData)
 
 	// Give it a moment
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 
 	// WITHOUT sendLoop running, packets should NOT be sent yet
 	if mock.PacketCount() > 0 {
@@ -247,7 +247,7 @@ func TestQueueSendUsesQueue(t *testing.T) {
 		if mock.PacketCount() >= 1 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	if mock.PacketCount() != 1 {
@@ -272,7 +272,7 @@ func TestPacketTerminatorFormat(t *testing.T) {
 		if mock.PacketCount() >= 1 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 	s.closed.Store(true)
 	deadline = time.Now().Add(2 * time.Second)
@@ -280,7 +280,7 @@ func TestPacketTerminatorFormat(t *testing.T) {
 		if mock.PacketCount() >= 1 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	sentPackets := mock.GetSentPackets()
@@ -360,7 +360,7 @@ func TestPacketQueueAckFormat(t *testing.T) {
 		if mock.PacketCount() >= 1 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 	s.closed.Store(true)
 	deadline = time.Now().Add(2 * time.Second)
@@ -368,7 +368,7 @@ func TestPacketQueueAckFormat(t *testing.T) {
 		if mock.PacketCount() >= 1 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	sentPackets := mock.GetSentPackets()

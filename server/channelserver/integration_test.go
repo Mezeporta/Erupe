@@ -89,7 +89,7 @@ func IntegrationTest_PacketQueueFlow(t *testing.T) {
 				if mock.PacketCount() >= tt.wantPackets {
 					break
 				}
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(1 * time.Millisecond)
 			}
 
 			sentPackets := mock.GetSentPackets()
@@ -186,7 +186,7 @@ done:
 		if mock.PacketCount() >= expectedTotal {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	sentPackets := mock.GetSentPackets()
@@ -255,7 +255,7 @@ func IntegrationTest_AckPacketFlow(t *testing.T) {
 		if mock.PacketCount() >= ackCount {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	sentPackets := mock.GetSentPackets()
@@ -330,7 +330,7 @@ func IntegrationTest_MixedPacketTypes(t *testing.T) {
 		if mock.PacketCount() >= 4 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	sentPackets := mock.GetSentPackets()
@@ -385,7 +385,7 @@ func IntegrationTest_PacketOrderPreservation(t *testing.T) {
 		if mock.PacketCount() >= packetCount {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	sentPackets := mock.GetSentPackets()
@@ -456,7 +456,7 @@ func IntegrationTest_QueueBackpressure(t *testing.T) {
 		if mock.PacketCount() > 0 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	// Some packets should have been sent
@@ -539,7 +539,7 @@ func IntegrationTest_GuildEnumerationFlow(t *testing.T) {
 				if mock.PacketCount() >= tt.guildCount {
 					break
 				}
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(1 * time.Millisecond)
 			}
 
 			sentPackets := mock.GetSentPackets()
@@ -614,7 +614,7 @@ func IntegrationTest_ConcurrentClientAccess(t *testing.T) {
 						if mock.PacketCount() >= tt.packetsPerClient {
 							break
 						}
-						time.Sleep(10 * time.Millisecond)
+						time.Sleep(1 * time.Millisecond)
 					}
 					s.closed.Store(true)
 					deadline = time.Now().Add(2 * time.Second)
@@ -622,7 +622,7 @@ func IntegrationTest_ConcurrentClientAccess(t *testing.T) {
 						if mock.PacketCount() >= tt.packetsPerClient {
 							break
 						}
-						time.Sleep(10 * time.Millisecond)
+						time.Sleep(1 * time.Millisecond)
 					}
 
 					sentCount := mock.PacketCount()
@@ -693,7 +693,7 @@ func IntegrationTest_ClientVersionCompatibility(t *testing.T) {
 				if mock.PacketCount() >= 1 {
 					break
 				}
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(1 * time.Millisecond)
 			}
 			s.closed.Store(true)
 			deadline = time.Now().Add(2 * time.Second)
@@ -701,7 +701,7 @@ func IntegrationTest_ClientVersionCompatibility(t *testing.T) {
 				if mock.PacketCount() >= 1 {
 					break
 				}
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(1 * time.Millisecond)
 			}
 
 			sentCount := mock.PacketCount()
@@ -742,7 +742,7 @@ func IntegrationTest_PacketPrioritization(t *testing.T) {
 		if mock.PacketCount() >= 10 {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	sentPackets := mock.GetSentPackets()
@@ -804,7 +804,7 @@ done:
 		if mock.PacketCount() >= packetCount {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	sentPackets := mock.GetSentPackets()
