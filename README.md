@@ -23,6 +23,8 @@ Pick one of two installation methods, then continue to [Quest & Scenario Files](
    createdb -U postgres erupe
    ```
 
+   Alternatively, when using pgAdmin4, right click the PostgreSQL version listed under "Servers" and click "Create", then name the database "erupe" and press Save.
+   
    The server will automatically apply all schema migrations on first startup.
 
 3. Copy and edit the config:
@@ -32,9 +34,38 @@ Pick one of two installation methods, then continue to [Quest & Scenario Files](
    # Edit config.json with your database credentials
    ```
 
-4. Download [quest/scenario files](#quest--scenario-files) and extract them to `bin/`
+   If you're using File Explorer or the likes, rename or create a copy of `config.example.json` titled `config.json` and fill it out with your database credentials.
 
-5. Run: `./erupe-ce`
+4. Download [quest/scenario files](#quest--scenario-files) and extract them to `bin/`.
+
+   It should look as follows:
+   ```
+   bin
+   ├───events
+   │   ├───Campaign
+   │   ├───Collab
+   │   ├───Custom Quests
+   │   ├───Daily
+   │   ├───Diva Defense
+   │   ├───G Event
+   │   ├───HR Event
+   │   ├───Musou
+   │   ├───Raviente
+   │   ├───Series
+   │   ├───Special Event & April Fools
+   │   └───Zenith
+   ├───quests
+   ├───scenarios
+   └───rengoku_data.bin
+   ```  
+
+7. Run the server:
+
+   On Linux, open the Terminal in the folder containing Erupe and run: `./erupe-ce`.
+   
+   On Windows, simply open the file titled `erupe.exe`. 
+
+   Alternatively, open the Command Prompt (cmd) in the folder containing Erupe and run: `erupe`.
 
 ### Option B: From Source
 
