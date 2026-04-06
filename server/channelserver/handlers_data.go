@@ -123,6 +123,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	if characterSaveData.Name == s.Name || s.server.erupeConfig.RealClientMode <= cfg.S10 {
 		if err := characterSaveData.Save(s); err != nil {
 			s.logger.Error("Failed to save character data", zap.Error(err))
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
 		s.logger.Info("Wrote recompressed savedata back to DB.")
