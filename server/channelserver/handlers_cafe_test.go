@@ -617,6 +617,29 @@ func TestHandleMsgMhfGetBoostTimeLimit_DisableBoostTime(t *testing.T) {
 	}
 }
 
+// Regression: GetBoostTimeLimit must return 0 for a stale past boost_time
+// (e.g. a pre-1970 sentinel left over from the pre-#187 bug). Without the
+// guard, uint32(negative int64) wraps to a huge future-looking timestamp
+// the client interprets as a permanently active boost — while
+// GetBoostRight correctly reports it as expired, producing an observable
+// inconsistency between the two handlers.
+func TestHandleMsgMhfGetBoostTimeLimit_PastBoostTime(t *testing.T) {
+	server := createMockServer()
+	charMock := newMockCharacterRepo()
+	// Year 1906 — the actual value found on the live test server.
+	charMock.times["boost_time"] = time.Date(1906, 1, 1, 0, 0, 0, 0, time.UTC)
+	server.charRepo = charMock
+	session := createMockSession(1, server)
+
+	handleMsgMhfGetBoostTimeLimit(session, &mhfpacket.MsgMhfGetBoostTimeLimit{AckHandle: 100})
+
+	p := <-session.sendPackets
+	payload := ackBufPayload(t, p.data)
+	if len(payload) != 4 || payload[0] != 0 || payload[1] != 0 || payload[2] != 0 || payload[3] != 0 {
+		t.Errorf("expected zero uint32 payload for past boost_time, got %x", payload)
+	}
+}
+
 // Regression for #187: GetBoostRight must report "no right" when disabled.
 func TestHandleMsgMhfGetBoostRight_DisableBoostTime(t *testing.T) {
 	server := createMockServer()

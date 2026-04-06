@@ -219,9 +219,14 @@ func handleMsgMhfGetBoostTimeLimit(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetBoostTimeLimit)
 	bf := byteframe.NewByteFrame()
 	boostLimit, err := s.server.charRepo.ReadTime(s.charID, "boost_time", time.Time{})
-	// Return 0 when disabled, on read error, or when boost_time is unset
-	// (zero time.Time.Unix() wraps to a large uint32 the client interprets as active).
-	if err != nil || s.server.erupeConfig.GameplayOptions.DisableBoostTime || boostLimit.IsZero() {
+	// Return 0 when disabled, on read error, when boost_time is unset,
+	// or when boost_time is already in the past. A naked uint32() cast
+	// on a pre-1970 int64 wraps to a huge future-looking timestamp the
+	// client interprets as permanently active (see the year-1906 rows
+	// left behind by the pre-#187 bug). Harmonise with GetBoostRight
+	// so the two handlers always agree on the same row.
+	if err != nil || s.server.erupeConfig.GameplayOptions.DisableBoostTime ||
+		boostLimit.IsZero() || !boostLimit.After(TimeAdjusted()) {
 		bf.WriteUint32(0)
 	} else {
 		bf.WriteUint32(uint32(boostLimit.Unix()))
