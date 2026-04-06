@@ -181,7 +181,7 @@ func loadScenarioBinary(s *Session, filename string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	compiled, err := CompileScenarioJSON(jsonData)
+	compiled, err := CompileScenarioJSON(jsonData, s.Lang())
 	if err != nil {
 		return nil, fmt.Errorf("compile scenario JSON %s: %w", filename, err)
 	}

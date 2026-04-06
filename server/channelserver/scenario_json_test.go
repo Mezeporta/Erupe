@@ -85,14 +85,18 @@ func extractStringsFromScenario(t *testing.T, data []byte) []string {
 	var result []string
 	if s.Chunk0 != nil {
 		if s.Chunk0.Subheader != nil {
-			result = append(result, s.Chunk0.Subheader.Strings...)
+			for _, ls := range s.Chunk0.Subheader.Strings {
+				result = append(result, ls.Resolve(""))
+			}
 		}
 		for _, e := range s.Chunk0.Inline {
-			result = append(result, e.Text)
+			result = append(result, e.Text.Resolve(""))
 		}
 	}
 	if s.Chunk1 != nil && s.Chunk1.Subheader != nil {
-		result = append(result, s.Chunk1.Subheader.Strings...)
+		for _, ls := range s.Chunk1.Subheader.Strings {
+			result = append(result, ls.Resolve(""))
+		}
 	}
 	return result
 }
@@ -134,8 +138,8 @@ func TestParseScenarioBinary_SubheaderChunk0(t *testing.T) {
 		t.Fatalf("string count: got %d, want %d", len(got), len(want))
 	}
 	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("[%d]: got %q, want %q", i, got[i], want[i])
+		if got[i].Resolve("") != want[i] {
+			t.Errorf("[%d]: got %q, want %q", i, got[i].Resolve(""), want[i])
 		}
 	}
 }
@@ -153,8 +157,8 @@ func TestParseScenarioBinary_InlineChunk0(t *testing.T) {
 	}
 	want := []string{"Item1", "Item2"}
 	for i, e := range s.Chunk0.Inline {
-		if e.Text != want[i] {
-			t.Errorf("[%d]: got %q, want %q", i, e.Text, want[i])
+		if got := e.Text.Resolve(""); got != want[i] {
+			t.Errorf("[%d]: got %q, want %q", i, got, want[i])
 		}
 	}
 }
@@ -187,8 +191,8 @@ func TestParseScenarioBinary_Japanese(t *testing.T) {
 	want := []string{"テスト", "日本語"}
 	got := s.Chunk0.Subheader.Strings
 	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("[%d]: got %q, want %q", i, got[i], want[i])
+		if got[i].Resolve("") != want[i] {
+			t.Errorf("[%d]: got %q, want %q", i, got[i].Resolve(""), want[i])
 		}
 	}
 }
@@ -203,7 +207,7 @@ func TestCompileScenarioJSON_Subheader(t *testing.T) {
 				Unknown1: 0x00,
 				Unknown2: 0x00,
 				Metadata: "AAAABBBB", // base64 of 6 zero bytes
-				Strings:  []string{"Hello", "World"},
+				Strings:  []LocalizedString{NewLocalizedPlain("Hello"), NewLocalizedPlain("World")},
 			},
 		},
 	}
@@ -213,7 +217,7 @@ func TestCompileScenarioJSON_Subheader(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	compiled, err := CompileScenarioJSON(jsonData)
+	compiled, err := CompileScenarioJSON(jsonData, "")
 	if err != nil {
 		t.Fatalf("CompileScenarioJSON: %v", err)
 	}
@@ -229,8 +233,8 @@ func TestCompileScenarioJSON_Subheader(t *testing.T) {
 	want := []string{"Hello", "World"}
 	got := result.Chunk0.Subheader.Strings
 	for i := range want {
-		if i >= len(got) || got[i] != want[i] {
-			t.Errorf("[%d]: got %q, want %q", i, got[i], want[i])
+		if i >= len(got) || got[i].Resolve("") != want[i] {
+			t.Errorf("[%d]: got %q, want %q", i, got[i].Resolve(""), want[i])
 		}
 	}
 }
@@ -239,13 +243,13 @@ func TestCompileScenarioJSON_Inline(t *testing.T) {
 	input := &ScenarioJSON{
 		Chunk0: &ScenarioChunk0JSON{
 			Inline: []ScenarioInlineEntry{
-				{Index: 1, Text: "Sword"},
-				{Index: 2, Text: "Shield"},
+				{Index: 1, Text: NewLocalizedPlain("Sword")},
+				{Index: 2, Text: NewLocalizedPlain("Shield")},
 			},
 		},
 	}
 	jsonData, _ := json.Marshal(input)
-	compiled, err := CompileScenarioJSON(jsonData)
+	compiled, err := CompileScenarioJSON(jsonData, "")
 	if err != nil {
 		t.Fatalf("CompileScenarioJSON: %v", err)
 	}
@@ -257,11 +261,11 @@ func TestCompileScenarioJSON_Inline(t *testing.T) {
 	if result.Chunk0 == nil || len(result.Chunk0.Inline) != 2 {
 		t.Fatal("expected 2 inline entries")
 	}
-	if result.Chunk0.Inline[0].Text != "Sword" {
-		t.Errorf("got %q, want Sword", result.Chunk0.Inline[0].Text)
+	if got := result.Chunk0.Inline[0].Text.Resolve(""); got != "Sword" {
+		t.Errorf("got %q, want Sword", got)
 	}
-	if result.Chunk0.Inline[1].Text != "Shield" {
-		t.Errorf("got %q, want Shield", result.Chunk0.Inline[1].Text)
+	if got := result.Chunk0.Inline[1].Text.Resolve(""); got != "Shield" {
+		t.Errorf("got %q, want Shield", got)
 	}
 }
 
@@ -283,7 +287,7 @@ func TestScenarioRoundTrip_Subheader(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	compiled, err := CompileScenarioJSON(jsonData)
+	compiled, err := CompileScenarioJSON(jsonData, "")
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
@@ -309,7 +313,7 @@ func TestScenarioRoundTrip_Inline(t *testing.T) {
 
 	s, _ := ParseScenarioBinary(original)
 	jsonData, _ := json.Marshal(s)
-	compiled, err := CompileScenarioJSON(jsonData)
+	compiled, err := CompileScenarioJSON(jsonData, "")
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
@@ -354,7 +358,7 @@ func TestScenarioRoundTrip_MetadataPreserved(t *testing.T) {
 
 	// Compile and parse again — metadata must survive
 	jsonData, _ := json.Marshal(s)
-	compiled, err := CompileScenarioJSON(jsonData)
+	compiled, err := CompileScenarioJSON(jsonData, "")
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
@@ -427,7 +431,7 @@ func TestScenarioRoundTrip_RealFiles(t *testing.T) {
 			}
 
 			// Compile JSON → binary
-			compiled, err := CompileScenarioJSON(jsonData)
+			compiled, err := CompileScenarioJSON(jsonData, "")
 			if err != nil {
 				t.Fatalf("CompileScenarioJSON: %v", err)
 			}
@@ -469,4 +473,76 @@ func TestScenarioRoundTrip_RealFiles(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ── Phase C: localized scenario strings (#188) ───────────────────────────────
+
+// TestCompileScenarioJSON_LocalizedStrings exercises the LocalizedString
+// schema inside scenario subheader and inline chunks — the same plain-or-map
+// extension shipped for quests in phase B.
+func TestCompileScenarioJSON_LocalizedStrings(t *testing.T) {
+	input := &ScenarioJSON{
+		Chunk0: &ScenarioChunk0JSON{
+			Subheader: &ScenarioSubheaderJSON{
+				Type:     0x01,
+				Metadata: "AAAABBBB",
+				Strings: []LocalizedString{
+					mustLocalized(t, `{"jp":"クエスト","en":"Quest","fr":"Quete"}`),
+					mustLocalized(t, `"Plain String"`),
+				},
+			},
+		},
+	}
+	jsonData, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	// English request picks the en variant; the plain string stays plain.
+	compiledEN, err := CompileScenarioJSON(jsonData, "en")
+	if err != nil {
+		t.Fatalf("compile en: %v", err)
+	}
+	gotEN := extractStringsFromScenario(t, compiledEN)
+	wantEN := []string{"Quest", "Plain String"}
+	if len(gotEN) != len(wantEN) {
+		t.Fatalf("en string count: got %d, want %d", len(gotEN), len(wantEN))
+	}
+	for i := range wantEN {
+		if gotEN[i] != wantEN[i] {
+			t.Errorf("en [%d]: got %q, want %q", i, gotEN[i], wantEN[i])
+		}
+	}
+
+	// Japanese request picks the jp variant; plain still plain.
+	compiledJP, err := CompileScenarioJSON(jsonData, "jp")
+	if err != nil {
+		t.Fatalf("compile jp: %v", err)
+	}
+	gotJP := extractStringsFromScenario(t, compiledJP)
+	wantJP := []string{"クエスト", "Plain String"}
+	for i := range wantJP {
+		if gotJP[i] != wantJP[i] {
+			t.Errorf("jp [%d]: got %q, want %q", i, gotJP[i], wantJP[i])
+		}
+	}
+
+	// Spanish not provided → falls back to jp (the canonical fallback).
+	compiledES, err := CompileScenarioJSON(jsonData, "es")
+	if err != nil {
+		t.Fatalf("compile es: %v", err)
+	}
+	gotES := extractStringsFromScenario(t, compiledES)
+	if gotES[0] != "クエスト" {
+		t.Errorf("es fallback = %q, want jp fallback %q", gotES[0], "クエスト")
+	}
+}
+
+func mustLocalized(t *testing.T, src string) LocalizedString {
+	t.Helper()
+	var ls LocalizedString
+	if err := json.Unmarshal([]byte(src), &ls); err != nil {
+		t.Fatalf("unmarshal %q: %v", src, err)
+	}
+	return ls
 }

@@ -49,6 +49,8 @@ type Session struct {
 	charID           uint32
 	userID           uint32
 	clientLang       string // Per-session language preference; empty = use server default
+	cachedI18n       *i18n  // Lazily populated by I18n(); invalidated on SetLang
+	cachedI18nLang   string // Lang the cachedI18n was built for
 	logKey           []byte
 	sessionStart     int64
 	courses          []mhfcourse.Course
@@ -126,10 +128,43 @@ func (s *Session) Lang() string {
 
 // SetLang updates the session's in-memory language preference. Persistence
 // to the database is the caller's responsibility (via userRepo.SetLanguage).
+// The cached i18n table is invalidated so the next I18n() call rebuilds
+// against the new language.
 func (s *Session) SetLang(lang string) {
 	s.Lock()
 	s.clientLang = lang
+	s.cachedI18n = nil
+	s.cachedI18nLang = ""
 	s.Unlock()
+}
+
+// I18n returns the i18n string table resolved against this session's
+// effective language (see Lang). The first call materializes the table via
+// getLangStringsFor and the result is cached on the session so hot-path
+// handlers (chat, mail, timer tick broadcasts) do not pay the allocation on
+// every packet. SetLang invalidates the cache.
+func (s *Session) I18n() *i18n {
+	s.Lock()
+	if s.cachedI18n != nil && s.cachedI18nLang == s.clientLang {
+		i := s.cachedI18n
+		s.Unlock()
+		return i
+	}
+	lang := s.clientLang
+	s.Unlock()
+	// Resolve lang (falls back to server default when empty).
+	effectiveLang := lang
+	if effectiveLang == "" {
+		effectiveLang = s.server.erupeConfig.Language
+	}
+	resolved := getLangStringsFor(effectiveLang)
+	s.Lock()
+	// Someone may have raced us — overwrite defensively, pointer value is
+	// still the one we just built so callers get a consistent view.
+	s.cachedI18n = &resolved
+	s.cachedI18nLang = lang
+	s.Unlock()
+	return &resolved
 }
 
 // Start starts the session packet send and recv loop(s).

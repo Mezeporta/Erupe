@@ -49,7 +49,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 				_ = tmp.ReadBytes(9)
 				tmp.SetLE()
 				frame := tmp.ReadUint32()
-				sendServerChatMessage(s, fmt.Sprintf(s.server.i18n.timer, frame/30/60/60, frame/30/60, frame/30%60, int(math.Round(float64(frame%30*100)/3)), frame))
+				sendServerChatMessage(s, fmt.Sprintf(s.I18n().timer, frame/30/60/60, frame/30/60, frame/30%60, int(math.Round(float64(frame%30*100)/3)), frame))
 			}
 		}
 	}

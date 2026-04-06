@@ -103,7 +103,7 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 	bf.WriteUint32(uint32(cafeTime))
 	if s.server.erupeConfig.RealClientMode >= cfg.ZZ {
 		bf.WriteUint16(0)
-		ps.Uint16(bf, fmt.Sprintf(s.server.i18n.cafe.reset, int(cafeReset.Month()), cafeReset.Day()), true)
+		ps.Uint16(bf, fmt.Sprintf(s.I18n().cafe.reset, int(cafeReset.Month()), cafeReset.Day()), true)
 	}
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }

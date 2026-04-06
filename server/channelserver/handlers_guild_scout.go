@@ -13,8 +13,8 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfPostGuildScout)
 
 	err := s.server.guildService.PostScout(s.charID, pkt.CharID, ScoutInviteStrings{
-		Title: s.server.i18n.guild.invite.title,
-		Body:  s.server.i18n.guild.invite.body,
+		Title: s.I18n().guild.invite.title,
+		Body:  s.I18n().guild.invite.body,
 	})
 
 	if errors.Is(err, ErrAlreadyInvited) {
@@ -66,7 +66,7 @@ func handleMsgMhfCancelGuildScout(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAnswerGuildScout)
 
-	i := s.server.i18n.guild.invite
+	i := s.I18n().guild.invite
 	result, err := s.server.guildService.AnswerScout(s.charID, pkt.LeaderID, pkt.Answer, AnswerScoutStrings{
 		SuccessTitle:  i.success.title,
 		SuccessBody:   i.success.body,

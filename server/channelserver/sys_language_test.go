@@ -193,3 +193,55 @@ func TestLangCompleteness(t *testing.T) {
 		})
 	}
 }
+
+// TestSessionI18n_Cached verifies that Session.I18n() returns an i18n table
+// resolved against the session's language and caches the pointer until
+// SetLang invalidates it (phase C of #188).
+func TestSessionI18n_Cached(t *testing.T) {
+	server := &Server{erupeConfig: &cfg.Config{Language: "en"}}
+	s := &Session{server: server}
+
+	en1 := s.I18n()
+	en2 := s.I18n()
+	if en1 != en2 {
+		t.Error("Session.I18n() should return the same pointer until SetLang")
+	}
+	if en1.language != "English" {
+		t.Errorf("server-default I18n = %q, want English", en1.language)
+	}
+
+	s.SetLang("jp")
+	jp := s.I18n()
+	if jp == en1 {
+		t.Error("SetLang should invalidate the cached I18n pointer")
+	}
+	if jp.language != "日本語" {
+		t.Errorf("after SetLang(jp) I18n = %q, want 日本語", jp.language)
+	}
+
+	// And another call returns the same (now-cached) jp pointer.
+	if s.I18n() != jp {
+		t.Error("Session.I18n() should be cached after SetLang rebuild")
+	}
+}
+
+// TestParseChatCommand_RepliesInSessionLanguage confirms the mechanical
+// s.server.i18n → s.I18n() refactor routes chat responses through the
+// session's language.
+func TestParseChatCommand_RepliesInSessionLanguage_Placeholder(t *testing.T) {
+	// Sanity: for a French session, the i18n table returned by I18n() must
+	// be the French one, and its commands.timer.enabled must not equal the
+	// English string.
+	server := &Server{erupeConfig: &cfg.Config{Language: "en"}}
+	s := &Session{server: server}
+	s.SetLang("fr")
+
+	frTable := s.I18n()
+	enTable := getLangStringsFor("en")
+	if frTable.commands.timer.enabled == enTable.commands.timer.enabled {
+		t.Error("fr and en timer.enabled strings should differ — refactor may have reverted")
+	}
+	if frTable.language != "Français" {
+		t.Errorf("session I18n language = %q, want Français", frTable.language)
+	}
+}

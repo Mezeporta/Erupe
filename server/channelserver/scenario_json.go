@@ -102,16 +102,22 @@ type ScenarioSubheaderJSON struct {
 	// fields, including those the server does not need to interpret.
 	// For chunk0, the client only reads m[0]–m[6]; m[7]–m[9] are ignored.
 	Metadata string `json:"metadata"`
-	// Strings contains the human-editable text (UTF-8).
-	// The compiler converts each string to null-terminated Shift-JIS on the wire.
-	Strings []string `json:"strings"`
+	// Strings contains the human-editable text. Each entry accepts either a
+	// plain UTF-8 string (backwards compatible, single-language) or a
+	// language-keyed object; see LocalizedString. The compiler converts the
+	// resolved value for the current session's language to null-terminated
+	// Shift-JIS on the wire.
+	Strings []LocalizedString `json:"strings"`
 }
 
 // ScenarioInlineEntry is one entry in an inline-format chunk0.
 // Format on wire: {u8 index}{Shift-JIS string}{0x00}.
+//
+// Text accepts either a plain string or a language-keyed object; see
+// LocalizedString.
 type ScenarioInlineEntry struct {
-	Index uint8  `json:"index"`
-	Text  string `json:"text"`
+	Index uint8           `json:"index"`
+	Text  LocalizedString `json:"text"`
 }
 
 // ScenarioRawChunkJSON stores a JKR-compressed chunk as its raw compressed bytes.
@@ -239,9 +245,15 @@ func parseScenarioSubheader(data []byte) (*ScenarioSubheaderJSON, error) {
 
 	metadata := base64.StdEncoding.EncodeToString(data[8:metaEnd])
 
-	strings, err := scenarioReadStrings(data, metaEnd, entryCount)
+	plainStrings, err := scenarioReadStrings(data, metaEnd, entryCount)
 	if err != nil {
 		return nil, err
+	}
+	// Binary carries a single language — wrap as plain LocalizedStrings so
+	// round-tripping emits the same bytes.
+	localized := make([]LocalizedString, len(plainStrings))
+	for i, s := range plainStrings {
+		localized[i] = NewLocalizedPlain(s)
 	}
 
 	return &ScenarioSubheaderJSON{
@@ -249,7 +261,7 @@ func parseScenarioSubheader(data []byte) (*ScenarioSubheaderJSON, error) {
 		Unknown1: unknown1,
 		Unknown2: unknown2,
 		Metadata: metadata,
-		Strings:  strings,
+		Strings:  localized,
 	}, nil
 }
 
@@ -276,7 +288,7 @@ func parseScenarioInline(data []byte) ([]ScenarioInlineEntry, error) {
 			if err != nil {
 				return nil, fmt.Errorf("inline entry at 0x%x: %w", pos, err)
 			}
-			result = append(result, ScenarioInlineEntry{Index: idx, Text: text})
+			result = append(result, ScenarioInlineEntry{Index: idx, Text: NewLocalizedPlain(text)})
 		}
 		pos = end + 1 // skip null terminator
 	}
@@ -317,27 +329,30 @@ func scenarioReadStrings(data []byte, start, maxCount int) ([]string, error) {
 
 // ── Compile: JSON → binary ───────────────────────────────────────────────────
 
-// CompileScenarioJSON parses jsonData and compiles it to MHF scenario binary format.
-func CompileScenarioJSON(jsonData []byte) ([]byte, error) {
+// CompileScenarioJSON parses jsonData and compiles it to MHF scenario binary
+// format for the given language. Phase B of #188 added the lang parameter so
+// per-session scenarios can ship localized text without affecting callers
+// holding single-language JSON files.
+func CompileScenarioJSON(jsonData []byte, lang string) ([]byte, error) {
 	var s ScenarioJSON
 	if err := json.Unmarshal(jsonData, &s); err != nil {
 		return nil, fmt.Errorf("unmarshal scenario JSON: %w", err)
 	}
-	return compileScenario(&s)
+	return compileScenario(&s, lang)
 }
 
-func compileScenario(s *ScenarioJSON) ([]byte, error) {
+func compileScenario(s *ScenarioJSON, lang string) ([]byte, error) {
 	var chunk0, chunk1, chunk2 []byte
 	var err error
 
 	if s.Chunk0 != nil {
-		chunk0, err = compileScenarioChunk0(s.Chunk0)
+		chunk0, err = compileScenarioChunk0(s.Chunk0, lang)
 		if err != nil {
 			return nil, fmt.Errorf("chunk0: %w", err)
 		}
 	}
 	if s.Chunk1 != nil {
-		chunk1, err = compileScenarioChunk1(s.Chunk1)
+		chunk1, err = compileScenarioChunk1(s.Chunk1, lang)
 		if err != nil {
 			return nil, fmt.Errorf("chunk1: %w", err)
 		}
@@ -370,26 +385,26 @@ func compileScenario(s *ScenarioJSON) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func compileScenarioChunk0(c *ScenarioChunk0JSON) ([]byte, error) {
+func compileScenarioChunk0(c *ScenarioChunk0JSON, lang string) ([]byte, error) {
 	if c.Subheader != nil {
-		return compileScenarioSubheader(c.Subheader)
+		return compileScenarioSubheader(c.Subheader, lang)
 	}
-	return compileScenarioInline(c.Inline)
+	return compileScenarioInline(c.Inline, lang)
 }
 
-func compileScenarioChunk1(c *ScenarioChunk1JSON) ([]byte, error) {
+func compileScenarioChunk1(c *ScenarioChunk1JSON, lang string) ([]byte, error) {
 	if c.JKR != nil {
 		return compileScenarioRawChunk(c.JKR)
 	}
 	if c.Subheader != nil {
-		return compileScenarioSubheader(c.Subheader)
+		return compileScenarioSubheader(c.Subheader, lang)
 	}
 	return nil, nil
 }
 
 // compileScenarioSubheader builds the binary sub-header chunk:
 // [8-byte header][metadata][null-terminated Shift-JIS strings][0xFF]
-func compileScenarioSubheader(sh *ScenarioSubheaderJSON) ([]byte, error) {
+func compileScenarioSubheader(sh *ScenarioSubheaderJSON, lang string) ([]byte, error) {
 	meta, err := base64.StdEncoding.DecodeString(sh.Metadata)
 	if err != nil {
 		return nil, fmt.Errorf("decode metadata base64: %w", err)
@@ -397,7 +412,7 @@ func compileScenarioSubheader(sh *ScenarioSubheaderJSON) ([]byte, error) {
 
 	var strBuf bytes.Buffer
 	for _, s := range sh.Strings {
-		sjis, err := scenarioEncodeShiftJIS(s)
+		sjis, err := scenarioEncodeShiftJIS(s.Resolve(lang))
 		if err != nil {
 			return nil, err
 		}
@@ -425,11 +440,11 @@ func compileScenarioSubheader(sh *ScenarioSubheaderJSON) ([]byte, error) {
 }
 
 // compileScenarioInline builds the inline-format chunk0 bytes.
-func compileScenarioInline(entries []ScenarioInlineEntry) ([]byte, error) {
+func compileScenarioInline(entries []ScenarioInlineEntry, lang string) ([]byte, error) {
 	var buf bytes.Buffer
 	for _, e := range entries {
 		buf.WriteByte(e.Index)
-		sjis, err := scenarioEncodeShiftJIS(e.Text)
+		sjis, err := scenarioEncodeShiftJIS(e.Text.Resolve(lang))
 		if err != nil {
 			return nil, err
 		}

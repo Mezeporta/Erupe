@@ -376,10 +376,10 @@ func handleMsgMhfEntryRookieGuild(s *Session, p mhfpacket.MHFPacket) {
 	// pkt.Unk==0: fresh rookie entering a rookie guild (return_type=1).
 	// pkt.Unk>=1: returning player entering a comeback/return guild (return_type=2).
 	returnType := uint8(1)
-	nameTemplate := s.server.i18n.guild.rookieGuildName
+	nameTemplate := s.I18n().guild.rookieGuildName
 	if pkt.Unk >= 1 {
 		returnType = 2
-		nameTemplate = s.server.i18n.guild.returnGuildName
+		nameTemplate = s.I18n().guild.returnGuildName
 	}
 
 	guildID, err := s.server.guildRepo.FindOrCreateReturnGuild(returnType, nameTemplate)
