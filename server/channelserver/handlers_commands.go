@@ -144,6 +144,33 @@ func parseChatCommand(s *Session, command string) {
 		} else {
 			sendDisabledCommandMessage(s, commands["Timer"])
 		}
+	case commands["Language"].Prefix:
+		if commands["Language"].Enabled || s.isOp() {
+			// Use the session's *current* i18n table so replies come back in
+			// the language the player was using before the change — the
+			// success message reflects the new language via its argument.
+			i := getLangStringsFor(s.Lang())
+			if len(args) < 2 {
+				sendServerChatMessage(s, fmt.Sprintf(i.commands.lang.current, s.Lang()))
+				sendServerChatMessage(s, fmt.Sprintf(i.commands.lang.usage, s.server.erupeConfig.CommandPrefix+commands["Language"].Prefix))
+			} else {
+				requested := strings.ToLower(args[1])
+				if !isSupportedLang(requested) {
+					sendServerChatMessage(s, fmt.Sprintf(i.commands.lang.invalid, requested))
+				} else {
+					if err := s.server.userRepo.SetLanguage(s.userID, requested); err != nil {
+						s.logger.Error("Failed to persist language preference", zap.Error(err), zap.String("lang", requested))
+					}
+					s.SetLang(requested)
+					// Reply in the *new* language so the player immediately
+					// sees the server switched.
+					newI := getLangStringsFor(requested)
+					sendServerChatMessage(s, fmt.Sprintf(newI.commands.lang.success, requested))
+				}
+			}
+		} else {
+			sendDisabledCommandMessage(s, commands["Language"])
+		}
 	case commands["PSN"].Prefix:
 		if commands["PSN"].Enabled || s.isOp() {
 			if len(args) > 1 {

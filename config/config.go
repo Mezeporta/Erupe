@@ -446,6 +446,7 @@ func registerDefaults() {
 		{Name: "Ban", Enabled: false, Description: "Ban/Temp Ban a user", Prefix: "ban"},
 		{Name: "Timer", Enabled: true, Description: "Toggle the Quest timer", Prefix: "timer"},
 		{Name: "Playtime", Enabled: true, Description: "Show your playtime", Prefix: "playtime"},
+		{Name: "Language", Enabled: true, Description: "Show or change your preferred language (en|jp|fr|es)", Prefix: "lang"},
 	})
 
 	// Courses

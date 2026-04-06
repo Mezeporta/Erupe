@@ -39,6 +39,11 @@ func langSpanish() i18n {
 	i.commands.timer.enabled = "Temporizador de misión activado"
 	i.commands.timer.disabled = "Temporizador de misión desactivado"
 
+	i.commands.lang.usage = "Uso: %s <en|jp|fr|es>"
+	i.commands.lang.invalid = "Idioma desconocido %q. Compatibles: en, jp, fr, es"
+	i.commands.lang.success = "Idioma establecido en %s"
+	i.commands.lang.current = "Idioma actual: %s"
+
 	i.commands.ravi.noCommand = "No se especificó ningún comando de Raviente"
 	i.commands.ravi.start.success = "La Gran Cacería comenzará en un momento"
 	i.commands.ravi.start.error = "¡La Gran Cacería ya ha comenzado!"

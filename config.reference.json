@@ -186,6 +186,11 @@
       "Enabled": true,
       "Description": "Show your playtime",
       "Prefix": "playtime"
+    }, {
+      "Name": "Language",
+      "Enabled": true,
+      "Description": "Show or change your preferred language (en|jp|fr|es)",
+      "Prefix": "lang"
     }
   ],
   "Courses": [

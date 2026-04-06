@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Per-session language preference (phase A of [#188](https://github.com/Mezeporta/Erupe/issues/188)): new `users.language` column (migration `0022_user_language`), `UserRepo.GetLanguage`/`SetLanguage`, `Session.Lang()`/`SetLang()` accessors, and a `!lang <en|jp|fr|es>` command to show or change the session's language live. The preference is loaded on login and persisted across sessions; an empty value falls back to `config.Language`. The `getLangStringsFor(code)` primitive is the new way to resolve an i18n table from a concrete code — existing callers keep working via the unchanged `getLangStrings(server)` wrapper. This is plumbing only: localized quest/scenario content comes in phase B.
+
 ### Changed
 
 - Shutdown now proceeds in three phases: listeners close immediately on signal, then a passive drain waits up to `ShutdownDrainSeconds` (default 30) for sessions to disconnect naturally, then remaining connections are force-closed. This prevents players from starting new quests after the countdown begins ([#179](https://github.com/Mezeporta/Erupe/issues/179)).

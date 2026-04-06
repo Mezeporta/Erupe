@@ -48,6 +48,7 @@ type Session struct {
 	prevGuildID      uint32 // Stores the last GuildID used in InfoGuild
 	charID           uint32
 	userID           uint32
+	clientLang       string // Per-session language preference; empty = use server default
 	logKey           []byte
 	sessionStart     int64
 	courses          []mhfcourse.Course
@@ -107,6 +108,28 @@ func NewSession(server *Server, conn net.Conn) *Session {
 		currentBeadIndex: -1,
 	}
 	return s
+}
+
+// Lang returns the session's effective language code, falling back to the
+// server's globally configured language when no per-user preference has been
+// loaded. Callers should use this instead of reading erupeConfig.Language
+// directly so that later phases can route localized content per session.
+func (s *Session) Lang() string {
+	s.Lock()
+	lang := s.clientLang
+	s.Unlock()
+	if lang != "" {
+		return lang
+	}
+	return s.server.erupeConfig.Language
+}
+
+// SetLang updates the session's in-memory language preference. Persistence
+// to the database is the caller's responsibility (via userRepo.SetLanguage).
+func (s *Session) SetLang(lang string) {
+	s.Lock()
+	s.clientLang = lang
+	s.Unlock()
 }
 
 // Start starts the session packet send and recv loop(s).

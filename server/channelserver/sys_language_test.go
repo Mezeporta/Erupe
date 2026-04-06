@@ -114,6 +114,72 @@ func checkNoEmptyStrings(t *testing.T, v reflect.Value, path string) {
 	}
 }
 
+// TestGetLangStringsFor covers every supported language code and the
+// unknown-code fallback, ensuring the new direct-dispatch primitive stays in
+// sync with supportedLangs.
+func TestGetLangStringsFor(t *testing.T) {
+	cases := []struct {
+		code       string
+		wantLang   string
+		wantNonJP  bool // ensure unknown falls back to English, not Japanese
+		wantPrefix string
+	}{
+		{"en", "English", true, ""},
+		{"jp", "日本語", false, ""},
+		{"fr", "Français", true, ""},
+		{"es", "Español", true, ""},
+		{"", "English", true, ""},
+		{"xx", "English", true, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.code, func(t *testing.T) {
+			got := getLangStringsFor(tc.code)
+			if got.language != tc.wantLang {
+				t.Errorf("getLangStringsFor(%q).language = %q, want %q", tc.code, got.language, tc.wantLang)
+			}
+			if got.commands.lang.usage == "" {
+				t.Errorf("%q: commands.lang.usage should not be empty", tc.code)
+			}
+		})
+	}
+}
+
+func TestIsSupportedLang(t *testing.T) {
+	for _, code := range []string{"en", "jp", "fr", "es"} {
+		if !isSupportedLang(code) {
+			t.Errorf("isSupportedLang(%q) = false, want true", code)
+		}
+	}
+	for _, code := range []string{"", "de", "EN", "english"} {
+		if isSupportedLang(code) {
+			t.Errorf("isSupportedLang(%q) = true, want false", code)
+		}
+	}
+}
+
+// TestSessionLang_FallbackAndOverride verifies that Session.Lang() returns the
+// server default when no per-session preference is set, and the preference
+// once SetLang is called.
+func TestSessionLang_FallbackAndOverride(t *testing.T) {
+	server := &Server{erupeConfig: &cfg.Config{Language: "jp"}}
+	s := &Session{server: server}
+
+	if got := s.Lang(); got != "jp" {
+		t.Errorf("Lang() with no override = %q, want %q (server default)", got, "jp")
+	}
+
+	s.SetLang("fr")
+	if got := s.Lang(); got != "fr" {
+		t.Errorf("Lang() after SetLang(fr) = %q, want %q", got, "fr")
+	}
+
+	// Empty SetLang clears the override — falls back to server default again.
+	s.SetLang("")
+	if got := s.Lang(); got != "jp" {
+		t.Errorf("Lang() after SetLang(\"\") = %q, want %q (server default)", got, "jp")
+	}
+}
+
 func TestLangCompleteness(t *testing.T) {
 	languages := map[string]i18n{
 		"en": langEnglish(),

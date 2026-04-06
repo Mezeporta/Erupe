@@ -672,6 +672,8 @@ func (m *mockUserRepoForItems) GetByIDAndUsername(_ uint32) (uint32, string, err
 	return 0, "", nil
 }
 func (m *mockUserRepoForItems) BanUser(_ uint32, _ *time.Time) error { return nil }
+func (m *mockUserRepoForItems) GetLanguage(_ uint32) (string, error) { return "", nil }
+func (m *mockUserRepoForItems) SetLanguage(_ uint32, _ string) error { return nil }
 
 // --- mockStampRepoForItems ---
 

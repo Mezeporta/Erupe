@@ -146,6 +146,31 @@ func (r *UserRepository) SetTimer(userID uint32, value bool) error {
 	return err
 }
 
+// GetLanguage returns the user's preferred language code. An empty string
+// means "no preference set" (caller should fall back to the server default).
+func (r *UserRepository) GetLanguage(userID uint32) (string, error) {
+	var lang sql.NullString
+	err := r.db.QueryRow(`SELECT language FROM users WHERE id=$1`, userID).Scan(&lang)
+	if err != nil {
+		return "", err
+	}
+	if !lang.Valid {
+		return "", nil
+	}
+	return lang.String, nil
+}
+
+// SetLanguage stores the user's preferred language code. An empty string
+// clears the preference.
+func (r *UserRepository) SetLanguage(userID uint32, lang string) error {
+	if lang == "" {
+		_, err := r.db.Exec(`UPDATE users SET language=NULL WHERE id=$1`, userID)
+		return err
+	}
+	_, err := r.db.Exec(`UPDATE users SET language=$1 WHERE id=$2`, lang, userID)
+	return err
+}
+
 // CountByPSNID returns the number of users with the given PSN ID.
 func (r *UserRepository) CountByPSNID(psnID string) (int, error) {
 	var count int

@@ -552,8 +552,8 @@ func TestMinimalConfigDefaults(t *testing.T) {
 	}
 
 	// Commands should be present
-	if len(cfg.Commands) != 12 {
-		t.Errorf("Commands = %d, want 12", len(cfg.Commands))
+	if len(cfg.Commands) != 13 {
+		t.Errorf("Commands = %d, want 13", len(cfg.Commands))
 	}
 
 	// Courses should be present
@@ -644,8 +644,8 @@ func TestFullConfigBackwardCompat(t *testing.T) {
 	if len(cfg.Entrance.Entries) != 6 {
 		t.Errorf("Entrance.Entries = %d, want 6", len(cfg.Entrance.Entries))
 	}
-	if len(cfg.Commands) != 12 {
-		t.Errorf("Commands = %d, want 12", len(cfg.Commands))
+	if len(cfg.Commands) != 13 {
+		t.Errorf("Commands = %d, want 13", len(cfg.Commands))
 	}
 	if cfg.GameplayOptions.MaximumNP != 100000 {
 		t.Errorf("MaximumNP = %d, want 100000", cfg.GameplayOptions.MaximumNP)

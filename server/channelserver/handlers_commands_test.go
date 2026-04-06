@@ -49,6 +49,11 @@ type mockUserRepoCommands struct {
 	// Rights
 	rightsVal    uint32
 	setRightsVal uint32
+
+	// Language
+	langStored    string
+	langSetCalled bool
+	langSetErr    error
 }
 
 func (m *mockUserRepoCommands) IsOp(_ uint32) (bool, error) { return m.opResult, nil }
@@ -83,6 +88,12 @@ func (m *mockUserRepoCommands) SetRights(_ uint32, v uint32) error {
 	m.setRightsVal = v
 	return nil
 }
+func (m *mockUserRepoCommands) GetLanguage(_ uint32) (string, error) { return m.langStored, nil }
+func (m *mockUserRepoCommands) SetLanguage(_ uint32, lang string) error {
+	m.langSetCalled = true
+	m.langStored = lang
+	return m.langSetErr
+}
 
 // --- helpers ---
 
@@ -100,6 +111,7 @@ func setupCommandsMap(allEnabled bool) {
 		"Discord":  {Name: "Discord", Prefix: "discord", Enabled: allEnabled},
 		"Playtime": {Name: "Playtime", Prefix: "playtime", Enabled: allEnabled},
 		"Help":     {Name: "Help", Prefix: "help", Enabled: allEnabled},
+		"Language": {Name: "Language", Prefix: "lang", Enabled: allEnabled},
 	}
 }
 
@@ -1239,6 +1251,98 @@ func TestSendDisabledCommandMessage(t *testing.T) {
 
 	if n := drainChatResponses(session); n != 1 {
 		t.Errorf("chat responses = %d, want 1", n)
+	}
+}
+
+// --- Language ---
+
+func TestParseChatCommand_Lang_ShowsUsageWhenNoArg(t *testing.T) {
+	setupCommandsMap(true)
+	repo := &mockUserRepoCommands{}
+	s := createCommandSession(repo)
+	s.server.erupeConfig.Language = "en"
+
+	parseChatCommand(s, "!lang")
+
+	if repo.langSetCalled {
+		t.Error("SetLanguage should not be called when no argument provided")
+	}
+	// Two messages: current + usage.
+	if n := drainChatResponses(s); n != 2 {
+		t.Errorf("chat responses = %d, want 2 (current + usage)", n)
+	}
+}
+
+func TestParseChatCommand_Lang_ValidCodePersistsAndSwitches(t *testing.T) {
+	setupCommandsMap(true)
+	repo := &mockUserRepoCommands{}
+	s := createCommandSession(repo)
+	s.server.erupeConfig.Language = "en"
+
+	parseChatCommand(s, "!lang fr")
+
+	if !repo.langSetCalled {
+		t.Fatal("SetLanguage should be called")
+	}
+	if repo.langStored != "fr" {
+		t.Errorf("langStored = %q, want %q", repo.langStored, "fr")
+	}
+	if got := s.Lang(); got != "fr" {
+		t.Errorf("session Lang() = %q, want %q", got, "fr")
+	}
+	if n := drainChatResponses(s); n != 1 {
+		t.Errorf("chat responses = %d, want 1 (success)", n)
+	}
+}
+
+func TestParseChatCommand_Lang_InvalidCodeRejected(t *testing.T) {
+	setupCommandsMap(true)
+	repo := &mockUserRepoCommands{}
+	s := createCommandSession(repo)
+	s.server.erupeConfig.Language = "en"
+
+	parseChatCommand(s, "!lang klingon")
+
+	if repo.langSetCalled {
+		t.Error("SetLanguage should not be called for unknown code")
+	}
+	if got := s.Lang(); got != "en" {
+		t.Errorf("session Lang() = %q, want unchanged %q", got, "en")
+	}
+	if n := drainChatResponses(s); n != 1 {
+		t.Errorf("chat responses = %d, want 1 (invalid message)", n)
+	}
+}
+
+func TestParseChatCommand_Lang_DisabledNonOp(t *testing.T) {
+	setupCommandsMap(false)
+	repo := &mockUserRepoCommands{opResult: false}
+	s := createCommandSession(repo)
+	s.server.erupeConfig.Language = "en"
+
+	parseChatCommand(s, "!lang fr")
+
+	if repo.langSetCalled {
+		t.Error("SetLanguage should not be called when command is disabled for non-op")
+	}
+	if got := s.Lang(); got != "en" {
+		t.Errorf("session Lang() = %q, want unchanged %q", got, "en")
+	}
+	if n := drainChatResponses(s); n != 1 {
+		t.Errorf("chat responses = %d, want 1 (disabled message)", n)
+	}
+}
+
+func TestParseChatCommand_Lang_UppercaseNormalized(t *testing.T) {
+	setupCommandsMap(true)
+	repo := &mockUserRepoCommands{}
+	s := createCommandSession(repo)
+	s.server.erupeConfig.Language = "en"
+
+	parseChatCommand(s, "!lang FR")
+
+	if repo.langStored != "fr" {
+		t.Errorf("langStored = %q, want %q (should be lowercased)", repo.langStored, "fr")
 	}
 }
 

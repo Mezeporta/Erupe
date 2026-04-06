@@ -60,6 +60,12 @@ type i18n struct {
 			enabled  string
 			disabled string
 		}
+		lang struct {
+			usage   string
+			invalid string
+			success string
+			current string
+		}
 		ravi struct {
 			noCommand string
 			start     struct {
@@ -132,17 +138,44 @@ func (i *i18n) beadDescription(beadType int) string {
 	return ""
 }
 
-// getLangStrings returns the i18n string table for the configured language,
-// falling back to English for unknown language codes.
-func getLangStrings(s *Server) i18n {
-	switch s.erupeConfig.Language {
+// supportedLangs lists the language codes the server can serve. Kept in one
+// place so the !lang command validator and future API handlers stay in sync
+// with getLangStringsFor.
+var supportedLangs = []string{"en", "jp", "fr", "es"}
+
+// isSupportedLang reports whether the given code is one the server can serve.
+func isSupportedLang(code string) bool {
+	for _, l := range supportedLangs {
+		if l == code {
+			return true
+		}
+	}
+	return false
+}
+
+// getLangStringsFor returns the i18n string table for the given language code,
+// falling back to English for unknown or empty codes. This is the primitive
+// callers should use when they have a concrete language (e.g. a per-session
+// preference from the database); callers that only want the server default
+// should use getLangStrings.
+func getLangStringsFor(lang string) i18n {
+	switch lang {
 	case "jp":
 		return langJapanese()
 	case "fr":
 		return langFrench()
 	case "es":
 		return langSpanish()
+	case "en":
+		return langEnglish()
 	default:
 		return langEnglish()
 	}
+}
+
+// getLangStrings returns the i18n string table for the server's globally
+// configured language. Per-session localization should resolve the language
+// first and call getLangStringsFor directly.
+func getLangStrings(s *Server) i18n {
+	return getLangStringsFor(s.erupeConfig.Language)
 }

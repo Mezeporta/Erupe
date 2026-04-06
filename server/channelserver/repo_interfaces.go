@@ -159,6 +159,13 @@ type UserRepo interface {
 	SetPasswordByDiscordID(discordID string, hash []byte) error
 	GetByIDAndUsername(charID uint32) (userID uint32, username string, err error)
 	BanUser(userID uint32, expires *time.Time) error
+	// GetLanguage returns the user's preferred language code (e.g. "en", "jp").
+	// An empty string means the user has no preference set and the server
+	// default should be used.
+	GetLanguage(userID uint32) (string, error)
+	// SetLanguage stores the user's preferred language code. Passing an empty
+	// string clears the preference (reverts to server default on next login).
+	SetLanguage(userID uint32, lang string) error
 }
 
 // GachaRepo defines the contract for gacha system data access.

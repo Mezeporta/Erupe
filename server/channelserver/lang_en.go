@@ -39,6 +39,11 @@ func langEnglish() i18n {
 	i.commands.timer.enabled = "Quest timer enabled"
 	i.commands.timer.disabled = "Quest timer disabled"
 
+	i.commands.lang.usage = "Usage: %s <en|jp|fr|es>"
+	i.commands.lang.invalid = "Unknown language %q. Supported: en, jp, fr, es"
+	i.commands.lang.success = "Language set to %s"
+	i.commands.lang.current = "Current language: %s"
+
 	i.commands.ravi.noCommand = "No Raviente command specified!"
 	i.commands.ravi.start.success = "The Great Slaying will begin in a moment"
 	i.commands.ravi.start.error = "The Great Slaying has already begun!"

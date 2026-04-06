@@ -39,6 +39,11 @@ func langFrench() i18n {
 	i.commands.timer.enabled = "Minuteur de quête activé"
 	i.commands.timer.disabled = "Minuteur de quête désactivé"
 
+	i.commands.lang.usage = "Utilisation : %s <en|jp|fr|es>"
+	i.commands.lang.invalid = "Langue inconnue %q. Prises en charge : en, jp, fr, es"
+	i.commands.lang.success = "Langue définie sur %s"
+	i.commands.lang.current = "Langue actuelle : %s"
+
 	i.commands.ravi.noCommand = "Aucune commande Raviente spécifiée !"
 	i.commands.ravi.start.success = "La Grande Chasse va commencer dans un instant"
 	i.commands.ravi.start.error = "La Grande Chasse a déjà commencé !"

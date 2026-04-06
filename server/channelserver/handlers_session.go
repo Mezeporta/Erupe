@@ -76,6 +76,15 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	}
 	s.userID = userID
 
+	// Load per-user language preference. A DB error or an empty value both
+	// mean "use the server default", which is what Session.Lang() returns
+	// when clientLang is empty — so we don't need to fail the login here.
+	if lang, langErr := s.server.userRepo.GetLanguage(userID); langErr == nil && lang != "" {
+		s.SetLang(lang)
+	} else if langErr != nil {
+		s.logger.Warn("Failed to load user language preference", zap.Error(langErr), zap.Uint32("userID", userID))
+	}
+
 	if s.captureConn != nil {
 		s.captureConn.SetSessionInfo(s.charID, s.userID)
 	}
