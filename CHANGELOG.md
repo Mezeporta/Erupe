@@ -7,8 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-<<<<<<< HEAD
 ### Added
+
+- Reverse-engineered user binary data types from `mhfo-hd.dll` via Ghidra: type 1 = character name (max 17B SJIS), type 2 = player profile with self-introduction (208B), type 3 = equipment/appearance snapshot (384B). Added structured parsing with size validation warnings to `handleMsgSysSetUserBinary`.
 
 - French (`fr`) and Spanish (`es`) server language translations. Set `"Language": "fr"` or `"Language": "es"` in `config.json` to activate.
 - `TestLangCompleteness` uses reflection to verify that every string field in `i18n` is populated for all registered languages — catches missing translations at CI time rather than silently serving empty strings in-game.
