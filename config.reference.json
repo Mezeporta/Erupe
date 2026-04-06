@@ -189,7 +189,7 @@
     }, {
       "Name": "Language",
       "Enabled": true,
-      "Description": "Show or change your preferred language (en|jp|fr|es)",
+      "Description": "Show or change your preferred language (en|jp|fr|es|zh)",
       "Prefix": "lang"
     }
   ],

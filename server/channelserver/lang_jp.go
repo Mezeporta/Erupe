@@ -39,8 +39,8 @@ func langJapanese() i18n {
 	i.commands.timer.enabled = "クエストタイマーが有効になりました"
 	i.commands.timer.disabled = "クエストタイマーが無効になりました"
 
-	i.commands.lang.usage = "使い方: %s <en|jp|fr|es>"
-	i.commands.lang.invalid = "未対応の言語 %q。対応言語: en, jp, fr, es"
+	i.commands.lang.usage = "使い方: %s <en|jp|fr|es|zh>"
+	i.commands.lang.invalid = "未対応の言語 %q。対応言語: en, jp, fr, es, zh"
 	i.commands.lang.success = "言語を %s に設定しました"
 	i.commands.lang.current = "現在の言語: %s"
 

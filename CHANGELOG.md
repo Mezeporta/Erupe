@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Server-side multi-language support ([#188](https://github.com/Mezeporta/Erupe/issues/188)): each player picks their own language with `!lang <en|jp|fr|es>`, persisted per user (migration `0022_user_language`) and loaded on login. Chat replies, guild invite mails, and cafe/timer broadcasts are served in that language via `Session.I18n()`. Quest and scenario JSON text fields now accept either a plain string (unchanged) or a `{"jp":"...","en":"...","fr":"..."}` map; the compiler resolves per session and the quest cache is keyed by `(questID, lang)`. Existing single-language JSONs and `.bin` round-trips remain byte-identical. Shift-JIS wire encoding still applies (ASCII/kana/CJK only). Raviente world-wide broadcasts stay on the server default since they have no single session.
+- Chinese (`zh`) language strings for chat commands, guild mails, cafe/timer broadcasts and prayer beads. Note: Shift-JIS wire encoding only covers characters shared with Japanese — simplified-only glyphs may fail to encode.
+- Server-side multi-language support ([#188](https://github.com/Mezeporta/Erupe/issues/188)): each player picks their own language with `!lang <en|jp|fr|es|zh>`, persisted per user (migration `0022_user_language`) and loaded on login. Chat replies, guild invite mails, and cafe/timer broadcasts are served in that language via `Session.I18n()`. Quest and scenario JSON text fields now accept either a plain string (unchanged) or a `{"jp":"...","en":"...","fr":"..."}` map; the compiler resolves per session and the quest cache is keyed by `(questID, lang)`. Existing single-language JSONs and `.bin` round-trips remain byte-identical. Shift-JIS wire encoding still applies (ASCII/kana/CJK only). Raviente world-wide broadcasts stay on the server default since they have no single session.
 
 ### Changed
 

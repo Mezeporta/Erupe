@@ -39,8 +39,8 @@ func langFrench() i18n {
 	i.commands.timer.enabled = "Minuteur de quête activé"
 	i.commands.timer.disabled = "Minuteur de quête désactivé"
 
-	i.commands.lang.usage = "Utilisation : %s <en|jp|fr|es>"
-	i.commands.lang.invalid = "Langue inconnue %q. Prises en charge : en, jp, fr, es"
+	i.commands.lang.usage = "Utilisation : %s <en|jp|fr|es|zh>"
+	i.commands.lang.invalid = "Langue inconnue %q. Prises en charge : en, jp, fr, es, zh"
 	i.commands.lang.success = "Langue définie sur %s"
 	i.commands.lang.current = "Langue actuelle : %s"
 
