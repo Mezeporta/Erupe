@@ -210,15 +210,24 @@ type QuestJSON struct {
 	// Quest identification
 	QuestID uint16 `json:"quest_id"`
 
-	// Text (UTF-8; converted to Shift-JIS in binary)
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	TextMain    string `json:"text_main"`
-	TextSubA    string `json:"text_sub_a"`
-	TextSubB    string `json:"text_sub_b"`
-	SuccessCond string `json:"success_cond"`
-	FailCond    string `json:"fail_cond"`
-	Contractor  string `json:"contractor"`
+	// Text (UTF-8; converted to Shift-JIS in binary).
+	//
+	// Each field accepts either a plain JSON string (single-language, treated
+	// as the value for every language) or a language-keyed object:
+	//
+	//	"title": "リオレウス"
+	//	"title": { "jp": "リオレウス", "en": "Rathalos", "fr": "Rathalos" }
+	//
+	// CompileQuestJSON resolves these based on the compiling session's
+	// language preference (see #188 phase B).
+	Title       LocalizedString `json:"title"`
+	Description LocalizedString `json:"description"`
+	TextMain    LocalizedString `json:"text_main"`
+	TextSubA    LocalizedString `json:"text_sub_a"`
+	TextSubB    LocalizedString `json:"text_sub_b"`
+	SuccessCond LocalizedString `json:"success_cond"`
+	FailCond    LocalizedString `json:"fail_cond"`
+	Contractor  LocalizedString `json:"contractor"`
 
 	// General quest properties (generalQuestProperties section, 0x44–0x85)
 	MonsterSizeMulti uint16 `json:"monster_size_multi"` // 100 = 100%
@@ -421,7 +430,7 @@ func objectiveBytes(obj QuestObjectiveJSON) ([]byte, error) {
 //	             map sections, area mappings, area transitions,
 //	             map info, gathering points, area facilities,
 //	             some strings, gathering tables
-func CompileQuestJSON(data []byte) ([]byte, error) {
+func CompileQuestJSON(data []byte, lang string) ([]byte, error) {
 	var q QuestJSON
 	if err := json.Unmarshal(data, &q); err != nil {
 		return nil, fmt.Errorf("parse quest JSON: %w", err)
@@ -454,10 +463,14 @@ func CompileQuestJSON(data []byte) ([]byte, error) {
 
 	// ── Build Shift-JIS strings ─────────────────────────────────────────
 	// Order matches QuestText struct: title, textMain, textSubA, textSubB,
-	// successCond, failCond, contractor, description.
+	// successCond, failCond, contractor, description. Each LocalizedString
+	// is resolved against the requesting session's language — plain-string
+	// JSON fields resolve to their literal value for every language.
 	rawTexts := []string{
-		q.Title, q.TextMain, q.TextSubA, q.TextSubB,
-		q.SuccessCond, q.FailCond, q.Contractor, q.Description,
+		q.Title.Resolve(lang), q.TextMain.Resolve(lang),
+		q.TextSubA.Resolve(lang), q.TextSubB.Resolve(lang),
+		q.SuccessCond.Resolve(lang), q.FailCond.Resolve(lang),
+		q.Contractor.Resolve(lang), q.Description.Resolve(lang),
 	}
 	var sjisStrings [][]byte
 	for _, s := range rawTexts {

@@ -171,14 +171,17 @@ func ParseQuestBinary(data []byte) (*QuestJSON, error) {
 			}
 			texts[i] = s
 		}
-		q.Title = texts[0]
-		q.TextMain = texts[1]
-		q.TextSubA = texts[2]
-		q.TextSubB = texts[3]
-		q.SuccessCond = texts[4]
-		q.FailCond = texts[5]
-		q.Contractor = texts[6]
-		q.Description = texts[7]
+		// The binary carries only one language, so the reverse path emits
+		// plain-string LocalizedStrings. Editors wanting multi-language
+		// quests should wrap these as {"jp": "...", "en": "..."} by hand.
+		q.Title = NewLocalizedPlain(texts[0])
+		q.TextMain = NewLocalizedPlain(texts[1])
+		q.TextSubA = NewLocalizedPlain(texts[2])
+		q.TextSubB = NewLocalizedPlain(texts[3])
+		q.SuccessCond = NewLocalizedPlain(texts[4])
+		q.FailCond = NewLocalizedPlain(texts[5])
+		q.Contractor = NewLocalizedPlain(texts[6])
+		q.Description = NewLocalizedPlain(texts[7])
 	}
 
 	// ── Stages ───────────────────────────────────────────────────────────

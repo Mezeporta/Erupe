@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"math"
 	"testing"
+
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/transform"
 )
 
 // minimalQuestJSON is a small but complete quest used across many test cases.
@@ -57,7 +60,7 @@ var minimalQuestJSON = `{
 // ── Compiler tests (existing) ────────────────────────────────────────────────
 
 func TestCompileQuestJSON_MinimalQuest(t *testing.T) {
-	data, err := CompileQuestJSON([]byte(minimalQuestJSON))
+	data, err := CompileQuestJSON([]byte(minimalQuestJSON), "")
 	if err != nil {
 		t.Fatalf("CompileQuestJSON: %v", err)
 	}
@@ -114,7 +117,7 @@ func TestCompileQuestJSON_BadObjectiveType(t *testing.T) {
 	q.ObjectiveMain.Type = "invalid_type"
 	b, _ := json.Marshal(q)
 
-	_, err := CompileQuestJSON(b)
+	_, err := CompileQuestJSON(b, "")
 	if err == nil {
 		t.Fatal("expected error for invalid objective type, got nil")
 	}
@@ -131,7 +134,7 @@ func TestCompileQuestJSON_AllObjectiveTypes(t *testing.T) {
 			_ = json.Unmarshal([]byte(minimalQuestJSON), &q)
 			q.ObjectiveMain.Type = typ
 			b, _ := json.Marshal(q)
-			if _, err := CompileQuestJSON(b); err != nil {
+			if _, err := CompileQuestJSON(b, ""); err != nil {
 				t.Fatalf("CompileQuestJSON with type %q: %v", typ, err)
 			}
 		})
@@ -143,7 +146,7 @@ func TestCompileQuestJSON_EmptyRewards(t *testing.T) {
 	_ = json.Unmarshal([]byte(minimalQuestJSON), &q)
 	q.Rewards = nil
 	b, _ := json.Marshal(q)
-	if _, err := CompileQuestJSON(b); err != nil {
+	if _, err := CompileQuestJSON(b, ""); err != nil {
 		t.Fatalf("unexpected error with no rewards: %v", err)
 	}
 }
@@ -156,7 +159,7 @@ func TestCompileQuestJSON_MultipleRewardTables(t *testing.T) {
 		{TableID: 2, Items: []QuestRewardItemJSON{{Rate: 100, Item: 153, Quantity: 2}}},
 	}
 	b, _ := json.Marshal(q)
-	data, err := CompileQuestJSON(b)
+	data, err := CompileQuestJSON(b, "")
 	if err != nil {
 		t.Fatalf("CompileQuestJSON: %v", err)
 	}
@@ -189,7 +192,7 @@ func TestParseQuestBinary_NullQuestTypeFlagsPtr(t *testing.T) {
 }
 
 func TestParseQuestBinary_MinimalQuest(t *testing.T) {
-	data, err := CompileQuestJSON([]byte(minimalQuestJSON))
+	data, err := CompileQuestJSON([]byte(minimalQuestJSON), "")
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
@@ -204,24 +207,25 @@ func TestParseQuestBinary_MinimalQuest(t *testing.T) {
 		t.Errorf("QuestID = %d, want 1", q.QuestID)
 	}
 
-	// Text strings
-	if q.Title != "Test Quest" {
-		t.Errorf("Title = %q, want %q", q.Title, "Test Quest")
+	// Text strings — Resolve against empty lang so plain-string JSON fields
+	// return their literal value (phase B of #188).
+	if got := q.Title.Resolve(""); got != "Test Quest" {
+		t.Errorf("Title = %q, want %q", got, "Test Quest")
 	}
-	if q.Description != "A test quest." {
-		t.Errorf("Description = %q, want %q", q.Description, "A test quest.")
+	if got := q.Description.Resolve(""); got != "A test quest." {
+		t.Errorf("Description = %q, want %q", got, "A test quest.")
 	}
-	if q.TextMain != "Hunt the Rathalos." {
-		t.Errorf("TextMain = %q, want %q", q.TextMain, "Hunt the Rathalos.")
+	if got := q.TextMain.Resolve(""); got != "Hunt the Rathalos." {
+		t.Errorf("TextMain = %q, want %q", got, "Hunt the Rathalos.")
 	}
-	if q.SuccessCond != "Slay the Rathalos." {
-		t.Errorf("SuccessCond = %q, want %q", q.SuccessCond, "Slay the Rathalos.")
+	if got := q.SuccessCond.Resolve(""); got != "Slay the Rathalos." {
+		t.Errorf("SuccessCond = %q, want %q", got, "Slay the Rathalos.")
 	}
-	if q.FailCond != "Time runs out or all hunters faint." {
-		t.Errorf("FailCond = %q, want %q", q.FailCond, "Time runs out or all hunters faint.")
+	if got := q.FailCond.Resolve(""); got != "Time runs out or all hunters faint." {
+		t.Errorf("FailCond = %q, want %q", got, "Time runs out or all hunters faint.")
 	}
-	if q.Contractor != "Guild Master" {
-		t.Errorf("Contractor = %q, want %q", q.Contractor, "Guild Master")
+	if got := q.Contractor.Resolve(""); got != "Guild Master" {
+		t.Errorf("Contractor = %q, want %q", got, "Guild Master")
 	}
 
 	// Numeric fields
@@ -348,7 +352,7 @@ func TestParseQuestBinary_MinimalQuest(t *testing.T) {
 func roundTrip(t *testing.T, label, jsonSrc string) {
 	t.Helper()
 
-	bin1, err := CompileQuestJSON([]byte(jsonSrc))
+	bin1, err := CompileQuestJSON([]byte(jsonSrc), "")
 	if err != nil {
 		t.Fatalf("%s: compile(1): %v", label, err)
 	}
@@ -363,7 +367,7 @@ func roundTrip(t *testing.T, label, jsonSrc string) {
 		t.Fatalf("%s: marshal: %v", label, err)
 	}
 
-	bin2, err := CompileQuestJSON(jsonOut)
+	bin2, err := CompileQuestJSON(jsonOut, "")
 	if err != nil {
 		t.Fatalf("%s: compile(2): %v", label, err)
 	}
@@ -773,7 +777,7 @@ func TestRoundTrip_AllSections(t *testing.T) {
 //	mainPropOffset  = 0x86 (= headerSize + genPropSize)
 //	questStringsPtr = 0x1C6 (= mainPropOffset + 320)
 func TestGolden_MinimalQuestBinaryLayout(t *testing.T) {
-	data, err := CompileQuestJSON([]byte(minimalQuestJSON))
+	data, err := CompileQuestJSON([]byte(minimalQuestJSON), "")
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
@@ -981,7 +985,7 @@ func TestGolden_GeneralQuestPropertiesCounts(t *testing.T) {
 	}
 
 	b, _ := json.Marshal(q)
-	data, err := CompileQuestJSON(b)
+	data, err := CompileQuestJSON(b, "")
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
@@ -1007,7 +1011,7 @@ func TestGolden_MapSectionsBinaryLayout(t *testing.T) {
 		},
 	}
 
-	data, err := CompileQuestJSON(func() []byte { b, _ := json.Marshal(q); return b }())
+	data, err := CompileQuestJSON(func() []byte { b, _ := json.Marshal(q); return b }(), "")
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
@@ -1097,7 +1101,7 @@ func TestGolden_GatheringTablesBinaryLayout(t *testing.T) {
 	}
 
 	b, _ := json.Marshal(q)
-	data, err := CompileQuestJSON(b)
+	data, err := CompileQuestJSON(b, "")
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
@@ -1261,5 +1265,129 @@ func assertF32(t *testing.T, data []byte, off int, want float32, label string) {
 	got := math.Float32frombits(binary.LittleEndian.Uint32(data[off:]))
 	if got != want {
 		t.Errorf("%s @ 0x%X: got %v, want %v", label, off, got, want)
+	}
+}
+
+// ── Phase B: localized quest text (#188) ─────────────────────────────────────
+
+// localizedQuestJSON exercises the LocalizedString schema — title is a map,
+// description is a mixed map, and the rest fall back to plain strings so the
+// test also covers the "most fields stay plain" migration path.
+var localizedQuestJSON = `{
+	"quest_id": 1,
+	"title": { "jp": "テストクエスト", "en": "Test Quest EN", "fr": "Test Quest FR" },
+	"description": { "jp": "説明", "en": "A test quest." },
+	"text_main": "Hunt the Rathalos.",
+	"text_sub_a": "",
+	"text_sub_b": "",
+	"success_cond": "Slay the Rathalos.",
+	"fail_cond": "Time runs out or all hunters faint.",
+	"contractor": "Guild Master",
+	"monster_size_multi": 100,
+	"main_rank_points": 120,
+	"sub_a_rank_points": 60,
+	"sub_b_rank_points": 0,
+	"fee": 500,
+	"reward_main": 5000,
+	"reward_sub_a": 1000,
+	"reward_sub_b": 0,
+	"time_limit_minutes": 50,
+	"map": 2,
+	"rank_band": 0,
+	"objective_main": {"type": "hunt", "target": 11, "count": 1},
+	"objective_sub_a": {"type": "deliver", "target": 149, "count": 3},
+	"objective_sub_b": {"type": "none"},
+	"large_monsters": [
+		{"id": 11, "spawn_amount": 1, "spawn_stage": 5, "orientation": 180, "x": 1500.0, "y": 0.0, "z": -2000.0}
+	],
+	"rewards": [
+		{"table_id": 1, "items": [{"rate": 50, "item": 149, "quantity": 1}]}
+	],
+	"supply_main": [{"item": 1, "quantity": 5}],
+	"stages": [{"stage_id": 2}]
+}`
+
+// extractQuestTitle reads the first Shift-JIS null-terminated string pointed
+// to by the QuestText pointer table and decodes it back to UTF-8. This lets
+// the test verify which language variant the compiler selected without
+// replicating the full binary layout.
+func extractQuestTitle(t *testing.T, data []byte) string {
+	t.Helper()
+	// Header offset 0x00 is the first pointer = questTypeFlagsPtr = 0x86.
+	// QuestStringsTablePtr is at headerSize + genPropSize + mainPropSize.
+	const questStringsTableOff = 68 + 66 + questBodyLenZZ // 0x1C6
+	if questStringsTableOff+4 > len(data) {
+		t.Fatalf("data too short for quest strings table: %d", len(data))
+	}
+	// First 4 bytes of the strings table point to the title string.
+	titlePtr := binary.LittleEndian.Uint32(data[questStringsTableOff:])
+	if int(titlePtr) >= len(data) {
+		t.Fatalf("title pointer 0x%X out of range (len=%d)", titlePtr, len(data))
+	}
+	end := int(titlePtr)
+	for end < len(data) && data[end] != 0 {
+		end++
+	}
+	sjis := data[titlePtr:end]
+	decoded, _, err := transform.Bytes(japanese.ShiftJIS.NewDecoder(), sjis)
+	if err != nil {
+		t.Fatalf("decode title: %v", err)
+	}
+	return string(decoded)
+}
+
+func TestCompileQuestJSON_LocalizedTitle_JapanesePicked(t *testing.T) {
+	data, err := CompileQuestJSON([]byte(localizedQuestJSON), "jp")
+	if err != nil {
+		t.Fatalf("CompileQuestJSON: %v", err)
+	}
+	if got := extractQuestTitle(t, data); got != "テストクエスト" {
+		t.Errorf("jp title = %q, want %q", got, "テストクエスト")
+	}
+}
+
+func TestCompileQuestJSON_LocalizedTitle_EnglishPicked(t *testing.T) {
+	data, err := CompileQuestJSON([]byte(localizedQuestJSON), "en")
+	if err != nil {
+		t.Fatalf("CompileQuestJSON: %v", err)
+	}
+	if got := extractQuestTitle(t, data); got != "Test Quest EN" {
+		t.Errorf("en title = %q, want %q", got, "Test Quest EN")
+	}
+}
+
+func TestCompileQuestJSON_LocalizedTitle_FrenchPicked(t *testing.T) {
+	data, err := CompileQuestJSON([]byte(localizedQuestJSON), "fr")
+	if err != nil {
+		t.Fatalf("CompileQuestJSON: %v", err)
+	}
+	if got := extractQuestTitle(t, data); got != "Test Quest FR" {
+		t.Errorf("fr title = %q, want %q", got, "Test Quest FR")
+	}
+}
+
+// Phase B fallback: Spanish is not provided in localizedQuestJSON, so the
+// compiler should fall back to the canonical jp variant.
+func TestCompileQuestJSON_LocalizedTitle_MissingLangFallsBackToJP(t *testing.T) {
+	data, err := CompileQuestJSON([]byte(localizedQuestJSON), "es")
+	if err != nil {
+		t.Fatalf("CompileQuestJSON: %v", err)
+	}
+	if got := extractQuestTitle(t, data); got != "テストクエスト" {
+		t.Errorf("es fallback title = %q, want jp %q", got, "テストクエスト")
+	}
+}
+
+// Phase B backwards-compat: existing plain-string quest JSON must produce
+// the exact same title regardless of requested language.
+func TestCompileQuestJSON_PlainString_SameAcrossLanguages(t *testing.T) {
+	for _, lang := range []string{"", "jp", "en", "fr", "es"} {
+		data, err := CompileQuestJSON([]byte(minimalQuestJSON), lang)
+		if err != nil {
+			t.Fatalf("lang=%q: CompileQuestJSON: %v", lang, err)
+		}
+		if got := extractQuestTitle(t, data); got != "Test Quest" {
+			t.Errorf("lang=%q: title = %q, want %q", lang, got, "Test Quest")
+		}
 	}
 }

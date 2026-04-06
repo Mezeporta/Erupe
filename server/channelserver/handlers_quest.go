@@ -161,7 +161,7 @@ func loadQuestBinary(s *Session, filename string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	compiled, err := CompileQuestJSON(jsonData)
+	compiled, err := CompileQuestJSON(jsonData, s.Lang())
 	if err != nil {
 		return nil, fmt.Errorf("compile quest JSON %s: %w", filename, err)
 	}
@@ -248,7 +248,8 @@ func handleMsgMhfSaveFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func loadQuestFile(s *Session, questId int) []byte {
-	if cached, ok := s.server.questCache.Get(questId); ok {
+	lang := s.Lang()
+	if cached, ok := s.server.questCache.Get(questId, lang); ok {
 		return cached
 	}
 
@@ -257,7 +258,7 @@ func loadQuestFile(s *Session, questId int) []byte {
 	if data, err := os.ReadFile(base + ".bin"); err == nil {
 		decrypted = decryption.UnpackSimple(data)
 	} else if jsonData, err := os.ReadFile(base + ".json"); err == nil {
-		compiled, err := CompileQuestJSON(jsonData)
+		compiled, err := CompileQuestJSON(jsonData, lang)
 		if err != nil {
 			s.logger.Error("loadQuestFile: failed to compile quest JSON",
 				zap.Int("questId", questId), zap.Error(err))
@@ -313,7 +314,7 @@ func loadQuestFile(s *Session, questId int) []byte {
 	questBody.WriteBytes(newStrings.Data())
 
 	result := questBody.Data()
-	s.server.questCache.Put(questId, result)
+	s.server.questCache.Put(questId, lang, result)
 	return result
 }
 
