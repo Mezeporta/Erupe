@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `protbot` gains `--action boost` and `--action gacha` scenarios for non-destructive live-server regression testing of #187 and #175 fixes. `gacha --roll` opts in to actually rolling a paid gacha.
+
 ### Fixed
 
+- Fixed empty-bytea crash in `MSG_MHF_RECEIVE_GACHA_ITEM` ([#175](https://github.com/Mezeporta/Erupe/issues/175)): `LoadColumnWithDefault` now treats an empty bytea (`'\x'`, length 0) the same as NULL. The postgres driver returns a non-nil empty slice for empty bytea, which previously reached the client as a zero-byte ACK payload. The ZZ client reads the first byte as the item count and iterates without bounds-checking the buffer length, so any `characters.gacha_items = '\x'::bytea` row crashed the gacha menu with garbage-count buffer overruns. RTTI-confirmed against `FUN_114fb410` (`CSync_man::putReceive_gacha_item`) and its caller `FUN_11531e90` — see `docs/re_notes/recv_gacha_item_crash.md` in the mhfrontier docs.
+- Logged and skipped `gacha_items` rows that fail to `StructScan` in `GachaRepository.GetItemsForEntry`/`GetGuaranteedItems`, with a warn pointing at `item_type > 255` or `item_id/quantity > 65535` as the likely cause. Previously these rows were silently dropped, making misconfigured gacha tables impossible to diagnose without a DB dump.
+- Fixed `handleMsgMhfGetBoostTimeLimit` sending a stray second ACK (`doAckSimpleSucceed`) on the same ack handle after its real `doAckBufSucceed`. Harmless in practice but a latent protocol bug.
+- Fixed `GetBoostTimeLimit` wrapping pre-1970 `boost_time` values through a naked `uint32(int64)` cast, which produced huge future-looking timestamps the client interpreted as permanently active. Added a past-time guard harmonised with `GetBoostRight`, and a healing migration `0011_fix_stale_boost_time` that NULLs out any `boost_time` column older than 1970 or more than 10 years in the future — residue of the pre-#187 bug observed on live servers (year-1906 rows).
 - Added migration `0010_fix_zero_rasta_id` to heal characters whose `rasta_id` was clobbered to `0` by the pre-fix `SaveMercenary` bug ([#163](https://github.com/Mezeporta/Erupe/issues/163)). Sets `rasta_id = NULL` for affected rows so silent save failures auto-resolve on upgrade.
 - Fixed quest tune-value filter silently dropping user-configured multipliers set to `0.0`: previously setting e.g. `ZennyMultiplier: 0.0` would strip the entry from the table and fall back to the client's default (100%), producing the opposite of the intended "no zenny" configuration. The `Value > 0` filter in `handleMsgMhfEnumerateQuest` has been removed so zero values are now sent verbatim. Affects HRP/SRP/GRP/GSRP/Zenny/GZenny/Material/GMaterial/GCP/GUrgent multipliers and their NC variants.
 - Fixed float32 truncation in quest multiplier conversion: `uint16(0.20 * 100)` yielded `19` instead of `20` because `float32(0.20) ≈ 0.19999998`. Replaced with a `multiplierToTuneValue` helper that rounds via `math.Round`. Applied to all 18 multiplier call sites.
