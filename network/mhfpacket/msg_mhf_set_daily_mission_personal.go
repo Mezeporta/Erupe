@@ -8,17 +8,22 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
-// MsgMhfSetDailyMissionPersonal represents the MSG_MHF_SET_DAILY_MISSION_PERSONAL
-type MsgMhfSetDailyMissionPersonal struct{}
+// MsgMhfSetDailyMissionPersonal writes the character's personal daily mission progress.
+// Full request payload beyond the AckHandle is not yet reverse-engineered.
+type MsgMhfSetDailyMissionPersonal struct {
+	AckHandle uint32
+}
 
 // Opcode returns the ID associated with this packet type.
 func (m *MsgMhfSetDailyMissionPersonal) Opcode() network.PacketID {
 	return network.MSG_MHF_SET_DAILY_MISSION_PERSONAL
 }
 
-// Parse parses the packet from binary
+// Parse parses the packet from binary.
+// Only the AckHandle is parsed; additional fields are unknown.
 func (m *MsgMhfSetDailyMissionPersonal) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	return errors.New("NOT IMPLEMENTED")
+	m.AckHandle = bf.ReadUint32()
+	return nil
 }
 
 // Build builds a binary packet from the current data.

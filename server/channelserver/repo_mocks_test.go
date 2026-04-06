@@ -248,6 +248,9 @@ func (m *mockCharacterRepo) SaveCharacterDataAtomic(_ SaveAtomicParams) error { 
 func (m *mockCharacterRepo) LoadSaveDataWithHash(_ uint32) (uint32, []byte, bool, string, []byte, error) {
 	return m.loadSaveDataID, m.loadSaveDataData, m.loadSaveDataNew, m.loadSaveDataName, m.loadSaveDataHash, m.loadSaveDataErr
 }
+func (m *mockCharacterRepo) LoadBackupsByRecency(_ uint32) ([]SavedataBackup, error) {
+	return []SavedataBackup{}, nil
+}
 
 // --- mockGoocooRepo ---
 
@@ -306,8 +309,10 @@ type mockGuildRepo struct {
 	removeErr     error
 	createAppErr  error
 	getMemberErr  error
-	hasAppResult  bool
-	hasAppErr     error
+	hasAppResult   bool
+	hasAppErr      error
+	hasInviteResult bool
+	hasInviteErr    error
 	listPostsErr  error
 	createPostErr error
 	deletePostErr error
@@ -315,8 +320,10 @@ type mockGuildRepo struct {
 	// State tracking
 	disbandedID    uint32
 	removedCharID  uint32
-	acceptedCharID uint32
-	rejectedCharID uint32
+	acceptedCharID    uint32
+	rejectedCharID    uint32
+	acceptInviteCharID uint32
+	declineInviteCharID uint32
 	savedGuild     *Guild
 	savedMembers   []*GuildMember
 	createdAppArgs []interface{}
@@ -569,10 +576,19 @@ func (m *mockGuildRepo) CountGuildKills(_, _ uint32) (int, error) {
 // No-op stubs for remaining GuildRepo interface methods.
 func (m *mockGuildRepo) ListAll() ([]*Guild, error)               { return nil, nil }
 func (m *mockGuildRepo) Create(_ uint32, _ string) (int32, error) { return 0, nil }
-func (m *mockGuildRepo) CreateApplicationWithMail(_, _, _ uint32, _ GuildApplicationType, _, _ uint32, _, _ string) error {
-	return nil
+func (m *mockGuildRepo) CreateInviteWithMail(_, _, _, _, _ uint32, _, _ string) error { return nil }
+func (m *mockGuildRepo) HasInvite(_, _ uint32) (bool, error) {
+	return m.hasInviteResult, m.hasInviteErr
 }
-func (m *mockGuildRepo) CancelInvitation(_, _ uint32) error                        { return nil }
+func (m *mockGuildRepo) CancelInvite(_ uint32) error { return nil }
+func (m *mockGuildRepo) AcceptInvite(_, charID uint32) error {
+	m.acceptInviteCharID = charID
+	return m.acceptErr
+}
+func (m *mockGuildRepo) DeclineInvite(_, charID uint32) error {
+	m.declineInviteCharID = charID
+	return m.rejectErr
+}
 func (m *mockGuildRepo) ArrangeCharacters(_ []uint32) error                        { return nil }
 func (m *mockGuildRepo) GetItemBox(_ uint32) ([]byte, error)                       { return nil, nil }
 func (m *mockGuildRepo) SaveItemBox(_ uint32, _ []byte) error                      { return nil }
@@ -595,11 +611,13 @@ func (m *mockGuildRepo) CountNewPosts(_ uint32, _ time.Time) (int, error)       
 func (m *mockGuildRepo) ListAlliances() ([]*GuildAlliance, error)                  { return nil, nil }
 func (m *mockGuildRepo) ClearTreasureHunt(_ uint32) error                          { return nil }
 func (m *mockGuildRepo) InsertKillLog(_ uint32, _ int, _ uint8, _ time.Time) error { return nil }
-func (m *mockGuildRepo) ListInvitedCharacters(_ uint32) ([]*ScoutedCharacter, error) {
-	return nil, nil
-}
+func (m *mockGuildRepo) ListInvites(_ uint32) ([]*GuildInvite, error) { return nil, nil }
 func (m *mockGuildRepo) RolloverDailyRP(_ uint32, _ time.Time) error { return nil }
 func (m *mockGuildRepo) AddWeeklyBonusUsers(_ uint32, _ uint8) error { return nil }
+func (m *mockGuildRepo) FindOrCreateReturnGuild(_ uint8, _ string) (uint32, error) {
+	return 1, nil
+}
+func (m *mockGuildRepo) AddMember(_, _ uint32) error { return nil }
 
 // --- mockUserRepoForItems ---
 
@@ -1147,6 +1165,22 @@ func (m *mockDivaRepo) GetTotalPoints(eventID uint32) (int64, int64, error) {
 	return tq, tb, nil
 }
 
+func (m *mockDivaRepo) GetBeads() ([]int, error)                      { return nil, nil }
+func (m *mockDivaRepo) AssignBead(_ uint32, _ int, _ time.Time) error { return nil }
+func (m *mockDivaRepo) AddBeadPoints(_ uint32, _ int, _ int) error    { return nil }
+func (m *mockDivaRepo) GetCharacterBeadPoints(_ uint32) (map[int]int, error) {
+	return map[int]int{}, nil
+}
+func (m *mockDivaRepo) GetTotalBeadPoints() (int64, error)      { return 0, nil }
+func (m *mockDivaRepo) GetTopBeadPerDay(_ int) (int, error)     { return 0, nil }
+func (m *mockDivaRepo) CleanupBeads() error                     { return nil }
+func (m *mockDivaRepo) GetPersonalPrizes() ([]DivaPrize, error) { return nil, nil }
+func (m *mockDivaRepo) GetGuildPrizes() ([]DivaPrize, error)    { return nil, nil }
+func (m *mockDivaRepo) GetCharacterInterceptionPoints(_ uint32) (map[string]int, error) {
+	return map[string]int{}, nil
+}
+func (m *mockDivaRepo) AddInterceptionPoints(_ uint32, _ int, _ int) error { return nil }
+
 // --- mockEventRepo ---
 
 type mockEventRepo struct {
@@ -1232,3 +1266,35 @@ func (m *mockCafeRepo) GetBonusItem(_ uint32) (uint32, uint32, error) {
 	return m.bonusItemType, m.bonusItemQty, m.bonusItemErr
 }
 func (m *mockCafeRepo) AcceptBonus(_, _ uint32) error { return nil }
+
+// --- mockTournamentRepo ---
+
+type mockTournamentRepo struct {
+	active      *Tournament
+	activeErr   error
+	cups        []TournamentCup
+	subEvents   []TournamentSubEvent
+	ranks       []TournamentRankEntry
+	registerID  uint32
+	registerErr error
+	entry       *TournamentEntry
+	entryErr    error
+}
+
+func (m *mockTournamentRepo) GetActive(_ int64) (*Tournament, error) {
+	return m.active, m.activeErr
+}
+func (m *mockTournamentRepo) GetCups(_ uint32) ([]TournamentCup, error) { return m.cups, nil }
+func (m *mockTournamentRepo) GetSubEvents() ([]TournamentSubEvent, error) {
+	return m.subEvents, nil
+}
+func (m *mockTournamentRepo) Register(_, _ uint32) (uint32, error) {
+	return m.registerID, m.registerErr
+}
+func (m *mockTournamentRepo) GetEntry(_, _ uint32) (*TournamentEntry, error) {
+	return m.entry, m.entryErr
+}
+func (m *mockTournamentRepo) SubmitResult(_, _, _, _, _ uint32) error { return nil }
+func (m *mockTournamentRepo) GetLeaderboard(_ uint32) ([]TournamentRankEntry, error) {
+	return m.ranks, nil
+}

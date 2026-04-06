@@ -8,6 +8,29 @@ import (
 // Repository interfaces decouple API server business logic from concrete
 // PostgreSQL implementations, enabling mock/stub injection for unit tests.
 
+// SaveBlobs holds the transferable save data columns for a character.
+// SavedataHash must be set by the caller (SHA-256 of decompressed Savedata).
+type SaveBlobs struct {
+	Savedata          []byte
+	SavedataHash      []byte
+	Decomyset         []byte
+	Hunternavi        []byte
+	Otomoairou        []byte
+	Partner           []byte
+	Platebox          []byte
+	Platedata         []byte
+	Platemyset        []byte
+	Rengokudata       []byte
+	Savemercenary     []byte
+	GachaItems        []byte
+	HouseInfo         []byte
+	LoginBoost        []byte
+	SkinHist          []byte
+	Scenariodata      []byte
+	Savefavoritequest []byte
+	Mezfes            []byte
+}
+
 // APIUserRepo defines the contract for user-related data access.
 type APIUserRepo interface {
 	// Register creates a new user and returns their ID and rights.
@@ -42,6 +65,13 @@ type APICharacterRepo interface {
 	GetForUser(ctx context.Context, userID uint32) ([]Character, error)
 	// ExportSave returns the full character row as a map.
 	ExportSave(ctx context.Context, userID, charID uint32) (map[string]interface{}, error)
+	// GrantImportToken sets a one-time import token for a character owned by userID.
+	GrantImportToken(ctx context.Context, charID, userID uint32, token string, expiry time.Time) error
+	// RevokeImportToken clears any pending import token for a character owned by userID.
+	RevokeImportToken(ctx context.Context, charID, userID uint32) error
+	// ImportSave atomically validates+consumes the import token and writes all save blobs.
+	// Returns an error if the token is invalid, expired, or the character doesn't belong to userID.
+	ImportSave(ctx context.Context, charID, userID uint32, token string, blobs SaveBlobs) error
 }
 
 // APIEventRepo defines the contract for read-only event data access.

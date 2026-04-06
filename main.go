@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -106,7 +107,7 @@ func main() {
 		}
 	}
 
-	logger.Info(fmt.Sprintf("Starting Erupe (9.3.2-%s)", Commit()))
+	logger.Info(fmt.Sprintf("Starting Erupe (9.4.0-dev-%s)", Commit()))
 	logger.Info(fmt.Sprintf("Client Mode: %s (%d)", config.ClientMode, config.RealClientMode))
 
 	if config.Database.Password == "" {
@@ -335,6 +336,7 @@ func main() {
 		si := 0
 		ci := 0
 		count := 1
+		seenPorts := make(map[uint16]string)
 		for j, ee := range config.Entrance.Entries {
 			for i, ce := range ee.Channels {
 				sid := (4096 + si*256) + (16 + ci)
@@ -344,6 +346,13 @@ func main() {
 					count++
 					continue
 				}
+				if prev, exists := seenPorts[ce.Port]; exists {
+					preventClose(config, fmt.Sprintf("Channel %d: port %d already used by %s", count, ce.Port, prev))
+					ci++
+					count++
+					continue
+				}
+				seenPorts[ce.Port] = fmt.Sprintf("channel %d", count)
 				c := *channelserver.NewServer(&channelserver.Config{
 					ID:          uint16(sid),
 					Logger:      logger.Named("channel-" + fmt.Sprint(count)),
@@ -393,8 +402,12 @@ func main() {
 	<-sig
 
 	if !config.DisableSoftCrash {
-		for i := 0; i < 10; i++ {
-			message := fmt.Sprintf("Shutting down in %d...", 10-i)
+		countdown := config.ShutdownCountdownSeconds
+		if countdown <= 0 {
+			countdown = 10
+		}
+		for i := 0; i < countdown; i++ {
+			message := fmt.Sprintf("Shutting down in %d...", countdown-i)
 			for _, c := range channels {
 				c.BroadcastChatMessage(message)
 			}
@@ -409,8 +422,10 @@ func main() {
 	}
 
 	if config.Channel.Enabled {
+		drainCtx, drainCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer drainCancel()
 		for _, c := range channels {
-			c.Shutdown()
+			c.ShutdownAndDrain(drainCtx)
 		}
 	}
 

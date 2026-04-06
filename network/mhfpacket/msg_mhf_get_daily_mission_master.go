@@ -8,17 +8,22 @@ import (
 	"erupe-ce/network/clientctx"
 )
 
-// MsgMhfGetDailyMissionMaster represents the MSG_MHF_GET_DAILY_MISSION_MASTER
-type MsgMhfGetDailyMissionMaster struct{}
+// MsgMhfGetDailyMissionMaster requests the server-side daily mission master list.
+// Full request payload beyond the AckHandle is not yet reverse-engineered.
+type MsgMhfGetDailyMissionMaster struct {
+	AckHandle uint32
+}
 
 // Opcode returns the ID associated with this packet type.
 func (m *MsgMhfGetDailyMissionMaster) Opcode() network.PacketID {
 	return network.MSG_MHF_GET_DAILY_MISSION_MASTER
 }
 
-// Parse parses the packet from binary
+// Parse parses the packet from binary.
+// Only the AckHandle is parsed; additional fields are unknown.
 func (m *MsgMhfGetDailyMissionMaster) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	return errors.New("NOT IMPLEMENTED")
+	m.AckHandle = bf.ReadUint32()
+	return nil
 }
 
 // Build builds a binary packet from the current data.

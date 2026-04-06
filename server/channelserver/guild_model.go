@@ -43,7 +43,8 @@ type Guild struct {
 	EventRP       uint32        `db:"event_rp"`
 	RoomRP        uint16        `db:"room_rp"`
 	RoomExpiry    time.Time     `db:"room_expiry"`
-	Comment       string        `db:"comment"`
+	Comment    string `db:"comment"`
+	ReturnType uint8  `db:"return_type"`
 	PugiName1     string        `db:"pugi_name_1"`
 	PugiName2     string        `db:"pugi_name_2"`
 	PugiName3     string        `db:"pugi_name_3"`

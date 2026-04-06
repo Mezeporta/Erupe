@@ -53,7 +53,7 @@ func handleMsgMhfCancelGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	err = s.server.guildRepo.CancelInvitation(guild.ID, pkt.InvitationID)
+	err = s.server.guildRepo.CancelInvite(pkt.InvitationID)
 
 	if err != nil {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
@@ -123,28 +123,25 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	chars, err := s.server.guildRepo.ListInvitedCharacters(guildInfo.ID)
+	invites, err := s.server.guildRepo.ListInvites(guildInfo.ID)
 	if err != nil {
-		s.logger.Error("failed to retrieve scouted characters", zap.Error(err))
+		s.logger.Error("failed to retrieve scout invites", zap.Error(err))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
 	bf := byteframe.NewByteFrame()
 	bf.SetBE()
-	bf.WriteUint32(uint32(len(chars)))
+	bf.WriteUint32(uint32(len(invites)))
 
-	for _, sc := range chars {
-		// This seems to be used as a unique ID for the invitation sent
-		// we can just use the charID and then filter on guild_id+charID when performing operations
-		// this might be a problem later with mails sent referencing IDs but we'll see.
-		bf.WriteUint32(sc.CharID)
-		bf.WriteUint32(sc.ActorID)
-		bf.WriteUint32(sc.CharID)
-		bf.WriteUint32(uint32(TimeAdjusted().Unix()))
-		bf.WriteUint16(sc.HR)
-		bf.WriteUint16(sc.GR)
-		bf.WriteBytes(stringsupport.PaddedString(sc.Name, 32, true))
+	for _, inv := range invites {
+		bf.WriteUint32(inv.ID)
+		bf.WriteUint32(inv.ActorID)
+		bf.WriteUint32(inv.CharID)
+		bf.WriteUint32(uint32(inv.InvitedAt.Unix()))
+		bf.WriteUint16(inv.HR)
+		bf.WriteUint16(inv.GR)
+		bf.WriteBytes(stringsupport.PaddedString(inv.Name, 32, true))
 	}
 
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())

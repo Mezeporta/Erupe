@@ -54,7 +54,7 @@ func ProcessDecode(data *byteframe.ByteFrame, outBuffer []byte) {
 func (s *jpkState) processDecode(data *byteframe.ByteFrame, outBuffer []byte) {
 	outIndex := 0
 
-	for int(data.Index()) < len(data.Data()) && outIndex < len(outBuffer)-1 {
+	for int(data.Index()) < len(data.Data()) && outIndex < len(outBuffer) {
 		if s.bitShift(data) == 0 {
 			outBuffer[outIndex] = ReadByte(data)
 			outIndex++

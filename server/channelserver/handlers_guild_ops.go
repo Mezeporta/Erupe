@@ -125,6 +125,13 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Error("Failed to exchange guild event RP", zap.Error(err))
 		}
 		bf.WriteUint32(balance)
+	case mhfpacket.OperateGuildGraduateRookie, mhfpacket.OperateGuildGraduateReturn:
+		// Player graduates (leaves) a temporary return/rookie guild.
+		// No extra packet data — just remove and succeed.
+		isApplicant := characterGuildInfo != nil && characterGuildInfo.IsApplicant
+		if _, err := s.server.guildService.Leave(s.charID, guild.ID, isApplicant, guild.Name); err != nil {
+			s.logger.Error("Failed to graduate from return guild", zap.Error(err))
+		}
 	default:
 		s.logger.Error("unhandled operate guild action", zap.Uint8("action", uint8(pkt.Action)))
 	}

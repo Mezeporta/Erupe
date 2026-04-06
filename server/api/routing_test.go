@@ -44,6 +44,7 @@ func newTestRouter(s *APIServer) *mux.Router {
 	v2Auth.HandleFunc("/characters/{id}/export", s.ExportSave).Methods("GET")
 
 	v2.HandleFunc("/server/status", s.ServerStatus).Methods("GET")
+	v2.HandleFunc("/server/info", s.ServerInfo).Methods("GET")
 
 	return r
 }

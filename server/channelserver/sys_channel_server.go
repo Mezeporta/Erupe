@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"erupe-ce/common/byteframe"
+	"erupe-ce/common/decryption"
 	cfg "erupe-ce/config"
 	"erupe-ce/network"
 	"erupe-ce/network/binpacket"
@@ -74,6 +76,7 @@ type Server struct {
 	miscRepo           MiscRepo
 	scenarioRepo       ScenarioRepo
 	mercenaryRepo      MercenaryRepo
+	tournamentRepo     TournamentRepo
 	mailService        *MailService
 	guildService       *GuildService
 	achievementService *AchievementService
@@ -167,6 +170,7 @@ func NewServer(config *Config) *Server {
 	s.miscRepo = NewMiscRepository(config.DB)
 	s.scenarioRepo = NewScenarioRepository(config.DB)
 	s.mercenaryRepo = NewMercenaryRepository(config.DB)
+	s.tournamentRepo = NewTournamentRepository(config.DB)
 
 	s.mailService = NewMailService(s.mailRepo, s.guildRepo, s.logger)
 	s.guildService = NewGuildService(s.guildRepo, s.mailService, s.charRepo, s.logger)
@@ -243,6 +247,51 @@ func (s *Server) Shutdown() {
 		_ = s.listener.Close()
 	}
 
+}
+
+// ShutdownAndDrain stops accepting new connections, force-closes every active
+// session so that their logoutPlayer cleanup runs (saves character data, removes
+// from stages, etc.), then waits until all sessions have been removed from the
+// sessions map or ctx is cancelled.  It is safe to call multiple times.
+func (s *Server) ShutdownAndDrain(ctx context.Context) {
+	s.Shutdown()
+
+	// Snapshot all active connections while holding the lock, then close them
+	// outside the lock so we don't hold it during I/O.  Closing a connection
+	// causes the session's recvLoop to see io.EOF and call logoutPlayer(), which
+	// in turn deletes the entry from s.sessions under the server mutex.
+	s.Lock()
+	conns := make([]net.Conn, 0, len(s.sessions))
+	for conn := range s.sessions {
+		conns = append(conns, conn)
+	}
+	s.Unlock()
+
+	for _, conn := range conns {
+		_ = conn.Close()
+	}
+
+	// Poll until logoutPlayer has removed every session or the deadline passes.
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			s.Lock()
+			remaining := len(s.sessions)
+			s.Unlock()
+			s.logger.Warn("Shutdown drain timed out", zap.Int("remaining_sessions", remaining))
+			return
+		case <-ticker.C:
+			s.Lock()
+			n := len(s.sessions)
+			s.Unlock()
+			if n == 0 {
+				s.logger.Info("Shutdown drain complete")
+				return
+			}
+		}
+	}
 }
 
 func (s *Server) acceptClients() {
@@ -449,31 +498,52 @@ func (s *Server) Season() uint8 {
 	return uint8(((TimeAdjusted().Unix() / secsPerDay) + sid) % 3)
 }
 
-// ecdMagic is the ECD magic as read by binary.LittleEndian.Uint32.
-// On-disk bytes: 65 63 64 1A ("ecd\x1a"), LE-decoded: 0x1A646365.
-const ecdMagic = uint32(0x1A646365)
-
-// loadRengokuBinary reads and validates rengoku_data.bin from binPath.
-// Returns the raw bytes on success, or nil if the file is missing or invalid.
+// loadRengokuBinary loads and caches Hunting Road config. It tries
+// rengoku_data.bin first and falls back to rengoku_data.json (built on the
+// fly). Returns ECD-encrypted bytes ready to serve, or nil if no valid source
+// is found.
 func loadRengokuBinary(binPath string, logger *zap.Logger) []byte {
 	path := filepath.Join(binPath, "rengoku_data.bin")
 	data, err := os.ReadFile(path)
-	if err != nil {
-		logger.Warn("rengoku_data.bin not found, Hunting Road will be unavailable",
-			zap.String("path", path), zap.Error(err))
-		return nil
+	if err == nil {
+		if len(data) < 4 {
+			logger.Warn("rengoku_data.bin too small, ignoring",
+				zap.Int("bytes", len(data)))
+		} else if magic := binary.LittleEndian.Uint32(data[:4]); magic != decryption.ECDMagic {
+			logger.Warn("rengoku_data.bin has invalid ECD magic, ignoring",
+				zap.String("expected", fmt.Sprintf("0x%08x", decryption.ECDMagic)),
+				zap.String("got", fmt.Sprintf("0x%08x", magic)))
+		} else {
+			// Decrypt and decompress to validate the internal structure and emit a
+			// human-readable summary at startup. Failures here are non-fatal: the
+			// encrypted blob is still served to clients unchanged.
+			if plain, decErr := decryption.DecodeECD(data); decErr != nil {
+				logger.Warn("rengoku_data.bin ECD decryption failed — serving anyway",
+					zap.Error(decErr))
+			} else {
+				raw := decryption.UnpackSimple(plain)
+				if info, parseErr := parseRengokuBinary(raw); parseErr != nil {
+					logger.Warn("rengoku_data.bin structural validation failed",
+						zap.Error(parseErr))
+				} else {
+					logger.Info("Hunting Road config",
+						zap.Int("multi_floors", info.MultiFloors),
+						zap.Int("multi_spawn_tables", info.MultiSpawnTables),
+						zap.Int("solo_floors", info.SoloFloors),
+						zap.Int("solo_spawn_tables", info.SoloSpawnTables),
+						zap.Int("unique_monsters", info.UniqueMonsters),
+					)
+				}
+			}
+			logger.Info("Loaded rengoku_data.bin", zap.Int("bytes", len(data)))
+			return data
+		}
 	}
-	if len(data) < 4 {
-		logger.Warn("rengoku_data.bin too small, ignoring",
-			zap.Int("bytes", len(data)))
-		return nil
+
+	if enc := loadRengokuFromJSON(binPath, logger); enc != nil {
+		return enc
 	}
-	if magic := binary.LittleEndian.Uint32(data[:4]); magic != ecdMagic {
-		logger.Warn("rengoku_data.bin has invalid ECD magic, ignoring",
-			zap.String("expected", "0x1a646365"),
-			zap.String("got", fmt.Sprintf("0x%08x", magic)))
-		return nil
-	}
-	logger.Info("Loaded rengoku_data.bin", zap.Int("bytes", len(data)))
-	return data
+
+	logger.Warn("No Hunting Road config found (rengoku_data.bin or rengoku_data.json), Hunting Road will be unavailable")
+	return nil
 }

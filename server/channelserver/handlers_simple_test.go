@@ -33,16 +33,18 @@ func TestHandlerMsgMhfSexChanger(t *testing.T) {
 
 func TestHandlerMsgMhfEnterTournamentQuest(t *testing.T) {
 	server := createMockServer()
+	server.tournamentRepo = &mockTournamentRepo{}
 	session := createMockSession(1, server)
 
-	// Should not panic with nil packet (empty handler)
+	pkt := &mhfpacket.MsgMhfEnterTournamentQuest{AckHandle: 1}
+
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("handleMsgMhfEnterTournamentQuest panicked: %v", r)
 		}
 	}()
 
-	handleMsgMhfEnterTournamentQuest(session, nil)
+	handleMsgMhfEnterTournamentQuest(session, pkt)
 }
 
 func TestHandlerMsgMhfGetUdBonusQuestInfo(t *testing.T) {
@@ -293,7 +295,6 @@ func TestEmptyHandlers_NoDb(t *testing.T) {
 		{"handleMsgMhfKickExportForce", handleMsgMhfKickExportForce},
 		{"handleMsgSysSetStatus", handleMsgSysSetStatus},
 		{"handleMsgSysEcho", handleMsgSysEcho},
-		{"handleMsgMhfEnterTournamentQuest", handleMsgMhfEnterTournamentQuest},
 	}
 
 	for _, tt := range tests {

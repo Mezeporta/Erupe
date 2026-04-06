@@ -2,13 +2,16 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"erupe-ce/common/gametime"
 	"erupe-ce/common/mhfcourse"
 	cfg "erupe-ce/config"
+	"erupe-ce/server/channelserver/compression/nullcomp"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -150,6 +153,32 @@ func (s *APIServer) Version(w http.ResponseWriter, r *http.Request) {
 		Name:       "Erupe-CE",
 	}
 	w.Header().Add("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// ServerInfoResponse is the JSON payload returned by GET /v2/server/info.
+// It exposes the server's configured game version in a form that launcher
+// tools (e.g. mhf-outpost) can use to check version compatibility.
+type ServerInfoResponse struct {
+	// ClientMode is the version string as configured in Erupe (e.g. "ZZ", "G10.1").
+	ClientMode string `json:"clientMode"`
+	// ManifestID is the normalized form of ClientMode (lowercase, dots removed)
+	// matching mhf-outpost manifest IDs (e.g. "zz", "g101").
+	ManifestID string `json:"manifestId"`
+	// Name is the server software name.
+	Name string `json:"name"`
+}
+
+// ServerInfo handles GET /v2/server/info, returning the server's configured
+// game version in a format compatible with mhf-outpost manifest IDs.
+func (s *APIServer) ServerInfo(w http.ResponseWriter, r *http.Request) {
+	clientMode := s.erupeConfig.ClientMode
+	resp := ServerInfoResponse{
+		ClientMode: clientMode,
+		ManifestID: strings.ToLower(strings.ReplaceAll(clientMode, ".", "")),
+		Name:       "Erupe-CE",
+	}
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
@@ -589,4 +618,152 @@ func (s *APIServer) Health(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"status": "ok",
 	})
+}
+
+// ImportSave handles POST /v2/characters/{id}/import.
+// The request body must contain a one-time import_token (granted by an admin
+// via saveutil) plus a character export blob in the same format as ExportSave.
+func (s *APIServer) ImportSave(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID, _ := UserIDFromContext(ctx)
+
+	var charID uint32
+	if _, err := fmt.Sscanf(mux.Vars(r)["id"], "%d", &charID); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_request", "Invalid character ID")
+		return
+	}
+
+	var req struct {
+		ImportToken string                 `json:"import_token"`
+		Character   map[string]interface{} `json:"character"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_request", "Malformed request body")
+		return
+	}
+	if req.ImportToken == "" {
+		writeError(w, http.StatusBadRequest, "missing_token", "import_token is required")
+		return
+	}
+
+	blobs, err := saveBlobsFromMap(req.Character)
+	if err != nil {
+		s.logger.Warn("ImportSave: failed to extract blobs", zap.Error(err), zap.Uint32("charID", charID))
+		writeError(w, http.StatusBadRequest, "invalid_request", "Invalid save data: "+err.Error())
+		return
+	}
+
+	// Compute savedata hash server-side.
+	if len(blobs.Savedata) > 0 {
+		decompressed, err := nullcomp.Decompress(blobs.Savedata)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_request", "savedata decompression failed")
+			return
+		}
+		h := sha256.Sum256(decompressed)
+		blobs.SavedataHash = h[:]
+	}
+
+	if err := s.charRepo.ImportSave(ctx, charID, userID, req.ImportToken, blobs); err != nil {
+		s.logger.Warn("ImportSave: failed", zap.Error(err), zap.Uint32("charID", charID))
+		writeError(w, http.StatusForbidden, "import_denied", "Import token invalid, expired, or character not owned by user")
+		return
+	}
+
+	s.logger.Info("ImportSave: save imported successfully", zap.Uint32("charID", charID), zap.Uint32("userID", userID))
+	w.WriteHeader(http.StatusOK)
+}
+
+// saveBlobsFromMap extracts save blob columns from an export character map.
+// Values must be base64-encoded strings (as produced by json.Marshal on []byte).
+func saveBlobsFromMap(m map[string]interface{}) (SaveBlobs, error) {
+	var b SaveBlobs
+	var err error
+	b.Savedata, err = extractBlob(m, "savedata")
+	if err != nil {
+		return b, err
+	}
+	b.Decomyset, err = extractBlob(m, "decomyset")
+	if err != nil {
+		return b, err
+	}
+	b.Hunternavi, err = extractBlob(m, "hunternavi")
+	if err != nil {
+		return b, err
+	}
+	b.Otomoairou, err = extractBlob(m, "otomoairou")
+	if err != nil {
+		return b, err
+	}
+	b.Partner, err = extractBlob(m, "partner")
+	if err != nil {
+		return b, err
+	}
+	b.Platebox, err = extractBlob(m, "platebox")
+	if err != nil {
+		return b, err
+	}
+	b.Platedata, err = extractBlob(m, "platedata")
+	if err != nil {
+		return b, err
+	}
+	b.Platemyset, err = extractBlob(m, "platemyset")
+	if err != nil {
+		return b, err
+	}
+	b.Rengokudata, err = extractBlob(m, "rengokudata")
+	if err != nil {
+		return b, err
+	}
+	b.Savemercenary, err = extractBlob(m, "savemercenary")
+	if err != nil {
+		return b, err
+	}
+	b.GachaItems, err = extractBlob(m, "gacha_items")
+	if err != nil {
+		return b, err
+	}
+	b.HouseInfo, err = extractBlob(m, "house_info")
+	if err != nil {
+		return b, err
+	}
+	b.LoginBoost, err = extractBlob(m, "login_boost")
+	if err != nil {
+		return b, err
+	}
+	b.SkinHist, err = extractBlob(m, "skin_hist")
+	if err != nil {
+		return b, err
+	}
+	b.Scenariodata, err = extractBlob(m, "scenariodata")
+	if err != nil {
+		return b, err
+	}
+	b.Savefavoritequest, err = extractBlob(m, "savefavoritequest")
+	if err != nil {
+		return b, err
+	}
+	b.Mezfes, err = extractBlob(m, "mezfes")
+	if err != nil {
+		return b, err
+	}
+	return b, nil
+}
+
+// extractBlob decodes a single base64-encoded blob from a character export map.
+// Returns nil (not an error) if the key is absent or its value is JSON null.
+func extractBlob(m map[string]interface{}, key string) ([]byte, error) {
+	v, ok := m[key]
+	if !ok || v == nil {
+		return nil, nil
+	}
+	s, ok := v.(string)
+	if !ok {
+		return nil, fmt.Errorf("field %q: expected base64 string, got %T", key, v)
+	}
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return nil, fmt.Errorf("field %q: base64 decode: %w", key, err)
+	}
+	return b, nil
 }

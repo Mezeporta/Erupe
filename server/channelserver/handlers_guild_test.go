@@ -923,23 +923,36 @@ func TestCheckMonthlyItem_UnknownType(t *testing.T) {
 }
 
 func TestHandleMsgMhfEntryRookieGuild(t *testing.T) {
-	server := createMockServer()
-	session := createMockSession(1, server)
-
-	pkt := &mhfpacket.MsgMhfEntryRookieGuild{
-		AckHandle: 12345,
-		Unk:       42,
+	tests := []struct {
+		name string
+		unk  uint32
+	}{
+		{"rookie (Unk=0)", 0},
+		{"comeback (Unk=1)", 1},
+		{"comeback with hr (Unk=2)", 2},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := createMockServer()
+			server.guildRepo = &mockGuildRepo{}
+			session := createMockSession(1, server)
 
-	handleMsgMhfEntryRookieGuild(session, pkt)
+			pkt := &mhfpacket.MsgMhfEntryRookieGuild{
+				AckHandle: 12345,
+				Unk:       tt.unk,
+			}
 
-	select {
-	case p := <-session.sendPackets:
-		if len(p.data) == 0 {
-			t.Error("Response packet should have data")
-		}
-	default:
-		t.Error("No response packet queued")
+			handleMsgMhfEntryRookieGuild(session, pkt)
+
+			select {
+			case p := <-session.sendPackets:
+				if len(p.data) == 0 {
+					t.Error("Response packet should have data")
+				}
+			default:
+				t.Error("No response packet queued")
+			}
+		})
 	}
 }
 

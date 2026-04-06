@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -34,6 +35,7 @@ SELECT
 	leader_id,
 	c.name AS leader_name,
 	comment,
+	return_type,
 	COALESCE(pugi_name_1, '') AS pugi_name_1,
 	COALESCE(pugi_name_2, '') AS pugi_name_2,
 	COALESCE(pugi_name_3, '') AS pugi_name_3,
@@ -195,6 +197,62 @@ func (r *GuildRepository) Create(leaderCharID uint32, guildName string) (int32, 
 	return guildID, nil
 }
 
+// FindOrCreateReturnGuild finds an existing return guild of the given type with fewer
+// than 60 members, or creates a new one. The name template receives the guild count+1
+// as its single %d argument. Returns the guild ID.
+func (r *GuildRepository) FindOrCreateReturnGuild(returnType uint8, nameTemplate string) (uint32, error) {
+	var guildID uint32
+	err := r.db.QueryRow(`
+		SELECT g.id FROM guilds g
+		WHERE g.return_type = $1
+		AND (SELECT COUNT(1) FROM guild_characters gc WHERE gc.guild_id = g.id) < 60
+		LIMIT 1
+	`, returnType).Scan(&guildID)
+	if err == nil {
+		return guildID, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, err
+	}
+
+	// No suitable guild — count existing ones and create a new one.
+	var count int
+	if err := r.db.QueryRow(
+		`SELECT COUNT(1) FROM guilds WHERE return_type = $1`, returnType,
+	).Scan(&count); err != nil {
+		return 0, err
+	}
+
+	tx, err := r.db.BeginTxx(context.Background(), nil)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	name := fmt.Sprintf(nameTemplate, count+1)
+	if err := tx.QueryRow(
+		`INSERT INTO guilds (name, leader_id, return_type, rank_rp) VALUES ($1, 0, $2, 1200) RETURNING id`,
+		name, returnType,
+	).Scan(&guildID); err != nil {
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return guildID, nil
+}
+
+// AddMember inserts a character into a guild's member list.
+func (r *GuildRepository) AddMember(guildID, charID uint32) error {
+	_, err := r.db.Exec(`
+		INSERT INTO guild_characters (guild_id, character_id, order_index)
+		VALUES ($1, $2, (SELECT COALESCE(MAX(order_index), 0) + 1 FROM guild_characters WHERE guild_id = $1))
+		ON CONFLICT (guild_id, character_id) DO NOTHING
+	`, guildID, charID)
+	return err
+}
+
 // Save persists guild metadata changes.
 func (r *GuildRepository) Save(guild *Guild) error {
 	_, err := r.db.Exec(`
@@ -270,8 +328,9 @@ func (r *GuildRepository) CreateApplication(guildID, charID, actorID uint32, app
 	return err
 }
 
-// CreateApplicationWithMail atomically creates an application and sends a notification mail.
-func (r *GuildRepository) CreateApplicationWithMail(guildID, charID, actorID uint32, appType GuildApplicationType, mailSenderID, mailRecipientID uint32, mailSubject, mailBody string) error {
+// CreateInviteWithMail atomically inserts a scout invitation into guild_invites
+// and sends a notification mail to the target character.
+func (r *GuildRepository) CreateInviteWithMail(guildID, charID, actorID uint32, mailSenderID, mailRecipientID uint32, mailSubject, mailBody string) error {
 	tx, err := r.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
@@ -279,8 +338,8 @@ func (r *GuildRepository) CreateApplicationWithMail(guildID, charID, actorID uin
 	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.Exec(
-		`INSERT INTO guild_applications (guild_id, character_id, actor_id, application_type) VALUES ($1, $2, $3, $4)`,
-		guildID, charID, actorID, appType); err != nil {
+		`INSERT INTO guild_invites (guild_id, character_id, actor_id) VALUES ($1, $2, $3)`,
+		guildID, charID, actorID); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(mailInsertQuery, mailSenderID, mailRecipientID, mailSubject, mailBody, 0, 0, true, false); err != nil {
@@ -289,11 +348,55 @@ func (r *GuildRepository) CreateApplicationWithMail(guildID, charID, actorID uin
 	return tx.Commit()
 }
 
-// CancelInvitation removes an invitation for a character.
-func (r *GuildRepository) CancelInvitation(guildID, charID uint32) error {
+// HasInvite reports whether a pending scout invitation exists for the character in the guild.
+func (r *GuildRepository) HasInvite(guildID, charID uint32) (bool, error) {
+	var n int
+	err := r.db.QueryRow(
+		`SELECT 1 FROM guild_invites WHERE guild_id = $1 AND character_id = $2`,
+		guildID, charID,
+	).Scan(&n)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// CancelInvite removes a scout invitation by its primary key.
+func (r *GuildRepository) CancelInvite(inviteID uint32) error {
+	_, err := r.db.Exec(`DELETE FROM guild_invites WHERE id = $1`, inviteID)
+	return err
+}
+
+// AcceptInvite removes the scout invitation and adds the character to the guild atomically.
+func (r *GuildRepository) AcceptInvite(guildID, charID uint32) error {
+	tx, err := r.db.BeginTxx(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.Exec(
+		`DELETE FROM guild_invites WHERE guild_id = $1 AND character_id = $2`,
+		guildID, charID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		INSERT INTO guild_characters (guild_id, character_id, order_index)
+		VALUES ($1, $2, (SELECT MAX(order_index) + 1 FROM guild_characters WHERE guild_id = $1))
+	`, guildID, charID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// DeclineInvite removes a scout invitation without joining the guild.
+func (r *GuildRepository) DeclineInvite(guildID, charID uint32) error {
 	_, err := r.db.Exec(
-		`DELETE FROM guild_applications WHERE character_id = $1 AND guild_id = $2 AND application_type = 'invited'`,
-		charID, guildID,
+		`DELETE FROM guild_invites WHERE guild_id = $1 AND character_id = $2`,
+		guildID, charID,
 	)
 	return err
 }
@@ -433,34 +536,39 @@ func (r *GuildRepository) SetRecruiter(charID uint32, allowed bool) error {
 	return err
 }
 
-// ScoutedCharacter represents an invited character in the scout list.
-type ScoutedCharacter struct {
-	CharID  uint32 `db:"id"`
-	Name    string `db:"name"`
-	HR      uint16 `db:"hr"`
-	GR      uint16 `db:"gr"`
-	ActorID uint32 `db:"actor_id"`
+// GuildInvite represents a pending scout invitation with the target character's info.
+type GuildInvite struct {
+	ID        uint32    `db:"id"`
+	GuildID   uint32    `db:"guild_id"`
+	CharID    uint32    `db:"character_id"`
+	ActorID   uint32    `db:"actor_id"`
+	InvitedAt time.Time `db:"created_at"`
+	HR        uint16    `db:"hr"`
+	GR        uint16    `db:"gr"`
+	Name      string    `db:"name"`
 }
 
-// ListInvitedCharacters returns all characters with pending guild invitations.
-func (r *GuildRepository) ListInvitedCharacters(guildID uint32) ([]*ScoutedCharacter, error) {
+// ListInvites returns all pending scout invitations for a guild, including
+// the target character's HR, GR, and name.
+func (r *GuildRepository) ListInvites(guildID uint32) ([]*GuildInvite, error) {
 	rows, err := r.db.Queryx(`
-		SELECT c.id, c.name, c.hr, c.gr, ga.actor_id
-			FROM guild_applications ga
-			JOIN characters c ON c.id = ga.character_id
-		WHERE ga.guild_id = $1 AND ga.application_type = 'invited'
+		SELECT gi.id, gi.guild_id, gi.character_id, gi.actor_id, gi.created_at,
+		       c.hr, c.gr, c.name
+		FROM guild_invites gi
+		JOIN characters c ON c.id = gi.character_id
+		WHERE gi.guild_id = $1
 	`, guildID)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	var chars []*ScoutedCharacter
+	var invites []*GuildInvite
 	for rows.Next() {
-		sc := &ScoutedCharacter{}
-		if err := rows.StructScan(sc); err != nil {
+		inv := &GuildInvite{}
+		if err := rows.StructScan(inv); err != nil {
 			continue
 		}
-		chars = append(chars, sc)
+		invites = append(invites, inv)
 	}
-	return chars, nil
+	return invites, nil
 }

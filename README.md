@@ -100,6 +100,18 @@ These files contain quest definitions and scenario data that the server sends to
 
 **Without these files, quests will not load and the client will crash.**
 
+### JSON Format Support
+
+As an alternative to opaque `.bin` files, Erupe supports human-readable `.json` files for quests, scenarios, and Hunting Road config. The server always tries `.bin` first and falls back to `.json` automatically — existing binary files work unchanged.
+
+| File type | Location | Documentation |
+|-----------|----------|---------------|
+| Quest | `bin/quests/<name>.json` | Erupe wiki |
+| Scenario | `bin/scenarios/<name>.json` | `docs/scenario-format.md` |
+| Hunting Road | `bin/rengoku_data.json` | Erupe wiki |
+
+JSON quests and scenarios use UTF-8 text (converted to Shift-JIS on the wire), making them diff-friendly and editable without binary tools.
+
 ## Client Setup
 
 1. Obtain a Monster Hunter Frontier client (version G10 or later recommended)
@@ -148,6 +160,64 @@ Edit `config.json` before starting the server. The essential settings are:
 | `Language` | `"en"` or `"jp"` |
 
 `config.example.json` is intentionally minimal — all other settings have sane defaults built into the server. For the full configuration reference (gameplay multipliers, debug options, Discord integration, in-game commands, entrance/channel definitions), see [config.reference.json](./config.reference.json) and the [Erupe Wiki](https://github.com/Mezeporta/Erupe/wiki).
+
+## Save Transfers
+
+To move a character from one Erupe instance to another, use the `saveutil` admin tool.
+
+### Build saveutil
+
+```bash
+go build -o saveutil ./cmd/saveutil/
+```
+
+### Method 1: Direct admin import (recommended)
+
+This method does not require the server to be running.
+
+**On the source server**, export the character:
+```bash
+./saveutil export --config config.json --char-id <SOURCE_ID> --output my_character.json
+```
+
+**On the destination server**, find the target character ID (use pgAdmin or `psql`), then import:
+```bash
+./saveutil import --config config.json --char-id <DEST_ID> --file my_character.json
+```
+
+### Method 2: Player self-service via API
+
+This method lets players import their own save without admin DB access, but requires the admin to grant a one-time token first.
+
+**Admin step** — grant a token (valid for 24 hours by default):
+```bash
+./saveutil grant-import --config config.json --char-id <DEST_ID> [--ttl 48h]
+# → Import token for character 42: abc123...
+```
+
+Give the printed token to the player. They then call the import endpoint:
+```bash
+curl -X POST http://<server>:8080/v2/characters/<DEST_ID>/import \
+  -H "Authorization: Bearer <player_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "import_token": "<admin_token>",
+    "character": <paste contents of my_character.json .character field here>
+  }'
+```
+
+The token is consumed on success and cannot be reused. To cancel a pending grant:
+```bash
+./saveutil revoke-import --config config.json --char-id <DEST_ID>
+```
+
+### Troubleshooting
+
+**"savedata integrity check failed"** — the character was imported directly into the DB without going through `saveutil`. Fix by clearing the stored hash:
+```sql
+UPDATE characters SET savedata_hash = NULL WHERE id = <char_id>;
+```
+The correct hash will be recomputed on the next save.
 
 ## Features
 
@@ -270,4 +340,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Authors
 
-A list of authors can be found at [AUTHORS.md](AUTHORS.md).
+A list of authors can be found at [HISTORY.md](HISTORY.md).

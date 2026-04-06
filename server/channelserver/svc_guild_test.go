@@ -385,14 +385,14 @@ func TestGuildService_PostScout(t *testing.T) {
 	strings := ScoutInviteStrings{Title: "Invite", Body: "Join 「%s」"}
 
 	tests := []struct {
-		name         string
-		membership   *GuildMember
-		guild        *Guild
-		hasApp       bool
-		hasAppErr    error
-		createAppErr error
-		getMemberErr error
-		wantErr      error
+		name          string
+		membership    *GuildMember
+		guild         *Guild
+		hasInvite     bool
+		hasInviteErr  error
+		createAppErr  error
+		getMemberErr  error
+		wantErr       error
 	}{
 		{
 			name:       "successful scout",
@@ -403,7 +403,7 @@ func TestGuildService_PostScout(t *testing.T) {
 			name:       "already invited",
 			membership: &GuildMember{GuildID: 10, CharID: 1, IsLeader: true, OrderIndex: 1},
 			guild:      &Guild{ID: 10, Name: "TestGuild"},
-			hasApp:     true,
+			hasInvite:  true,
 			wantErr:    ErrAlreadyInvited,
 		},
 		{
@@ -423,11 +423,11 @@ func TestGuildService_PostScout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			guildMock := &mockGuildRepo{
-				membership:   tt.membership,
-				hasAppResult: tt.hasApp,
-				hasAppErr:    tt.hasAppErr,
-				createAppErr: tt.createAppErr,
-				getMemberErr: tt.getMemberErr,
+				membership:      tt.membership,
+				hasInviteResult: tt.hasInvite,
+				hasInviteErr:    tt.hasInviteErr,
+				createAppErr:    tt.createAppErr,
+				getMemberErr:    tt.getMemberErr,
 			}
 			guildMock.guild = tt.guild
 			svc := newTestGuildService(guildMock, &mockMailRepo{})
@@ -468,7 +468,7 @@ func TestGuildService_AnswerScout(t *testing.T) {
 		name          string
 		accept        bool
 		guild         *Guild
-		application   *GuildApplication
+		hasInvite     bool
 		acceptErr     error
 		rejectErr     error
 		sendErr       error
@@ -477,13 +477,13 @@ func TestGuildService_AnswerScout(t *testing.T) {
 		wantErr       error
 		wantMailCount int
 		wantAccepted  uint32
-		wantRejected  uint32
+		wantDeclined  uint32
 	}{
 		{
 			name:          "accept invitation",
 			accept:        true,
 			guild:         &Guild{ID: 10, Name: "TestGuild", GuildLeader: GuildLeader{LeaderCharID: 50}},
-			application:   &GuildApplication{GuildID: 10, CharID: 1},
+			hasInvite:     true,
 			wantSuccess:   true,
 			wantMailCount: 2,
 			wantAccepted:  1,
@@ -492,16 +492,16 @@ func TestGuildService_AnswerScout(t *testing.T) {
 			name:          "decline invitation",
 			accept:        false,
 			guild:         &Guild{ID: 10, Name: "TestGuild", GuildLeader: GuildLeader{LeaderCharID: 50}},
-			application:   &GuildApplication{GuildID: 10, CharID: 1},
+			hasInvite:     true,
 			wantSuccess:   true,
 			wantMailCount: 2,
-			wantRejected:  1,
+			wantDeclined:  1,
 		},
 		{
 			name:        "application missing",
 			accept:      true,
 			guild:       &Guild{ID: 10, Name: "TestGuild", GuildLeader: GuildLeader{LeaderCharID: 50}},
-			application: nil,
+			hasInvite:   false,
 			wantSuccess: false,
 			wantErr:     ErrApplicationMissing,
 		},
@@ -516,7 +516,7 @@ func TestGuildService_AnswerScout(t *testing.T) {
 			name:          "mail error is best-effort",
 			accept:        true,
 			guild:         &Guild{ID: 10, Name: "TestGuild", GuildLeader: GuildLeader{LeaderCharID: 50}},
-			application:   &GuildApplication{GuildID: 10, CharID: 1},
+			hasInvite:     true,
 			sendErr:       errors.New("mail failed"),
 			wantSuccess:   true,
 			wantMailCount: 2,
@@ -527,9 +527,9 @@ func TestGuildService_AnswerScout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			guildMock := &mockGuildRepo{
-				application: tt.application,
-				acceptErr:   tt.acceptErr,
-				rejectErr:   tt.rejectErr,
+				hasInviteResult: tt.hasInvite,
+				acceptErr:       tt.acceptErr,
+				rejectErr:       tt.rejectErr,
 			}
 			guildMock.guild = tt.guild
 			guildMock.getErr = tt.getErr
@@ -559,11 +559,11 @@ func TestGuildService_AnswerScout(t *testing.T) {
 			if len(mailMock.sentMails) != tt.wantMailCount {
 				t.Errorf("sentMails count = %d, want %d", len(mailMock.sentMails), tt.wantMailCount)
 			}
-			if tt.wantAccepted != 0 && guildMock.acceptedCharID != tt.wantAccepted {
-				t.Errorf("acceptedCharID = %d, want %d", guildMock.acceptedCharID, tt.wantAccepted)
+			if tt.wantAccepted != 0 && guildMock.acceptInviteCharID != tt.wantAccepted {
+				t.Errorf("acceptInviteCharID = %d, want %d", guildMock.acceptInviteCharID, tt.wantAccepted)
 			}
-			if tt.wantRejected != 0 && guildMock.rejectedCharID != tt.wantRejected {
-				t.Errorf("rejectedCharID = %d, want %d", guildMock.rejectedCharID, tt.wantRejected)
+			if tt.wantDeclined != 0 && guildMock.declineInviteCharID != tt.wantDeclined {
+				t.Errorf("declineInviteCharID = %d, want %d", guildMock.declineInviteCharID, tt.wantDeclined)
 			}
 		})
 	}

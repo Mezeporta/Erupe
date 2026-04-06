@@ -168,6 +168,17 @@ This version transformed Erupe from a proof-of-concept into a feature-complete, 
 
 This is a recent fork and its specific goals or contributions are not yet documented.
 
+### Houmgaor / Mogapédia (2025-present)
+
+<https://github.com/Mezeporta/Erupe> (continued from ZeruLight/Mezeporta)
+
+Houmgaor, maintainer of the French MH community Mogapédia, took over active development with a focus on engineering quality and production reliability. Key contributions:
+
+* Shift-left quality gates: mandatory race-detector CI, coverage floor (≥50%), `golangci-lint`, mock repo pattern for unit tests without a database
+* Savedata integrity: SHA-256 checksums, rotating backups, transparent corruption recovery
+* Operator tooling: interactive setup wizard, live dashboard, protocol bot for integration testing
+* New game systems: Event Tent campaigns, JSON quest files, JSON Hunting Road config, achievement rank-up notifications, Diva Defense point accumulation
+
 ## Authorship of the code
 
 Authorship is assigned for each commit within the git history, which is stored in these git repos:

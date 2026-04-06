@@ -998,7 +998,7 @@ CREATE TABLE public.guilds (
     pugi_name_1 character varying(12) DEFAULT ''::character varying,
     pugi_name_2 character varying(12) DEFAULT ''::character varying,
     pugi_name_3 character varying(12) DEFAULT ''::character varying,
-    recruiting boolean DEFAULT true NOT NULL,
+    recruiting boolean DEFAULT false NOT NULL,
     pugi_outfit_1 integer DEFAULT 0 NOT NULL,
     pugi_outfit_2 integer DEFAULT 0 NOT NULL,
     pugi_outfit_3 integer DEFAULT 0 NOT NULL,

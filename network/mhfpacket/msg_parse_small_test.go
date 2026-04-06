@@ -18,13 +18,9 @@ func TestParseSmallNotImplemented(t *testing.T) {
 	}{
 		// MHF packets - NOT IMPLEMENTED
 		{"MsgMhfAcceptReadReward", &MsgMhfAcceptReadReward{}},
-		{"MsgMhfAddRewardSongCount", &MsgMhfAddRewardSongCount{}},
 		{"MsgMhfDebugPostValue", &MsgMhfDebugPostValue{}},
-		{"MsgMhfEnterTournamentQuest", &MsgMhfEnterTournamentQuest{}},
 		{"MsgMhfGetCaAchievementHist", &MsgMhfGetCaAchievementHist{}},
 		{"MsgMhfGetCaUniqueID", &MsgMhfGetCaUniqueID{}},
-		{"MsgMhfGetDailyMissionMaster", &MsgMhfGetDailyMissionMaster{}},
-		{"MsgMhfGetDailyMissionPersonal", &MsgMhfGetDailyMissionPersonal{}},
 		{"MsgMhfGetRestrictionEvent", &MsgMhfGetRestrictionEvent{}},
 		{"MsgMhfKickExportForce", &MsgMhfKickExportForce{}},
 		{"MsgMhfPaymentAchievement", &MsgMhfPaymentAchievement{}},
@@ -33,7 +29,6 @@ func TestParseSmallNotImplemented(t *testing.T) {
 		{"MsgMhfResetAchievement", &MsgMhfResetAchievement{}},
 		{"MsgMhfResetTitle", &MsgMhfResetTitle{}},
 		{"MsgMhfSetCaAchievement", &MsgMhfSetCaAchievement{}},
-		{"MsgMhfSetDailyMissionPersonal", &MsgMhfSetDailyMissionPersonal{}},
 		{"MsgMhfSetUdTacticsFollower", &MsgMhfSetUdTacticsFollower{}},
 		{"MsgMhfStampcardPrize", &MsgMhfStampcardPrize{}},
 		{"MsgMhfUpdateForceGuildRank", &MsgMhfUpdateForceGuildRank{}},

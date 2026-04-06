@@ -48,6 +48,9 @@ type CharacterRepo interface {
 	// LoadSaveDataWithHash loads savedata along with its stored SHA-256 hash.
 	// The hash may be nil for characters saved before checksums were introduced.
 	LoadSaveDataWithHash(charID uint32) (id uint32, savedata []byte, isNew bool, name string, hash []byte, err error)
+	// LoadBackupsByRecency returns all backup slots for a character ordered
+	// most-recent first. Returns an empty slice if no backups exist.
+	LoadBackupsByRecency(charID uint32) ([]SavedataBackup, error)
 }
 
 // GuildRepo defines the contract for guild data access.
@@ -61,8 +64,11 @@ type GuildRepo interface {
 	RemoveCharacter(charID uint32) error
 	AcceptApplication(guildID, charID uint32) error
 	CreateApplication(guildID, charID, actorID uint32, appType GuildApplicationType) error
-	CreateApplicationWithMail(guildID, charID, actorID uint32, appType GuildApplicationType, mailSenderID, mailRecipientID uint32, mailSubject, mailBody string) error
-	CancelInvitation(guildID, charID uint32) error
+	CreateInviteWithMail(guildID, charID, actorID uint32, mailSenderID, mailRecipientID uint32, mailSubject, mailBody string) error
+	HasInvite(guildID, charID uint32) (bool, error)
+	CancelInvite(inviteID uint32) error
+	AcceptInvite(guildID, charID uint32) error
+	DeclineInvite(guildID, charID uint32) error
 	RejectApplication(guildID, charID uint32) error
 	ArrangeCharacters(charIDs []uint32) error
 	GetApplication(guildID, charID uint32, appType GuildApplicationType) (*GuildApplication, error)
@@ -117,9 +123,11 @@ type GuildRepo interface {
 	CountGuildKills(guildID, charID uint32) (int, error)
 	ClearTreasureHunt(charID uint32) error
 	InsertKillLog(charID uint32, monster int, quantity uint8, timestamp time.Time) error
-	ListInvitedCharacters(guildID uint32) ([]*ScoutedCharacter, error)
+	ListInvites(guildID uint32) ([]*GuildInvite, error)
 	RolloverDailyRP(guildID uint32, noon time.Time) error
 	AddWeeklyBonusUsers(guildID uint32, numUsers uint8) error
+	FindOrCreateReturnGuild(returnType uint8, nameTemplate string) (uint32, error)
+	AddMember(guildID, charID uint32) error
 }
 
 // UserRepo defines the contract for user account data access.
@@ -319,6 +327,18 @@ type GoocooRepo interface {
 	SaveSlot(charID uint32, slot uint32, data []byte) error
 }
 
+// DivaPrize represents a single reward milestone for the personal or guild track.
+type DivaPrize struct {
+	ID         int
+	Type       string
+	PointsReq  int
+	ItemType   int
+	ItemID     int
+	Quantity   int
+	GR         bool
+	Repeatable bool
+}
+
 // DivaRepo defines the contract for diva event data access.
 type DivaRepo interface {
 	DeleteEvents() error
@@ -327,6 +347,23 @@ type DivaRepo interface {
 	AddPoints(charID uint32, eventID uint32, questPoints, bonusPoints uint32) error
 	GetPoints(charID uint32, eventID uint32) (questPoints, bonusPoints int64, err error)
 	GetTotalPoints(eventID uint32) (questPoints, bonusPoints int64, err error)
+
+	// Bead management
+	GetBeads() ([]int, error)
+	AssignBead(characterID uint32, beadIndex int, expiry time.Time) error
+	AddBeadPoints(characterID uint32, beadIndex int, points int) error
+	GetCharacterBeadPoints(characterID uint32) (map[int]int, error)
+	GetTotalBeadPoints() (int64, error)
+	GetTopBeadPerDay(day int) (int, error)
+	CleanupBeads() error
+
+	// Prize rewards
+	GetPersonalPrizes() ([]DivaPrize, error)
+	GetGuildPrizes() ([]DivaPrize, error)
+
+	// Interception points (guild_characters.interception_points JSON)
+	GetCharacterInterceptionPoints(characterID uint32) (map[string]int, error)
+	AddInterceptionPoints(characterID uint32, questFileID int, points int) error
 }
 
 // MiscRepo defines the contract for miscellaneous data access.
@@ -347,4 +384,62 @@ type MercenaryRepo interface {
 	GetMercenaryLoans(charID uint32) ([]MercenaryLoan, error)
 	GetGuildHuntCatsUsed(charID uint32) ([]GuildHuntCatUsage, error)
 	GetGuildAirou(guildID uint32) ([][]byte, error)
+}
+
+// Tournament represents a tournament schedule entry.
+type Tournament struct {
+	ID         uint32 `db:"id"`
+	Name       string `db:"name"`
+	StartTime  int64  `db:"start_time"`
+	EntryEnd   int64  `db:"entry_end"`
+	RankingEnd int64  `db:"ranking_end"`
+	RewardEnd  int64  `db:"reward_end"`
+}
+
+// TournamentCup represents a competition category within a tournament.
+type TournamentCup struct {
+	ID          uint32 `db:"id"`
+	CupGroup    int16  `db:"cup_group"`
+	CupType     int16  `db:"cup_type"`
+	Unk         int16  `db:"unk"`
+	Name        string `db:"name"`
+	Description string `db:"description"`
+}
+
+// TournamentSubEvent represents a specific hunt/fish target within a cup group.
+type TournamentSubEvent struct {
+	ID           uint32 `db:"id"`
+	CupGroup     int16  `db:"cup_group"`
+	EventSubType int16  `db:"event_sub_type"`
+	QuestFileID  uint32 `db:"quest_file_id"`
+	Name         string `db:"name"`
+}
+
+// TournamentRankEntry is a single entry in a leaderboard.
+type TournamentRankEntry struct {
+	CharID    uint32
+	Rank      uint32
+	Grade     uint16
+	HR        uint16
+	GR        uint16
+	CharName  string
+	GuildName string
+}
+
+// TournamentEntry represents a player's registration for a tournament.
+type TournamentEntry struct {
+	ID           uint32 `db:"id"`
+	CharID       uint32 `db:"char_id"`
+	TournamentID uint32 `db:"tournament_id"`
+}
+
+// TournamentRepo defines the contract for tournament schedule and result data access.
+type TournamentRepo interface {
+	GetActive(now int64) (*Tournament, error)
+	GetCups(tournamentID uint32) ([]TournamentCup, error)
+	GetSubEvents() ([]TournamentSubEvent, error)
+	Register(charID, tournamentID uint32) (entryID uint32, err error)
+	GetEntry(charID, tournamentID uint32) (*TournamentEntry, error)
+	SubmitResult(charID, tournamentID, eventID, questSlot, stageHandle uint32) error
+	GetLeaderboard(eventID uint32) ([]TournamentRankEntry, error)
 }

@@ -26,65 +26,6 @@ func handleMsgMhfLoadMezfesData(s *Session, p mhfpacket.MHFPacket) {
 		[]byte{0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 }
 
-func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfEnumerateRanking)
-	bf := byteframe.NewByteFrame()
-	state := s.server.erupeConfig.DebugOptions.TournamentOverride
-	// Unk
-	// Unk
-	// Start?
-	// End?
-	midnight := TimeMidnight()
-	switch state {
-	case 1:
-		bf.WriteUint32(uint32(midnight.Unix()))
-		bf.WriteUint32(uint32(midnight.Add(3 * 24 * time.Hour).Unix()))
-		bf.WriteUint32(uint32(midnight.Add(13 * 24 * time.Hour).Unix()))
-		bf.WriteUint32(uint32(midnight.Add(20 * 24 * time.Hour).Unix()))
-	case 2:
-		bf.WriteUint32(uint32(midnight.Add(-3 * 24 * time.Hour).Unix()))
-		bf.WriteUint32(uint32(midnight.Unix()))
-		bf.WriteUint32(uint32(midnight.Add(10 * 24 * time.Hour).Unix()))
-		bf.WriteUint32(uint32(midnight.Add(17 * 24 * time.Hour).Unix()))
-	case 3:
-		bf.WriteUint32(uint32(midnight.Add(-13 * 24 * time.Hour).Unix()))
-		bf.WriteUint32(uint32(midnight.Add(-10 * 24 * time.Hour).Unix()))
-		bf.WriteUint32(uint32(midnight.Unix()))
-		bf.WriteUint32(uint32(midnight.Add(7 * 24 * time.Hour).Unix()))
-	default:
-		bf.WriteBytes(make([]byte, 16))
-		bf.WriteUint32(uint32(TimeAdjusted().Unix())) // TS Current Time
-		bf.WriteUint8(3)
-		bf.WriteBytes(make([]byte, 4))
-		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
-		return
-	}
-	bf.WriteUint32(uint32(TimeAdjusted().Unix())) // TS Current Time
-	bf.WriteUint8(3)
-	ps.Uint8(bf, "", false)
-	bf.WriteUint16(0) // numEvents
-	bf.WriteUint8(0)  // numCups
-
-	/*
-		struct event
-		uint32 eventID
-		uint16 unk
-		uint16 unk
-		uint32 unk
-		psUint8 name
-
-		struct cup
-		uint32 cupID
-		uint16 unk
-		uint16 unk
-		uint16 unk
-		psUint8 name
-		psUint16 desc
-	*/
-
-	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
-}
-
 // Festa timing constants (all values in seconds)
 const (
 	festaVotingDuration = 9000    // 150 min voting window

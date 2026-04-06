@@ -15,7 +15,7 @@ All empty handlers carry an inline comment — `// stub: unimplemented` for real
 
 ---
 
-## Unimplemented (68 handlers)
+## Unimplemented (65 handlers)
 
 Grouped by handler file / game subsystem. Handlers with an open branch are marked **[branch]**.
 
@@ -44,7 +44,7 @@ Grouped by handler file / game subsystem. Handlers with an open branch are marke
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfShutClient` | Server-initiated client disconnect — partial draft in `fix/clan-invites` |
+| `handleMsgMhfShutClient` | Server-initiated client disconnect |
 | `handleMsgSysHideClient` | Hide a client session from the session list |
 
 ### Data / Auth (`handlers_data.go`)
@@ -57,7 +57,7 @@ Grouped by handler file / game subsystem. Handlers with an open branch are marke
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfGetRestrictionEvent` | Fetch event-based gameplay restrictions — **[`feature/enum-event`]** (4 commits), **[`feature/event-tent`]** (30 commits, most mature) |
+| `handleMsgMhfGetRestrictionEvent` | Fetch event-based gameplay restrictions — see `docs/fort-attack-event.md` |
 
 ### Guild (`handlers_guild.go`)
 
@@ -77,7 +77,7 @@ Grouped by handler file / game subsystem. Handlers with an open branch are marke
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfStampcardPrize` | Claim a stamp card prize — **[`feature/event-tent`]** (campaign stamp work) |
+| `handleMsgMhfStampcardPrize` | Claim a stamp card prize |
 
 ### Misc (`handlers_misc.go`)
 
@@ -95,8 +95,6 @@ Grouped by handler file / game subsystem. Handlers with an open branch are marke
 
 All five mutex handlers are empty. MHF mutexes are distributed locks used for event coordination
 (Raviente, etc.). The server currently uses its own semaphore system instead.
-**[`fix/mutex-rework`]** (2 commits) proposes replacing the semaphore system with proper
-protocol-level mutex handling.
 
 | Handler | Notes |
 |---------|-------|
@@ -125,12 +123,6 @@ secondary operations are stubs:
 | `handleMsgSysDispObject` | Display/show a previously hidden object |
 | `handleMsgSysHideObject` | Hide an object from other clients |
 
-### Quests (`handlers_quest.go`)
-
-| Handler | Notes |
-|---------|-------|
-| `handleMsgMhfEnterTournamentQuest` | Enter a tournament-mode quest — **[`feature/hunting-tournament`]** (7 commits, actively rebased onto main) |
-
 ### Register (`handlers_register.go`)
 
 | Handler | Notes |
@@ -141,8 +133,6 @@ secondary operations are stubs:
 
 | Handler | Notes |
 |---------|-------|
-| `handleMsgMhfUseRewardSong` | Use/activate a reward song buff — **[`feature/diva`]** |
-| `handleMsgMhfAddRewardSongCount` | Increment reward song usage counter — **[`feature/diva`]** |
 | `handleMsgMhfAcceptReadReward` | Claim a reward for reading an in-game notice |
 
 ### Session (`handlers_session.go`)
@@ -199,15 +189,10 @@ that needs no reply). Others are genuine feature gaps.
 
 | Branch | Commits ahead | Handlers targeted |
 |--------|:---:|-------------------|
-| `feature/event-tent` | 30 | `GetRestrictionEvent`, `StampcardPrize` (campaign stamps) |
-| `feature/hunting-tournament` | 7 | `EnterTournamentQuest` |
-| `fix/mutex-rework` | 2 | All 5 Mutex handlers |
-| `feature/enum-event` | 4 | `GetRestrictionEvent` |
-| `feature/conquest` | 4 | Conquest quest handlers |
-| `feature/tower` | 4 | Tower handlers |
-| `feature/diva` | 6 | `UseRewardSong`, `AddRewardSongCount` |
-| `feature/return-guild` | 1 | `UpdateGuild` |
-| `fix/clan-invites` | 1 | `ShutClient` (unfinished draft) |
+| `feature/enum-event` | 4 | `EnumerateEvent` scheduling only — not mergeable, see `docs/fort-attack-event.md` |
+| `feature/conquest` | 4 | Conquest quest handlers — not mergeable, see `docs/conquest-war.md` |
+| `feature/hunting-tournament` | 7 | `EnumerateRanking` / `EnumerateOrder` — not mergeable (duplicates handlers_tournament.go), see `docs/hunting-tournament.md` |
+| `feature/tower` | 4 | Tower handlers — superseded by direct integration; see `docs/tower.md` for gaps |
 
 ---
 

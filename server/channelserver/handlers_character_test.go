@@ -446,6 +446,144 @@ func TestGetCharacterSaveData_Integration(t *testing.T) {
 	}
 }
 
+// TestGetCharacterSaveData_BackupRecovery tests that a character whose primary
+// savedata has a hash mismatch is transparently recovered from the backup table.
+func TestGetCharacterSaveData_BackupRecovery(t *testing.T) {
+	db := SetupTestDB(t)
+	defer TeardownTestDB(t, db)
+
+	// Build valid compressed savedata (same layout as CreateTestCharacter).
+	rawSave := make([]byte, 150000)
+	copy(rawSave[88:], append([]byte("BackupChar"), 0x00))
+	validCompressed, err := nullcomp.Compress(rawSave)
+	if err != nil {
+		t.Fatalf("compress valid savedata: %v", err)
+	}
+
+	// Build a compressed blob that will fail decompression (garbage bytes).
+	invalidCompressed := []byte("this is not valid compressed data")
+
+	corruptHash := make([]byte, 32) // all-zero hash is wrong for any real savedata
+	corruptHash[0] = 0xFF
+
+	repo := NewCharacterRepository(db)
+
+	t.Run("recovers_from_most_recent_backup", func(t *testing.T) {
+		userID := CreateTestUser(t, db, "recovery_user")
+		charID := CreateTestCharacter(t, db, userID, "BackupChar")
+
+		// Store a valid backup in slot 0.
+		if err := repo.SaveBackup(charID, 0, validCompressed); err != nil {
+			t.Fatalf("SaveBackup: %v", err)
+		}
+
+		// Set a wrong hash on the primary so the integrity check fails.
+		if _, err := db.Exec("UPDATE characters SET savedata_hash = $1 WHERE id = $2", corruptHash, charID); err != nil {
+			t.Fatalf("set corrupt hash: %v", err)
+		}
+
+		mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+		s := createTestSession(mock)
+		s.charID = charID
+		SetTestDB(s.server, db)
+		s.server.erupeConfig.RealClientMode = cfg.Z2
+
+		got, err := GetCharacterSaveData(s, charID)
+		if err != nil {
+			t.Fatalf("GetCharacterSaveData() unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("GetCharacterSaveData() returned nil")
+		}
+		if got.CharID != charID {
+			t.Errorf("CharID = %d, want %d", got.CharID, charID)
+		}
+	})
+
+	t.Run("skips_corrupt_backup_and_uses_next", func(t *testing.T) {
+		userID := CreateTestUser(t, db, "multibackup_user")
+		charID := CreateTestCharacter(t, db, userID, "BackupChar")
+
+		// Slot 1 is newer (saved second) but has invalid compressed data.
+		// Slot 0 is older but valid. Recovery must skip slot 1 and use slot 0.
+		if err := repo.SaveBackup(charID, 0, validCompressed); err != nil {
+			t.Fatalf("SaveBackup slot 0: %v", err)
+		}
+		if err := repo.SaveBackup(charID, 1, invalidCompressed); err != nil {
+			t.Fatalf("SaveBackup slot 1: %v", err)
+		}
+		// Update slot 1's saved_at to be newer than slot 0.
+		if _, err := db.Exec(
+			"UPDATE savedata_backups SET saved_at = now() + interval '1 minute' WHERE char_id = $1 AND slot = 1",
+			charID,
+		); err != nil {
+			t.Fatalf("update saved_at: %v", err)
+		}
+
+		if _, err := db.Exec("UPDATE characters SET savedata_hash = $1 WHERE id = $2", corruptHash, charID); err != nil {
+			t.Fatalf("set corrupt hash: %v", err)
+		}
+
+		mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+		s := createTestSession(mock)
+		s.charID = charID
+		SetTestDB(s.server, db)
+		s.server.erupeConfig.RealClientMode = cfg.Z2
+
+		got, err := GetCharacterSaveData(s, charID)
+		if err != nil {
+			t.Fatalf("GetCharacterSaveData() unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("GetCharacterSaveData() returned nil")
+		}
+	})
+
+	t.Run("returns_error_when_no_backups", func(t *testing.T) {
+		userID := CreateTestUser(t, db, "nobackup_user")
+		charID := CreateTestCharacter(t, db, userID, "NoBackupChar")
+
+		if _, err := db.Exec("UPDATE characters SET savedata_hash = $1 WHERE id = $2", corruptHash, charID); err != nil {
+			t.Fatalf("set corrupt hash: %v", err)
+		}
+
+		mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+		s := createTestSession(mock)
+		s.charID = charID
+		SetTestDB(s.server, db)
+		s.server.erupeConfig.RealClientMode = cfg.Z2
+
+		_, err := GetCharacterSaveData(s, charID)
+		if err == nil {
+			t.Fatal("expected error when no backups available, got nil")
+		}
+	})
+
+	t.Run("returns_error_when_all_backups_corrupt", func(t *testing.T) {
+		userID := CreateTestUser(t, db, "allcorrupt_user")
+		charID := CreateTestCharacter(t, db, userID, "AllCorruptChar")
+
+		if err := repo.SaveBackup(charID, 0, invalidCompressed); err != nil {
+			t.Fatalf("SaveBackup: %v", err)
+		}
+
+		if _, err := db.Exec("UPDATE characters SET savedata_hash = $1 WHERE id = $2", corruptHash, charID); err != nil {
+			t.Fatalf("set corrupt hash: %v", err)
+		}
+
+		mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+		s := createTestSession(mock)
+		s.charID = charID
+		SetTestDB(s.server, db)
+		s.server.erupeConfig.RealClientMode = cfg.Z2
+
+		_, err := GetCharacterSaveData(s, charID)
+		if err == nil {
+			t.Fatal("expected error when all backups corrupt, got nil")
+		}
+	})
+}
+
 // TestCharacterSaveData_Save_Integration tests saving character data to database
 func TestCharacterSaveData_Save_Integration(t *testing.T) {
 	db := SetupTestDB(t)

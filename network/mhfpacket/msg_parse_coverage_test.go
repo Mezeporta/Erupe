@@ -102,8 +102,8 @@ func TestParseCoverage_VariableLength(t *testing.T) {
 		if err := pkt.Parse(parsed, ctx); err != nil {
 			t.Errorf("Parse() error: %v", err)
 		}
-		if len(pkt.Unk1) != 2 {
-			t.Errorf("expected 2 items, got %d", len(pkt.Unk1))
+		if len(pkt.RewardIDs) != 2 {
+			t.Errorf("expected 2 items, got %d", len(pkt.RewardIDs))
 		}
 	})
 

@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -88,4 +90,81 @@ func (r *APICharacterRepository) ExportSave(ctx context.Context, userID, charID 
 		return nil, err
 	}
 	return result, nil
+}
+
+func (r *APICharacterRepository) GrantImportToken(ctx context.Context, charID, userID uint32, token string, expiry time.Time) error {
+	res, err := r.db.ExecContext(ctx,
+		`UPDATE characters SET savedata_import_token=$1, savedata_import_token_expiry=$2
+         WHERE id=$3 AND user_id=$4 AND deleted=false`,
+		token, expiry, charID, userID,
+	)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("character not found or not owned by user")
+	}
+	return nil
+}
+
+func (r *APICharacterRepository) RevokeImportToken(ctx context.Context, charID, userID uint32) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE characters SET savedata_import_token=NULL, savedata_import_token_expiry=NULL
+         WHERE id=$1 AND user_id=$2`,
+		charID, userID,
+	)
+	return err
+}
+
+func (r *APICharacterRepository) ImportSave(ctx context.Context, charID, userID uint32, token string, blobs SaveBlobs) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Validate token ownership and expiry, then clear it — all in one UPDATE.
+	res, err := tx.ExecContext(ctx,
+		`UPDATE characters
+         SET savedata_import_token=NULL, savedata_import_token_expiry=NULL
+         WHERE id=$1 AND user_id=$2
+           AND savedata_import_token=$3
+           AND savedata_import_token_expiry > now()`,
+		charID, userID, token,
+	)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("import token invalid, expired, or character not owned by user")
+	}
+
+	// Write all save blobs.
+	_, err = tx.ExecContext(ctx,
+		`UPDATE characters SET
+            savedata=$1, savedata_hash=$2, decomyset=$3, hunternavi=$4,
+            otomoairou=$5, partner=$6, platebox=$7, platedata=$8,
+            platemyset=$9, rengokudata=$10, savemercenary=$11, gacha_items=$12,
+            house_info=$13, login_boost=$14, skin_hist=$15, scenariodata=$16,
+            savefavoritequest=$17, mezfes=$18
+         WHERE id=$19`,
+		blobs.Savedata, blobs.SavedataHash, blobs.Decomyset, blobs.Hunternavi,
+		blobs.Otomoairou, blobs.Partner, blobs.Platebox, blobs.Platedata,
+		blobs.Platemyset, blobs.Rengokudata, blobs.Savemercenary, blobs.GachaItems,
+		blobs.HouseInfo, blobs.LoginBoost, blobs.SkinHist, blobs.Scenariodata,
+		blobs.Savefavoritequest, blobs.Mezfes,
+		charID,
+	)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }

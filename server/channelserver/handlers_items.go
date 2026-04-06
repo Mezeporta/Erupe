@@ -9,11 +9,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func handleMsgMhfTransferItem(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfTransferItem)
-	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
-}
-
 func handleMsgMhfEnumeratePrice(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumeratePrice)
 	bf := byteframe.NewByteFrame()
@@ -50,10 +45,6 @@ func handleMsgMhfEnumeratePrice(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func handleMsgMhfEnumerateOrder(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfEnumerateOrder)
-	stubEnumerateNoResults(s, pkt.AckHandle)
-}
 
 func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetExtraInfo)

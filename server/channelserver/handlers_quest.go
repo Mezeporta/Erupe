@@ -107,10 +107,9 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			)
 		}
 		filename := fmt.Sprintf("%d_0_0_0_S%d_T%d_C%d", pkt.ScenarioIdentifer.CategoryID, pkt.ScenarioIdentifer.MainID, pkt.ScenarioIdentifer.Flags, pkt.ScenarioIdentifer.ChapterID)
-		// Read the scenario file.
-		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("scenarios/%s.bin", filename)))
+		data, err := loadScenarioBinary(s, filename)
 		if err != nil {
-			s.logger.Error("Failed to open scenario file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", filename))
+			s.logger.Error("Failed to open scenario file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", filename), zap.Error(err))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
@@ -127,9 +126,9 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			pkt.Filename = seasonConversion(s, pkt.Filename)
 		}
 
-		data, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
+		data, err := loadQuestBinary(s, pkt.Filename)
 		if err != nil {
-			s.logger.Error("Failed to open quest file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", pkt.Filename))
+			s.logger.Error("Failed to open quest file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", pkt.Filename), zap.Error(err))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
@@ -141,8 +140,52 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func questFileExists(s *Session, filename string) bool {
-	_, err := os.Stat(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", filename)))
+	base := filepath.Join(s.server.erupeConfig.BinPath, "quests", filename)
+	if _, err := os.Stat(base + ".bin"); err == nil {
+		return true
+	}
+	_, err := os.Stat(base + ".json")
 	return err == nil
+}
+
+// loadQuestBinary loads a quest file by name, trying .bin first then .json.
+// For .json files it compiles the JSON to the MHF binary wire format.
+func loadQuestBinary(s *Session, filename string) ([]byte, error) {
+	base := filepath.Join(s.server.erupeConfig.BinPath, "quests", filename)
+
+	if data, err := os.ReadFile(base + ".bin"); err == nil {
+		return data, nil
+	}
+
+	jsonData, err := os.ReadFile(base + ".json")
+	if err != nil {
+		return nil, err
+	}
+	compiled, err := CompileQuestJSON(jsonData)
+	if err != nil {
+		return nil, fmt.Errorf("compile quest JSON %s: %w", filename, err)
+	}
+	return compiled, nil
+}
+
+// loadScenarioBinary loads a scenario file by name, trying .bin first then .json.
+// For .json files it compiles the JSON to the MHF binary wire format.
+func loadScenarioBinary(s *Session, filename string) ([]byte, error) {
+	base := filepath.Join(s.server.erupeConfig.BinPath, "scenarios", filename)
+
+	if data, err := os.ReadFile(base + ".bin"); err == nil {
+		return data, nil
+	}
+
+	jsonData, err := os.ReadFile(base + ".json")
+	if err != nil {
+		return nil, err
+	}
+	compiled, err := CompileScenarioJSON(jsonData)
+	if err != nil {
+		return nil, fmt.Errorf("compile scenario JSON %s: %w", filename, err)
+	}
+	return compiled, nil
 }
 
 func seasonConversion(s *Session, questFile string) string {
@@ -209,12 +252,22 @@ func loadQuestFile(s *Session, questId int) []byte {
 		return cached
 	}
 
-	file, err := os.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%05dd0.bin", questId)))
-	if err != nil {
+	base := filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%05dd0", questId))
+	var decrypted []byte
+	if data, err := os.ReadFile(base + ".bin"); err == nil {
+		decrypted = decryption.UnpackSimple(data)
+	} else if jsonData, err := os.ReadFile(base + ".json"); err == nil {
+		compiled, err := CompileQuestJSON(jsonData)
+		if err != nil {
+			s.logger.Error("loadQuestFile: failed to compile quest JSON",
+				zap.Int("questId", questId), zap.Error(err))
+			return nil
+		}
+		decrypted = compiled
+	} else {
 		return nil
 	}
 
-	decrypted := decryption.UnpackSimple(file)
 	if s.server.erupeConfig.RealClientMode <= cfg.Z1 && s.server.erupeConfig.DebugOptions.AutoQuestBackport {
 		decrypted = BackportQuest(decrypted, s.server.erupeConfig.RealClientMode)
 	}
@@ -290,7 +343,34 @@ func makeEventQuest(s *Session, eq EventQuest) ([]byte, error) {
 	}
 	bf.WriteUint8(eq.QuestType)
 	if eq.QuestType == QuestTypeSpecialTool {
-		bf.WriteBool(false)
+		var stamps, required int
+		var deadline time.Time
+		err := s.server.db.QueryRow(`SELECT COUNT(*) FROM campaign_state WHERE campaign_id = (
+			SELECT campaign_id
+			FROM campaign_rewards
+			WHERE item_type = 9
+			AND item_id = $1
+			LIMIT 1
+		) AND character_id = $2`, eq.QuestID, s.charID).Scan(&stamps)
+		if err != nil {
+			bf.WriteBool(false)
+		} else {
+			err = s.server.db.QueryRow(`SELECT stamps, end_time
+			FROM campaigns
+			WHERE id = (
+				SELECT campaign_id
+				FROM campaign_rewards
+				WHERE item_type = 9
+				AND item_id = $1
+				LIMIT 1
+			)`, eq.QuestID).Scan(&required, &deadline)
+			required = campaignRequiredStamps(required)
+			if err == nil && stamps >= required && deadline.After(time.Now()) {
+				bf.WriteBool(true)
+			} else {
+				bf.WriteBool(false)
+			}
+		}
 	} else {
 		bf.WriteBool(true)
 	}
@@ -654,7 +734,6 @@ func getTuneValueRange(start uint16, value uint16) []tuneValue {
 	return tv
 }
 
-func handleMsgMhfEnterTournamentQuest(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
 func handleMsgMhfGetUdBonusQuestInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetUdBonusQuestInfo)
