@@ -9,6 +9,7 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -503,9 +504,9 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 		{ID: 1180, Value: 5},
 	}
 
-	tuneValues = append(tuneValues, tuneValue{1020, uint16(s.server.erupeConfig.GameplayOptions.GCPMultiplier * 100)})
+	tuneValues = append(tuneValues, tuneValue{1020, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GCPMultiplier)})
 
-	tuneValues = append(tuneValues, tuneValue{1029, uint16(s.server.erupeConfig.GameplayOptions.GUrgentRate * 100)})
+	tuneValues = append(tuneValues, tuneValue{1029, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GUrgentRate)})
 
 	if s.server.erupeConfig.GameplayOptions.DisableHunterNavi {
 		tuneValues = append(tuneValues, tuneValue{1037, 1})
@@ -528,29 +529,29 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	// get_hrp_rate_from_rank
-	tuneValues = append(tuneValues, getTuneValueRange(3000, uint16(s.server.erupeConfig.GameplayOptions.HRPMultiplier*100))...)
-	tuneValues = append(tuneValues, getTuneValueRange(3338, uint16(s.server.erupeConfig.GameplayOptions.HRPMultiplierNC*100))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3000, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.HRPMultiplier))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3338, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.HRPMultiplierNC))...)
 	// get_srp_rate_from_rank
-	tuneValues = append(tuneValues, getTuneValueRange(3013, uint16(s.server.erupeConfig.GameplayOptions.SRPMultiplier*100))...)
-	tuneValues = append(tuneValues, getTuneValueRange(3351, uint16(s.server.erupeConfig.GameplayOptions.SRPMultiplierNC*100))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3013, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.SRPMultiplier))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3351, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.SRPMultiplierNC))...)
 	// get_grp_rate_from_rank
-	tuneValues = append(tuneValues, getTuneValueRange(3026, uint16(s.server.erupeConfig.GameplayOptions.GRPMultiplier*100))...)
-	tuneValues = append(tuneValues, getTuneValueRange(3364, uint16(s.server.erupeConfig.GameplayOptions.GRPMultiplierNC*100))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3026, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GRPMultiplier))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3364, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GRPMultiplierNC))...)
 	// get_gsrp_rate_from_rank
-	tuneValues = append(tuneValues, getTuneValueRange(3039, uint16(s.server.erupeConfig.GameplayOptions.GSRPMultiplier*100))...)
-	tuneValues = append(tuneValues, getTuneValueRange(3377, uint16(s.server.erupeConfig.GameplayOptions.GSRPMultiplierNC*100))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3039, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GSRPMultiplier))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3377, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GSRPMultiplierNC))...)
 	// get_zeny_rate_from_hrank
-	tuneValues = append(tuneValues, getTuneValueRange(3052, uint16(s.server.erupeConfig.GameplayOptions.ZennyMultiplier*100))...)
-	tuneValues = append(tuneValues, getTuneValueRange(3390, uint16(s.server.erupeConfig.GameplayOptions.ZennyMultiplierNC*100))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3052, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.ZennyMultiplier))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3390, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.ZennyMultiplierNC))...)
 	// get_zeny_rate_from_grank
-	tuneValues = append(tuneValues, getTuneValueRange(3078, uint16(s.server.erupeConfig.GameplayOptions.GZennyMultiplier*100))...)
-	tuneValues = append(tuneValues, getTuneValueRange(3416, uint16(s.server.erupeConfig.GameplayOptions.GZennyMultiplierNC*100))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3078, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GZennyMultiplier))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3416, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GZennyMultiplierNC))...)
 	// get_reward_rate_from_hrank
-	tuneValues = append(tuneValues, getTuneValueRange(3104, uint16(s.server.erupeConfig.GameplayOptions.MaterialMultiplier*100))...)
-	tuneValues = append(tuneValues, getTuneValueRange(3442, uint16(s.server.erupeConfig.GameplayOptions.MaterialMultiplierNC*100))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3104, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.MaterialMultiplier))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3442, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.MaterialMultiplierNC))...)
 	// get_reward_rate_from_grank
-	tuneValues = append(tuneValues, getTuneValueRange(3130, uint16(s.server.erupeConfig.GameplayOptions.GMaterialMultiplier*100))...)
-	tuneValues = append(tuneValues, getTuneValueRange(3468, uint16(s.server.erupeConfig.GameplayOptions.GMaterialMultiplierNC*100))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3130, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GMaterialMultiplier))...)
+	tuneValues = append(tuneValues, getTuneValueRange(3468, multiplierToTuneValue(s.server.erupeConfig.GameplayOptions.GMaterialMultiplierNC))...)
 	// get_lottery_rate_from_hrank
 	tuneValues = append(tuneValues, getTuneValueRange(3156, 0)...)
 	tuneValues = append(tuneValues, getTuneValueRange(3494, 0)...)
@@ -569,14 +570,6 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	// get_nboost_transcend_rate_from_grank
 	tuneValues = append(tuneValues, getTuneValueRange(3299, 200)...)
 	tuneValues = append(tuneValues, getTuneValueRange(3325, 300)...)
-
-	var temp []tuneValue
-	for i := range tuneValues {
-		if tuneValues[i].Value > 0 {
-			temp = append(temp, tuneValues[i])
-		}
-	}
-	tuneValues = temp
 
 	tuneLimit := tuneLimitZZ
 	if s.server.erupeConfig.RealClientMode <= cfg.G1 {
@@ -644,6 +637,13 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	bf.WriteUint16(returnedCount)
 
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+}
+
+// multiplierToTuneValue converts a float32 config multiplier (e.g. 0.20 for 20%)
+// into the uint16 percentage value expected by the client tune table. Uses
+// rounding to avoid float32 truncation artifacts such as 0.20*100 → 19.
+func multiplierToTuneValue(m float32) uint16 {
+	return uint16(math.Round(float64(m) * 100))
 }
 
 func getTuneValueRange(start uint16, value uint16) []tuneValue {

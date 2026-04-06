@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed quest tune-value filter silently dropping user-configured multipliers set to `0.0`: previously setting e.g. `ZennyMultiplier: 0.0` would strip the entry from the table and fall back to the client's default (100%), producing the opposite of the intended "no zenny" configuration. The `Value > 0` filter in `handleMsgMhfEnumerateQuest` has been removed so zero values are now sent verbatim. Affects HRP/SRP/GRP/GSRP/Zenny/GZenny/Material/GMaterial/GCP/GUrgent multipliers and their NC variants.
+- Fixed float32 truncation in quest multiplier conversion: `uint16(0.20 * 100)` yielded `19` instead of `20` because `float32(0.20) ≈ 0.19999998`. Replaced with a `multiplierToTuneValue` helper that rounds via `math.Round`. Applied to all 18 multiplier call sites.
 - Fixed `DisableLoginBoost` and `DisableBoostTime` config flags not fully honored ([#187](https://github.com/Mezeporta/Erupe/issues/187)): `GetBoostTimeLimit`/`GetBoostRight` now respect `DisableBoostTime` and `UseKeepLoginBoost` now respects `DisableLoginBoost`. Also fixes a zero-`time.Time` wraparound in `GetBoostTimeLimit` that made the "Boost Time" overlay appear on fresh characters.
 - Fixed playtime regression across sessions: `updateSaveDataWithStruct` now writes the accumulated playtime back into the binary save blob, preventing each reconnect from loading a stale in-game counter and rolling back progress.
 - Fixed player softlock when buying items at the forge: `MSG_CA_EXCHANGE_ITEM` `Parse()` was returning `NOT IMPLEMENTED`, causing the dispatch loop to drop the packet without sending an ACK. Now parses the `AckHandle` and responds with `doAckBufFail` so the client's error branch exits cleanly.
