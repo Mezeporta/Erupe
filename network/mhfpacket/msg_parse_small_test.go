@@ -33,7 +33,6 @@ func TestParseSmallNotImplemented(t *testing.T) {
 		{"MsgMhfStampcardPrize", &MsgMhfStampcardPrize{}},
 		{"MsgMhfUpdateForceGuildRank", &MsgMhfUpdateForceGuildRank{}},
 
-
 		// SYS packets - NOT IMPLEMENTED
 		{"MsgSysAuthData", &MsgSysAuthData{}},
 		{"MsgSysAuthQuery", &MsgSysAuthQuery{}},

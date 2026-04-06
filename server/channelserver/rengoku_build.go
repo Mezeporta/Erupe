@@ -148,7 +148,7 @@ func BuildRengokuBinary(cfg RengokuConfig) ([]byte, error) {
 
 // RoadModeFields carries the computed field values for one RoadMode struct.
 type RoadModeFields struct {
-	FloorCount, SpawnCount, TablePtrCnt uint32
+	FloorCount, SpawnCount, TablePtrCnt  uint32
 	FloorPtr, TablePtrsPtr, CountPtrsPtr uint32
 }
 
@@ -194,8 +194,8 @@ func writeSpawnSection(buf []byte, tables []SpawnTableConfig, ptrsBase, tablesBa
 // within range for both road modes.
 func validateRengokuConfig(cfg RengokuConfig) error {
 	for _, road := range []struct {
-		name  string
-		r     RoadConfig
+		name string
+		r    RoadConfig
 	}{{"multi_road", cfg.MultiRoad}, {"solo_road", cfg.SoloRoad}} {
 		n := len(road.r.SpawnTables)
 		for i, f := range road.r.Floors {

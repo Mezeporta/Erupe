@@ -13,12 +13,12 @@ import (
 //	@0x14: RoadMode multiDef (24 bytes)
 //	@0x2C: RoadMode soloDef  (24 bytes)
 const (
-	rengokuMinSize      = 0x44 // header (0x14) + two RoadModes (2×24)
-	rengokuMultiOffset  = 0x14
-	rengokuSoloOffset   = 0x2C
-	floorStatsByteSize  = 24
-	spawnTableByteSize  = 32
-	spawnPtrEntrySize   = 4 // each spawn-table pointer is a u32
+	rengokuMinSize     = 0x44 // header (0x14) + two RoadModes (2×24)
+	rengokuMultiOffset = 0x14
+	rengokuSoloOffset  = 0x2C
+	floorStatsByteSize = 24
+	spawnTableByteSize = 32
+	spawnPtrEntrySize  = 4 // each spawn-table pointer is a u32
 )
 
 // rengokuRoadMode holds a parsed RoadMode struct. All pointer fields are file

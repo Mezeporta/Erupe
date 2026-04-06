@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	cfg "erupe-ce/config"
 	"erupe-ce/common/decryption"
+	cfg "erupe-ce/config"
 	"erupe-ce/network/clientctx"
 	"erupe-ce/network/mhfpacket"
 

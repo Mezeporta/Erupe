@@ -224,7 +224,7 @@ func parseScenarioSubheader(data []byte) (*ScenarioSubheaderJSON, error) {
 	}
 
 	// 8-byte sub-header fields:
-	chunkType := data[0]       // @0: chunk type (0x01 = compound container)
+	chunkType := data[0] // @0: chunk type (0x01 = compound container)
 	// data[1]                 // @1: pad 0x00 (format detector; not stored)
 	// data[2:4]               // @2: u16 LE total size (recomputed on compile)
 	entryCount := int(data[4]) // @4: number of string entries
@@ -469,4 +469,3 @@ func scenarioEncodeShiftJIS(s string) ([]byte, error) {
 	}
 	return append(out, 0x00), nil
 }
-

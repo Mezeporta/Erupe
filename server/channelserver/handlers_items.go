@@ -45,7 +45,6 @@ func handleMsgMhfEnumeratePrice(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-
 func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetExtraInfo)
 	// TODO: response structure unknown; fail ACK prevents softlock without misleading client

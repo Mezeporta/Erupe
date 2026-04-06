@@ -385,14 +385,14 @@ func TestGuildService_PostScout(t *testing.T) {
 	strings := ScoutInviteStrings{Title: "Invite", Body: "Join 「%s」"}
 
 	tests := []struct {
-		name          string
-		membership    *GuildMember
-		guild         *Guild
-		hasInvite     bool
-		hasInviteErr  error
-		createAppErr  error
-		getMemberErr  error
-		wantErr       error
+		name         string
+		membership   *GuildMember
+		guild        *Guild
+		hasInvite    bool
+		hasInviteErr error
+		createAppErr error
+		getMemberErr error
+		wantErr      error
 	}{
 		{
 			name:       "successful scout",
