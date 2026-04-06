@@ -39,3 +39,4 @@ coverage.out
 
 # Claude Code local config
 .claude/
+CLAUDE.local.md
