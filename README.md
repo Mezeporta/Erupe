@@ -157,7 +157,15 @@ Edit `config.json` before starting the server. The essential settings are:
 | `Host` | IP advertised to clients. Use `127.0.0.1` for local play, your LAN/WAN IP for remote. Leave blank in config to auto-detect |
 | `ClientMode` | Target client version (`ZZ`, `G10`, `Forward4`, etc.) |
 | `BinPath` | Path to quest/scenario files |
-| `Language` | `"en"` or `"jp"` |
+| `Language` | Default server language: `"en"`, `"jp"`, `"fr"`, or `"zh"`. Players can override per-session in-game via `!lang <code>` |
+
+### Localization (i18n)
+
+Erupe supports per-session language preferences for quest text, scenario text, and in-game messages. Languages currently available: English (`en`), Japanese (`jp`), French (`fr`), and Chinese (`zh`).
+
+- **Default language** is set via `Language` in `config.json`.
+- **Per-player override**: players can switch their own session language in-game with `!lang <code>` (e.g. `!lang fr`).
+- **Localized quest/scenario text**: JSON quests and scenarios accept either a plain string or a `{ "en": "...", "jp": "...", "fr": "...", "zh": "..." }` map for any user-facing field (quest titles, descriptions, scenario strings, etc.). The server picks the string matching the session's language and falls back to the default language when a translation is missing. Compiled output is cached per `(questID, language)`.
 
 `config.example.json` is intentionally minimal — all other settings have sane defaults built into the server. For the full configuration reference (gameplay multipliers, debug options, Discord integration, in-game commands, entrance/channel definitions), see [config.reference.json](./config.reference.json) and the [Erupe Wiki](https://github.com/Mezeporta/Erupe/wiki).
 
@@ -267,8 +275,8 @@ Erupe uses an embedded auto-migrating schema system. Migrations in [server/migra
 
 ### Branch Strategy
 
-- **main**: Active development branch with the latest features and improvements
-- **stable/v9.2.x**: Stable release branch for those seeking stability over cutting-edge features
+- **main**: Stable branch — released, tested features
+- **develop**: Integration branch for in-progress and potentially breaking changes
 
 ### Running Tests
 
