@@ -83,9 +83,9 @@ func TestApplyDataDiffWithLimit_BoundsCheck(t *testing.T) {
 	// which would extend to offset 13 (beyond 10-byte base).
 	// Format: matchCount=9 (first is +1), differentCount=6 (is -1 = 5 bytes)
 	diff := []byte{
-		0x09,                               // matchCount (first is +1, so offset becomes -1+9=8)
-		0x06,                               // differentCount (6-1=5 different bytes)
-		0xAA, 0xBB, 0xCC, 0xDD, 0xEE,      // 5 patch bytes
+		0x09,                         // matchCount (first is +1, so offset becomes -1+9=8)
+		0x06,                         // differentCount (6-1=5 different bytes)
+		0xAA, 0xBB, 0xCC, 0xDD, 0xEE, // 5 patch bytes
 	}
 
 	t.Run("within_limit", func(t *testing.T) {
