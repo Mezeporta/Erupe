@@ -64,30 +64,31 @@ func (m Mode) String() string {
 
 // Config holds the global server-wide config.
 type Config struct {
-	Host                   string `mapstructure:"Host"`
-	BinPath                string `mapstructure:"BinPath"`
-	Language               string
-	DisableSoftCrash            bool // Disables the 'Press Return to exit' dialog allowing scripts to reboot the server automatically
-	ShutdownCountdownSeconds    int  // Seconds to count down before shutting down (default 10; ignored when DisableSoftCrash is true)
-	HideLoginNotice        bool     // Hide the Erupe notice on login
-	LoginNotices           []string // MHFML string of the login notices displayed
-	PatchServerManifest    string   // Manifest patch server override
-	PatchServerFile        string   // File patch server override
-	DeleteOnSaveCorruption    bool // Attempts to save corrupted data will flag the save for deletion
-	DisableSaveIntegrityCheck bool // Skip SHA-256 hash verification on load (needed for cross-server save transfers)
-	ClientMode             string
-	RealClientMode         Mode
-	QuestCacheExpiry       int    // Number of seconds to keep quest data cached
-	CommandPrefix          string // The prefix for commands
-	AutoCreateAccount      bool   // Automatically create accounts if they don't exist
-	LoopDelay              int    // Delay in milliseconds between each loop iteration
-	DefaultCourses         []uint16
-	EarthStatus            int32
-	EarthID                int32
-	EarthMonsters          []int32
-	SaveDumps              SaveDumpOptions
-	Screenshots            ScreenshotsOptions
-	Capture                CaptureOptions
+	Host                      string `mapstructure:"Host"`
+	BinPath                   string `mapstructure:"BinPath"`
+	Language                  string
+	DisableShutdownCountdown  bool     `mapstructure:"DisableShutdownCountdown"` // Skip the in-game shutdown countdown (lets scripts restart the server unattended). Previously named DisableSoftCrash — legacy key still accepted.
+	ShutdownCountdownSeconds  int      // Seconds to count down before shutting down (default 10; ignored when DisableShutdownCountdown is true)
+	ShutdownDrainSeconds      int      // Additional seconds to wait for sessions to disconnect naturally before force-closing (default 30)
+	HideLoginNotice           bool     // Hide the Erupe notice on login
+	LoginNotices              []string // MHFML string of the login notices displayed
+	PatchServerManifest       string   // Manifest patch server override
+	PatchServerFile           string   // File patch server override
+	DeleteOnSaveCorruption    bool     // Attempts to save corrupted data will flag the save for deletion
+	DisableSaveIntegrityCheck bool     // Skip SHA-256 hash verification on load (needed for cross-server save transfers)
+	ClientMode                string
+	RealClientMode            Mode
+	QuestCacheExpiry          int    // Number of seconds to keep quest data cached
+	CommandPrefix             string // The prefix for commands
+	AutoCreateAccount         bool   // Automatically create accounts if they don't exist
+	LoopDelay                 int    // Delay in milliseconds between each loop iteration
+	DefaultCourses            []uint16
+	EarthStatus               int32
+	EarthID                   int32
+	EarthMonsters             []int32
+	SaveDumps                 SaveDumpOptions
+	Screenshots               ScreenshotsOptions
+	Capture                   CaptureOptions
 
 	DebugOptions    DebugOptions
 	GameplayOptions GameplayOptions
@@ -356,6 +357,11 @@ func registerDefaults() {
 	viper.SetDefault("AutoCreateAccount", true)
 	viper.SetDefault("LoopDelay", 50)
 	viper.SetDefault("ShutdownCountdownSeconds", 10)
+	viper.SetDefault("ShutdownDrainSeconds", 30)
+	// Back-compat: old configs use DisableSoftCrash. RegisterAlias makes Viper
+	// treat reads/writes of the old key as the new key, so existing
+	// config.json files keep working without modification.
+	viper.RegisterAlias("DisableSoftCrash", "DisableShutdownCountdown")
 	viper.SetDefault("DefaultCourses", []uint16{1, 23, 24})
 	viper.SetDefault("EarthMonsters", []int32{0, 0, 0, 0})
 

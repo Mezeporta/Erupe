@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	cfg "erupe-ce/config"
 	"erupe-ce/common/gametime"
+	cfg "erupe-ce/config"
 	"erupe-ce/server/api"
 	"erupe-ce/server/channelserver"
 	"erupe-ce/server/discordbot"
@@ -401,7 +401,15 @@ func main() {
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	<-sig
 
-	if !config.DisableSoftCrash {
+	// Phase 1: stop accepting new connections immediately so players seeing
+	// the countdown cannot start fresh quests at T-1.
+	if config.Channel.Enabled {
+		for _, c := range channels {
+			c.Shutdown()
+		}
+	}
+
+	if !config.DisableShutdownCountdown {
 		countdown := config.ShutdownCountdownSeconds
 		if countdown <= 0 {
 			countdown = 10
@@ -422,6 +430,31 @@ func main() {
 	}
 
 	if config.Channel.Enabled {
+		// Phase 2: passive drain — give active sessions (mid-quest players)
+		// up to ShutdownDrainSeconds to disconnect on their own.
+		drainSecs := config.ShutdownDrainSeconds
+		if drainSecs < 0 {
+			drainSecs = 0
+		}
+		if drainSecs > 0 {
+			passiveCtx, passiveCancel := context.WithTimeout(context.Background(), time.Duration(drainSecs)*time.Second)
+			// A second signal cancels the passive drain so the force-close
+			// phase runs immediately.
+			go func() {
+				select {
+				case <-sig:
+					logger.Info("Second signal received, skipping passive drain")
+					passiveCancel()
+				case <-passiveCtx.Done():
+				}
+			}()
+			for _, c := range channels {
+				c.DrainPassive(passiveCtx)
+			}
+			passiveCancel()
+		}
+
+		// Phase 3: force-close any stragglers so logoutPlayer runs and saves.
 		drainCtx, drainCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer drainCancel()
 		for _, c := range channels {
@@ -451,7 +484,7 @@ func wait() {
 }
 
 func preventClose(config *cfg.Config, text string) {
-	if config != nil && config.DisableSoftCrash {
+	if config != nil && config.DisableShutdownCountdown {
 		os.Exit(0)
 	}
 	fmt.Println("\nFailed to start Erupe:\n" + text)

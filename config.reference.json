@@ -2,7 +2,9 @@
   "Host": "127.0.0.1",
   "BinPath": "bin",
   "Language": "en",
-  "DisableSoftCrash": false,
+  "DisableShutdownCountdown": false,
+  "ShutdownCountdownSeconds": 10,
+  "ShutdownDrainSeconds": 30,
   "HideLoginNotice": true,
   "LoginNotices": [
     "<BODY><CENTER><SIZE_3><C_4>Welcome to Erupe SU9.3!<BR><BODY><LEFT><SIZE_2><C_5>Erupe is experimental software<C_7>, we are not liable for any<BR><BODY>issues caused by installing the software!<BR><BODY><BR><BODY><C_4>■Report bugs on Discord!<C_7><BR><BODY><BR><BODY><C_4>■Test everything!<C_7><BR><BODY><BR><BODY><C_4>■Don't talk to softlocking NPCs!<C_7><BR><BODY><BR><BODY><C_4>■Fork the code on GitHub!<C_7><BR><BODY><BR><BODY>Thank you to all of the contributors,<BR><BODY><BR><BODY>this wouldn't exist without you."

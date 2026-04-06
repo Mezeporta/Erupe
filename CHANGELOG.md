@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Shutdown now proceeds in three phases: listeners close immediately on signal, then a passive drain waits up to `ShutdownDrainSeconds` (default 30) for sessions to disconnect naturally, then remaining connections are force-closed. This prevents players from starting new quests after the countdown begins ([#179](https://github.com/Mezeporta/Erupe/issues/179)).
+- Renamed config field `DisableSoftCrash` → `DisableShutdownCountdown` for clarity. The old key is still accepted via a Viper alias so existing `config.json` files keep working without modification ([#179](https://github.com/Mezeporta/Erupe/issues/179)).
+
 ### Added
 
 - Reverse-engineered user binary data types from `mhfo-hd.dll` via Ghidra: type 1 = character name (max 17B SJIS), type 2 = player profile with self-introduction (208B), type 3 = equipment/appearance snapshot (384B). Added structured parsing with size validation warnings to `handleMsgSysSetUserBinary`.

@@ -249,6 +249,30 @@ func (s *Server) Shutdown() {
 
 }
 
+// DrainPassive waits for active sessions to disconnect naturally (e.g. players
+// finishing a quest and logging out) without force-closing anything. Returns
+// when the session count reaches zero or ctx is cancelled. Callers should have
+// already invoked Shutdown() to close the listener so no new sessions arrive.
+func (s *Server) DrainPassive(ctx context.Context) {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		s.Lock()
+		n := len(s.sessions)
+		s.Unlock()
+		if n == 0 {
+			s.logger.Info("Passive drain complete: all sessions disconnected")
+			return
+		}
+		select {
+		case <-ctx.Done():
+			s.logger.Info("Passive drain deadline reached", zap.Int("remaining_sessions", n))
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
 // ShutdownAndDrain stops accepting new connections, force-closes every active
 // session so that their logoutPlayer cleanup runs (saves character data, removes
 // from stages, etc.), then waits until all sessions have been removed from the
