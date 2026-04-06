@@ -195,6 +195,10 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUseKeepLoginBoost(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUseKeepLoginBoost)
+	if s.server.erupeConfig.GameplayOptions.DisableLoginBoost {
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 5))
+		return
+	}
 	var expiration time.Time
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint8(0)

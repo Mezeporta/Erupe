@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `DisableLoginBoost` and `DisableBoostTime` config flags not fully honored ([#187](https://github.com/Mezeporta/Erupe/issues/187)): `GetBoostTimeLimit`/`GetBoostRight` now respect `DisableBoostTime` and `UseKeepLoginBoost` now respects `DisableLoginBoost`. Also fixes a zero-`time.Time` wraparound in `GetBoostTimeLimit` that made the "Boost Time" overlay appear on fresh characters.
 - Fixed playtime regression across sessions: `updateSaveDataWithStruct` now writes the accumulated playtime back into the binary save blob, preventing each reconnect from loading a stale in-game counter and rolling back progress.
 - Fixed player softlock when buying items at the forge: `MSG_CA_EXCHANGE_ITEM` `Parse()` was returning `NOT IMPLEMENTED`, causing the dispatch loop to drop the packet without sending an ACK. Now parses the `AckHandle` and responds with `doAckBufFail` so the client's error branch exits cleanly.
 - Fixed player softlock on N-points (Hunting Road) interactions: same root cause for `MSG_MHF_USE_UD_SHOP_COIN` — `Parse()` now reads the `AckHandle` and responds with `doAckBufFail`.

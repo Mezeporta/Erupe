@@ -219,7 +219,9 @@ func handleMsgMhfGetBoostTimeLimit(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetBoostTimeLimit)
 	bf := byteframe.NewByteFrame()
 	boostLimit, err := s.server.charRepo.ReadTime(s.charID, "boost_time", time.Time{})
-	if err != nil {
+	// Return 0 when disabled, on read error, or when boost_time is unset
+	// (zero time.Time.Unix() wraps to a large uint32 the client interprets as active).
+	if err != nil || s.server.erupeConfig.GameplayOptions.DisableBoostTime || boostLimit.IsZero() {
 		bf.WriteUint32(0)
 	} else {
 		bf.WriteUint32(uint32(boostLimit.Unix()))
@@ -230,6 +232,10 @@ func handleMsgMhfGetBoostTimeLimit(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetBoostRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetBoostRight)
+	if s.server.erupeConfig.GameplayOptions.DisableBoostTime {
+		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		return
+	}
 	boostLimit, err := s.server.charRepo.ReadTime(s.charID, "boost_time", time.Time{})
 	if err != nil {
 		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
