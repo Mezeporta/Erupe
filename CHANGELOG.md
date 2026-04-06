@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Added migration `0010_fix_zero_rasta_id` to heal characters whose `rasta_id` was clobbered to `0` by the pre-fix `SaveMercenary` bug ([#163](https://github.com/Mezeporta/Erupe/issues/163)). Sets `rasta_id = NULL` for affected rows so silent save failures auto-resolve on upgrade.
 - Fixed quest tune-value filter silently dropping user-configured multipliers set to `0.0`: previously setting e.g. `ZennyMultiplier: 0.0` would strip the entry from the table and fall back to the client's default (100%), producing the opposite of the intended "no zenny" configuration. The `Value > 0` filter in `handleMsgMhfEnumerateQuest` has been removed so zero values are now sent verbatim. Affects HRP/SRP/GRP/GSRP/Zenny/GZenny/Material/GMaterial/GCP/GUrgent multipliers and their NC variants.
 - Fixed float32 truncation in quest multiplier conversion: `uint16(0.20 * 100)` yielded `19` instead of `20` because `float32(0.20) ≈ 0.19999998`. Replaced with a `multiplierToTuneValue` helper that rounds via `math.Round`. Applied to all 18 multiplier call sites.
 - Fixed `DisableLoginBoost` and `DisableBoostTime` config flags not fully honored ([#187](https://github.com/Mezeporta/Erupe/issues/187)): `GetBoostTimeLimit`/`GetBoostRight` now respect `DisableBoostTime` and `UseKeepLoginBoost` now respects `DisableLoginBoost`. Also fixes a zero-`time.Time` wraparound in `GetBoostTimeLimit` that made the "Boost Time" overlay appear on fresh characters.
