@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.3.2] - 2026-04-06
+
 ### Added
 
 - `protbot` gains `--action boost` and `--action gacha` scenarios for non-destructive live-server regression testing of #187 and #175 fixes. `gacha --roll` opts in to actually rolling a paid gacha.
