@@ -581,7 +581,7 @@ func createTestServerWithDB(t *testing.T, db *sqlx.DB) *Server {
 	server.charRepo = NewCharacterRepository(db)
 	server.guildRepo = NewGuildRepository(db)
 	server.userRepo = NewUserRepository(db)
-	server.gachaRepo = NewGachaRepository(db)
+	server.gachaRepo = NewGachaRepository(db, nil)
 	server.houseRepo = NewHouseRepository(db)
 	server.festaRepo = NewFestaRepository(db)
 	server.towerRepo = NewTowerRepository(db)

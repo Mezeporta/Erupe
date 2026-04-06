@@ -6,17 +6,22 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 )
 
 // GachaRepository centralizes all database access for gacha-related tables
 // (gacha_shop, gacha_entries, gacha_items, gacha_stepup, gacha_box).
 type GachaRepository struct {
-	db *sqlx.DB
+	db     *sqlx.DB
+	logger *zap.Logger
 }
 
 // NewGachaRepository creates a new GachaRepository.
-func NewGachaRepository(db *sqlx.DB) *GachaRepository {
-	return &GachaRepository{db: db}
+func NewGachaRepository(db *sqlx.DB, logger *zap.Logger) *GachaRepository {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	return &GachaRepository{db: db, logger: logger}
 }
 
 // GetEntryForTransaction reads the cost type/amount and roll count for a gacha transaction.
@@ -65,9 +70,12 @@ func (r *GachaRepository) GetItemsForEntry(entryID uint32) ([]GachaItem, error) 
 	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var item GachaItem
-		if err := rows.StructScan(&item); err == nil {
-			items = append(items, item)
+		if err := rows.StructScan(&item); err != nil {
+			r.logger.Warn("Skipping gacha_items row that failed to scan — check item_type (≤255) and item_id/quantity (≤65535) for out-of-range values",
+				zap.Uint32("entryID", entryID), zap.Error(err))
+			continue
 		}
+		items = append(items, item)
 	}
 	return items, nil
 }
@@ -85,9 +93,12 @@ func (r *GachaRepository) GetGuaranteedItems(rollType uint8, gachaID uint32) ([]
 	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var item GachaItem
-		if err := rows.StructScan(&item); err == nil {
-			items = append(items, item)
+		if err := rows.StructScan(&item); err != nil {
+			r.logger.Warn("Skipping guaranteed gacha_items row that failed to scan — check item_type (≤255) and item_id/quantity (≤65535) for out-of-range values",
+				zap.Uint8("rollType", rollType), zap.Uint32("gachaID", gachaID), zap.Error(err))
+			continue
 		}
+		items = append(items, item)
 	}
 	return items, nil
 }

@@ -149,7 +149,7 @@ func NewServer(config *Config) *Server {
 	s.charRepo = NewCharacterRepository(config.DB)
 	s.guildRepo = NewGuildRepository(config.DB)
 	s.userRepo = NewUserRepository(config.DB)
-	s.gachaRepo = NewGachaRepository(config.DB)
+	s.gachaRepo = NewGachaRepository(config.DB, s.logger)
 	s.houseRepo = NewHouseRepository(config.DB)
 	s.festaRepo = NewFestaRepository(config.DB)
 	s.towerRepo = NewTowerRepository(config.DB)

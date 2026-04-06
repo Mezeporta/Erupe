@@ -333,7 +333,7 @@ func SetTestDB(s *Server, db *sqlx.DB) {
 	s.charRepo = NewCharacterRepository(db)
 	s.guildRepo = NewGuildRepository(db)
 	s.userRepo = NewUserRepository(db)
-	s.gachaRepo = NewGachaRepository(db)
+	s.gachaRepo = NewGachaRepository(db, nil)
 	s.houseRepo = NewHouseRepository(db)
 	s.festaRepo = NewFestaRepository(db)
 	s.towerRepo = NewTowerRepository(db)

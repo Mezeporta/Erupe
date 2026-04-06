@@ -13,7 +13,7 @@ func setupGachaRepo(t *testing.T) (*GachaRepository, *sqlx.DB, uint32) {
 	db := SetupTestDB(t)
 	userID := CreateTestUser(t, db, "gacha_test_user")
 	charID := CreateTestCharacter(t, db, userID, "GachaChar")
-	repo := NewGachaRepository(db)
+	repo := NewGachaRepository(db, nil)
 	t.Cleanup(func() { TeardownTestDB(t, db) })
 	return repo, db, charID
 }
