@@ -231,7 +231,9 @@ func TestHandleMsgMhfGetBoostTimeLimit(t *testing.T) {
 
 	handleMsgMhfGetBoostTimeLimit(session, pkt)
 
-	// This handler sends two responses (doAckBufSucceed + doAckSimpleSucceed)
+	// One response: the stray second ACK (doAckSimpleSucceed) was removed
+	// because it fired with the same ack handle as the real buf ACK, which
+	// is a protocol bug.
 	count := 0
 	for {
 		select {
@@ -242,8 +244,8 @@ func TestHandleMsgMhfGetBoostTimeLimit(t *testing.T) {
 		}
 	}
 done:
-	if count != 2 {
-		t.Errorf("Expected 2 response packets, got %d", count)
+	if count != 1 {
+		t.Errorf("Expected 1 response packet, got %d", count)
 	}
 }
 

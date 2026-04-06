@@ -392,6 +392,27 @@ func TestLoadColumnWithDefaultExistingData(t *testing.T) {
 	}
 }
 
+// TestLoadColumnWithDefaultEmptyBytea verifies that an empty bytea ('\x', len 0)
+// is treated the same as NULL and returns the default value. Without this, the
+// postgres driver returns a non-nil empty slice that would reach the client
+// as a zero-byte ACK payload and crash the MHF gacha menu (see #175).
+func TestLoadColumnWithDefaultEmptyBytea(t *testing.T) {
+	repo, db, charID := setupCharRepo(t)
+
+	if _, err := db.Exec("UPDATE characters SET skin_hist=''::bytea WHERE id=$1", charID); err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	defaultVal := []byte{0x00, 0x01, 0x02}
+	got, err := repo.LoadColumnWithDefault(charID, "skin_hist", defaultVal)
+	if err != nil {
+		t.Fatalf("LoadColumnWithDefault failed: %v", err)
+	}
+	if len(got) != 3 || got[0] != 0x00 || got[2] != 0x02 {
+		t.Errorf("Expected default value for empty bytea, got: %x", got)
+	}
+}
+
 func TestSetDeleted(t *testing.T) {
 	repo, db, charID := setupCharRepo(t)
 

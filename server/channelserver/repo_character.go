@@ -167,7 +167,11 @@ func (r *CharacterRepository) LoadColumnWithDefault(charID uint32, column string
 	if err != nil {
 		return defaultVal, err
 	}
-	if data == nil {
+	// Treat empty bytea ('\x', len 0) the same as NULL. The postgres driver
+	// returns a non-nil empty slice for empty bytea, so a bare `data == nil`
+	// check would send zero bytes to the client — which the MHF client
+	// interprets as a malformed response and crashes on (see #175).
+	if len(data) == 0 {
 		return defaultVal, nil
 	}
 	return data, nil

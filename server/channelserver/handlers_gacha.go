@@ -84,7 +84,9 @@ func handleMsgMhfUseGachaPoint(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfReceiveGachaItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReceiveGachaItem)
 	data, err := s.server.charRepo.LoadColumnWithDefault(s.charID, "gacha_items", []byte{0x00})
-	if err != nil {
+	if err != nil || len(data) == 0 {
+		// The client requires at least one byte (the item count) or it
+		// treats the response as malformed and crashes (see #175).
 		data = []byte{0x00}
 	}
 

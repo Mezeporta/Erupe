@@ -227,7 +227,6 @@ func handleMsgMhfGetBoostTimeLimit(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(uint32(boostLimit.Unix()))
 	}
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
-	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfGetBoostRight(s *Session, p mhfpacket.MHFPacket) {
