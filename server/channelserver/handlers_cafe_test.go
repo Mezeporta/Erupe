@@ -584,3 +584,52 @@ func TestHandleMsgMhfGetCafeDuration_ZZClient(t *testing.T) {
 	handleMsgMhfGetCafeDuration(s, pkt)
 	<-s.sendPackets
 }
+
+// ackBufPayload extracts the payload bytes from a queued buffered-ack packet.
+// Layout: opcode(u16) + ackHandle(u32) + isBuf(u8) + err(u8) + len(u16) + data.
+func ackBufPayload(t *testing.T, data []byte) []byte {
+	t.Helper()
+	const headerLen = 10
+	if len(data) < headerLen {
+		t.Fatalf("ack packet too short: %d bytes", len(data))
+	}
+	return data[headerLen:]
+}
+
+// Regression for #187: GetBoostTimeLimit must return 0 when DisableBoostTime
+// is set, overriding any stored boost_time.
+func TestHandleMsgMhfGetBoostTimeLimit_DisableBoostTime(t *testing.T) {
+	server := createMockServer()
+	server.erupeConfig.GameplayOptions.DisableBoostTime = true
+	charMock := newMockCharacterRepo()
+	charMock.times["boost_time"] = time.Now().Add(1 * time.Hour)
+	server.charRepo = charMock
+	session := createMockSession(1, server)
+
+	handleMsgMhfGetBoostTimeLimit(session, &mhfpacket.MsgMhfGetBoostTimeLimit{AckHandle: 100})
+
+	p := <-session.sendPackets
+	payload := ackBufPayload(t, p.data)
+	if len(payload) != 4 || payload[0] != 0 || payload[1] != 0 || payload[2] != 0 || payload[3] != 0 {
+		t.Errorf("expected zero uint32 payload, got %x", payload)
+	}
+}
+
+// Regression for #187: GetBoostRight must report "no right" when disabled.
+func TestHandleMsgMhfGetBoostRight_DisableBoostTime(t *testing.T) {
+	server := createMockServer()
+	server.erupeConfig.GameplayOptions.DisableBoostTime = true
+	charMock := newMockCharacterRepo()
+	charMock.times["boost_time"] = time.Now().Add(1 * time.Hour)
+	server.charRepo = charMock
+	session := createMockSession(1, server)
+
+	handleMsgMhfGetBoostRight(session, &mhfpacket.MsgMhfGetBoostRight{AckHandle: 100})
+
+	p := <-session.sendPackets
+	payload := ackBufPayload(t, p.data)
+	want := []byte{0x00, 0x00, 0x00, 0x00}
+	if len(payload) != 4 || payload[0] != want[0] || payload[1] != want[1] || payload[2] != want[2] || payload[3] != want[3] {
+		t.Errorf("expected %x, got %x", want, payload)
+	}
+}

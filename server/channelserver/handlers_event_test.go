@@ -448,6 +448,29 @@ func TestHandleMsgMhfUseKeepLoginBoost(t *testing.T) {
 	}
 }
 
+// Regression for #187: UseKeepLoginBoost must not activate a boost when
+// DisableLoginBoost is set. Response payload must be all zeros (no expiration).
+func TestHandleMsgMhfUseKeepLoginBoost_Disabled(t *testing.T) {
+	srv := createMockServer()
+	srv.erupeConfig.GameplayOptions.DisableLoginBoost = true
+	srv.eventRepo = &mockEventRepo{}
+	s := createMockSession(100, srv)
+
+	handleMsgMhfUseKeepLoginBoost(s, &mhfpacket.MsgMhfUseKeepLoginBoost{AckHandle: 1, BoostWeekUsed: 5})
+
+	p := <-s.sendPackets
+	payload := ackBufPayload(t, p.data)
+	// Expect 5 zero bytes: status u8 + expiration u32, all zero.
+	if len(payload) != 5 {
+		t.Fatalf("expected 5-byte payload, got %d", len(payload))
+	}
+	for i, b := range payload {
+		if b != 0 {
+			t.Errorf("payload[%d] = %#x, want 0", i, b)
+		}
+	}
+}
+
 func TestHandleMsgMhfLoadScenarioData(t *testing.T) {
 	srv := createMockServer()
 	srv.charRepo = newMockCharacterRepo()
