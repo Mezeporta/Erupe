@@ -7,6 +7,8 @@
 //	protbot --sign-addr 127.0.0.1:53312 --user test --pass test --action session
 //	protbot --sign-addr 127.0.0.1:53312 --user test --pass test --action chat --message "Hello"
 //	protbot --sign-addr 127.0.0.1:53312 --user test --pass test --action quests
+//	protbot --sign-addr 127.0.0.1:53312 --user test --pass test --action boost
+//	protbot --sign-addr 127.0.0.1:53312 --user test --pass test --action gacha --gacha-id 1 --roll-type 0
 package main
 
 import (
@@ -24,8 +26,12 @@ func main() {
 	signAddr := flag.String("sign-addr", "127.0.0.1:53312", "Sign server address (host:port)")
 	user := flag.String("user", "", "Username")
 	pass := flag.String("pass", "", "Password")
-	action := flag.String("action", "login", "Action to perform: login, lobby, session, chat, quests, achievement")
+	action := flag.String("action", "login", "Action to perform: login, lobby, session, chat, quests, achievement, boost, gacha")
 	message := flag.String("message", "", "Chat message to send (used with --action chat)")
+	gachaID := flag.Uint("gacha-id", 1, "Gacha ID to roll (used with --action gacha)")
+	rollType := flag.Uint("roll-type", 0, "Gacha roll type: 0=single, 1=ten-pull (used with --action gacha)")
+	gachaType := flag.Uint("gacha-type", 0, "Gacha type code (used with --action gacha)")
+	doRoll := flag.Bool("roll", false, "Actually perform a paid roll (default: only inspect gacha state)")
 	flag.Parse()
 
 	if *user == "" || *pass == "" {
@@ -210,8 +216,121 @@ func main() {
 
 		_ = scenario.Logout(result.Channel)
 
+	case "boost":
+		result, err := scenario.Login(*signAddr, *user, *pass)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "login failed: %v\n", err)
+			os.Exit(1)
+		}
+		charID := result.Sign.CharIDs[0]
+		if _, err := scenario.SetupSession(result.Channel, charID); err != nil {
+			fmt.Fprintf(os.Stderr, "session setup failed: %v\n", err)
+			_ = result.Channel.Close()
+			os.Exit(1)
+		}
+		if err := scenario.EnterLobby(result.Channel); err != nil {
+			fmt.Fprintf(os.Stderr, "enter lobby failed: %v\n", err)
+			_ = result.Channel.Close()
+			os.Exit(1)
+		}
+
+		// Boost time inspection (#187): confirm GetBoostTimeLimit returns 0
+		// for a fresh character when DisableBoostTime is either set or when
+		// the character has never started a boost.
+		limit, err := scenario.GetBoostTimeLimit(result.Channel)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "get boost time limit failed: %v\n", err)
+		} else {
+			fmt.Printf("[boost] BoostLimitUnix = %d", limit.BoostLimitUnix)
+			if limit.BoostLimitUnix == 0 {
+				fmt.Println("  (inactive/disabled — #187 fix OK)")
+			} else {
+				fmt.Printf("  (active until %s)\n", time.Unix(int64(limit.BoostLimitUnix), 0))
+			}
+		}
+
+		right, err := scenario.GetBoostRight(result.Channel)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "get boost right failed: %v\n", err)
+		} else {
+			fmt.Printf("[boost] BoostRight = %d (0=disabled, 1=active, 2=available)\n", right.State)
+		}
+
+		login, err := scenario.GetKeepLoginBoostStatus(result.Channel)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "get login boost status failed: %v\n", err)
+		} else {
+			allZero := true
+			for _, e := range login.Entries {
+				if e.WeekReq != 0 || e.Active || e.WeekCount != 0 || e.Expiration != 0 {
+					allZero = false
+				}
+				fmt.Printf("[boost] login-boost week=%d active=%v count=%d exp=%d\n",
+					e.WeekReq, e.Active, e.WeekCount, e.Expiration)
+			}
+			if allZero {
+				fmt.Println("[boost] all entries zeroed — DisableLoginBoost honored (#187 fix OK)")
+			}
+		}
+		_ = scenario.Logout(result.Channel)
+
+	case "gacha":
+		result, err := scenario.Login(*signAddr, *user, *pass)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "login failed: %v\n", err)
+			os.Exit(1)
+		}
+		charID := result.Sign.CharIDs[0]
+		if _, err := scenario.SetupSession(result.Channel, charID); err != nil {
+			fmt.Fprintf(os.Stderr, "session setup failed: %v\n", err)
+			_ = result.Channel.Close()
+			os.Exit(1)
+		}
+		if err := scenario.EnterLobby(result.Channel); err != nil {
+			fmt.Fprintf(os.Stderr, "enter lobby failed: %v\n", err)
+			_ = result.Channel.Close()
+			os.Exit(1)
+		}
+
+		// Gacha state inspection (#175, 6fa07ae). By default do NOT roll —
+		// we just snapshot existing gacha points and pending items. Pass
+		// --roll to exercise the full PLAY_NORMAL_GACHA path against a
+		// configured gacha_id.
+		pts, err := scenario.GetGachaPoint(result.Channel)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "get gacha point failed: %v\n", err)
+		} else {
+			fmt.Printf("[gacha] Points: premium=%d trial=%d frontier=%d\n",
+				pts.Premium, pts.Trial, pts.Frontier)
+		}
+
+		stored, err := scenario.ReceiveGachaItem(result.Channel, 36, true)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "receive gacha item failed: %v\n", err)
+		} else {
+			fmt.Printf("[gacha] %d item(s) pending in temp storage (freeze=true, not cleared)\n", len(stored))
+			for _, it := range stored {
+				fmt.Printf("  type=%d id=%d qty=%d\n", it.ItemType, it.ItemID, it.Quantity)
+			}
+		}
+
+		if *doRoll {
+			rewards, err := scenario.PlayNormalGacha(result.Channel,
+				uint32(*gachaID), uint8(*rollType), uint8(*gachaType))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "play normal gacha failed: %v\n", err)
+			} else {
+				fmt.Printf("[gacha] Rolled %d reward(s):\n", len(rewards))
+				for _, r := range rewards {
+					fmt.Printf("  type=%d id=%d qty=%d rarity=%d\n",
+						r.ItemType, r.ItemID, r.Quantity, r.Rarity)
+				}
+			}
+		}
+		_ = scenario.Logout(result.Channel)
+
 	default:
-		fmt.Fprintf(os.Stderr, "unknown action: %s (supported: login, lobby, session, chat, quests, achievement)\n", *action)
+		fmt.Fprintf(os.Stderr, "unknown action: %s (supported: login, lobby, session, chat, quests, achievement, boost, gacha)\n", *action)
 		os.Exit(1)
 	}
 }

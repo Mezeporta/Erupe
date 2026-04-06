@@ -265,6 +265,87 @@ func BuildDisplayedAchievementPacket() []byte {
 	return bf.Data()
 }
 
+// BuildSimpleAckPacket builds a packet whose body is just an ack handle.
+// Used by several trivial query packets (boost time, gacha point, ...).
+//
+//	uint16 opcode
+//	uint32 ackHandle
+//	0x00 0x10 terminator
+func BuildSimpleAckPacket(opcode uint16, ackHandle uint32) []byte {
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(opcode)
+	bf.WriteUint32(ackHandle)
+	bf.WriteBytes([]byte{0x00, 0x10})
+	return bf.Data()
+}
+
+// BuildStartBoostTimePacket builds a MSG_MHF_START_BOOST_TIME packet.
+func BuildStartBoostTimePacket(ackHandle uint32) []byte {
+	return BuildSimpleAckPacket(MSG_MHF_START_BOOST_TIME, ackHandle)
+}
+
+// BuildGetBoostTimeLimitPacket builds a MSG_MHF_GET_BOOST_TIME_LIMIT packet.
+func BuildGetBoostTimeLimitPacket(ackHandle uint32) []byte {
+	return BuildSimpleAckPacket(MSG_MHF_GET_BOOST_TIME_LIMIT, ackHandle)
+}
+
+// BuildGetBoostRightPacket builds a MSG_MHF_GET_BOOST_RIGHT packet.
+func BuildGetBoostRightPacket(ackHandle uint32) []byte {
+	return BuildSimpleAckPacket(MSG_MHF_GET_BOOST_RIGHT, ackHandle)
+}
+
+// BuildGetKeepLoginBoostStatusPacket builds a MSG_MHF_GET_KEEP_LOGIN_BOOST_STATUS packet.
+func BuildGetKeepLoginBoostStatusPacket(ackHandle uint32) []byte {
+	return BuildSimpleAckPacket(MSG_MHF_GET_KEEP_LOGIN_BOOST_STATUS, ackHandle)
+}
+
+// BuildGetGachaPointPacket builds a MSG_MHF_GET_GACHA_POINT packet.
+func BuildGetGachaPointPacket(ackHandle uint32) []byte {
+	return BuildSimpleAckPacket(MSG_MHF_GET_GACHA_POINT, ackHandle)
+}
+
+// BuildPlayNormalGachaPacket builds a MSG_MHF_PLAY_NORMAL_GACHA packet.
+// Layout mirrors Erupe's MsgMhfPlayNormalGacha.Parse:
+//
+//	uint16 opcode
+//	uint32 ackHandle
+//	uint32 gachaID
+//	uint8  rollType (0=single, 1=ten-pull)
+//	uint8  gachaType
+//	0x00 0x10 terminator
+func BuildPlayNormalGachaPacket(ackHandle, gachaID uint32, rollType, gachaType uint8) []byte {
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(MSG_MHF_PLAY_NORMAL_GACHA)
+	bf.WriteUint32(ackHandle)
+	bf.WriteUint32(gachaID)
+	bf.WriteUint8(rollType)
+	bf.WriteUint8(gachaType)
+	bf.WriteBytes([]byte{0x00, 0x10})
+	return bf.Data()
+}
+
+// BuildReceiveGachaItemPacket builds a MSG_MHF_RECEIVE_GACHA_ITEM packet.
+// Layout mirrors Erupe's MsgMhfReceiveGachaItem.Parse:
+//
+//	uint16 opcode
+//	uint32 ackHandle
+//	uint8  max
+//	uint8  freeze (bool; if non-zero, server does not clear the stored items)
+//	0x00 0x10 terminator
+func BuildReceiveGachaItemPacket(ackHandle uint32, max uint8, freeze bool) []byte {
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(MSG_MHF_RECEIVE_GACHA_ITEM)
+	bf.WriteUint32(ackHandle)
+	bf.WriteUint8(max)
+	if freeze {
+		bf.WriteUint8(1)
+	} else {
+		bf.WriteUint8(0)
+	}
+	bf.WriteBytes([]byte{0x00, 0x10})
+	return bf.Data()
+}
+
 // BuildGetWeeklySchedulePacket builds a MSG_MHF_GET_WEEKLY_SCHEDULE packet.
 //
 //	uint16 opcode
