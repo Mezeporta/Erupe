@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Dashboard channel ports now reflect the actual configured `Entrance.Entries[].Channels[].Port` instead of a hardcoded `54000 + server_id`.
 - Fixed backup recovery panic: `recoverFromBackups` now rejects decompressed backup data smaller than the minimum save layout size, preventing a slice-bounds panic when nullcomp passes through garbage bytes as "already decompressed" data ([#182](https://github.com/Mezeporta/Erupe/pull/182)).
+- Fixed save-time panic and character rollback on Forward.5 / Forward.4 / Season 6.0 clients: bookshelf was introduced after Forward.5 (verified against the F5 client binary), so the configured pointers overshoot the smaller save blob. The bookshelf read is now bounds-checked and skipped when absent; persistence via house packets is unaffected.
 
 ## [9.3.2] - 2026-04-06
 

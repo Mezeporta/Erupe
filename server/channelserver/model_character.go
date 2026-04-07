@@ -188,7 +188,16 @@ func (save *CharacterSaveData) updateStructWithSaveData() {
 			save.RP = binary.LittleEndian.Uint16(save.decompSave[save.Pointers[pRP] : save.Pointers[pRP]+saveFieldRP])
 			save.HouseTier = save.decompSave[save.Pointers[pHouseTier] : save.Pointers[pHouseTier]+saveFieldHouseTier]
 			save.HouseData = save.decompSave[save.Pointers[pHouseData] : save.Pointers[pHouseData]+saveFieldHouseData]
-			save.BookshelfData = save.decompSave[save.Pointers[pBookshelfData] : save.Pointers[pBookshelfData]+save.Pointers[lBookshelfData]]
+			// Bookshelf was introduced after Forward.5 (verified: F5 mhfo.dll
+			// contains no Bookshelf symbols, while modern clients export
+			// .?AVBookshelfForm@@). For F4/F5/S6 the configured pointers
+			// place the bookshelf region past the end of the save blob, so
+			// skip the read entirely on those versions. Bookshelf state is
+			// persisted via house packets into user_binary.bookshelf, not
+			// from this blob, so leaving BookshelfData nil is safe.
+			if bsEnd := save.Pointers[pBookshelfData] + save.Pointers[lBookshelfData]; bsEnd <= len(save.decompSave) {
+				save.BookshelfData = save.decompSave[save.Pointers[pBookshelfData]:bsEnd]
+			}
 			save.GalleryData = save.decompSave[save.Pointers[pGalleryData] : save.Pointers[pGalleryData]+saveFieldGallery]
 			save.ToreData = save.decompSave[save.Pointers[pToreData] : save.Pointers[pToreData]+saveFieldTore]
 			save.GardenData = save.decompSave[save.Pointers[pGardenData] : save.Pointers[pGardenData]+saveFieldGarden]
