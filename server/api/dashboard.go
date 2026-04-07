@@ -82,6 +82,20 @@ func (s *APIServer) DashboardStatsJSON(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Build a map from server_id to configured port, mirroring main.go's
+	// sid assignment: sid = (4096 + si*256) + (16 + ci) where si is the
+	// entrance entry index and ci is the channel index within that entry.
+	// Disabled channels still increment ci, matching main.go.
+	portByServerID := make(map[int]uint16)
+	if s.erupeConfig != nil {
+		for si, ee := range s.erupeConfig.Entrance.Entries {
+			for ci, ce := range ee.Channels {
+				sid := (4096 + si*256) + (16 + ci)
+				portByServerID[sid] = ce.Port
+			}
+		}
+	}
+
 	// Query channel info from servers table.
 	if s.db != nil {
 		rows, err := s.db.Query("SELECT server_id, current_players, world_name, land FROM servers ORDER BY server_id")
@@ -100,9 +114,13 @@ func (s *APIServer) DashboardStatsJSON(w http.ResponseWriter, r *http.Request) {
 				if worldName != nil {
 					name = *worldName
 				}
+				port := 0
+				if p, ok := portByServerID[serverID]; ok {
+					port = int(p)
+				}
 				ch := ChannelInfo{
 					Name:    name,
-					Port:    54000 + serverID,
+					Port:    port,
 					Players: players,
 				}
 				stats.Channels = append(stats.Channels, ch)
