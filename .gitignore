@@ -37,6 +37,9 @@ deploy.sh
 # Test/build artifacts
 coverage.out
 
+# Local save blob dumps (PII)
+tmp/
+
 # Claude Code local config
 .claude/
 CLAUDE.local.md

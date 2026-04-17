@@ -28,6 +28,13 @@ const (
 	pGRP
 	pKQF
 	lBookshelfData
+	// Offsets sourced from Chakratos/mhf-save-manager (ZZ layout), validated
+	// against live G6-ZZ blobs. F5 / G1-G5.2 values from that project have
+	// not been verified and are intentionally left unmapped here.
+	pZenny
+	pGZenny
+	pCP
+	pCurrentEquip
 )
 
 // CharacterSaveData holds a character's save data and its parsed fields.
@@ -52,6 +59,9 @@ type CharacterSaveData struct {
 	HR            uint16
 	GR            uint16
 	KQF           []byte
+	Zenny         uint32
+	GZenny        uint32
+	CP            uint32
 
 	compSave   []byte
 	decompSave []byte
@@ -74,6 +84,11 @@ func getPointers(mode cfg.Mode) map[SavePointer]int {
 		pointers[pGardenData] = 142424
 		pointers[pRP] = 142614
 		pointers[pKQF] = 146720
+		// Validated against a live HR999 ZZ save blob (see tests).
+		pointers[pZenny] = 0xB0
+		pointers[pGZenny] = 0x1FF64
+		pointers[pCP] = 0x212E4
+		pointers[pCurrentEquip] = 0x1F604
 	case cfg.Z2, cfg.Z1, cfg.G101, cfg.G10, cfg.G91, cfg.G9, cfg.G81, cfg.G8,
 		cfg.G7, cfg.G61, cfg.G6, cfg.G52, cfg.G51, cfg.G5, cfg.GG, cfg.G32, cfg.G31,
 		cfg.G3, cfg.G2, cfg.G1:
@@ -174,6 +189,12 @@ const (
 	saveFieldKQF        = 8
 	saveFieldNameOffset = 88
 	saveFieldNameLen    = 12
+	saveFieldZenny      = 4
+	saveFieldGZenny     = 4
+	saveFieldCP         = 4
+	// current_equip is a ~2.4KB equipment record; we expose the offset but do
+	// not extract a fixed-size slice until its exact length is reverse-
+	// engineered. Leave extraction as a follow-up.
 )
 
 func (save *CharacterSaveData) updateStructWithSaveData() {
@@ -212,6 +233,20 @@ func (save *CharacterSaveData) updateStructWithSaveData() {
 			}
 			if save.Mode >= cfg.G10 {
 				save.KQF = save.decompSave[save.Pointers[pKQF] : save.Pointers[pKQF]+saveFieldKQF]
+			}
+			// Read zenny / gzenny / CP only when a pointer is configured for
+			// the current mode. Unmapped versions (e.g. S6, F4/F5, G1-G5.2)
+			// leave the pointer at zero; we guard with the ok check and an
+			// additional offset != 0 check so a bare default map cannot cause
+			// bogus reads from the blob header.
+			if off, ok := save.Pointers[pZenny]; ok && off > 0 && off+saveFieldZenny <= len(save.decompSave) {
+				save.Zenny = binary.LittleEndian.Uint32(save.decompSave[off : off+saveFieldZenny])
+			}
+			if off, ok := save.Pointers[pGZenny]; ok && off > 0 && off+saveFieldGZenny <= len(save.decompSave) {
+				save.GZenny = binary.LittleEndian.Uint32(save.decompSave[off : off+saveFieldGZenny])
+			}
+			if off, ok := save.Pointers[pCP]; ok && off > 0 && off+saveFieldCP <= len(save.decompSave) {
+				save.CP = binary.LittleEndian.Uint32(save.decompSave[off : off+saveFieldCP])
 			}
 		}
 	}
