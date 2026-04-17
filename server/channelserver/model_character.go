@@ -171,6 +171,18 @@ func (save *CharacterSaveData) updateSaveDataWithStruct() {
 	if save.Mode >= cfg.G10 {
 		copy(save.decompSave[save.Pointers[pKQF]:save.Pointers[pKQF]+saveFieldKQF], save.KQF)
 	}
+	// Write zenny / gzenny / CP only when a validated pointer exists for the
+	// current mode. Same guards as the read path: absent or zero offsets are
+	// never written, so unmapped versions cannot corrupt unrelated bytes.
+	if off, ok := save.Pointers[pZenny]; ok && off > 0 && off+saveFieldZenny <= len(save.decompSave) {
+		binary.LittleEndian.PutUint32(save.decompSave[off:off+saveFieldZenny], save.Zenny)
+	}
+	if off, ok := save.Pointers[pGZenny]; ok && off > 0 && off+saveFieldGZenny <= len(save.decompSave) {
+		binary.LittleEndian.PutUint32(save.decompSave[off:off+saveFieldGZenny], save.GZenny)
+	}
+	if off, ok := save.Pointers[pCP]; ok && off > 0 && off+saveFieldCP <= len(save.decompSave) {
+		binary.LittleEndian.PutUint32(save.decompSave[off:off+saveFieldCP], save.CP)
+	}
 }
 
 // This will update the save struct with the values stored in the character save
