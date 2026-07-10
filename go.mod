@@ -10,7 +10,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/spf13/viper v1.17.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/crypto v0.51.0
+	golang.org/x/crypto v0.52.0
 	golang.org/x/text v0.37.0
 )
 
