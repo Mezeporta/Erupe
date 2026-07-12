@@ -365,9 +365,46 @@ func TestHandleMsgSysHideClient(t *testing.T) {
 				Hide: tt.hide,
 			}
 
-			// Should not panic (handler is empty)
 			handleMsgSysHideClient(s, pkt)
+
+			if got := s.hidden.Load(); got != tt.hide {
+				t.Errorf("s.hidden = %v, want %v", got, tt.hide)
+			}
 		})
+	}
+}
+
+// TestHandleMsgSysEnumerateClient_HiddenExcluded verifies that a session
+// marked hidden via MsgSysHideClient is left out of the "All" enumeration
+// seen by other clients in the same stage.
+func TestHandleMsgSysEnumerateClient_HiddenExcluded(t *testing.T) {
+	mock := &MockCryptConn{sentPackets: make([][]byte, 0)}
+	s := createTestSession(mock)
+
+	stage := NewStage("hidden_test_stage")
+	visible := createMockSession(100, s.server)
+	hidden := createMockSession(200, s.server)
+	hidden.hidden.Store(true)
+	stage.clients[visible] = 100
+	stage.clients[hidden] = 200
+	s.server.stages.Store("hidden_test_stage", stage)
+
+	pkt := &mhfpacket.MsgSysEnumerateClient{
+		AckHandle: 1234,
+		StageID:   "hidden_test_stage",
+		Get:       0,
+	}
+
+	handleMsgSysEnumerateClient(s, pkt)
+
+	ackPkt := <-s.sendPackets
+	bf := byteframe.NewByteFrameFromBytes(ackPkt.data[10:])
+	count := bf.ReadUint16()
+	if count != 1 {
+		t.Fatalf("client count = %d, want 1 (hidden session should be excluded)", count)
+	}
+	if got := bf.ReadUint32(); got != 100 {
+		t.Errorf("enumerated charID = %d, want 100 (the visible session)", got)
 	}
 }
 
@@ -552,7 +589,6 @@ func TestEmptyHandlers_ClientsGo(t *testing.T) {
 		fn   func()
 	}{
 		{"handleMsgMhfShutClient", func() { handleMsgMhfShutClient(session, nil) }},
-		{"handleMsgSysHideClient", func() { handleMsgSysHideClient(session, nil) }},
 	}
 
 	for _, tt := range tests {

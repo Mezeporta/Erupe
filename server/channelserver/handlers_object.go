@@ -38,7 +38,28 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 	s.stage.BroadcastMHF(dupObjUpdate, s)
 }
 
-func handleMsgSysDeleteObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+// handleMsgSysDeleteObject removes the sender's own synced stage object and
+// relays the deletion to the rest of the stage, mirroring the same
+// remove-then-broadcast pattern already used server-side when a client
+// leaves a stage (see removeSessionFromStage). A client may only delete the
+// object it owns -- the requested ObjID must match the object on record for
+// the sender's charID, or the request is dropped.
+func handleMsgSysDeleteObject(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgSysDeleteObject)
+
+	s.stage.Lock()
+	object, ok := s.stage.objects[s.charID]
+	if ok && object.id == pkt.ObjID {
+		delete(s.stage.objects, s.charID)
+	} else {
+		ok = false
+	}
+	s.stage.Unlock()
+
+	if ok {
+		s.stage.BroadcastMHF(pkt, s)
+	}
+}
 
 func handleMsgSysPositionObject(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysPositionObject)

@@ -166,4 +166,14 @@ func handleMsgMhfGetUdTacticsRanking(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSetUdTacticsFollower(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgMhfGetUdTacticsLog(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+// handleMsgMhfGetUdTacticsLog was previously a bare stub, which meant it sent
+// no ack at all -- since the packet carries an AckHandle, that silence is a
+// client softlock (see CLAUDE.md's ack requirement), not just a missing
+// feature. The real log entry format hasn't been reverse engineered yet, so
+// this returns an empty result via the same "no results" convention used
+// elsewhere in this file (e.g. handleMsgMhfGetUdTacticsRemainingPoint)
+// rather than fabricate a layout.
+func handleMsgMhfGetUdTacticsLog(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfGetUdTacticsLog)
+	stubEnumerateNoResults(s, pkt.AckHandle)
+}

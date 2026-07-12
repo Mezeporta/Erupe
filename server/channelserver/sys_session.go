@@ -81,6 +81,7 @@ type Session struct {
 
 	Name           string
 	closed         atomic.Bool
+	hidden         atomic.Bool // Set via MsgSysHideClient; excludes this session from MsgSysEnumerateClient's "All" results.
 	ackStart       map[uint32]time.Time
 	captureConn    *pcap.RecordingConn // non-nil when capture is active
 	captureCleanup func()              // Called on session close to flush/close capture file

@@ -23,7 +23,10 @@ func handleMsgSysEnumerateClient(s *Session, p mhfpacket.MHFPacket) {
 	var clients []uint32
 	switch pkt.Get {
 	case 0: // All
-		for _, cid := range stage.clients {
+		for session, cid := range stage.clients {
+			if session.hidden.Load() {
+				continue
+			}
 			clients = append(clients, cid)
 		}
 		for cid := range stage.reservedClientSlots {
@@ -111,4 +114,11 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfShutClient(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
-func handleMsgSysHideClient(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+// handleMsgSysHideClient toggles whether this session is included in
+// MsgSysEnumerateClient's "All" results for others in the same stage. The
+// client sends this around menu/private-area transitions (e.g. opening the
+// storage box); it carries no ack.
+func handleMsgSysHideClient(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgSysHideClient)
+	s.hidden.Store(pkt.Hide)
+}

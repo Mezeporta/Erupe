@@ -1111,7 +1111,6 @@ func TestEmptyHandlers_Concurrent(t *testing.T) {
 		handleMsgSysInfokyserver,
 		handleMsgMhfGetCaUniqueID,
 		handleMsgSysSetStatus,
-		handleMsgSysDeleteObject,
 		handleMsgSysRotateObject,
 		handleMsgSysDuplicateObject,
 		handleMsgSysGetObjectBinary,
@@ -1119,7 +1118,6 @@ func TestEmptyHandlers_Concurrent(t *testing.T) {
 		handleMsgSysUpdateObjectBinary,
 		handleMsgSysCleanupObject,
 		handleMsgMhfShutClient,
-		handleMsgSysHideClient,
 		handleMsgSysStageDestruct,
 	}
 

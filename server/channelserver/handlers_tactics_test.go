@@ -179,19 +179,6 @@ func TestHandleMsgMhfSetUdTacticsFollower(t *testing.T) {
 	handleMsgMhfSetUdTacticsFollower(session, nil)
 }
 
-func TestHandleMsgMhfGetUdTacticsLog(t *testing.T) {
-	server := createMockServer()
-	session := createMockSession(1, server)
-
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgMhfGetUdTacticsLog panicked: %v", r)
-		}
-	}()
-
-	handleMsgMhfGetUdTacticsLog(session, nil)
-}
-
 // Tests consolidated from handlers_coverage3_test.go
 
 func TestSimpleAckHandlers_TacticsGo(t *testing.T) {
@@ -250,6 +237,9 @@ func TestNonTrivialHandlers_TacticsGo(t *testing.T) {
 		{"handleMsgMhfGetUdTacticsRanking", func(s *Session) {
 			handleMsgMhfGetUdTacticsRanking(s, &mhfpacket.MsgMhfGetUdTacticsRanking{AckHandle: 1})
 		}},
+		{"handleMsgMhfGetUdTacticsLog", func(s *Session) {
+			handleMsgMhfGetUdTacticsLog(s, &mhfpacket.MsgMhfGetUdTacticsLog{AckHandle: 1})
+		}},
 	}
 
 	for _, tt := range tests {
@@ -277,7 +267,6 @@ func TestEmptyHandlers_MiscFiles_Tactics(t *testing.T) {
 		fn   func()
 	}{
 		{"handleMsgMhfSetUdTacticsFollower", func() { handleMsgMhfSetUdTacticsFollower(session, nil) }},
-		{"handleMsgMhfGetUdTacticsLog", func() { handleMsgMhfGetUdTacticsLog(session, nil) }},
 	}
 
 	for _, tt := range tests {

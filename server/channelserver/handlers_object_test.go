@@ -151,14 +151,51 @@ func TestHandleMsgSysDeleteObject(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	// Should not panic (empty handler)
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgSysDeleteObject panicked: %v", r)
-		}
-	}()
+	stage := NewStage("test_stage")
+	session.stage = stage
 
-	handleMsgSysDeleteObject(session, nil)
+	session2 := createMockSession(2, server)
+	session2.stage = stage
+	stage.clients[session] = session.charID
+	stage.clients[session2] = session2.charID
+
+	stage.objects[session.charID] = &Object{
+		id:          1,
+		ownerCharID: session.charID,
+	}
+
+	handleMsgSysDeleteObject(session, &mhfpacket.MsgSysDeleteObject{ObjID: 1})
+
+	if _, ok := stage.objects[session.charID]; ok {
+		t.Error("object should have been removed from the stage")
+	}
+
+	select {
+	case <-session2.sendPackets:
+		// Good - broadcast received
+	default:
+		t.Error("deletion should be broadcast to other sessions")
+	}
+}
+
+// TestHandleMsgSysDeleteObject_WrongObjID verifies a client can't delete an
+// object it doesn't own by guessing a mismatched ObjID.
+func TestHandleMsgSysDeleteObject_WrongObjID(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	stage := NewStage("test_stage")
+	session.stage = stage
+	stage.objects[session.charID] = &Object{
+		id:          1,
+		ownerCharID: session.charID,
+	}
+
+	handleMsgSysDeleteObject(session, &mhfpacket.MsgSysDeleteObject{ObjID: 999})
+
+	if _, ok := stage.objects[session.charID]; !ok {
+		t.Error("object should not have been removed for a mismatched ObjID")
+	}
 }
 
 func TestHandleMsgSysRotateObject(t *testing.T) {
@@ -380,7 +417,6 @@ func TestEmptyHandlers_ObjectGo(t *testing.T) {
 		name string
 		fn   func()
 	}{
-		{"handleMsgSysDeleteObject", func() { handleMsgSysDeleteObject(session, nil) }},
 		{"handleMsgSysRotateObject", func() { handleMsgSysRotateObject(session, nil) }},
 		{"handleMsgSysDuplicateObject", func() { handleMsgSysDuplicateObject(session, nil) }},
 		{"handleMsgSysGetObjectBinary", func() { handleMsgSysGetObjectBinary(session, nil) }},
