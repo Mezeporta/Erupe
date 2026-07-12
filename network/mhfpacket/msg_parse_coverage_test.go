@@ -346,15 +346,6 @@ func TestParseCoverage_EmptyPackets(t *testing.T) {
 func TestParseCoverage_NotImplemented2(t *testing.T) {
 	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
 
-	t.Run("MsgSysGetObjectOwner_Parse", func(t *testing.T) {
-		bf := byteframe.NewByteFrame()
-		pkt := &MsgSysGetObjectOwner{}
-		err := pkt.Parse(bf, ctx)
-		if err == nil {
-			t.Error("expected NOT IMPLEMENTED error")
-		}
-	})
-
 	t.Run("MsgSysUpdateRight_Parse", func(t *testing.T) {
 		bf := byteframe.NewByteFrame()
 		pkt := &MsgSysUpdateRight{}

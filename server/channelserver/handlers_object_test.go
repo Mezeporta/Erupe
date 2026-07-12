@@ -202,14 +202,50 @@ func TestHandleMsgSysRotateObject(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	// Should not panic (empty handler)
+	stage := NewStage("test_stage")
+	session.stage = stage
+
+	session2 := createMockSession(2, server)
+	session2.stage = stage
+	stage.clients[session] = session.charID
+	stage.clients[session2] = session2.charID
+
+	stage.objects[session.charID] = &Object{
+		id:          1,
+		ownerCharID: session.charID,
+	}
+
+	pkt := &mhfpacket.MsgSysRotateObject{ObjID: 1, Rotation: 1.5707963}
+	handleMsgSysRotateObject(session, pkt)
+
+	obj := stage.objects[session.charID]
+	if obj.rotation != 1.5707963 {
+		t.Errorf("Object rotation not updated: got %f, want 1.5707963", obj.rotation)
+	}
+
+	select {
+	case <-session2.sendPackets:
+		// Good - broadcast received
+	default:
+		t.Error("Rotation update should be broadcast to other sessions")
+	}
+}
+
+func TestHandleMsgSysRotateObject_NoObject(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	stage := NewStage("test_stage")
+	session.stage = stage
+	stage.clients[session] = session.charID
+
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("handleMsgSysRotateObject panicked: %v", r)
+			t.Errorf("handleMsgSysRotateObject panicked with non-existent object: %v", r)
 		}
 	}()
 
-	handleMsgSysRotateObject(session, nil)
+	handleMsgSysRotateObject(session, &mhfpacket.MsgSysRotateObject{ObjID: 999, Rotation: 0})
 }
 
 func TestHandleMsgSysDuplicateObject(t *testing.T) {
@@ -229,29 +265,58 @@ func TestHandleMsgSysDuplicateObject(t *testing.T) {
 func TestHandleMsgSysGetObjectBinary(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
+	stage := NewStage("test_stage")
+	session.stage = stage
 
-	// Should not panic (empty handler)
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgSysGetObjectBinary panicked: %v", r)
+	handleMsgSysGetObjectBinary(session, &mhfpacket.MsgSysGetObjectBinary{AckHandle: 42, ObjID: 1})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data (the ack header, even with an empty payload)")
 		}
-	}()
-
-	handleMsgSysGetObjectBinary(session, nil)
+	default:
+		t.Error("No response packet queued")
+	}
 }
 
 func TestHandleMsgSysGetObjectOwner(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	// Should not panic (empty handler)
+	stage := NewStage("test_stage")
+	session.stage = stage
+	stage.objects[session.charID] = &Object{
+		id:          1,
+		ownerCharID: session.charID,
+	}
+
+	handleMsgSysGetObjectOwner(session, &mhfpacket.MsgSysGetObjectOwner{AckHandle: 42, ObjID: 1})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
+}
+
+func TestHandleMsgSysGetObjectOwner_NotFound(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	stage := NewStage("test_stage")
+	session.stage = stage
+
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("handleMsgSysGetObjectOwner panicked: %v", r)
+			t.Errorf("handleMsgSysGetObjectOwner panicked for unknown ObjID: %v", r)
 		}
 	}()
 
-	handleMsgSysGetObjectOwner(session, nil)
+	handleMsgSysGetObjectOwner(session, &mhfpacket.MsgSysGetObjectOwner{AckHandle: 42, ObjID: 999})
 }
 
 func TestHandleMsgSysUpdateObjectBinary(t *testing.T) {
@@ -417,10 +482,7 @@ func TestEmptyHandlers_ObjectGo(t *testing.T) {
 		name string
 		fn   func()
 	}{
-		{"handleMsgSysRotateObject", func() { handleMsgSysRotateObject(session, nil) }},
 		{"handleMsgSysDuplicateObject", func() { handleMsgSysDuplicateObject(session, nil) }},
-		{"handleMsgSysGetObjectBinary", func() { handleMsgSysGetObjectBinary(session, nil) }},
-		{"handleMsgSysGetObjectOwner", func() { handleMsgSysGetObjectOwner(session, nil) }},
 		{"handleMsgSysUpdateObjectBinary", func() { handleMsgSysUpdateObjectBinary(session, nil) }},
 		{"handleMsgSysCleanupObject", func() { handleMsgSysCleanupObject(session, nil) }},
 	}

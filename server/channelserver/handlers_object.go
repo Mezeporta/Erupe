@@ -84,7 +84,21 @@ func handleMsgSysPositionObject(s *Session, p mhfpacket.MHFPacket) {
 	s.stage.BroadcastMHF(pkt, s)
 }
 
-func handleMsgSysRotateObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+// handleMsgSysRotateObject mirrors handleMsgSysPositionObject's pattern:
+// update the sender's own synced stage object and re-broadcast the same
+// packet to the rest of the stage so other clients turn the model to match.
+func handleMsgSysRotateObject(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgSysRotateObject)
+
+	s.stage.Lock()
+	object, ok := s.stage.objects[s.charID]
+	if ok {
+		object.rotation = pkt.Rotation
+	}
+	s.stage.Unlock()
+
+	s.stage.BroadcastMHF(pkt, s)
+}
 
 func handleMsgSysDuplicateObject(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 
@@ -104,9 +118,38 @@ func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
 	*/
 }
 
-func handleMsgSysGetObjectBinary(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+// handleMsgSysGetObjectBinary answers a request for another stage object's
+// synced binary state. Erupe doesn't persist per-object binary payloads yet
+// (see handleMsgSysSetObjectBinary's PS3-endianness caveat above), so this
+// always acks a zero-length result -- the same "not found" shape the PC
+// client itself falls back to when its local lookup misses (decompiled
+// pkt_handler_MSG_SYS_GET_OBJECT_BINARY replies with a zero-length payload
+// rather than an error ack), so a real client handles this gracefully.
+func handleMsgSysGetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgSysGetObjectBinary)
+	doAckBufSucceed(s, pkt.AckHandle, []byte{})
+}
 
-func handleMsgSysGetObjectOwner(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+// handleMsgSysGetObjectOwner answers a request for the owning character of a
+// stage object, resolved from the same s.stage.objects map handleMsgSysCreateObject
+// populates and handleMsgSysDeleteObject prunes.
+func handleMsgSysGetObjectOwner(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgSysGetObjectOwner)
+
+	var ownerCharID uint32
+	s.stage.RLock()
+	for _, object := range s.stage.objects {
+		if object.id == pkt.ObjID {
+			ownerCharID = object.ownerCharID
+			break
+		}
+	}
+	s.stage.RUnlock()
+
+	resp := byteframe.NewByteFrame()
+	resp.WriteUint32(ownerCharID)
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+}
 
 func handleMsgSysUpdateObjectBinary(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
 

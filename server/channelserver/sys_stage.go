@@ -64,6 +64,7 @@ type Object struct {
 	id          uint32
 	ownerCharID uint32
 	x, y, z     float32
+	rotation    float32
 }
 
 // stageBinaryKey is a struct used as a map key for identifying a stage binary part.

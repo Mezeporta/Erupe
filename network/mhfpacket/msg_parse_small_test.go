@@ -43,11 +43,9 @@ func TestParseSmallNotImplemented(t *testing.T) {
 		{"MsgSysDeleteMutex", &MsgSysDeleteMutex{}},
 		{"MsgSysEnumlobby", &MsgSysEnumlobby{}},
 		{"MsgSysEnumuser", &MsgSysEnumuser{}},
-		{"MsgSysGetObjectBinary", &MsgSysGetObjectBinary{}},
 		{"MsgSysGetState", &MsgSysGetState{}},
 		{"MsgSysInfokyserver", &MsgSysInfokyserver{}},
 		{"MsgSysOpenMutex", &MsgSysOpenMutex{}},
-		{"MsgSysRotateObject", &MsgSysRotateObject{}},
 		{"MsgSysSerialize", &MsgSysSerialize{}},
 		{"MsgSysTransBinary", &MsgSysTransBinary{}},
 	}
@@ -218,6 +216,68 @@ func TestParseSmallGetExtraInfoAndCogInfo(t *testing.T) {
 			t.Errorf("AckHandle = 0x%X, want 0xCAFEBABE", pkt.AckHandle)
 		}
 	})
+}
+
+// TestParseSmallRotateObject tests Parse for MsgSysRotateObject (ObjID + Rotation).
+func TestParseSmallRotateObject(t *testing.T) {
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint32(0x1002)
+	bf.WriteFloat32(1.5707963)
+	_, _ = bf.Seek(0, io.SeekStart)
+
+	pkt := &MsgSysRotateObject{}
+	if err := pkt.Parse(bf, ctx); err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	if pkt.ObjID != 0x1002 {
+		t.Errorf("ObjID = 0x%X, want 0x1002", pkt.ObjID)
+	}
+	if pkt.Rotation != 1.5707963 {
+		t.Errorf("Rotation = %v, want 1.5707963", pkt.Rotation)
+	}
+}
+
+// TestParseSmallGetObjectOwner tests Parse for MsgSysGetObjectOwner (AckHandle + ObjID).
+func TestParseSmallGetObjectOwner(t *testing.T) {
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint32(0xAAAA)
+	bf.WriteUint32(0x1002)
+	_, _ = bf.Seek(0, io.SeekStart)
+
+	pkt := &MsgSysGetObjectOwner{}
+	if err := pkt.Parse(bf, ctx); err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	if pkt.AckHandle != 0xAAAA {
+		t.Errorf("AckHandle = 0x%X, want 0xAAAA", pkt.AckHandle)
+	}
+	if pkt.ObjID != 0x1002 {
+		t.Errorf("ObjID = 0x%X, want 0x1002", pkt.ObjID)
+	}
+}
+
+// TestParseSmallGetObjectBinary tests Parse for MsgSysGetObjectBinary
+// (AckHandle + Unk0 + ObjID).
+func TestParseSmallGetObjectBinary(t *testing.T) {
+	ctx := &clientctx.ClientContext{RealClientMode: cfg.ZZ}
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint32(0xAAAA)
+	bf.WriteUint32(0)
+	bf.WriteUint32(0x1002)
+	_, _ = bf.Seek(0, io.SeekStart)
+
+	pkt := &MsgSysGetObjectBinary{}
+	if err := pkt.Parse(bf, ctx); err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	if pkt.AckHandle != 0xAAAA {
+		t.Errorf("AckHandle = 0x%X, want 0xAAAA", pkt.AckHandle)
+	}
+	if pkt.ObjID != 0x1002 {
+		t.Errorf("ObjID = 0x%X, want 0x1002", pkt.ObjID)
+	}
 }
 
 // TestParseSmallNotImplementedDoesNotPanic ensures that calling Parse on NOT IMPLEMENTED
