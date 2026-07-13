@@ -934,8 +934,8 @@ func TestGolden_MinimalQuestBinaryLayout(t *testing.T) {
 	assertByte(t, data, rewardPtr, 1, "reward header[0].tableID")
 	assertByte(t, data, rewardPtr+1, 0, "reward header[0].pad1")
 	assertU16(t, data, rewardPtr+2, 0, "reward header[0].pad2")
-	// headerArraySize = 1×8 + 2 = 10
-	assertU32(t, data, rewardPtr+4, 10, "reward header[0].tableOffset")
+	// headerArraySize = 1×8 + 2 = 10; tableOffset is absolute (rewardPtr + 10)
+	assertU32(t, data, rewardPtr+4, uint32(rewardPtr+10), "reward header[0].tableOffset")
 	assertU16(t, data, rewardPtr+8, 0xFFFF, "reward header terminator")
 	itemsBase := rewardPtr + 10
 	assertU16(t, data, itemsBase, 50, "reward[0].items[0].rate")

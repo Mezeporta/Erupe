@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `DebugOptions.DivaOverride` had no registered default, so it fell back to Go's zero value (`0`) — which the diva handler treats as "force an empty/inactive schedule", not neutral. Diva Defense appeared completely absent to players on any server that didn't explicitly set it to `-1`. Default is now `-1`, matching `FestaOverride`.
 - `common/decryption.UnpackSimple` only implemented JPK type 3 (LZ) decompression; type 4 (HFI: Huffman+LZ) payloads were returned unchanged, so `rengoku_data.bin` files built with HFI compression failed structural validation at startup (`rengoku: invalid magic 4a 4b 52 1a` — the untouched JKR container header) even though the raw file was still served correctly to clients. Added an HFI decoder so the startup summary (floor/spawn-table/monster counts) now parses correctly for both compression types.
+- `ParseQuestBinary`/`CompileQuestJSON` treated a reward table's item-list pointer as relative to the reward section, but every retail quest binary stores it as an absolute file offset — `parseRewardTables` overshot past EOF on every single retail `.bin` (`reward item list truncated`), making JSON conversion of retail quests impossible. Parser and builder now agree on absolute offsets, matching `questfile.bin.hexpat`.
 
 ## [9.4.0] - 2026-07-13
 

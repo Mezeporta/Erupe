@@ -509,7 +509,7 @@ func CompileQuestJSON(data []byte, lang string) ([]byte, error) {
 
 	// Reward tables: compute size.
 	rewardPtr := afterSupply
-	rewardBuf := buildRewardTables(q.Rewards)
+	rewardBuf := buildRewardTables(q.Rewards, rewardPtr)
 	afterRewards := align4(rewardPtr + uint32(len(rewardBuf)))
 
 	// Large monster spawns: each is 60 bytes + 1-byte terminator.
@@ -1057,7 +1057,11 @@ func CompileQuestJSON(data []byte, lang string) ([]byte, error) {
 //
 //	RewardTable[] { u8 tableId, u8 pad, u16 pad, u32 tableOffset } terminated by int16(-1)
 //	RewardItem[]  { u16 rate, u16 item, u16 quantity }             terminated by int16(-1)
-func buildRewardTables(tables []QuestRewardTableJSON) []byte {
+//
+// basePtr is the absolute file offset of the reward section (rewardPtr in the
+// header); tableOffset is an absolute file offset, matching retail quest
+// binaries (see parseRewardTables).
+func buildRewardTables(tables []QuestRewardTableJSON, basePtr uint32) []byte {
 	if len(tables) == 0 {
 		// Empty: just the terminator.
 		b := [2]byte{0xFF, 0xFF}
@@ -1071,8 +1075,7 @@ func buildRewardTables(tables []QuestRewardTableJSON) []byte {
 	headerArraySize := uint32(len(tables)*8 + 2)
 
 	for _, t := range tables {
-		// tableOffset is relative to the start of rewardPtr in the file.
-		tableOffset := headerArraySize + uint32(itemData.Len())
+		tableOffset := basePtr + headerArraySize + uint32(itemData.Len())
 
 		headers.WriteByte(t.TableID)
 		headers.WriteByte(0)      // padding

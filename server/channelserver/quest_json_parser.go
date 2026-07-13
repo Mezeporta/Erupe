@@ -411,7 +411,10 @@ func readSupplySlots(data []byte, off, n int) []QuestSupplyItemJSON {
 
 // parseRewardTables reads the reward table array starting at baseOff.
 // Header array: {u8 tableId, u8 pad, u16 pad, u32 tableOffset} per entry,
-// terminated by int16(-1). tableOffset is relative to baseOff.
+// terminated by int16(-1). tableOffset is an absolute offset into the file
+// (confirmed against retail quest binaries and the questfile.bin.hexpat
+// pattern, which places RewardItem[] directly `@ tableOffset` with no base
+// added), not relative to baseOff.
 // Each item list: {u16 rate, u16 item, u16 quantity} terminated by int16(-1).
 func parseRewardTables(data []byte, baseOff int) ([]QuestRewardTableJSON, error) {
 	var tables []QuestRewardTableJSON
@@ -427,7 +430,7 @@ func parseRewardTables(data []byte, baseOff int) ([]QuestRewardTableJSON, error)
 			return nil, fmt.Errorf("reward table header entry truncated at 0x%X", off)
 		}
 		tableID := data[off]
-		tableOff := int(binary.LittleEndian.Uint32(data[off+4:])) + baseOff
+		tableOff := int(binary.LittleEndian.Uint32(data[off+4:]))
 		off += 8
 
 		items, err := parseRewardItems(data, tableOff)
