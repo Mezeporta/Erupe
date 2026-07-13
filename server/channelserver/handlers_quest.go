@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"encoding/binary"
+	"errors"
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/decryption"
 	ps "erupe-ce/common/pascalstring"
@@ -9,6 +10,7 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"os"
 	"path/filepath"
@@ -16,6 +18,12 @@ import (
 
 	"go.uber.org/zap"
 )
+
+// errFileNotFound distinguishes "no matching .bin/.json exists on disk" from
+// other I/O failures (permissions, a bad mount, etc.) in loadQuestBinary/
+// loadScenarioBinary, so callers can log an accurate "not found" message
+// instead of a generic "failed to open" for what is actually missing data.
+var errFileNotFound = errors.New("file not found")
 
 type tuneValue struct {
 	ID    uint16
@@ -109,7 +117,11 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 		filename := fmt.Sprintf("%d_0_0_0_S%d_T%d_C%d", pkt.ScenarioIdentifer.CategoryID, pkt.ScenarioIdentifer.MainID, pkt.ScenarioIdentifer.Flags, pkt.ScenarioIdentifer.ChapterID)
 		data, err := loadScenarioBinary(s, filename)
 		if err != nil {
-			s.logger.Error("Failed to open scenario file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", filename), zap.Error(err))
+			msg := "Failed to read scenario file"
+			if errors.Is(err, errFileNotFound) {
+				msg = "Scenario file not found"
+			}
+			s.logger.Error(msg, zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", filename), zap.Error(err))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
@@ -128,7 +140,11 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 
 		data, err := loadQuestBinary(s, pkt.Filename)
 		if err != nil {
-			s.logger.Error("Failed to open quest file", zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", pkt.Filename), zap.Error(err))
+			msg := "Failed to read quest file"
+			if errors.Is(err, errFileNotFound) {
+				msg = "Quest file not found"
+			}
+			s.logger.Error(msg, zap.String("binPath", s.server.erupeConfig.BinPath), zap.String("filename", pkt.Filename), zap.Error(err))
 			doAckBufFail(s, pkt.AckHandle, nil)
 			return
 		}
@@ -159,6 +175,9 @@ func loadQuestBinary(s *Session, filename string) ([]byte, error) {
 
 	jsonData, err := os.ReadFile(base + ".json")
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("%w: tried %s.bin and %s.json", errFileNotFound, base, base)
+		}
 		return nil, err
 	}
 	compiled, err := CompileQuestJSON(jsonData, s.Lang())
@@ -179,6 +198,9 @@ func loadScenarioBinary(s *Session, filename string) ([]byte, error) {
 
 	jsonData, err := os.ReadFile(base + ".json")
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("%w: tried %s.bin and %s.json", errFileNotFound, base, base)
+		}
 		return nil, err
 	}
 	compiled, err := CompileScenarioJSON(jsonData, s.Lang())
