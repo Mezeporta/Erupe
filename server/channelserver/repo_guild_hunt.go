@@ -56,6 +56,10 @@ func (r *GuildRepository) ListGuildHunts(guildID, charID uint32) ([]*TreasureHun
 
 // CreateHunt inserts a new guild treasure hunt.
 func (r *GuildRepository) CreateHunt(guildID, hostID, destination, level uint32, huntData []byte, catsUsed string) error {
+	if huntData == nil {
+		// hunt_data is NOT NULL; a nil slice must not reach the driver as SQL NULL.
+		huntData = []byte{}
+	}
 	_, err := r.db.Exec(
 		`INSERT INTO guild_hunts (guild_id, host_id, destination, level, hunt_data, cats_used) VALUES ($1, $2, $3, $4, $5, $6)`,
 		guildID, hostID, destination, level, huntData, catsUsed)
