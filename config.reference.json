@@ -49,7 +49,7 @@
     "LogOutboundMessages": false,
     "LogMessageData": false,
     "MaxHexdumpLength": 256,
-    "DivaOverride": 0,
+    "DivaOverride": -1,
     "FestaOverride": -1,
     "TournamentOverride": 0,
     "DisableTokenCheck": false,

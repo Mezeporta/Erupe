@@ -390,6 +390,7 @@ func registerDefaults() {
 
 	// DebugOptions (dot-notation for per-field merge)
 	viper.SetDefault("DebugOptions.MaxHexdumpLength", 256)
+	viper.SetDefault("DebugOptions.DivaOverride", -1)
 	viper.SetDefault("DebugOptions.FestaOverride", -1)
 	viper.SetDefault("DebugOptions.AutoQuestBackport", true)
 	viper.SetDefault("DebugOptions.CapLink", CapLinkOptions{

@@ -561,6 +561,15 @@ func TestMinimalConfigDefaults(t *testing.T) {
 		t.Errorf("Courses = %d, want 11", len(cfg.Courses))
 	}
 
+	// Event overrides must default to -1 (off); 0 is a debug sentinel
+	// meaning "force an inactive/empty schedule" in the diva/festa handlers.
+	if cfg.DebugOptions.DivaOverride != -1 {
+		t.Errorf("DebugOptions.DivaOverride = %d, want -1", cfg.DebugOptions.DivaOverride)
+	}
+	if cfg.DebugOptions.FestaOverride != -1 {
+		t.Errorf("DebugOptions.FestaOverride = %d, want -1", cfg.DebugOptions.FestaOverride)
+	}
+
 	// Standard ports
 	if cfg.Sign.Port != 53312 {
 		t.Errorf("Sign.Port = %d, want 53312", cfg.Sign.Port)
