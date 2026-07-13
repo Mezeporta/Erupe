@@ -71,7 +71,7 @@ jobs:
       uses: actions/checkout@v6
 
     - name: Log in to the Container registry
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
@@ -79,7 +79,7 @@ jobs:
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
-      uses: docker/metadata-action@v5
+      uses: docker/metadata-action@v6
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
@@ -88,7 +88,7 @@ jobs:
 
     - name: Build and push Docker image
       id: push
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: .
         push: true
@@ -96,7 +96,7 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
 
     - name: Generate artifact attestation
-      uses: actions/attest-build-provenance@v2
+      uses: actions/attest-build-provenance@v4
       with:
         subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         subject-digest: ${{ steps.push.outputs.digest }}
@@ -120,7 +120,7 @@ jobs:
       run: cp server/migrations/sql/0001_init.sql SCHEMA.sql
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         generate_release_notes: true
         body: |
