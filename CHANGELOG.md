@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.4.0] - 2026-07-13
+
 ### Added
 
 - Reverse-engineered user binary data types from `mhfo-hd.dll` via Ghidra: type 1 = character name (max 17B SJIS), type 2 = player profile with self-introduction (208B), type 3 = equipment/appearance snapshot (384B). Added structured parsing with size validation warnings to `handleMsgSysSetUserBinary`.
@@ -32,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Parse and write zenny, gzenny and caravan points (CP) in the ZZ character save blob (offsets 0xB0, 0x1FF64, 0x212E4 — sourced from Chakratos/mhf-save-manager, validated against a live HR999 save). Exposed as `CharacterSaveData.Zenny/GZenny/CP` alongside the existing `current_equip` pointer. Write path is byte-idempotent (verified against a live blob). Pre-ZZ modes remain unmapped to avoid corrupting unverified layouts.
 - Chinese (`zh`) language strings for chat commands, guild mails, cafe/timer broadcasts and prayer beads. Note: Shift-JIS wire encoding only covers characters shared with Japanese — simplified-only glyphs may fail to encode.
 - Server-side multi-language support ([#188](https://github.com/Mezeporta/Erupe/issues/188)): each player picks their own language with `!lang <en|jp|fr|es|zh>`, persisted per user (migration `0022_user_language`) and loaded on login. Chat replies, guild invite mails, and cafe/timer broadcasts are served in that language via `Session.I18n()`. Quest and scenario JSON text fields now accept either a plain string (unchanged) or a `{"jp":"...","en":"...","fr":"..."}` map; the compiler resolves per session and the quest cache is keyed by `(questID, lang)`. Existing single-language JSONs and `.bin` round-trips remain byte-identical. Shift-JIS wire encoding still applies (ASCII/kana/CJK only). Raviente world-wide broadcasts stay on the server default since they have no single session.
+- `GET /v2/server/info` REST endpoint for launcher compatibility checks: returns the server's configured `clientMode` (raw, e.g. `G10.1`) and a `manifestId` normalized to match `mhf-outpost` manifest IDs (lowercase, dots stripped, e.g. `g101`), so launcher tools can warn users before connecting with a mismatched client version. No auth required.
 
 ### Changed
 
