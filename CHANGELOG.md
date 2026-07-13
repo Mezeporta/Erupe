@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `DebugOptions.QuestTools`'s `MSG_SYS_CAST_BINARY` quest-payload logging now also dumps the full raw hex (plus sender char ID) alongside the existing best-effort XYZ decode, so the real struct layout can be read directly instead of guessed. Used this to confirm the payload bundles one position record per party slot (player + AI companions), each tagged with an incrementing slot ID — the existing fixed-offset decode was only ever reading slot 1.
+
 ### Fixed
 
 - `DebugOptions.DivaOverride` had no registered default, so it fell back to Go's zero value (`0`) — which the diva handler treats as "force an empty/inactive schedule", not neutral. Diva Defense appeared completely absent to players on any server that didn't explicitly set it to `-1`. Default is now `-1`, matching `FestaOverride`.

@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"encoding/hex"
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/token"
 	"erupe-ce/network/binpacket"
@@ -56,6 +57,15 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 
 	if s.server.erupeConfig.DebugOptions.QuestTools {
 		if pkt.BroadcastType == BroadcastTypeStage && pkt.MessageType == BinaryMessageTypeQuest && len(pkt.RawDataPayload) > 32 {
+			// Temporary raw dump to find the real struct layout (entity ID,
+			// how many coord triples, where the guessed offset-20 read
+			// actually lands) -- the offset-20 decode below is a guess that's
+			// "only correct most of the time", this is the ground truth.
+			s.logger.Debug("QuestBinaryRaw",
+				zap.Uint32("charID", uint32(s.charID)),
+				zap.Int("len", len(pkt.RawDataPayload)),
+				zap.String("hex", hex.EncodeToString(pkt.RawDataPayload)),
+			)
 			// This is only correct most of the time
 			tmp.ReadBytes(20)
 			tmp.SetLE()
