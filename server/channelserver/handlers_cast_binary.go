@@ -1,6 +1,8 @@
 package channelserver
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/token"
@@ -57,22 +59,28 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 
 	if s.server.erupeConfig.DebugOptions.QuestTools {
 		if pkt.BroadcastType == BroadcastTypeStage && pkt.MessageType == BinaryMessageTypeQuest && len(pkt.RawDataPayload) > 32 {
-			// Temporary raw dump to find the real struct layout (entity ID,
-			// how many coord triples, where the guessed offset-20 read
-			// actually lands) -- the offset-20 decode below is a guess that's
-			// "only correct most of the time", this is the ground truth.
+			// Temporary raw dump to find the real struct layout -- ground
+			// truth for the decode below.
 			s.logger.Debug("QuestBinaryRaw",
 				zap.Uint32("charID", uint32(s.charID)),
 				zap.Int("len", len(pkt.RawDataPayload)),
 				zap.String("hex", hex.EncodeToString(pkt.RawDataPayload)),
 			)
-			// This is only correct most of the time
-			tmp.ReadBytes(20)
-			tmp.SetLE()
-			x := tmp.ReadFloat32()
-			y := tmp.ReadFloat32()
-			z := tmp.ReadFloat32()
-			s.logger.Debug("Coord", zap.Float32s("XYZ", []float32{x, y, z}))
+			// Party-slot records are tagged 0x0N020030 (LE) at their own
+			// offset 0, N = party slot 1-4, with XYZ at record-relative
+			// offset 8-19. Locate slot 1's own record explicitly instead of
+			// blindly reading a fixed offset 20: a fixed read there aliases
+			// a different entity's own XYZ (e.g. the 0x7c000108 marker's,
+			// which starts at offset 12) whenever this payload isn't a
+			// plain party-slot message, silently logging the wrong entity's
+			// position as "Coord".
+			slot1ID := []byte{0x30, 0x00, 0x02, 0x01}
+			if idx := bytes.Index(pkt.RawDataPayload, slot1ID); idx != -1 && len(pkt.RawDataPayload) >= idx+20 {
+				x := math.Float32frombits(binary.LittleEndian.Uint32(pkt.RawDataPayload[idx+8:]))
+				y := math.Float32frombits(binary.LittleEndian.Uint32(pkt.RawDataPayload[idx+12:]))
+				z := math.Float32frombits(binary.LittleEndian.Uint32(pkt.RawDataPayload[idx+16:]))
+				s.logger.Debug("Coord", zap.Float32s("XYZ", []float32{x, y, z}))
+			}
 		}
 	}
 
