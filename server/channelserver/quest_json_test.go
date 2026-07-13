@@ -435,6 +435,33 @@ func TestRoundTrip_MultipleMonsters(t *testing.T) {
 	roundTrip(t, "multiple monsters", string(b))
 }
 
+func TestRoundTrip_MaxMonsters(t *testing.T) {
+	var q QuestJSON
+	_ = json.Unmarshal([]byte(minimalQuestJSON), &q)
+	q.LargeMonsters = []QuestMonsterJSON{
+		{ID: 11, SpawnAmount: 1, SpawnStage: 5, Orientation: 180, X: 1500.0, Y: 0.0, Z: -2000.0},
+		{ID: 37, SpawnAmount: 2, SpawnStage: 3, Orientation: 90, X: 0.0, Y: 50.0, Z: 300.0},
+		{ID: 62, SpawnAmount: 1, SpawnStage: 1, Orientation: 0, X: 100.0, Y: 0.0, Z: 0.0},
+		{ID: 90, SpawnAmount: 1, SpawnStage: 2, Orientation: 45, X: -100.0, Y: 25.0, Z: 50.0},
+		{ID: 103, SpawnAmount: 1, SpawnStage: 3, Orientation: 270, X: 200.0, Y: -25.0, Z: -50.0},
+	}
+	b, _ := json.Marshal(q)
+	roundTrip(t, "max monsters (5)", string(b))
+}
+
+func TestCompileQuestJSON_TooManyMonsters(t *testing.T) {
+	var q QuestJSON
+	_ = json.Unmarshal([]byte(minimalQuestJSON), &q)
+	q.LargeMonsters = make([]QuestMonsterJSON, maxLargeMonsters+1)
+	for i := range q.LargeMonsters {
+		q.LargeMonsters[i] = QuestMonsterJSON{ID: uint8(i + 1), SpawnAmount: 1, SpawnStage: 1}
+	}
+	b, _ := json.Marshal(q)
+	if _, err := CompileQuestJSON(b, ""); err == nil {
+		t.Fatal("expected error for more than maxLargeMonsters spawns, got nil")
+	}
+}
+
 func TestRoundTrip_MultipleRewardTables(t *testing.T) {
 	var q QuestJSON
 	_ = json.Unmarshal([]byte(minimalQuestJSON), &q)
@@ -946,28 +973,55 @@ func TestGolden_MinimalQuestBinaryLayout(t *testing.T) {
 	assertU16(t, data, itemsBase+10, 1, "reward[0].items[1].quantity")
 	assertU16(t, data, itemsBase+12, 0xFFFF, "reward item terminator")
 
-	// ── Large monster spawn ──────────────────────────────────────────────
+	// ── Large monster pointer block ──────────────────────────────────────
 	largeMonsterPtr := int(binary.LittleEndian.Uint32(data[0x18:]))
-	assertByte(t, data, largeMonsterPtr, 11, "monster[0].id")
-	assertByte(t, data, largeMonsterPtr+1, 0, "monster[0].pad1")
-	assertByte(t, data, largeMonsterPtr+2, 0, "monster[0].pad2")
-	assertByte(t, data, largeMonsterPtr+3, 0, "monster[0].pad3")
-	assertU32(t, data, largeMonsterPtr+4, 1, "monster[0].spawnAmount")
-	assertU32(t, data, largeMonsterPtr+8, 5, "monster[0].spawnStage")
-	for i := 0; i < 16; i++ {
-		assertByte(t, data, largeMonsterPtr+0x0C+i, 0, "monster[0].pad16")
+	assertU32(t, data, largeMonsterPtr, 1, "monsterBlock.header lo (retail constant)")
+	assertU32(t, data, largeMonsterPtr+4, 0, "monsterBlock.header hi")
+	idsPtr := int(binary.LittleEndian.Uint32(data[largeMonsterPtr+8:]))
+	spawnsPtr := int(binary.LittleEndian.Uint32(data[largeMonsterPtr+12:]))
+	if idsPtr != largeMonsterPtr+16 {
+		t.Errorf("monsterIDsPtr = 0x%X, want 0x%X", idsPtr, largeMonsterPtr+16)
 	}
-	assertU32(t, data, largeMonsterPtr+0x1C, 180, "monster[0].orientation")
-	assertF32(t, data, largeMonsterPtr+0x20, 1500.0, "monster[0].x")
-	assertF32(t, data, largeMonsterPtr+0x24, 0.0, "monster[0].y")
-	assertF32(t, data, largeMonsterPtr+0x28, -2000.0, "monster[0].z")
-	for i := 0; i < 16; i++ {
-		assertByte(t, data, largeMonsterPtr+0x2C+i, 0, "monster[0].trailing_pad")
+	if spawnsPtr != idsPtr+maxLargeMonsters*4 {
+		t.Errorf("monsterSpawnsPtr = 0x%X, want 0x%X", spawnsPtr, idsPtr+maxLargeMonsters*4)
 	}
-	assertByte(t, data, largeMonsterPtr+60, 0xFF, "monster list terminator")
+
+	// IDs array: slot 0 used (id=11), remaining slots zero.
+	assertByte(t, data, idsPtr, 11, "monsterIDs[0]")
+	for i := 1; i < maxLargeMonsters; i++ {
+		assertU32(t, data, idsPtr+i*4, 0, "monsterIDs unused slot")
+	}
+
+	// Spawn array: slot 0 populated.
+	assertByte(t, data, spawnsPtr, 11, "monster[0].id")
+	assertByte(t, data, spawnsPtr+1, 0, "monster[0].pad1")
+	assertByte(t, data, spawnsPtr+2, 0, "monster[0].pad2")
+	assertByte(t, data, spawnsPtr+3, 0, "monster[0].pad3")
+	assertU32(t, data, spawnsPtr+4, 1, "monster[0].spawnAmount")
+	assertU32(t, data, spawnsPtr+8, 5, "monster[0].spawnStage")
+	for i := 0; i < 16; i++ {
+		assertByte(t, data, spawnsPtr+0x0C+i, 0, "monster[0].pad16")
+	}
+	assertU32(t, data, spawnsPtr+0x1C, 180, "monster[0].orientation")
+	assertF32(t, data, spawnsPtr+0x20, 1500.0, "monster[0].x")
+	assertF32(t, data, spawnsPtr+0x24, 0.0, "monster[0].y")
+	assertF32(t, data, spawnsPtr+0x28, -2000.0, "monster[0].z")
+	for i := 0; i < 16; i++ {
+		assertByte(t, data, spawnsPtr+0x2C+i, 0, "monster[0].trailing_pad")
+	}
+
+	// Remaining slots: unused sentinel, matching retail exactly (0xFFFF then zero-fill).
+	for slot := 1; slot < maxLargeMonsters; slot++ {
+		base := spawnsPtr + slot*60
+		assertByte(t, data, base, 0xFF, "monster[unused].id")
+		assertByte(t, data, base+1, 0xFF, "monster[unused].fill1")
+		for i := 2; i < 60; i++ {
+			assertByte(t, data, base+i, 0, "monster[unused].fill")
+		}
+	}
 
 	// ── Total file size ──────────────────────────────────────────────────
-	minExpectedLen := largeMonsterPtr + 61
+	minExpectedLen := spawnsPtr + maxLargeMonsters*60
 	if len(data) < minExpectedLen {
 		t.Errorf("file too short: len=%d, need at least %d", len(data), minExpectedLen)
 	}
