@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - `schemas/bundled-schema/` — orphaned duplicate of `server/migrations/seed/`, left behind when seed data was migrated to the embedded `go:embed` system ([9.4.0]'s "add embedded auto-migrating schema system"). It was never actually wired into anything and had since drifted out of sync with the real seed files (missing `CampaignDemo`/`DivaDefaults`/`TournamentDefaults`, stale `GachaDemo`/`RoadShopItems`). Also dropped the matching dead `../schemas/:/schemas/` volume mount in `docker/docker-compose.test.yml`, which pointed Postgres at a path it never auto-executes (`/docker-entrypoint-initdb.d/` is required for that).
+- Root-level `savedata/` placeholder directory (kept alive only by a `.gitkeep`). Nothing in the current server reads or writes a directory of that name — the actual save-dump feature (`DebugOptions.SaveDumps`) defaults to `save-backups/` and creates it on demand via `os.MkdirAll`, and the Docker Compose `/app/savedata` mount points at the separate, already-gitignored `docker/savedata/`. Traces back to a years-old fix ("created savedata dir to fix errorcode 10054...") that predates the Postgres-backed save system; the release workflow was still bundling the empty folder into every release zip. Dropped the folder, the `cp -r savedata/ staging/savedata/` step in `release.yml`, and the now-dead `savedata/*/` `.gitignore` rule.
 
 ### Fixed
 

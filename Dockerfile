@@ -17,10 +17,10 @@ WORKDIR /app
 
 COPY --from=builder /build/erupe-ce .
 
-# www/ and bin/ are mounted at runtime if needed
+# www/ is mounted at runtime if needed
 
-# bin/ and savedata/ are mounted at runtime via docker-compose
-# config.json is also mounted at runtime
+# docker-compose mounts docker/bin/ and docker/savedata/ to /app/bin and
+# /app/savedata respectively; config.json is also mounted at runtime
 
 USER erupe
 
