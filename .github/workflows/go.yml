@@ -99,9 +99,6 @@ jobs:
         name: Linux-amd64
         path: |
           ./erupe-ce
-          ./config.json
-          ./www/
-          ./savedata/
           ./bin/
         retention-days: 7
 
@@ -114,9 +111,6 @@ jobs:
         name: Windows-amd64
         path: |
           ./erupe-ce.exe
-          ./config.json
-          ./www/
-          ./savedata/
           ./bin/
         retention-days: 7
 
