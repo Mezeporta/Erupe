@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Orphaned `schemas/bundled-schema/` directory, superseded by `server/migrations/seed/` and drifted out of sync with it; also its dead volume mount in `docker/docker-compose.test.yml`.
 - Orphaned root-level `savedata/` placeholder directory (unused by any code path); also its `cp` step in `release.yml` and its `.gitignore` rule.
-- Stale `www/` references (`Dockerfile` comment, CI artifact upload) left over from the removed LauncherServer, plus the never-present `config.json` from the same CI artifact list.
+- Stale `www/` references (`.gitignore`, `Dockerfile` comment, CI artifact upload) left over from the removed LauncherServer, plus the never-present `config.json` from the same CI artifact list.
 
 ### Fixed
 

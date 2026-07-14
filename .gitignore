@@ -1,6 +1,5 @@
 .idea/
 
-www/jp/
 vendor/
 *.bin
 *.exe
