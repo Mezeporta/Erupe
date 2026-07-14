@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `DebugOptions.QuestTools`'s `MSG_SYS_CAST_BINARY` quest-payload logging now also dumps the full raw hex (plus sender char ID) alongside the existing best-effort XYZ decode, so the real struct layout can be read directly instead of guessed. Used this to confirm the payload bundles one position record per party slot (player + AI companions), each tagged with an incrementing slot ID — the existing fixed-offset decode was only ever reading slot 1.
 
+### Removed
+
+- `schemas/bundled-schema/` — orphaned duplicate of `server/migrations/seed/`, left behind when seed data was migrated to the embedded `go:embed` system ([9.4.0]'s "add embedded auto-migrating schema system"). It was never actually wired into anything and had since drifted out of sync with the real seed files (missing `CampaignDemo`/`DivaDefaults`/`TournamentDefaults`, stale `GachaDemo`/`RoadShopItems`). Also dropped the matching dead `../schemas/:/schemas/` volume mount in `docker/docker-compose.test.yml`, which pointed Postgres at a path it never auto-executes (`/docker-entrypoint-initdb.d/` is required for that).
+
 ### Fixed
 
 - `DebugOptions.QuestTools`'s `Coord` debug line blindly read a fixed offset (20) of the `MSG_SYS_CAST_BINARY` quest payload regardless of what was actually there, silently aliasing a different entity's own position field whenever the payload wasn't a plain party-slot message. Now locates party slot 1's record explicitly by its own ID tag before decoding XYZ from it.
