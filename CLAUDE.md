@@ -96,7 +96,7 @@ Each service takes repo interfaces + `*zap.Logger` in its constructor, making it
 
 PostgreSQL with embedded auto-migrating schema in `server/migrations/`:
 - `sql/0001_init.sql` — consolidated baseline
-- `seed/*.sql` / `seed/*.json` — demo data (applied via `migrations.ApplySeedData()` on fresh DB). JSON is preferred for plain tabular data (see `seed_json.go`); SQL remains for seed logic needing subqueries or procedural SQL.
+- `seed/*.sql` (procedural/subquery seed logic) / `seed/<table>/*.json` (plain tabular data, one directory per table — see `seed_json.go`) — demo data, applied via `migrations.ApplySeedData()` on fresh DB. The table name comes from the directory, never a field inside the file.
 - New migrations: `sql/0002_description.sql`, etc. (each runs in its own transaction)
 
 The server runs `migrations.Migrate()` automatically on startup.

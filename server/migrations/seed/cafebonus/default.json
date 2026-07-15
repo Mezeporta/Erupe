@@ -1,0 +1,12 @@
+{
+  "truncate": true,
+  "rows": [
+    {"time_req": 1800, "item_type": 17, "item_id": 0, "quantity": 50},
+    {"time_req": 3600, "item_type": 17, "item_id": 0, "quantity": 100},
+    {"time_req": 7200, "item_type": 17, "item_id": 0, "quantity": 200},
+    {"time_req": 10800, "item_type": 17, "item_id": 0, "quantity": 300},
+    {"time_req": 18000, "item_type": 17, "item_id": 0, "quantity": 350},
+    {"time_req": 28800, "item_type": 17, "item_id": 0, "quantity": 500},
+    {"time_req": 43200, "item_type": 17, "item_id": 0, "quantity": 500}
+  ]
+}

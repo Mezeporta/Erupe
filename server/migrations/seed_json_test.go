@@ -1,9 +1,11 @@
 package migrations
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"go.uber.org/zap"
 )
@@ -196,7 +198,7 @@ func TestApplySeedJSONBlock_EmptyRowsNoOp(t *testing.T) {
 }
 
 func TestApplySeedJSON_InvalidJSON(t *testing.T) {
-	err := applySeedJSON(nil, "broken.json", []byte("{not json"))
+	err := applySeedJSON(nil, "broken.json", "diva_prizes", []byte("{not json"))
 	if err == nil {
 		t.Error("expected parse error for malformed JSON, got nil")
 	}
@@ -212,18 +214,13 @@ func TestApplySeedJSON_Integration(t *testing.T) {
 	}
 
 	data := []byte(`{
-		"blocks": [
-			{
-				"table": "diva_prizes",
-				"onConflict": "DO NOTHING",
-				"rows": [
-					{"type": "personal", "points_req": 42, "item_type": 26, "item_id": 0, "quantity": 1, "gr": false, "repeatable": false}
-				]
-			}
+		"onConflict": "DO NOTHING",
+		"rows": [
+			{"type": "personal", "points_req": 42, "item_type": 26, "item_id": 0, "quantity": 1, "gr": false, "repeatable": false}
 		]
 	}`)
 
-	if err := applySeedJSON(db, "test.json", data); err != nil {
+	if err := applySeedJSON(db, "diva_prizes/test.json", "diva_prizes", data); err != nil {
 		t.Fatalf("applySeedJSON failed: %v", err)
 	}
 
@@ -251,19 +248,14 @@ func TestApplySeedJSON_OnConflict(t *testing.T) {
 	}
 
 	data := []byte(`{
-		"blocks": [
-			{
-				"table": "seed_conflict_test",
-				"onConflict": "(k) DO NOTHING",
-				"rows": [{"k": 1, "v": 100}]
-			}
-		]
+		"onConflict": "(k) DO NOTHING",
+		"rows": [{"k": 1, "v": 100}]
 	}`)
 
-	if err := applySeedJSON(db, "test.json", data); err != nil {
+	if err := applySeedJSON(db, "seed_conflict_test/test.json", "seed_conflict_test", data); err != nil {
 		t.Fatalf("applySeedJSON failed: %v", err)
 	}
-	if err := applySeedJSON(db, "test.json", data); err != nil {
+	if err := applySeedJSON(db, "seed_conflict_test/test.json", "seed_conflict_test", data); err != nil {
 		t.Fatalf("second applySeedJSON failed: %v", err)
 	}
 
@@ -287,15 +279,10 @@ func TestApplySeedJSON_Truncate(t *testing.T) {
 
 	seedTwice := func(quantity int) {
 		data := []byte(`{
-			"blocks": [
-				{
-					"table": "public.cafebonus",
-					"truncate": true,
-					"rows": [{"time_req": 1800, "item_type": 17, "item_id": 0, "quantity": ` + strconv.Itoa(quantity) + `}]
-				}
-			]
+			"truncate": true,
+			"rows": [{"time_req": 1800, "item_type": 17, "item_id": 0, "quantity": ` + strconv.Itoa(quantity) + `}]
 		}`)
-		if err := applySeedJSON(db, "test.json", data); err != nil {
+		if err := applySeedJSON(db, "cafebonus/test.json", "cafebonus", data); err != nil {
 			t.Fatalf("applySeedJSON failed: %v", err)
 		}
 	}
@@ -317,5 +304,79 @@ func TestApplySeedJSON_Truncate(t *testing.T) {
 	}
 	if quantity != 99 {
 		t.Errorf("expected latest seeded quantity 99, got %d", quantity)
+	}
+}
+
+func TestIsForeignKeyViolation(t *testing.T) {
+	if isForeignKeyViolation(nil) {
+		t.Error("nil error should not be a foreign key violation")
+	}
+	if isForeignKeyViolation(errors.New("some other error")) {
+		t.Error("unrelated error should not be a foreign key violation")
+	}
+}
+
+// TestApplySeedJSONTables_RetriesOutOfOrderForeignKeys is the scenario this
+// whole retry mechanism exists for: "seed_child" sorts alphabetically before
+// "seed_parent" but has a foreign key on it, exactly like
+// campaign_category_links/campaign_rewards sorting before campaigns. Table
+// directory order must not need to be hand-tuned for this to work.
+func TestApplySeedJSONTables_RetriesOutOfOrderForeignKeys(t *testing.T) {
+	db := testDB(t)
+	defer func() { _ = db.Close() }()
+
+	if _, err := db.Exec(`
+		CREATE TABLE seed_parent (id INT PRIMARY KEY);
+		CREATE TABLE seed_child (id INT PRIMARY KEY, parent_id INT REFERENCES seed_parent(id));
+	`); err != nil {
+		t.Fatalf("creating scratch tables failed: %v", err)
+	}
+
+	files := fstest.MapFS{
+		"seed_child/default.json":  {Data: []byte(`{"rows": [{"id": 1, "parent_id": 100}]}`)},
+		"seed_parent/default.json": {Data: []byte(`{"rows": [{"id": 100}]}`)},
+	}
+
+	logger, _ := zap.NewDevelopment()
+	count, err := applySeedJSONTables(db, logger, files, []string{"seed_child", "seed_parent"})
+	if err != nil {
+		t.Fatalf("applySeedJSONTables failed: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("count = %d, want 2", count)
+	}
+
+	var childCount, parentCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM seed_child").Scan(&childCount); err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM seed_parent").Scan(&parentCount); err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if childCount != 1 || parentCount != 1 {
+		t.Errorf("childCount=%d parentCount=%d, want 1 and 1", childCount, parentCount)
+	}
+}
+
+func TestApplySeedJSONTables_UnresolvableForeignKey(t *testing.T) {
+	db := testDB(t)
+	defer func() { _ = db.Close() }()
+
+	if _, err := db.Exec(`
+		CREATE TABLE seed_parent (id INT PRIMARY KEY);
+		CREATE TABLE seed_child (id INT PRIMARY KEY, parent_id INT REFERENCES seed_parent(id));
+	`); err != nil {
+		t.Fatalf("creating scratch tables failed: %v", err)
+	}
+
+	// parent_id 999 never gets inserted anywhere, so this can never resolve.
+	files := fstest.MapFS{
+		"seed_child/default.json": {Data: []byte(`{"rows": [{"id": 1, "parent_id": 999}]}`)},
+	}
+
+	logger, _ := zap.NewDevelopment()
+	_, err := applySeedJSONTables(db, logger, files, []string{"seed_child"})
+	if err == nil {
+		t.Error("expected an error for an unresolvable foreign key reference, got nil")
 	}
 }

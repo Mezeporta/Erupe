@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"regexp"
@@ -9,19 +10,19 @@ import (
 	"strings"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
-// seedJSONFile is the JSON seed format: a sequence of table blocks applied in
-// order, for operators who find hand-editing raw SQL INSERT statements
-// unapproachable. Sits alongside seed/*.sql, which remains the format for
-// seed data that needs real SQL logic (subqueries, NOW()-relative rows,
-// idempotency guards) rather than plain tabular data.
-type seedJSONFile struct {
-	Blocks []seedJSONBlock `json:"blocks"`
-}
-
+// seedJSONBlock is the JSON seed format: one file, one table. Files live
+// under seed/<table>/*.json — the table is the enclosing directory name,
+// never a field inside the file, so there's no string to keep in sync with
+// the filesystem layout. Sits alongside top-level seed/*.sql, which remains
+// the format for seed data that needs real SQL logic (subqueries,
+// NOW()-relative rows, idempotency guards) rather than plain tabular data.
 type seedJSONBlock struct {
-	Table string `json:"table"`
+	// Table is populated by the loader from the enclosing directory name,
+	// never read from the file itself (hence no `json` tag).
+	Table string
 	// Comment is free-text documentation carried over from the original SQL
 	// file header; it has no functional effect on seeding.
 	Comment string `json:"comment,omitempty"`
@@ -43,17 +44,35 @@ type seedJSONBlock struct {
 // compile-time embedded file rather than user input.
 var identifierPattern = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$`)
 
-func applySeedJSON(db *sqlx.DB, name string, data []byte) error {
-	var f seedJSONFile
-	if err := json.Unmarshal(data, &f); err != nil {
-		return fmt.Errorf("parsing %s: %w", name, err)
+// parseSeedJSONBlock parses one seed/<table>/*.json file's content. table is
+// the enclosing directory name, supplied by the caller rather than read from
+// the file.
+func parseSeedJSONBlock(name, table string, data []byte) (seedJSONBlock, error) {
+	var block seedJSONBlock
+	if err := json.Unmarshal(data, &block); err != nil {
+		return seedJSONBlock{}, fmt.Errorf("parsing %s: %w", name, err)
 	}
-	for i, block := range f.Blocks {
-		if err := applySeedJSONBlock(db, block); err != nil {
-			return fmt.Errorf("%s block %d (%s): %w", name, i, block.Table, err)
-		}
+	block.Table = table
+	return block, nil
+}
+
+func applySeedJSON(db *sqlx.DB, name, table string, data []byte) error {
+	block, err := parseSeedJSONBlock(name, table, data)
+	if err != nil {
+		return err
+	}
+	if err := applySeedJSONBlock(db, block); err != nil {
+		return fmt.Errorf("%s: %w", name, err)
 	}
 	return nil
+}
+
+// isForeignKeyViolation reports whether err is Postgres error 23503
+// (foreign_key_violation), used by the caller to retry seed directories in a
+// different order rather than needing to hardcode table dependency order.
+func isForeignKeyViolation(err error) bool {
+	var pqErr *pq.Error
+	return errors.As(err, &pqErr) && pqErr.Code == "23503"
 }
 
 func applySeedJSONBlock(db *sqlx.DB, block seedJSONBlock) error {
