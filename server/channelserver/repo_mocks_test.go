@@ -330,6 +330,12 @@ type mockGuildRepo struct {
 	createdPost         []interface{}
 	deletedPostID       uint32
 
+	// Interception maps
+	interceptionMapsData    []byte
+	interceptionMapsErr     error
+	savedInterceptionMaps   []byte
+	saveInterceptionMapsErr error
+
 	// Alliance
 	alliance              *GuildAlliance
 	getAllianceErr        error
@@ -589,9 +595,16 @@ func (m *mockGuildRepo) DeclineInvite(_, charID uint32) error {
 	m.declineInviteCharID = charID
 	return m.rejectErr
 }
-func (m *mockGuildRepo) ArrangeCharacters(_ []uint32) error                        { return nil }
-func (m *mockGuildRepo) GetItemBox(_ uint32) ([]byte, error)                       { return nil, nil }
-func (m *mockGuildRepo) SaveItemBox(_ uint32, _ []byte) error                      { return nil }
+func (m *mockGuildRepo) ArrangeCharacters(_ []uint32) error   { return nil }
+func (m *mockGuildRepo) GetItemBox(_ uint32) ([]byte, error)  { return nil, nil }
+func (m *mockGuildRepo) SaveItemBox(_ uint32, _ []byte) error { return nil }
+func (m *mockGuildRepo) GetInterceptionMaps(_ uint32) ([]byte, error) {
+	return m.interceptionMapsData, m.interceptionMapsErr
+}
+func (m *mockGuildRepo) SaveInterceptionMaps(_ uint32, data []byte) error {
+	m.savedInterceptionMaps = data
+	return m.saveInterceptionMapsErr
+}
 func (m *mockGuildRepo) SetRecruiting(_ uint32, _ bool) error                      { return nil }
 func (m *mockGuildRepo) SetPugiOutfits(_ uint32, _ uint32) error                   { return nil }
 func (m *mockGuildRepo) SetRecruiter(_ uint32, _ bool) error                       { return nil }

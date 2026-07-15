@@ -75,6 +75,8 @@ type GuildRepo interface {
 	HasApplication(guildID, charID uint32) (bool, error)
 	GetItemBox(guildID uint32) ([]byte, error)
 	SaveItemBox(guildID uint32, data []byte) error
+	GetInterceptionMaps(guildID uint32) ([]byte, error)
+	SaveInterceptionMaps(guildID uint32, data []byte) error
 	GetMembers(guildID uint32, applicants bool) ([]*GuildMember, error)
 	GetCharacterMembership(charID uint32) (*GuildMember, error)
 	SaveMember(member *GuildMember) error

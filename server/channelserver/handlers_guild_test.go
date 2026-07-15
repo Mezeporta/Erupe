@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"erupe-ce/common/byteframe"
 	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 )
@@ -829,6 +830,7 @@ func TestGuildAllianceRelationship(t *testing.T) {
 func TestHandleMsgMhfGetUdGuildMapInfo(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
+	server.guildRepo = &mockGuildRepo{guild: &Guild{ID: 1}}
 
 	handleMsgMhfGetUdGuildMapInfo(session, &mhfpacket.MsgMhfGetUdGuildMapInfo{
 		AckHandle: 1,
@@ -838,6 +840,79 @@ func TestHandleMsgMhfGetUdGuildMapInfo(t *testing.T) {
 	case p := <-session.sendPackets:
 		if len(p.data) == 0 {
 			t.Error("response should have data")
+		}
+	default:
+		t.Error("no response queued")
+	}
+}
+
+func TestHandleMsgMhfGetUdGuildMapInfo_NoGuild(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+	server.guildRepo = &mockGuildRepo{}
+
+	handleMsgMhfGetUdGuildMapInfo(session, &mhfpacket.MsgMhfGetUdGuildMapInfo{
+		AckHandle: 1,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) != ackBufDataOffset+1 || p.data[ackBufDataOffset] != 0xFF {
+			t.Errorf("expected a single 0xFF error byte payload, got %v", p.data)
+		}
+	default:
+		t.Error("no response queued")
+	}
+}
+
+func TestHandleMsgMhfGetUdGuildMapInfo_Applicant(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+	server.guildRepo = &mockGuildRepo{guild: &Guild{ID: 1}, hasAppResult: true}
+
+	handleMsgMhfGetUdGuildMapInfo(session, &mhfpacket.MsgMhfGetUdGuildMapInfo{
+		AckHandle: 1,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) != ackBufDataOffset+1 || p.data[ackBufDataOffset] != 0xFF {
+			t.Errorf("expected a single 0xFF error byte payload, got %v", p.data)
+		}
+	default:
+		t.Error("no response queued")
+	}
+}
+
+func TestHandleMsgMhfGetUdGuildMapInfo_WithMapData(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+
+	maps, branches := GenerateUdGuildMaps()
+	if len(maps) != 5 {
+		t.Fatalf("GenerateUdGuildMaps returned %d maps, want 5", len(maps))
+	}
+	data, err := json.Marshal(InterceptionMaps{Maps: maps, Branches: branches})
+	if err != nil {
+		t.Fatalf("failed to marshal fixture interception maps: %v", err)
+	}
+	server.guildRepo = &mockGuildRepo{guild: &Guild{ID: 1}, interceptionMapsData: data}
+
+	handleMsgMhfGetUdGuildMapInfo(session, &mhfpacket.MsgMhfGetUdGuildMapInfo{
+		AckHandle: 1,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("response should have data")
+		}
+		bf := byteframe.NewByteFrameFromBytes(p.data[ackBufDataOffset:])
+		if errByte := bf.ReadUint8(); errByte != 0 {
+			t.Errorf("expected leading no-error byte 0, got %d", errByte)
+		}
+		if numMaps := bf.ReadUint8(); numMaps != 5 {
+			t.Errorf("expected 5 maps in response, got %d", numMaps)
 		}
 	default:
 		t.Error("no response queued")
@@ -959,6 +1034,8 @@ func TestHandleMsgMhfEntryRookieGuild(t *testing.T) {
 func TestHandleMsgMhfGenerateUdGuildMap(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
+	guildMock := &mockGuildRepo{guild: &Guild{ID: 1}}
+	server.guildRepo = guildMock
 
 	pkt := &mhfpacket.MsgMhfGenerateUdGuildMap{
 		AckHandle: 12345,
@@ -973,6 +1050,36 @@ func TestHandleMsgMhfGenerateUdGuildMap(t *testing.T) {
 		}
 	default:
 		t.Error("No response packet queued")
+	}
+
+	if guildMock.savedInterceptionMaps == nil {
+		t.Fatal("expected generated maps to be persisted via SaveInterceptionMaps")
+	}
+	var saved InterceptionMaps
+	if err := json.Unmarshal(guildMock.savedInterceptionMaps, &saved); err != nil {
+		t.Fatalf("saved interception map data is not valid JSON: %v", err)
+	}
+	if len(saved.Maps) != 5 {
+		t.Errorf("expected 5 generated maps, got %d", len(saved.Maps))
+	}
+}
+
+func TestHandleMsgMhfGenerateUdGuildMap_NoGuild(t *testing.T) {
+	server := createMockServer()
+	session := createMockSession(1, server)
+	server.guildRepo = &mockGuildRepo{}
+
+	handleMsgMhfGenerateUdGuildMap(session, &mhfpacket.MsgMhfGenerateUdGuildMap{
+		AckHandle: 12345,
+	})
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) != ackBufDataOffset+1 || p.data[ackBufDataOffset] != 0xFF {
+			t.Errorf("expected a single 0xFF error byte payload, got %v", p.data)
+		}
+	default:
+		t.Error("no response queued")
 	}
 }
 

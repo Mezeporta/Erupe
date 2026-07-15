@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `handleMsgMhfGetUdGuildMapInfo`/`handleMsgMhfGenerateUdGuildMap` (guild interception map generation and retrieval for Diva Defense) — both were unconditional-fail stubs; the real logic existed only on an abandoned `feature/diva` branch that never merged. Ported and adapted to the current repo pattern (`GuildRepo.GetInterceptionMaps`/`SaveInterceptionMaps`), backed by the `guilds.interception_maps` column that migration `0017_diva.sql` had already provisioned but nothing wrote to.
+
 ### Removed
 
 - `stable/v9.2.x` branch and its `SECURITY.md` supported-version entry — the branch had been untouched since 2026-02-08 and 9.2.x is well past the current 9.4.x release line.

@@ -472,6 +472,22 @@ func (r *GuildRepository) SaveItemBox(guildID uint32, data []byte) error {
 	return err
 }
 
+// GetInterceptionMaps loads the serialized (JSON) interception map data for a guild.
+func (r *GuildRepository) GetInterceptionMaps(guildID uint32) ([]byte, error) {
+	var data []byte
+	err := r.db.QueryRow(`SELECT interception_maps FROM guilds WHERE id=$1`, guildID).Scan(&data)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return data, err
+}
+
+// SaveInterceptionMaps writes the serialized (JSON) interception map data for a guild.
+func (r *GuildRepository) SaveInterceptionMaps(guildID uint32, data []byte) error {
+	_, err := r.db.Exec(`UPDATE guilds SET interception_maps=$1 WHERE id=$2`, data, guildID)
+	return err
+}
+
 // GetMembers loads all members (or applicants) of a guild.
 func (r *GuildRepository) GetMembers(guildID uint32, applicants bool) ([]*GuildMember, error) {
 	rows, err := r.db.Queryx(fmt.Sprintf(`
