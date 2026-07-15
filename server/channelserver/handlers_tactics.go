@@ -22,17 +22,21 @@ func handleMsgMhfGetUdTacticsPoint(s *Session, p mhfpacket.MHFPacket) {
 
 	// Build per-quest list and compute total.
 	type questEntry struct {
-		questFileID int
+		questFileID uint32
 		points      int
 	}
 	var entries []questEntry
 	var total int
 	for k, pts := range pointsMap {
-		qid, err := strconv.Atoi(k)
+		// ParseUint with bitSize 32 rejects keys that don't fit in a
+		// uint32 instead of silently truncating them (unlike Atoi followed
+		// by a uint32 conversion), since these are written to the wire as
+		// uint32 below.
+		qid, err := strconv.ParseUint(k, 10, 32)
 		if err != nil {
 			continue
 		}
-		entries = append(entries, questEntry{qid, pts})
+		entries = append(entries, questEntry{uint32(qid), pts})
 		total += pts
 	}
 
@@ -40,7 +44,7 @@ func handleMsgMhfGetUdTacticsPoint(s *Session, p mhfpacket.MHFPacket) {
 	bf.WriteUint32(uint32(total))
 	bf.WriteUint32(uint32(len(entries)))
 	for _, e := range entries {
-		bf.WriteUint32(uint32(e.questFileID))
+		bf.WriteUint32(e.questFileID)
 		bf.WriteUint32(uint32(e.points))
 	}
 
