@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.4.1] - 2026-07-15
+
 ### Changed
 
-- Default `LoginNotices` banner (`config.reference.json`) now reads "9.4.1-dev" instead of the stale "SU9.3".
+- Default `LoginNotices` banner (`config.reference.json`) now reads "9.4.1" instead of the stale "SU9.3".
+- Default `LoginNotices` banner bullet points: "Report bugs on Discord" → "Get help on Discord", "Fork the code on GitHub" → "Find the code on Mezeporta/Erupe (GitHub)", dropped "Test everything", added a "Maintained with love by the Mogapedia and Mezeporta communities" closing line, and reworded the intro from "Erupe is experimental software" to "Erupe is a community implementation for the Frontier server".
 
 ### Added
 
