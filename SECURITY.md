@@ -5,7 +5,6 @@
 | Version | Supported |
 |---------|-----------|
 | main | Yes |
-| stable/v9.2.x | Yes |
 | All other branches | No |
 
 ## Reporting a Vulnerability
