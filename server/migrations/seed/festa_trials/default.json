@@ -1,5 +1,5 @@
 {
-  "comment": "Ripped trials",
+  "comment": "Hunting Festival (Festa) trial/objective definitions, read by FestaRepository.GetTrialsWithMonopoly (handleMsgMhfInfoFesta). objective selects what goal_id means: 1-3 make goal_id a monster ID (em-number - confirmed by a Forward.5 compat filter that drops goal_id>106, the last monster added in that version), 4 makes goal_id an item ID (same filter drops goal_id>6430 for objective 4). times_req: how many hunts/deliveries needed. locale_req/reward: sent to the client as-is; their exact semantics (region gating? a reward-tier index rather than a literal item?) are unconfirmed.",
   "rows": [
     {"objective": 1, "goal_id": 27, "times_req": 1, "locale_req": 0, "reward": 1},
     {"objective": 5, "goal_id": 53034, "times_req": 0, "locale_req": 0, "reward": 400},

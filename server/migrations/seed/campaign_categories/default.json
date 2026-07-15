@@ -1,4 +1,5 @@
 {
+  "comment": "Category labels for the redemption-code UI (handlers_campaign.go's CampaignCategory), linked to campaigns via campaign_category_links/. type is an opaque grouping value relayed to the client, not branched on server-side. description contains the client's own '~CNN' inline color-tag codes and literal line breaks matching the original text wrapping - preserve both when editing.",
   "rows": [
     {"id": 1, "type": 0, "title": "イベント・キャンペーン", "description": "各種~C04イベント~C00用のイベントコードや、各\n種~C04キャンペーン~C00で入手できるイベントコ\nードを入力することができます。"},
     {"id": 2, "type": 0, "title": "パッケージ特典", "description": "~C11プレミアムパッケージ~C00など、各種~C04パッ\nケージ~C00に付属されているイベントコード\nを入力することができます。"},

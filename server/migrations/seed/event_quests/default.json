@@ -1,5 +1,5 @@
 {
-  "comment": "Ripped quests",
+  "comment": "Event/rotation quest listing (repo_event.go). quest_type selects which event system serves the quest - notably 46/47/48 (QuestTypeDivaDefenseA/B/C, see constants_quest.go) mark Diva Defense (interception) quests, and 16/22/40/50/51 mark the various Raviente siege variants. quest_id is the ripped quest-file ID actually loaded. max_players/mark: sent to the client as-is; mark's exact effect (highlight/badge?) is unconfirmed.",
   "rows": [
     {"max_players": 0, "quest_type": 9, "quest_id": 40060, "mark": 0},
     {"max_players": 0, "quest_type": 9, "quest_id": 40079, "mark": 0},

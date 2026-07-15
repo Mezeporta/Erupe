@@ -1,4 +1,5 @@
 {
+  "comment": "Items actually granted when a campaign in campaigns/ is claimed (handlers_campaign.go's CampaignReward) - unlike campaigns.reward, which is just display text. campaign_id is a foreign key, so this file must apply after campaigns/ is seeded; see campaign_category_links/ for how the loader handles that automatically. item_type/item_id/quantity: the granted item and amount.",
   "rows": [
     {"campaign_id": 410645266, "item_type": 9, "quantity": 0, "item_id": 40161},
     {"campaign_id": 884238467, "item_type": 14, "quantity": 10, "item_id": 0},

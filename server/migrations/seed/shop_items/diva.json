@@ -1,4 +1,5 @@
 {
+  "comment": "Diva Defense (interception) shop catalog: shop_type=8 (see the 'Diva'/'Diva song shop' cases in handleMsgMhfEnumerateShop, handlers_shop.go), shop_id 5 or 7 selects the sub-tab. cost/quantity: price and per-purchase amount granted. min_hr/min_sr/min_gr: minimum Hunter/Star/G Rank to see the row. store_level: unlock tier within the shop. max_quantity: purchase cap per character (0 = unlimited). road_floors/road_fatalis: Hunter's Road gating, unused here (always 0) - see shop_items/road.json where they're actually set.",
   "rows": [
     {"shop_type": 8, "shop_id": 5, "item_id": 1, "cost": 30, "quantity": 10, "min_hr": 0, "min_sr": 0, "min_gr": 0, "store_level": 0, "max_quantity": 10, "road_floors": 0, "road_fatalis": 0},
     {"shop_type": 8, "shop_id": 5, "item_id": 2, "cost": 60, "quantity": 10, "min_hr": 0, "min_sr": 0, "min_gr": 0, "store_level": 0, "max_quantity": 10, "road_floors": 0, "road_fatalis": 0},

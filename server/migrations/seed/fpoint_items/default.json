@@ -1,4 +1,5 @@
 {
+  "comment": "Frontier Point <-> item exchange list (handleMsgMhfGetFpointExchangeList/handleMsgMhfExchangeItem2Fpoint). item_type/item_id: the item side of the exchange. quantity: item amount per exchange unit. fpoints: the Frontier Point cost/value for that quantity. buyable: whether players can buy this item with Frontier Points, as opposed to only exchanging (selling) the item for Frontier Points - the server reports counts for both via a single 'buyables' tally sent alongside the full list.",
   "rows": [
     {"item_type": 7, "item_id": 8895, "quantity": 1, "fpoints": 500, "buyable": true},
     {"item_type": 7, "item_id": 8891, "quantity": 1, "fpoints": 300, "buyable": true},

@@ -1,4 +1,5 @@
 {
+  "comment": "Scenario (story quest chain) progress counters shown on the load screen, read by handleMsgMhfInfoScenarioCounter. scenario_id: the scenario/chain's main ID. category_id groups it for display (documented in handlers_scenario.go's Scenario struct): 0=Basic, 1=Veteran, 3=Other, 6=Pallone, 7=Diva.",
   "rows": [
     {"scenario_id": 17, "category_id": 0},
     {"scenario_id": 93, "category_id": 1},

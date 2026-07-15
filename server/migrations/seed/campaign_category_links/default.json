@@ -1,4 +1,5 @@
 {
+  "comment": "Many-to-many join table between campaigns/ and campaign_categories/ (a campaign can appear under several category tabs). Both foreign keys, so this file must apply after both campaigns/ and campaign_categories/ are seeded - the loader's retry-on-foreign-key-violation logic (server/migrations/migrations.go) handles that automatically regardless of directory apply order.",
   "rows": [
     {"campaign_id": 921805910, "category_id": 1},
     {"campaign_id": 142209682, "category_id": 3},

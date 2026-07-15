@@ -1,4 +1,5 @@
 {
+  "comment": "Hunter's Road item shop/forge: shop_type=10 ('Item shop, 0-8' in handleMsgMhfEnumerateShop, handlers_shop.go), shop_id (4/7/8 here) selects the sub-tab. cost/quantity: price and per-purchase amount granted. min_hr/min_sr/min_gr: minimum Hunter/Star/G Rank to see the row. store_level: unlock tier within the shop. max_quantity: purchase cap per character (0 = unlimited). road_floors: minimum Hunter's Road floor reached to unlock the row. road_fatalis: presumed to gate on Road Fatalis kill count by analogy with road_floors, but the server only relays the raw value to the client and never branches on it, so this is inferred from the column name, not confirmed; always 0 in this file regardless.",
   "rows": [
     {"shop_type": 10, "shop_id": 4, "item_id": 11664, "cost": 20000, "quantity": 1, "min_hr": 0, "min_sr": 0, "min_gr": 1, "store_level": 1, "max_quantity": 0, "road_floors": 0, "road_fatalis": 0},
     {"shop_type": 10, "shop_id": 4, "item_id": 11665, "cost": 20000, "quantity": 1, "min_hr": 0, "min_sr": 0, "min_gr": 1, "store_level": 1, "max_quantity": 0, "road_floors": 0, "road_fatalis": 0},

@@ -1,4 +1,5 @@
 {
+  "comment": "Misc. point-exchange shops: shop_type 5/6/7 (see handleMsgMhfEnumerateShop, handlers_shop.go: 5='GCP->Item', 6='Gacha coin->Item', 7='Item->GCP'). Same columns as shop_items/road.json; road_floors/road_fatalis are unused here (always 0) since these aren't Hunter's Road shops.",
   "rows": [
     {"shop_type": 5, "shop_id": 5, "item_id": 16516, "cost": 100, "quantity": 1, "min_hr": 0, "min_sr": 0, "min_gr": 1, "store_level": 0, "max_quantity": 0, "road_floors": 0, "road_fatalis": 0},
     {"shop_type": 5, "shop_id": 5, "item_id": 16517, "cost": 100, "quantity": 1, "min_hr": 0, "min_sr": 0, "min_gr": 1, "store_level": 0, "max_quantity": 0, "road_floors": 0, "road_fatalis": 0},

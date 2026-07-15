@@ -1,4 +1,5 @@
 {
+  "comment": "NetCafe point bonus tiers: logging a session of at least time_req seconds grants item_type/item_id x quantity. truncate=true because this table is a fixed tier ladder meant to be fully replaced on reseed, not appended to.",
   "truncate": true,
   "rows": [
     {"time_req": 1800, "item_type": 17, "item_id": 0, "quantity": 50},

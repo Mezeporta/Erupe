@@ -1,5 +1,5 @@
 {
-  "comment": "Diva Defense default prize rewards. Personal track: type='personal', quantity=1 per milestone. Guild track:    type='guild',    quantity=5 per milestone. item_type=26 is Diva Coins; item_id=0 for all.",
+  "comment": "Diva Defense (interception) cumulative-point milestone rewards, read by handleMsgMhfGetUdTacticsRewardList. type: 'personal' or 'guild' track. points_req: cumulative interception points needed (ascending, not cumulative-from-previous). item_type/item_id/quantity: the reward item (item_type=26 is Diva Coins, item_id=0 for all rows here - see Erupe issue #201, these are a placeholder, not the real per-milestone rewards). gr/repeatable: flags sent to the client as-is (gr commonly means 'G Rank only'; repeatable means claimable more than once) - both false for every row currently.",
   "onConflict": "DO NOTHING",
   "rows": [
     {"type": "personal", "points_req": 500000, "item_type": 26, "item_id": 0, "quantity": 1, "gr": false, "repeatable": false},
