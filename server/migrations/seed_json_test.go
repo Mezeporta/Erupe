@@ -62,14 +62,49 @@ func TestNormalizeSeedValue(t *testing.T) {
 	}
 }
 
+func TestRowColumns(t *testing.T) {
+	row := map[string]interface{}{"type": "personal", "points_req": 500000, "repeatable": false}
+	got := rowColumns(row)
+	want := []string{"points_req", "repeatable", "type"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("got %v, want %v", got, want)
+			break
+		}
+	}
+}
+
+func TestHasExactColumns(t *testing.T) {
+	columns := []string{"a", "b"}
+	tests := []struct {
+		name string
+		row  map[string]interface{}
+		want bool
+	}{
+		{"exact match", map[string]interface{}{"a": 1, "b": 2}, true},
+		{"missing key", map[string]interface{}{"a": 1}, false},
+		{"extra key", map[string]interface{}{"a": 1, "b": 2, "c": 3}, false},
+		{"different key", map[string]interface{}{"a": 1, "c": 2}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := hasExactColumns(tt.row, columns); got != tt.want {
+				t.Errorf("hasExactColumns(%v, %v) = %v, want %v", tt.row, columns, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestBuildSeedInsert(t *testing.T) {
 	block := seedJSONBlock{
 		Table:      "diva_prizes",
 		OnConflict: "DO NOTHING",
-		Columns:    []string{"type", "points_req", "repeatable"},
-		Rows: [][]interface{}{
-			{"personal", float64(500000), false},
-			{"guild", float64(1000000), false},
+		Rows: []map[string]interface{}{
+			{"type": "personal", "points_req": float64(500000), "repeatable": false},
+			{"type": "guild", "points_req": float64(1000000), "repeatable": false},
 		},
 	}
 
@@ -78,7 +113,9 @@ func TestBuildSeedInsert(t *testing.T) {
 		t.Fatalf("buildSeedInsert failed: %v", err)
 	}
 
-	want := "INSERT INTO diva_prizes (type, points_req, repeatable) VALUES " +
+	// Columns are sorted alphabetically for a deterministic query:
+	// points_req, repeatable, type.
+	want := "INSERT INTO diva_prizes (points_req, repeatable, type) VALUES " +
 		"($1, $2, $3), ($4, $5, $6) ON CONFLICT DO NOTHING"
 	if query != want {
 		t.Errorf("query = %q, want %q", query, want)
@@ -86,17 +123,16 @@ func TestBuildSeedInsert(t *testing.T) {
 	if len(args) != 6 {
 		t.Fatalf("len(args) = %d, want 6", len(args))
 	}
-	if args[1] != int64(500000) {
-		t.Errorf("args[1] = %v (%T), want int64(500000)", args[1], args[1])
+	if args[0] != int64(500000) {
+		t.Errorf("args[0] = %v (%T), want int64(500000)", args[0], args[0])
 	}
 }
 
 func TestBuildSeedInsert_RawValue(t *testing.T) {
 	block := seedJSONBlock{
-		Table:   "campaigns",
-		Columns: []string{"id", "start_time"},
-		Rows: [][]interface{}{
-			{float64(1), map[string]interface{}{"raw": "NOW()"}},
+		Table: "campaigns",
+		Rows: []map[string]interface{}{
+			{"id": float64(1), "start_time": map[string]interface{}{"raw": "NOW()"}},
 		},
 	}
 
@@ -113,24 +149,23 @@ func TestBuildSeedInsert_RawValue(t *testing.T) {
 	}
 }
 
-func TestBuildSeedInsert_RowLengthMismatch(t *testing.T) {
+func TestBuildSeedInsert_ColumnMismatch(t *testing.T) {
 	block := seedJSONBlock{
-		Table:   "diva_prizes",
-		Columns: []string{"type", "points_req"},
-		Rows: [][]interface{}{
-			{"personal"},
+		Table: "diva_prizes",
+		Rows: []map[string]interface{}{
+			{"type": "personal", "points_req": float64(1)},
+			{"type": "guild"},
 		},
 	}
 	if _, _, err := buildSeedInsert(block); err == nil {
-		t.Error("expected error for row/column length mismatch, got nil")
+		t.Error("expected error for a row whose columns differ from row 0, got nil")
 	}
 }
 
 func TestApplySeedJSONBlock_InvalidTableName(t *testing.T) {
 	block := seedJSONBlock{
-		Table:   "diva_prizes; DROP TABLE users",
-		Columns: []string{"type"},
-		Rows:    [][]interface{}{{"personal"}},
+		Table: "diva_prizes; DROP TABLE users",
+		Rows:  []map[string]interface{}{{"type": "personal"}},
 	}
 	err := applySeedJSONBlock(nil, block)
 	if err == nil || !strings.Contains(err.Error(), "invalid table name") {
@@ -140,9 +175,8 @@ func TestApplySeedJSONBlock_InvalidTableName(t *testing.T) {
 
 func TestApplySeedJSONBlock_InvalidColumnName(t *testing.T) {
 	block := seedJSONBlock{
-		Table:   "diva_prizes",
-		Columns: []string{"type; DROP TABLE users"},
-		Rows:    [][]interface{}{{"personal"}},
+		Table: "diva_prizes",
+		Rows:  []map[string]interface{}{{"type; DROP TABLE users": "personal"}},
 	}
 	err := applySeedJSONBlock(nil, block)
 	if err == nil || !strings.Contains(err.Error(), "invalid column name") {
@@ -152,9 +186,8 @@ func TestApplySeedJSONBlock_InvalidColumnName(t *testing.T) {
 
 func TestApplySeedJSONBlock_EmptyRowsNoOp(t *testing.T) {
 	block := seedJSONBlock{
-		Table:   "diva_prizes",
-		Columns: []string{"type"},
-		Rows:    [][]interface{}{},
+		Table: "diva_prizes",
+		Rows:  []map[string]interface{}{},
 	}
 	// No DB call should happen for an empty block, so a nil *sqlx.DB must not panic.
 	if err := applySeedJSONBlock(nil, block); err != nil {
@@ -183,9 +216,8 @@ func TestApplySeedJSON_Integration(t *testing.T) {
 			{
 				"table": "diva_prizes",
 				"onConflict": "DO NOTHING",
-				"columns": ["type", "points_req", "item_type", "item_id", "quantity", "gr", "repeatable"],
 				"rows": [
-					["personal", 42, 26, 0, 1, false, false]
+					{"type": "personal", "points_req": 42, "item_type": 26, "item_id": 0, "quantity": 1, "gr": false, "repeatable": false}
 				]
 			}
 		]
@@ -223,8 +255,7 @@ func TestApplySeedJSON_OnConflict(t *testing.T) {
 			{
 				"table": "seed_conflict_test",
 				"onConflict": "(k) DO NOTHING",
-				"columns": ["k", "v"],
-				"rows": [[1, 100]]
+				"rows": [{"k": 1, "v": 100}]
 			}
 		]
 	}`)
@@ -260,8 +291,7 @@ func TestApplySeedJSON_Truncate(t *testing.T) {
 				{
 					"table": "public.cafebonus",
 					"truncate": true,
-					"columns": ["time_req", "item_type", "item_id", "quantity"],
-					"rows": [[1800, 17, 0, ` + strconv.Itoa(quantity) + `]]
+					"rows": [{"time_req": 1800, "item_type": 17, "item_id": 0, "quantity": ` + strconv.Itoa(quantity) + `}]
 				}
 			]
 		}`)

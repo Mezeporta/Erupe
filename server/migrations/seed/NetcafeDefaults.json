@@ -3,15 +3,14 @@
     {
       "table": "public.cafebonus",
       "truncate": true,
-      "columns": ["time_req", "item_type", "item_id", "quantity"],
       "rows": [
-        [1800, 17, 0, 50],
-        [3600, 17, 0, 100],
-        [7200, 17, 0, 200],
-        [10800, 17, 0, 300],
-        [18000, 17, 0, 350],
-        [28800, 17, 0, 500],
-        [43200, 17, 0, 500]
+        {"time_req": 1800, "item_type": 17, "item_id": 0, "quantity": 50},
+        {"time_req": 3600, "item_type": 17, "item_id": 0, "quantity": 100},
+        {"time_req": 7200, "item_type": 17, "item_id": 0, "quantity": 200},
+        {"time_req": 10800, "item_type": 17, "item_id": 0, "quantity": 300},
+        {"time_req": 18000, "item_type": 17, "item_id": 0, "quantity": 350},
+        {"time_req": 28800, "item_type": 17, "item_id": 0, "quantity": 500},
+        {"time_req": 43200, "item_type": 17, "item_id": 0, "quantity": 500}
       ]
     }
   ]
