@@ -170,13 +170,20 @@ func TestHandleMsgMhfSetUdTacticsFollower(t *testing.T) {
 	server := createMockServer()
 	session := createMockSession(1, server)
 
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("handleMsgMhfSetUdTacticsFollower panicked: %v", r)
-		}
-	}()
+	pkt := &mhfpacket.MsgMhfSetUdTacticsFollower{
+		AckHandle: 12345,
+	}
 
-	handleMsgMhfSetUdTacticsFollower(session, nil)
+	handleMsgMhfSetUdTacticsFollower(session, pkt)
+
+	select {
+	case p := <-session.sendPackets:
+		if len(p.data) == 0 {
+			t.Error("Response packet should have data")
+		}
+	default:
+		t.Error("No response packet queued")
+	}
 }
 
 // Tests consolidated from handlers_coverage3_test.go
@@ -190,6 +197,9 @@ func TestSimpleAckHandlers_TacticsGo(t *testing.T) {
 	}{
 		{"handleMsgMhfAddUdTacticsPoint", func(s *Session) {
 			handleMsgMhfAddUdTacticsPoint(s, &mhfpacket.MsgMhfAddUdTacticsPoint{AckHandle: 1})
+		}},
+		{"handleMsgMhfSetUdTacticsFollower", func(s *Session) {
+			handleMsgMhfSetUdTacticsFollower(s, &mhfpacket.MsgMhfSetUdTacticsFollower{AckHandle: 1})
 		}},
 	}
 
@@ -254,29 +264,6 @@ func TestNonTrivialHandlers_TacticsGo(t *testing.T) {
 			default:
 				t.Errorf("%s: no response queued", tt.name)
 			}
-		})
-	}
-}
-
-func TestEmptyHandlers_MiscFiles_Tactics(t *testing.T) {
-	server := createMockServer()
-	session := createMockSession(1, server)
-
-	tests := []struct {
-		name string
-		fn   func()
-	}{
-		{"handleMsgMhfSetUdTacticsFollower", func() { handleMsgMhfSetUdTacticsFollower(session, nil) }},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				if r := recover(); r != nil {
-					t.Errorf("%s panicked: %v", tt.name, r)
-				}
-			}()
-			tt.fn()
 		})
 	}
 }

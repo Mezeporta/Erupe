@@ -28,7 +28,6 @@ func TestParseSmallNotImplemented(t *testing.T) {
 		{"MsgMhfResetAchievement", &MsgMhfResetAchievement{}},
 		{"MsgMhfResetTitle", &MsgMhfResetTitle{}},
 		{"MsgMhfSetCaAchievement", &MsgMhfSetCaAchievement{}},
-		{"MsgMhfSetUdTacticsFollower", &MsgMhfSetUdTacticsFollower{}},
 		{"MsgMhfStampcardPrize", &MsgMhfStampcardPrize{}},
 		{"MsgMhfUpdateForceGuildRank", &MsgMhfUpdateForceGuildRank{}},
 

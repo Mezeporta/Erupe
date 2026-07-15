@@ -168,7 +168,10 @@ func handleMsgMhfGetUdTacticsRanking(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
-func handleMsgMhfSetUdTacticsFollower(s *Session, p mhfpacket.MHFPacket) {} // stub: unimplemented
+func handleMsgMhfSetUdTacticsFollower(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfSetUdTacticsFollower)
+	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+}
 
 // handleMsgMhfGetUdTacticsLog was previously a bare stub, which meant it sent
 // no ack at all -- since the packet carries an AckHandle, that silence is a
