@@ -52,7 +52,7 @@ func handleMsgMhfGetUdTacticsPoint(s *Session, p mhfpacket.MHFPacket) {
 }
 
 // udTacticsQuestMin/Max bound the interception (Diva Defense) quest file IDs.
-// Every ripped 58xxx quest_id in EventQuests.sql (quest_type 46/47/48, see
+// Every ripped 58xxx quest_id in EventQuests.json (quest_type 46/47/48, see
 // isDivaDefenseQuestType in constants_quest.go) falls in 58043-58128; the
 // previous 58079-58083 bound only covered one event batch out of 65 rows.
 // This range isn't gap-free (a handful of unused IDs in between are also

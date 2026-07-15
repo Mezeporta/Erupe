@@ -15,7 +15,7 @@ import (
 //go:embed sql/*.sql
 var migrationFS embed.FS
 
-//go:embed seed/*.sql
+//go:embed seed/*.sql seed/*.json
 var seedFS embed.FS
 
 // Migrate creates the schema_version table if needed, detects existing databases
@@ -55,8 +55,13 @@ func Migrate(db *sqlx.DB, logger *zap.Logger) (int, error) {
 	return count, nil
 }
 
-// ApplySeedData runs all seed/*.sql files. Not tracked in schema_version.
-// Safe to run multiple times if seed files use ON CONFLICT DO NOTHING.
+// ApplySeedData runs all seed/*.sql and seed/*.json files. Not tracked in
+// schema_version. Safe to run multiple times if seed files use ON CONFLICT
+// DO NOTHING (SQL) or "onConflict" (JSON).
+//
+// JSON seed files (see seed_json.go) are a hand-editing-friendly alternative
+// to SQL for plain tabular data; seed data needing real SQL logic (subqueries,
+// idempotency guards, NOW()-relative rows) stays as .sql.
 func ApplySeedData(db *sqlx.DB, logger *zap.Logger) (int, error) {
 	files, err := fs.ReadDir(seedFS, "seed")
 	if err != nil {
@@ -65,7 +70,7 @@ func ApplySeedData(db *sqlx.DB, logger *zap.Logger) (int, error) {
 
 	var names []string
 	for _, f := range files {
-		if !f.IsDir() && strings.HasSuffix(f.Name(), ".sql") {
+		if !f.IsDir() && (strings.HasSuffix(f.Name(), ".sql") || strings.HasSuffix(f.Name(), ".json")) {
 			names = append(names, f.Name())
 		}
 	}
@@ -78,8 +83,14 @@ func ApplySeedData(db *sqlx.DB, logger *zap.Logger) (int, error) {
 			return count, fmt.Errorf("reading seed file %s: %w", name, err)
 		}
 		logger.Info(fmt.Sprintf("Applying seed data: %s", name))
-		if _, err := db.Exec(string(data)); err != nil {
-			return count, fmt.Errorf("executing seed file %s: %w", name, err)
+		if strings.HasSuffix(name, ".json") {
+			if err := applySeedJSON(db, name, data); err != nil {
+				return count, fmt.Errorf("executing seed file %s: %w", name, err)
+			}
+		} else {
+			if _, err := db.Exec(string(data)); err != nil {
+				return count, fmt.Errorf("executing seed file %s: %w", name, err)
+			}
 		}
 		count++
 	}

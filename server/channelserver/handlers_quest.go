@@ -429,7 +429,7 @@ func makeEventQuest(s *Session, eq EventQuest) ([]byte, error) {
 	_, _ = bf.Seek(questFrameVariant3Offset, 0)
 	questVariant3 := bf.ReadUint8()
 	if !isDivaDefenseQuestType(eq.QuestType) {
-		// Only Diva Defense quests (quest_type 46/47/48 in EventQuests.sql,
+		// Only Diva Defense quests (quest_type 46/47/48 in EventQuests.json,
 		// covering all ripped 58xxx quest files) have real server-side support
 		// for the interception mechanics; clear the flag everywhere else so the
 		// client doesn't expect them on a normal quest.

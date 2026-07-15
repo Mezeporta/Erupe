@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- JSON seed format alongside `server/migrations/seed/*.sql`, for operators who find hand-editing raw SQL `INSERT` statements unapproachable (#205). A generic loader (`server/migrations/seed_json.go`) parses `seed/*.json` into table/column/row blocks and builds parameterized `INSERT`s, with a `{"raw": "..."}` escape hatch for computed values JSON can't express literally (used for the campaign demo data's `NOW()`-relative timestamps). Converted the 10 seed files that were plain tabular data — `DivaDefaults`, `DivaShops`, `OtherShops`, `RoadShopItems`, `FPointItems`, `EventQuests`, `ScenarioDefaults`, `NetcafeDefaults`, `FestaDefaults`, `CampaignDemo` — and removed their `.sql` originals; `GachaDemo.sql`, `DistributionDemo.sql`, and `TournamentDefaults.sql` stay as SQL since they rely on subqueries or procedural logic a data-only loader can't express.
 - `handleMsgMhfGetUdGuildMapInfo`/`handleMsgMhfGenerateUdGuildMap` (guild interception map generation and retrieval for Diva Defense) — both were unconditional-fail stubs; the real logic existed only on an abandoned `feature/diva` branch that never merged. Ported and adapted to the current repo pattern (`GuildRepo.GetInterceptionMaps`/`SaveInterceptionMaps`), backed by the `guilds.interception_maps` column that migration `0017_diva.sql` had already provisioned but nothing wrote to.
 
 ### Fixed

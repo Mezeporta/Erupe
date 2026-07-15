@@ -11,7 +11,7 @@ const (
 )
 
 // Diva Defense (interception) quest type codes. Verified exhaustively against
-// every ripped 58xxx quest_id row in EventQuests.sql: quest_type is always
+// every ripped 58xxx quest_id row in EventQuests.json: quest_type is always
 // 46, 47, or 48 for those rows, and never appears on any other quest_id.
 const (
 	QuestTypeDivaDefenseA = uint8(46)
