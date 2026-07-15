@@ -42,3 +42,4 @@ tmp/
 # Claude Code local config
 .claude/
 CLAUDE.local.md
+/log

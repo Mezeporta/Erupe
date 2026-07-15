@@ -381,9 +381,13 @@ func (r *CharacterRepository) LoadSaveDataWithHash(charID uint32) (uint32, []byt
 	return id, savedata, isNew, name, hash, err
 }
 
-// FindByRastaID looks up name and id by rasta_id.
-func (r *CharacterRepository) FindByRastaID(rastaID int) (charID uint32, name string, err error) {
-	err = r.db.QueryRow("SELECT name, id FROM characters WHERE rasta_id=$1", rastaID).Scan(&name, &charID)
+// FindByRastaID looks up name, id, and the querying character's contract_date by rasta_id.
+func (r *CharacterRepository) FindByRastaID(rastaID int, selfID uint32) (charID uint32, name string, contractDate sql.NullTime, err error) {
+	err = r.db.QueryRow(`
+		SELECT c.name, c.id, (SELECT mercenary_contract_date FROM characters WHERE id = $2)
+		FROM characters c
+		WHERE c.rasta_id = $1
+	`, rastaID, selfID).Scan(&name, &charID, &contractDate)
 	return
 }
 
@@ -411,4 +415,17 @@ func (r *CharacterRepository) LoadSaveData(charID uint32) (uint32, []byte, bool,
 	err := r.db.QueryRow("SELECT id, savedata, is_new_character, name FROM characters WHERE id = $1", charID).
 		Scan(&id, &savedata, &isNew, &name)
 	return id, savedata, isNew, name, err
+}
+
+// SetPact sets pact_id and contract_date atomically (used when forming a mercenary loan).
+func (r *CharacterRepository) SetPact(charID uint32, pactID uint32, contractDate time.Time) error {
+	_, err := r.db.Exec(`UPDATE characters SET pact_id=$1, mercenary_contract_date=$2 WHERE id=$3`,
+		pactID, contractDate, charID)
+	return err
+}
+
+// ClearPact resets pact_id to 0 and clears contract_date (used when a lend/loan is cancelled).
+func (r *CharacterRepository) ClearPact(charID uint32) error {
+	_, err := r.db.Exec(`UPDATE characters SET pact_id=0, mercenary_contract_date=NULL WHERE id=$1`, charID)
+	return err
 }

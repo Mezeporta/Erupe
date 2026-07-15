@@ -233,20 +233,29 @@ func (s *Session) QueueAck(ackHandle uint32, data []byte) {
 }
 
 func (s *Session) sendLoop() {
-	for {
-		if s.closed.Load() {
-			return
-		}
-		// Send each packet individually with its own terminator
-		for len(s.sendPackets) > 0 {
-			pkt := <-s.sendPackets
-			err := s.cryptConn.SendPacket(append(pkt.data, []byte{0x00, 0x10}...))
-			if err != nil {
-				s.logger.Warn("Failed to send packet", zap.Error(err))
-			}
-		}
-		time.Sleep(time.Duration(s.server.erupeConfig.LoopDelay) * time.Millisecond)
-	}
+    var pkt packet
+    var buffer []byte
+
+    for {
+        if s.closed.Load() {
+            return
+        }
+
+        for len(s.sendPackets) > 0 {
+            pkt = <-s.sendPackets
+            buffer = append(buffer, pkt.data...)
+        }
+
+        if len(buffer) > 0 {
+            err := s.cryptConn.SendPacket(append(buffer, 0x00, 0x10))
+            if err != nil {
+                s.logger.Warn("Failed to send packet", zap.Error(err))
+            }
+            buffer = buffer[:0]
+        }
+
+        time.Sleep(time.Duration(s.server.erupeConfig.LoopDelay) * time.Millisecond)
+    }
 }
 
 func (s *Session) recvLoop() {

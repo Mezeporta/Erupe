@@ -435,25 +435,46 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 
 const localhostAddrLE = uint32(0x0100007F) // 127.0.0.1 in little-endian
 
-// Kill log binary layout constants
-const (
-	killLogHeaderSize   = 32  // bytes before monster kill count array
-	killLogMonsterCount = 176 // monster table entries
-)
-
 // RP accrual rate constants (seconds per RP point)
 const (
 	rpAccrualNormal = 1800 // 30 min per RP without cafe
 	rpAccrualCafe   = 900  // 15 min per RP with cafe course
 )
 
+// Kill log binary layout constants
+func killLogLayout(mode cfg.Mode) (headerSize int, monsterCount int, ok bool) {
+	switch mode {
+	case cfg.ZZ:
+		return 32, 176, true
+	case cfg.G32:
+		return 28, 122, true
+	// Add newly discovered versions here, e.g.:
+	// case cfg.G3:
+	// 	return X, Y, true
+	default:
+		return 0, 0, false
+	}
+}
+
 func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysRecordLog)
-	if s.server.erupeConfig.RealClientMode == cfg.ZZ {
+
+	headerSize, monsterCount, ok := killLogLayout(s.server.erupeConfig.RealClientMode)
+	if !ok {
+		// Unknown/unsupported client version for this packet layout.
+		// Skip parsing rather than risk reading garbage offsets.
+		s.logger.Warn("No kill log layout defined for client mode",
+			zap.Any("mode", s.server.erupeConfig.RealClientMode))
+	} else if monsterCount > len(mhfmon.Monsters) {
+		s.logger.Error("killLog monsterCount exceeds mhfmon.Monsters length",
+			zap.Int("monsterCount", monsterCount),
+			zap.Int("available", len(mhfmon.Monsters)))
+	} else {
 		bf := byteframe.NewByteFrameFromBytes(pkt.Data)
-		_, _ = bf.Seek(killLogHeaderSize, 0)
+		_, _ = bf.Seek(int64(headerSize), 0)
+
 		var val uint8
-		for i := 0; i < killLogMonsterCount; i++ {
+		for i := 0; i < monsterCount; i++ {
 			val = bf.ReadUint8()
 			if val > 0 && mhfmon.Monsters[i].Large {
 				if err := s.server.guildRepo.InsertKillLog(s.charID, i, val, TimeAdjusted()); err != nil {
@@ -462,6 +483,7 @@ func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	}
+
 	// remove a client returning to town from reserved slots to make sure the stage is hidden from board
 	delete(s.stage.reservedClientSlots, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

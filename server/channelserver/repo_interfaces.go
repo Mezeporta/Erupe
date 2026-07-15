@@ -2,6 +2,8 @@ package channelserver
 
 import (
 	"time"
+	"database/sql" // ADD THIS
+
 )
 
 // Repository interfaces decouple handlers from concrete PostgreSQL implementations,
@@ -35,7 +37,7 @@ type CharacterRepo interface {
 	ReadGuildPostChecked(charID uint32) (time.Time, error)
 	SaveMercenary(charID uint32, data []byte, rastaID uint32) error
 	UpdateGCPAndPact(charID uint32, gcp uint32, pactID uint32) error
-	FindByRastaID(rastaID int) (charID uint32, name string, err error)
+	//FindByRastaID(rastaID int) (charID uint32, name string, err error)
 	SaveCharacterData(charID uint32, compSave []byte, hr, gr uint16, isFemale bool, weaponType uint8, weaponID uint16) error
 	SaveHouseData(charID uint32, houseTier []byte, houseData, bookshelf, gallery, tore, garden []byte) error
 	LoadSaveData(charID uint32) (uint32, []byte, bool, string, error)
@@ -51,6 +53,9 @@ type CharacterRepo interface {
 	// LoadBackupsByRecency returns all backup slots for a character ordered
 	// most-recent first. Returns an empty slice if no backups exist.
 	LoadBackupsByRecency(charID uint32) ([]SavedataBackup, error)
+	FindByRastaID(rastaID int, selfID uint32) (charID uint32, name string, contractDate sql.NullTime, err error)
+	SetPact(charID uint32, pactID uint32, contractDate time.Time) error
+	ClearPact(charID uint32) error
 }
 
 // GuildRepo defines the contract for guild data access.
@@ -401,6 +406,22 @@ type MercenaryRepo interface {
 	GetMercenaryLoans(charID uint32) ([]MercenaryLoan, error)
 	GetGuildHuntCatsUsed(charID uint32) ([]GuildHuntCatUsage, error)
 	GetGuildAirou(guildID uint32) ([][]byte, error)
+	// LogMercenaryEvent inserts a row into mercenary_logs recording a contract state change.
+	LogMercenaryEvent(playerID, mercenaryID uint32, logTime time.Time, isInitiator bool, state int) error
+
+	// GetMercenaryLogs returns the mercenary contract history for a character, most recent first.
+	GetMercenaryLogs(charID uint32) ([]MercenaryLogEntry, error)
+
+	// GetLastMercenaryReward returns the last claimed kill_log_id and claim time for a mercenary.
+	// If no reward row exists, sql.ErrNoRows is returned so callers can distinguish "first claim".
+	GetLastMercenaryReward(mercenaryID uint32, defaultClaim time.Time) (lastKillLogID uint32, lastClaimAt time.Time, err error)
+
+	// GetRecentKillLogs returns up to `limit` most recent distinct-monster kill logs for
+	// characters on loan to the given mercenary (rasta), with id greater than afterID.
+	GetRecentKillLogs(rastaID uint32, afterID uint32, limit int) ([]MercenaryKillLog, error)
+
+	// InsertMercenaryReward records a new reward claim checkpoint for a mercenary.
+	InsertMercenaryReward(mercenaryID, lastKillLogID uint32, claimAt time.Time) error
 }
 
 // Tournament represents a tournament schedule entry.

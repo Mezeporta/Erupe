@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"database/sql" // ADD THIS
 	"fmt"
 	"time"
 
@@ -33,14 +34,15 @@ func (r *MercenaryRepository) NextAirouID() (uint32, error) {
 
 // MercenaryLoan represents a character that has a pact with a rasta.
 type MercenaryLoan struct {
-	Name   string
-	CharID uint32
-	PactID int
+	Name         string
+	CharID       uint32
+	PactID       int
+	ContractDate sql.NullTime
 }
 
 // GetMercenaryLoans returns characters that have a pact with the given character's rasta_id.
 func (r *MercenaryRepository) GetMercenaryLoans(charID uint32) ([]MercenaryLoan, error) {
-	rows, err := r.db.Query("SELECT name, id, pact_id FROM characters WHERE pact_id=(SELECT rasta_id FROM characters WHERE id=$1)", charID)
+	rows, err := r.db.Query("SELECT name, id, pact_id, mercenary_contract_date FROM characters WHERE pact_id=(SELECT rasta_id FROM characters WHERE id=$1)", charID)
 	if err != nil {
 		return nil, fmt.Errorf("query mercenary loans: %w", err)
 	}
@@ -48,7 +50,7 @@ func (r *MercenaryRepository) GetMercenaryLoans(charID uint32) ([]MercenaryLoan,
 	var result []MercenaryLoan
 	for rows.Next() {
 		var l MercenaryLoan
-		if err := rows.Scan(&l.Name, &l.CharID, &l.PactID); err != nil {
+		if err := rows.Scan(&l.Name, &l.CharID, &l.PactID, &l.ContractDate); err != nil {
 			return nil, fmt.Errorf("scan mercenary loan: %w", err)
 		}
 		result = append(result, l)
@@ -100,4 +102,104 @@ func (r *MercenaryRepository) GetGuildAirou(guildID uint32) ([][]byte, error) {
 		result = append(result, data)
 	}
 	return result, rows.Err()
+}
+
+// LogMercenaryEvent inserts a row into mercenary_logs recording a contract state change.
+func (r *MercenaryRepository) LogMercenaryEvent(playerID, mercenaryID uint32, logTime time.Time, isInitiator bool, state int) error {
+	_, err := r.db.Exec(`
+		INSERT INTO mercenary_logs(player_id, mercenary_id, log_time, is_initiator, state)
+		VALUES ($1, $2, $3, $4, $5)
+	`, playerID, mercenaryID, logTime, isInitiator, state)
+	return err
+}
+
+// MercenaryKillLog represents an aggregated kill-log entry for a mercenary reward claim.
+type MercenaryKillLog struct {
+	ID      uint32 `db:"id"`
+	Monster uint32 `db:"monster"`
+}
+
+// GetLastMercenaryReward returns the last claimed kill_log_id and claim time for a mercenary.
+// If no reward row exists, sql.ErrNoRows is returned so callers can distinguish "first claim".
+func (r *MercenaryRepository) GetLastMercenaryReward(mercenaryID uint32, defaultClaim time.Time) (lastKillLogID uint32, lastClaimAt time.Time, err error) {
+	err = r.db.QueryRow(`
+		SELECT COALESCE(last_kill_log_id, 0), COALESCE(last_claim_at, $2)
+		FROM mercenary_rewards
+		WHERE mercenary_id = $1
+		ORDER BY last_claim_at DESC
+		LIMIT 1
+	`, mercenaryID, defaultClaim).Scan(&lastKillLogID, &lastClaimAt)
+	return
+}
+
+// GetRecentKillLogs returns up to `limit` most recent distinct-monster kill logs for
+// characters on loan to the given mercenary (rasta), with id greater than afterID.
+func (r *MercenaryRepository) GetRecentKillLogs(rastaID uint32, afterID uint32, limit int) ([]MercenaryKillLog, error) {
+	rows, err := r.db.Queryx(`
+		SELECT MAX(id) AS id, monster
+		FROM kill_logs
+		WHERE character_id IN (
+			SELECT id FROM characters WHERE pact_id = $1
+		)
+		AND id > $2
+		GROUP BY monster
+		ORDER BY MAX(timestamp) DESC
+		LIMIT $3
+	`, rastaID, afterID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query recent kill logs: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var logs []MercenaryKillLog
+	for rows.Next() {
+		var log MercenaryKillLog
+		if err := rows.StructScan(&log); err != nil {
+			return nil, fmt.Errorf("scan kill log row: %w", err)
+		}
+		logs = append(logs, log)
+	}
+	return logs, rows.Err()
+}
+
+// InsertMercenaryReward records a new reward claim checkpoint for a mercenary.
+func (r *MercenaryRepository) InsertMercenaryReward(mercenaryID, lastKillLogID uint32, claimAt time.Time) error {
+	_, err := r.db.Exec(`
+		INSERT INTO mercenary_rewards (mercenary_id, last_kill_log_id, last_claim_at)
+		VALUES ($1, $2, $3)
+	`, mercenaryID, lastKillLogID, claimAt)
+	return err
+}
+
+// MercenaryLogEntry represents one contract-history entry for a character.
+type MercenaryLogEntry struct {
+	Name        string
+	Date        time.Time
+	IsInitiator bool
+	State       uint16
+}
+
+// GetMercenaryLogs returns the mercenary contract history for a character, most recent first.
+func (r *MercenaryRepository) GetMercenaryLogs(charID uint32) ([]MercenaryLogEntry, error) {
+	rows, err := r.db.Query(`
+		SELECT COALESCE(c.name, ''), ml.log_time, ml.is_initiator, ml.state
+		FROM mercenary_logs ml
+		LEFT JOIN characters c ON c.id = ml.mercenary_id
+		WHERE ml.player_id = $1
+		ORDER BY ml.log_time DESC
+	`, charID)
+	if err != nil {
+		return nil, fmt.Errorf("query mercenary logs: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var logs []MercenaryLogEntry
+	for rows.Next() {
+		var l MercenaryLogEntry
+		if err := rows.Scan(&l.Name, &l.Date, &l.IsInitiator, &l.State); err != nil {
+			return nil, fmt.Errorf("scan mercenary log row: %w", err)
+		}
+		logs = append(logs, l)
+	}
+	return logs, rows.Err()
 }

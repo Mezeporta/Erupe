@@ -1,15 +1,18 @@
 package channelserver
 
 import (
+	"database/sql"
+	"errors"
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/stringsupport"
 	cfg "erupe-ce/config"
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
-	"go.uber.org/zap"
 	"io"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 func handleMsgMhfLoadPartner(s *Session, p mhfpacket.MHFPacket) {
@@ -141,28 +144,104 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfMercenaryHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfMercenaryHuntdata)
-	if pkt.RequestType == 1 {
-		// Format:
-		// uint8 Hunts
-		// struct Hunt
-		//   uint32 HuntID
-		//   uint32 MonID
-		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
-	} else {
+
+	if pkt.RequestType != 1 {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0))
+		return
 	}
+
+	rastaID, err := s.server.charRepo.ReadInt(s.charID, "rasta_id")
+	if err != nil {
+		s.logger.Error("failed to fetch rasta_id for character", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
+		return
+	}
+
+	defaultClaim := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+	lastKillLog, lastClaim, err := s.server.mercenaryRepo.GetLastMercenaryReward(uint32(rastaID), defaultClaim)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			s.logger.Error("failed to fetch last mercenary claim", zap.Error(err), zap.Uint32("rastaID", uint32(rastaID)))
+			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
+			return
+		}
+		// No previous claim; treat as first claim.
+		lastKillLog = 0
+		lastClaim = defaultClaim
+	}
+
+	// Same boundary logic as the daily reset: current period's noon cutoff,
+	// rolled forward a day if we're already past today's noon.
+	midday := TimeMidnight().Add(12 * time.Hour)
+	if TimeAdjusted().After(midday) {
+		midday = midday.Add(24 * time.Hour)
+	}
+
+	if !midday.After(lastClaim) {
+		s.logger.Info("Woops Too Soon")
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
+		return
+	}
+
+	logs, err := s.server.mercenaryRepo.GetRecentKillLogs(uint32(rastaID), lastKillLog, 5)
+	if err != nil {
+		s.logger.Error("failed to fetch kill logs for mercenary huntdata", zap.Error(err), zap.Uint32("rastaID", uint32(rastaID)))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
+		return
+	}
+
+	if len(logs) == 0 {
+		s.logger.Info("Woops No new Hunts")
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
+		return
+	}
+
+	var maxID uint32
+	for _, log := range logs {
+		if log.ID > maxID {
+			maxID = log.ID
+		}
+	}
+
+	if err := s.server.mercenaryRepo.InsertMercenaryReward(uint32(rastaID), maxID, midday); err != nil {
+		s.logger.Error("failed to insert mercenary claim", zap.Error(err), zap.Uint32("rastaID", uint32(rastaID)), zap.Uint32("killLogID", maxID))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
+		return
+	}
+
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint8(uint8(len(logs)))
+	for _, log := range logs {
+		bf.WriteUint32(log.ID)
+		bf.WriteUint32(log.Monster)
+	}
+
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
 func handleMsgMhfEnumerateMercenaryLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateMercenaryLog)
 	bf := byteframe.NewByteFrame()
-	bf.WriteUint32(0)
-	// Format:
-	// struct Log
-	//   uint32 Timestamp
-	//   []byte Name (len 18)
-	//   uint8 Unk
-	//   uint8 Unk
+
+	logs, err := s.server.mercenaryRepo.GetMercenaryLogs(s.charID)
+	if err != nil {
+		s.logger.Error("failed to fetch mercenary logs", zap.Error(err), zap.Uint32("charID", s.charID))
+		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+		return
+	}
+
+	bf.WriteUint32(uint32(len(logs)))
+	for _, l := range logs {
+		bf.WriteUint32(uint32(l.Date.Unix()))
+		bf.WriteBytes(stringsupport.PaddedString(l.Name, 18, true))
+
+		state := []byte{0, byte(l.State)}
+		if l.IsInitiator {
+			state[0] = 1
+		}
+		bf.WriteBytes(state)
+	}
+
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
@@ -186,26 +265,54 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveMercenary)
-	if len(pkt.MercData) > 65536 {
+
+	if len(pkt.MercData) > 0x8B {
 		s.logger.Warn("Mercenary payload too large", zap.Int("len", len(pkt.MercData)))
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 	dumpSaveData(s, pkt.MercData, "mercenary")
-	if len(pkt.MercData) >= 4 {
-		temp := byteframe.NewByteFrameFromBytes(pkt.MercData)
-		rastaID := temp.ReadUint32()
-		if rastaID == 0 {
+
+	if len(pkt.MercData) == 0x8B {
+		if pkt.RastaMercID == 0 {
 			s.logger.Warn("Mercenary save with rasta_id=0, preserving existing value",
 				zap.Uint32("charID", s.charID))
 		}
-		if err := s.server.charRepo.SaveMercenary(s.charID, pkt.MercData, rastaID); err != nil {
+		if err := s.server.charRepo.SaveMercenary(s.charID, pkt.MercData, pkt.RastaMercID); err != nil {
 			s.logger.Error("Failed to save mercenary data", zap.Error(err))
 		}
+	} else {
+		s.logger.Warn("Mercenary payload too small", zap.Int("len", len(pkt.MercData)))
 	}
+
+	var gcp int
+	gcp, gcpErr := readCharacterInt(s, "gcp")
+	if gcpErr != nil {
+		s.logger.Warn("Failed to read gcp", zap.Error(gcpErr))
+	} else if pkt.GCP > uint32(gcp) {
+		difference := pkt.GCP - uint32(gcp)
+		// s.logger.Info("GCP increased",
+		// 	zap.Uint32("old_gcp", uint32(gcp)),
+		// 	zap.Uint32("new_gcp", pkt.GCP),
+		// 	zap.Uint32("difference", difference),
+		// )
+
+		if pkt.PactMercID > 0 {
+			ownerCharID, _, _, ownerErr := s.server.charRepo.FindByRastaID(int(pkt.PactMercID), s.charID)
+			if ownerErr != nil {
+				s.logger.Warn("Failed to find pact owner for GCP credit",
+					zap.Error(ownerErr), zap.Uint32("pactMercID", pkt.PactMercID))
+			} else if _, err := s.server.charRepo.AdjustInt(ownerCharID, "gcp", int(difference)); err != nil {
+				s.logger.Warn("Failed to credit GCP to pact owner",
+					zap.Error(err), zap.Uint32("ownerCharID", ownerCharID))
+			}
+		}
+	}
+
 	if err := s.server.charRepo.UpdateGCPAndPact(s.charID, pkt.GCP, pkt.PactMercID); err != nil {
 		s.logger.Error("Failed to update GCP and pact ID", zap.Error(err))
 	}
+
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
@@ -217,20 +324,29 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	if pactErr != nil {
 		s.logger.Warn("Failed to read pact_id", zap.Error(pactErr))
 	}
+
 	var cid uint32
 	var name string
 	if pactID > 0 {
 		var findErr error
-		cid, name, findErr = s.server.charRepo.FindByRastaID(pactID)
+		var contractDate sql.NullTime
+		cid, name, contractDate, findErr = s.server.charRepo.FindByRastaID(pactID, s.charID)
 		if findErr != nil {
 			s.logger.Warn("Failed to find character by rasta ID", zap.Error(findErr))
 		}
+
+		start := TimeAdjusted()
+		if contractDate.Valid {
+			start = contractDate.Time
+		}
+		expiry := start.Add(7 * 24 * time.Hour)
+
 		bf.WriteUint8(1) // numLends
 		bf.WriteUint32(uint32(pactID))
 		bf.WriteUint32(cid)
 		bf.WriteBool(true) // Escort enabled
-		bf.WriteUint32(uint32(TimeAdjusted().Unix()))
-		bf.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * 7).Unix()))
+		bf.WriteUint32(uint32(start.Unix()))
+		bf.WriteUint32(uint32(expiry.Unix()))
 		bf.WriteBytes(stringsupport.PaddedString(name, 18, true))
 	} else {
 		bf.WriteUint8(0)
@@ -241,12 +357,19 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 		if err != nil {
 			s.logger.Error("Failed to query mercenary loans", zap.Error(err))
 		}
+
 		bf.WriteUint8(uint8(len(loans)))
 		for _, loan := range loans {
+			start := TimeAdjusted()
+			if loan.ContractDate.Valid {
+				start = loan.ContractDate.Time
+			}
+			expiry := start.Add(7 * 24 * time.Hour)
+
 			bf.WriteUint32(uint32(loan.PactID))
 			bf.WriteUint32(loan.CharID)
-			bf.WriteUint32(uint32(TimeAdjusted().Unix()))
-			bf.WriteUint32(uint32(TimeAdjusted().Add(time.Hour * 24 * 7).Unix()))
+			bf.WriteUint32(uint32(start.Unix()))
+			bf.WriteUint32(uint32(expiry.Unix()))
 			bf.WriteBytes(stringsupport.PaddedString(loan.Name, 18, true))
 		}
 
@@ -254,6 +377,10 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 			data, dataErr := s.server.charRepo.LoadColumn(s.charID, "savemercenary")
 			if dataErr != nil {
 				s.logger.Warn("Failed to load savemercenary", zap.Error(dataErr))
+			}
+			rastaid, rastaErr := readCharacterInt(s, "rasta_id")
+			if rastaErr != nil {
+				s.logger.Warn("Failed to read rasta_id", zap.Error(rastaErr))
 			}
 			gcp, gcpErr := readCharacterInt(s, "gcp")
 			if gcpErr != nil {
@@ -264,6 +391,9 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteBool(false)
 			} else {
 				bf.WriteBool(true)
+				bf.WriteUint32(uint32(rastaid))
+				bf.WriteUint32(s.charID)
+				bf.WriteBool(true) // TODO: Load escort toggle state from DB.
 				bf.WriteBytes(data)
 			}
 			bf.WriteUint32(uint32(gcp))
@@ -273,6 +403,7 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
+// This function load contracted mercenary data (triggered by mercenaryW if theres some contract)
 func handleMsgMhfReadMercenaryM(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryM)
 	data, err := s.server.charRepo.LoadColumn(pkt.CharID, "savemercenary")
@@ -283,6 +414,12 @@ func handleMsgMhfReadMercenaryM(s *Session, p mhfpacket.MHFPacket) {
 	if len(data) == 0 {
 		resp.WriteBool(false)
 	} else {
+		//mercenary header data
+		resp.WriteUint32(uint32(pkt.MercID))
+		resp.WriteUint32(uint32(pkt.CharID))
+		//hard code for now, should be in database to check rasta escort state (follow/not)
+		resp.WriteBool(true)
+		//mercenary savedata
 		resp.WriteBytes(data)
 	}
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -290,20 +427,83 @@ func handleMsgMhfReadMercenaryM(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfContractMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfContractMercenary)
+	now := TimeAdjusted()
+
 	switch pkt.Op {
 	case 0: // Form loan
-		if err := s.server.charRepo.SaveInt(pkt.CID, "pact_id", int(pkt.PactMercID)); err != nil {
-			s.logger.Error("Failed to form mercenary loan", zap.Error(err))
+		if err := s.server.charRepo.SetPact(pkt.CID, pkt.PactMercID, now); err != nil {
+			s.logger.Error("Failed to form mercenary loan",
+				zap.Uint32("charID", pkt.CID),
+				zap.Uint32("pactMercID", pkt.PactMercID),
+				zap.Error(err),
+			)
 		}
+		if err := s.server.mercenaryRepo.LogMercenaryEvent(s.charID, pkt.CID, now, true, 0); err != nil {
+			s.logger.Error("Failed to log mercenary event",
+				zap.Uint32("playerID", s.charID),
+				zap.Uint32("mercenaryID", pkt.CID),
+				zap.Int("state", 0),
+				zap.Error(err),
+			)
+		}
+		if err := s.server.mercenaryRepo.LogMercenaryEvent(pkt.CID, s.charID, now, false, 0); err != nil {
+			s.logger.Error("Failed to log mercenary event",
+				zap.Uint32("playerID", pkt.CID),
+				zap.Uint32("mercenaryID", s.charID),
+				zap.Int("state", 0),
+				zap.Error(err),
+			)
+		}
+
 	case 1: // Cancel lend
-		if err := s.server.charRepo.SaveInt(s.charID, "pact_id", 0); err != nil {
-			s.logger.Error("Failed to cancel mercenary lend", zap.Error(err))
+		if err := s.server.charRepo.ClearPact(s.charID); err != nil {
+			s.logger.Error("Failed to cancel mercenary lend",
+				zap.Uint32("charID", s.charID),
+				zap.Error(err),
+			)
 		}
-	case 2: // Cancel loan
-		if err := s.server.charRepo.SaveInt(pkt.CID, "pact_id", 0); err != nil {
-			s.logger.Error("Failed to cancel mercenary loan", zap.Error(err))
+		if err := s.server.mercenaryRepo.LogMercenaryEvent(pkt.CID, s.charID, now, true, 4); err != nil {
+			s.logger.Error("Failed to log mercenary event",
+				zap.Uint32("playerID", pkt.CID),
+				zap.Uint32("mercenaryID", s.charID),
+				zap.Int("state", 4),
+				zap.Error(err),
+			)
+		}
+		if err := s.server.mercenaryRepo.LogMercenaryEvent(s.charID, pkt.CID, now, false, 4); err != nil {
+			s.logger.Error("Failed to log mercenary event",
+				zap.Uint32("playerID", s.charID),
+				zap.Uint32("mercenaryID", pkt.CID),
+				zap.Int("state", 4),
+				zap.Error(err),
+			)
+		}
+
+	case 2: // Cancel loan - player terminate the backup contract
+		if err := s.server.charRepo.ClearPact(pkt.CID); err != nil {
+			s.logger.Error("Failed to cancel mercenary loan",
+				zap.Uint32("charID", pkt.CID),
+				zap.Error(err),
+			)
+		}
+		if err := s.server.mercenaryRepo.LogMercenaryEvent(pkt.CID, s.charID, now, false, 3); err != nil {
+			s.logger.Error("Failed to log mercenary event",
+				zap.Uint32("playerID", pkt.CID),
+				zap.Uint32("mercenaryID", s.charID),
+				zap.Int("state", 3),
+				zap.Error(err),
+			)
+		}
+		if err := s.server.mercenaryRepo.LogMercenaryEvent(s.charID, pkt.CID, now, true, 3); err != nil {
+			s.logger.Error("Failed to log mercenary event",
+				zap.Uint32("playerID", s.charID),
+				zap.Uint32("mercenaryID", pkt.CID),
+				zap.Int("state", 3),
+				zap.Error(err),
+			)
 		}
 	}
+
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 

@@ -221,6 +221,7 @@ CREATE TABLE public.characters (
     promo_points integer DEFAULT 0 NOT NULL,
     rasta_id integer,
     pact_id integer,
+    mercenary_contract_date timestamp with time zone,
     stampcard integer DEFAULT 0 NOT NULL,
     mezfes bytea
 );
@@ -1119,6 +1120,68 @@ CREATE SEQUENCE public.mail_id_seq
 ALTER SEQUENCE public.mail_id_seq OWNED BY public.mail.id;
 
 
+CREATE TABLE public.mercenary_logs (
+    id integer NOT NULL,
+    player_id integer,
+    mercenary_id integer,
+    log_time timestamp with time zone,
+    is_initiator boolean DEFAULT false NOT NULL,
+    state smallint DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: mercenary_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.mercenary_logs_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: mercenary_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.mercenary_logs_id_seq OWNED BY public.mercenary_logs.id;
+
+
+--
+-- Name: mercenary_rewards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.mercenary_rewards (
+    id integer NOT NULL,
+    mercenary_id integer NOT NULL,
+    last_kill_log_id integer,
+    last_claim_at timestamp with time zone
+);
+
+
+--
+-- Name: mercenary_rewards_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.mercenary_rewards_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: mercenary_rewards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.mercenary_rewards_id_seq OWNED BY public.mercenary_rewards.id;
+
+
 --
 -- Name: rasta_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
@@ -1131,9 +1194,6 @@ CREATE SEQUENCE public.rasta_id_seq
     CACHE 1;
 
 
---
--- Name: rengoku_score; Type: TABLE; Schema: public; Owner: -
---
 
 CREATE TABLE public.rengoku_score (
     character_id integer NOT NULL,
