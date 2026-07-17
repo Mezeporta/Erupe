@@ -144,37 +144,51 @@ func validateRoadMode(data []byte, rm rengokuRoadMode, label string) error {
 			label, rm.SpawnCountPtrsPtr, rm.SpawnCountCount, fileLen)
 	}
 
-	// Individual spawn-table pointer targets.
+	// Individual spawn slots: each slot's candidate count must be >= 1 (a
+	// zero count crashes the real client on Hunting Road entry), and the
+	// slot's candidate-table range (tablePtr .. tablePtr+count*32) must fit
+	// within the file.
 	ptrBase := rm.SpawnTablePtrsPtr
+	cntBase := rm.SpawnCountPtrsPtr
 	for i := uint32(0); i < rm.SpawnTablePtrCount; i++ {
 		tablePtr := binary.LittleEndian.Uint32(data[ptrBase+i*4:])
-		if !ptrInBounds(data, tablePtr, spawnTableByteSize) {
-			return fmt.Errorf("rengoku: %s: spawnTable[%d] at 0x%X is out of bounds (file %d B)",
-				label, i, tablePtr, fileLen)
+		count := binary.LittleEndian.Uint32(data[cntBase+i*4:])
+		if count == 0 {
+			return fmt.Errorf("rengoku: %s: spawn slot %d has zero candidate count (client crashes on this slot)",
+				label, i)
+		}
+		if !ptrInBounds(data, tablePtr, count*spawnTableByteSize) {
+			return fmt.Errorf("rengoku: %s: spawnTable[%d] pool [0x%X, +%d×%d] out of bounds (file %d B)",
+				label, i, tablePtr, count, spawnTableByteSize, fileLen)
 		}
 	}
 
 	return nil
 }
 
-// countUniqueMonsters iterates all SpawnTables for a RoadMode and returns a
-// set of unique non-zero monster IDs (from both monsterID1 and monsterID2).
+// countUniqueMonsters iterates every candidate table across all spawn pools
+// for a RoadMode and returns a set of unique non-zero monster IDs (from both
+// monsterID1 and monsterID2).
 func countUniqueMonsters(data []byte, rm rengokuRoadMode) map[uint32]struct{} {
 	ids := make(map[uint32]struct{})
 	ptrBase := rm.SpawnTablePtrsPtr
+	cntBase := rm.SpawnCountPtrsPtr
 	for i := uint32(0); i < rm.SpawnTablePtrCount; i++ {
 		tablePtr := binary.LittleEndian.Uint32(data[ptrBase+i*4:])
-		if !ptrInBounds(data, tablePtr, spawnTableByteSize) {
+		count := binary.LittleEndian.Uint32(data[cntBase+i*4:])
+		if !ptrInBounds(data, tablePtr, count*spawnTableByteSize) {
 			continue
 		}
-		t := data[tablePtr:]
-		id1 := binary.LittleEndian.Uint32(t[0:])
-		id2 := binary.LittleEndian.Uint32(t[8:])
-		if id1 != 0 {
-			ids[id1] = struct{}{}
-		}
-		if id2 != 0 {
-			ids[id2] = struct{}{}
+		for j := uint32(0); j < count; j++ {
+			t := data[tablePtr+j*spawnTableByteSize:]
+			id1 := binary.LittleEndian.Uint32(t[0:])
+			id2 := binary.LittleEndian.Uint32(t[8:])
+			if id1 != 0 {
+				ids[id1] = struct{}{}
+			}
+			if id2 != 0 {
+				ids[id2] = struct{}{}
+			}
 		}
 	}
 	return ids

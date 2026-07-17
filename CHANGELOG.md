@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `BuildRengokuBinary` (JSON Hunting Road config) left the per-slot spawn candidate count array zeroed, so any server using `rengoku_data.json` served a binary that instantly crashed real clients on Hunting Road entry ([#206](https://github.com/Mezeporta/Erupe/issues/206)). The flat `spawn_tables` schema also couldn't represent retail's multi-candidate spawn slots. Replaced it with `spawn_pools` (`RoadConfig.SpawnPools [][]SpawnTableConfig`) — each floor's `spawn_table_index` now selects a pool of candidates the client rolls between via `spawn_weighting` — and `writeSpawnSection` now writes real per-slot counts (`len(pool)`, always >= 1). `validateRengokuConfig` rejects empty pools before building, and `parseRengokuBinary` now reads the count array and rejects zero-count slots instead of only checking pointer bounds, so a broken build can no longer pass structural validation silently.
+
 ### Removed
 
 - `stable/v9.2.x` branch and its `SECURITY.md` supported-version entry — the branch had been untouched since 2026-02-08 and 9.2.x is well past the current 9.4.x release line.
