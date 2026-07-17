@@ -304,6 +304,11 @@ func BuildGetGachaPointPacket(ackHandle uint32) []byte {
 	return BuildSimpleAckPacket(MSG_MHF_GET_GACHA_POINT, ackHandle)
 }
 
+// BuildGetRengokuBinaryPacket builds a MSG_MHF_GET_RENGOKU_BINARY packet.
+func BuildGetRengokuBinaryPacket(ackHandle uint32) []byte {
+	return BuildSimpleAckPacket(MSG_MHF_GET_RENGOKU_BINARY, ackHandle)
+}
+
 // BuildPlayNormalGachaPacket builds a MSG_MHF_PLAY_NORMAL_GACHA packet.
 // Layout mirrors Erupe's MsgMhfPlayNormalGacha.Parse:
 //

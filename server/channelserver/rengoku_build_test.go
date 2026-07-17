@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"math"
 	"os"
@@ -12,12 +13,20 @@ import (
 )
 
 // sampleRengokuConfig returns a small but complete RengokuConfig for tests.
+// Slot 0 is a two-candidate pool (the client rolls between them); slot 1 is a
+// single-candidate pool (fixed spawn).
 func sampleRengokuConfig() RengokuConfig {
-	spawnTables := []SpawnTableConfig{
-		{Monster1ID: 101, Monster1Variant: 0, Monster2ID: 102, Monster2Variant: 1,
-			StatTable: 3, SpawnWeighting: 10},
-		{Monster1ID: 103, Monster1Variant: 2, Monster2ID: 104, Monster2Variant: 0,
-			SpawnWeighting: 20},
+	pools := [][]SpawnTableConfig{
+		{
+			{Monster1ID: 101, Monster1Variant: 0, Monster2ID: 102, Monster2Variant: 1,
+				StatTable: 3, SpawnWeighting: 10},
+			{Monster1ID: 105, Monster1Variant: 1, Monster2ID: 106, Monster2Variant: 0,
+				SpawnWeighting: 15},
+		},
+		{
+			{Monster1ID: 103, Monster1Variant: 2, Monster2ID: 104, Monster2Variant: 0,
+				SpawnWeighting: 20},
+		},
 	}
 	floors := []FloorConfig{
 		{FloorNumber: 1, SpawnTableIndex: 0, PointMulti1: 1.0, PointMulti2: 1.5},
@@ -29,8 +38,8 @@ func sampleRengokuConfig() RengokuConfig {
 		{FloorNumber: 2, SpawnTableIndex: 0, PointMulti1: 1.2, PointMulti2: 2.0},
 	}
 	return RengokuConfig{
-		MultiRoad: RoadConfig{Floors: floors, SpawnTables: spawnTables},
-		SoloRoad:  RoadConfig{Floors: soloFloors, SpawnTables: spawnTables[1:]},
+		MultiRoad: RoadConfig{Floors: floors, SpawnPools: pools},
+		SoloRoad:  RoadConfig{Floors: soloFloors, SpawnPools: pools[1:]},
 	}
 }
 
@@ -52,18 +61,64 @@ func TestBuildRengokuBinary_RoundTrip(t *testing.T) {
 	if info.MultiFloors != len(cfg.MultiRoad.Floors) {
 		t.Errorf("MultiFloors = %d, want %d", info.MultiFloors, len(cfg.MultiRoad.Floors))
 	}
-	if info.MultiSpawnTables != len(cfg.MultiRoad.SpawnTables) {
-		t.Errorf("MultiSpawnTables = %d, want %d", info.MultiSpawnTables, len(cfg.MultiRoad.SpawnTables))
+	if info.MultiSpawnTables != len(cfg.MultiRoad.SpawnPools) {
+		t.Errorf("MultiSpawnTables = %d, want %d", info.MultiSpawnTables, len(cfg.MultiRoad.SpawnPools))
 	}
 	if info.SoloFloors != len(cfg.SoloRoad.Floors) {
 		t.Errorf("SoloFloors = %d, want %d", info.SoloFloors, len(cfg.SoloRoad.Floors))
 	}
-	if info.SoloSpawnTables != len(cfg.SoloRoad.SpawnTables) {
-		t.Errorf("SoloSpawnTables = %d, want %d", info.SoloSpawnTables, len(cfg.SoloRoad.SpawnTables))
+	if info.SoloSpawnTables != len(cfg.SoloRoad.SpawnPools) {
+		t.Errorf("SoloSpawnTables = %d, want %d", info.SoloSpawnTables, len(cfg.SoloRoad.SpawnPools))
 	}
-	// Unique monsters: multi has 101,102,103,104; solo has 103,104 → 4 total
-	if info.UniqueMonsters != 4 {
-		t.Errorf("UniqueMonsters = %d, want 4", info.UniqueMonsters)
+	// Unique monsters: multi pools cover 101,102,105,106,103,104; solo pool
+	// (103,104) is a subset → 6 total.
+	if info.UniqueMonsters != 6 {
+		t.Errorf("UniqueMonsters = %d, want 6", info.UniqueMonsters)
+	}
+}
+
+// TestBuildRengokuBinary_SpawnCounts is a regression test for #206: the
+// candidate count array was left entirely zeroed, which crashes the real
+// client on Hunting Road entry. It verifies every slot's count is non-zero,
+// and that a multi-candidate pool is laid out contiguously with the right
+// count and pointer.
+func TestBuildRengokuBinary_SpawnCounts(t *testing.T) {
+	cfg := sampleRengokuConfig()
+
+	bin, err := BuildRengokuBinary(cfg)
+	if err != nil {
+		t.Fatalf("BuildRengokuBinary: %v", err)
+	}
+
+	multi, err := readRoadMode(bin, rengokuMultiOffset)
+	if err != nil {
+		t.Fatalf("readRoadMode(multi): %v", err)
+	}
+
+	le := binary.LittleEndian
+	for i := uint32(0); i < multi.SpawnTablePtrCount; i++ {
+		count := le.Uint32(bin[multi.SpawnCountPtrsPtr+i*4:])
+		if count == 0 {
+			t.Fatalf("multi slot %d: candidate count is 0 (client would crash on Hunting Road entry)", i)
+		}
+	}
+
+	// Slot 0 is a 2-candidate pool: verify the count and that both
+	// candidates are stored contiguously starting at the slot's pointer.
+	wantCount := uint32(len(cfg.MultiRoad.SpawnPools[0]))
+	gotCount := le.Uint32(bin[multi.SpawnCountPtrsPtr:])
+	if gotCount != wantCount {
+		t.Fatalf("multi slot 0 count = %d, want %d", gotCount, wantCount)
+	}
+
+	slot0TablePtr := le.Uint32(bin[multi.SpawnTablePtrsPtr:])
+	firstMonster := le.Uint32(bin[slot0TablePtr:])
+	secondMonster := le.Uint32(bin[slot0TablePtr+spawnTableByteSize:])
+	if firstMonster != cfg.MultiRoad.SpawnPools[0][0].Monster1ID {
+		t.Errorf("slot 0 candidate 0 Monster1ID = %d, want %d", firstMonster, cfg.MultiRoad.SpawnPools[0][0].Monster1ID)
+	}
+	if secondMonster != cfg.MultiRoad.SpawnPools[0][1].Monster1ID {
+		t.Errorf("slot 0 candidate 1 Monster1ID = %d, want %d", secondMonster, cfg.MultiRoad.SpawnPools[0][1].Monster1ID)
 	}
 }
 
@@ -75,11 +130,11 @@ func TestBuildRengokuBinary_FloatFields(t *testing.T) {
 			Floors: []FloorConfig{
 				{FloorNumber: 1, SpawnTableIndex: 0, PointMulti1: 1.25, PointMulti2: 3.75},
 			},
-			SpawnTables: []SpawnTableConfig{{Monster1ID: 1}},
+			SpawnPools: [][]SpawnTableConfig{{{Monster1ID: 1}}},
 		},
 		SoloRoad: RoadConfig{
-			Floors:      []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 0}},
-			SpawnTables: []SpawnTableConfig{{Monster1ID: 2}},
+			Floors:     []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 0}},
+			SpawnPools: [][]SpawnTableConfig{{{Monster1ID: 2}}},
 		},
 	}
 
@@ -106,7 +161,8 @@ func TestBuildRengokuBinary_FloatFields(t *testing.T) {
 }
 
 // TestBuildRengokuBinary_ValidationErrors verifies that out-of-range
-// spawn_table_index values are caught before the binary is built.
+// spawn_table_index values and empty spawn pools are caught before the
+// binary is built.
 func TestBuildRengokuBinary_ValidationErrors(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -117,12 +173,12 @@ func TestBuildRengokuBinary_ValidationErrors(t *testing.T) {
 			name: "multi_index_out_of_range",
 			cfg: RengokuConfig{
 				MultiRoad: RoadConfig{
-					Floors:      []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 5}},
-					SpawnTables: []SpawnTableConfig{{Monster1ID: 1}},
+					Floors:     []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 5}},
+					SpawnPools: [][]SpawnTableConfig{{{Monster1ID: 1}}},
 				},
 				SoloRoad: RoadConfig{
-					Floors:      []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 0}},
-					SpawnTables: []SpawnTableConfig{{Monster1ID: 2}},
+					Floors:     []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 0}},
+					SpawnPools: [][]SpawnTableConfig{{{Monster1ID: 2}}},
 				},
 			},
 			wantErr: "multi_road",
@@ -131,15 +187,29 @@ func TestBuildRengokuBinary_ValidationErrors(t *testing.T) {
 			name: "solo_index_out_of_range",
 			cfg: RengokuConfig{
 				MultiRoad: RoadConfig{
-					Floors:      []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 0}},
-					SpawnTables: []SpawnTableConfig{{Monster1ID: 1}},
+					Floors:     []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 0}},
+					SpawnPools: [][]SpawnTableConfig{{{Monster1ID: 1}}},
 				},
 				SoloRoad: RoadConfig{
-					Floors:      []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 99}},
-					SpawnTables: []SpawnTableConfig{{Monster1ID: 2}},
+					Floors:     []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 99}},
+					SpawnPools: [][]SpawnTableConfig{{{Monster1ID: 2}}},
 				},
 			},
 			wantErr: "solo_road",
+		},
+		{
+			name: "empty_pool",
+			cfg: RengokuConfig{
+				MultiRoad: RoadConfig{
+					Floors:     []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 0}},
+					SpawnPools: [][]SpawnTableConfig{{}},
+				},
+				SoloRoad: RoadConfig{
+					Floors:     []FloorConfig{{FloorNumber: 1, SpawnTableIndex: 0}},
+					SpawnPools: [][]SpawnTableConfig{{{Monster1ID: 2}}},
+				},
+			},
+			wantErr: "empty",
 		},
 	}
 

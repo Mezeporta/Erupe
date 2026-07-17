@@ -8,15 +8,20 @@ package channelserver
 	precedence: it is parsed, validated, assembled into the raw binary layout,
 	and ECD-encrypted before being cached. The .bin file is used as a fallback.
 
+	Each spawn slot (referenced by a floor's SpawnTableIndex) holds a *pool* of
+	candidate spawn tables — the real client rolls one candidate per slot using
+	each candidate's spawn_weighting, so a slot's count must be >= 1. A pool of
+	size 1 is a valid degenerate case (fixed spawn, no rolling).
+
 	Binary layout produced by BuildRengokuBinary:
 	  0x00–0x13  header  (20 bytes: magic + version + zeros)
 	  0x14–0x2B  multiDef RoadMode  (24 bytes)
 	  0x2C–0x43  soloDef  RoadMode  (24 bytes)
 	  -- multi road data --
 	  floorStats[]          (floorStatsCount × 24 bytes)
-	  spawnTablePtrs[]      (spawnTablePtrCount × 4 bytes)
-	  spawnCountPtrs[]      (spawnTablePtrCount × 4 bytes, zeroed)
-	  spawnTables[]         (spawnTablePtrCount × 32 bytes)
+	  spawnTablePtrs[]      (slotCount × 4 bytes — ptr to each slot's first candidate)
+	  spawnCountPtrs[]      (slotCount × 4 bytes — candidate count per slot, >= 1)
+	  spawnTables[]         (Σ pool sizes × 32 bytes, pools stored back to back)
 	  -- solo road data --  (same sub-layout)
 */
 
@@ -42,16 +47,18 @@ type RengokuConfig struct {
 }
 
 // RoadConfig describes one road mode (multi or solo) with its floors and
-// spawn tables. Floors reference spawn tables by zero-based index.
+// spawn pools. Floors reference spawn pools by zero-based index.
 type RoadConfig struct {
-	Floors      []FloorConfig      `json:"floors"`
-	SpawnTables []SpawnTableConfig `json:"spawn_tables"`
+	Floors     []FloorConfig        `json:"floors"`
+	SpawnPools [][]SpawnTableConfig `json:"spawn_pools"`
 }
 
 // FloorConfig describes one floor within a road mode.
 //
-//   - SpawnTableIndex: zero-based index into this road's SpawnTables slice,
-//     selecting which monster configuration is active on this floor.
+//   - SpawnTableIndex: zero-based index into this road's SpawnPools slice,
+//     selecting which pool of candidate monster configurations is active on
+//     this floor. The client rolls one candidate from the pool per spawn,
+//     weighted by each candidate's SpawnWeighting.
 //   - PointMulti1/2: point multipliers applied to rewards on this floor.
 //   - FinalLoop: non-zero on the last floor of a loop cycle.
 type FloorConfig struct {
@@ -89,25 +96,30 @@ func BuildRengokuBinary(cfg RengokuConfig) ([]byte, error) {
 	// Fixed regions: header (0x14) + two RoadModes (2×24) = 0x44
 	const dataStart = uint32(rengokuMinSize) // 0x44
 
+	mSlotCount := uint32(len(cfg.MultiRoad.SpawnPools))
+	mCandidateCount := countCandidates(cfg.MultiRoad.SpawnPools)
+	sSlotCount := uint32(len(cfg.SoloRoad.SpawnPools))
+	sCandidateCount := countCandidates(cfg.SoloRoad.SpawnPools)
+
 	// Multi road sections
 	mFloorOff := dataStart
 	mFloorSz := uint32(len(cfg.MultiRoad.Floors)) * floorStatsByteSize
 	mPtrsOff := mFloorOff + mFloorSz
-	mPtrsSz := uint32(len(cfg.MultiRoad.SpawnTables)) * spawnPtrEntrySize
+	mPtrsSz := mSlotCount * spawnPtrEntrySize
 	mCntOff := mPtrsOff + mPtrsSz
-	mCntSz := uint32(len(cfg.MultiRoad.SpawnTables)) * spawnPtrEntrySize
+	mCntSz := mSlotCount * spawnPtrEntrySize
 	mTablesOff := mCntOff + mCntSz
-	mTablesSz := uint32(len(cfg.MultiRoad.SpawnTables)) * spawnTableByteSize
+	mTablesSz := mCandidateCount * spawnTableByteSize
 
 	// Solo road sections (appended directly after multi)
 	sFloorOff := mTablesOff + mTablesSz
 	sFloorSz := uint32(len(cfg.SoloRoad.Floors)) * floorStatsByteSize
 	sPtrsOff := sFloorOff + sFloorSz
-	sPtrsSz := uint32(len(cfg.SoloRoad.SpawnTables)) * spawnPtrEntrySize
+	sPtrsSz := sSlotCount * spawnPtrEntrySize
 	sCntOff := sPtrsOff + sPtrsSz
-	sCntSz := uint32(len(cfg.SoloRoad.SpawnTables)) * spawnPtrEntrySize
+	sCntSz := sSlotCount * spawnPtrEntrySize
 	sTablesOff := sCntOff + sCntSz
-	sTablesSz := uint32(len(cfg.SoloRoad.SpawnTables)) * spawnTableByteSize
+	sTablesSz := sCandidateCount * spawnTableByteSize
 
 	totalSize := sTablesOff + sTablesSz
 	buf := make([]byte, totalSize)
@@ -121,16 +133,16 @@ func BuildRengokuBinary(cfg RengokuConfig) ([]byte, error) {
 	// ── RoadMode structs ─────────────────────────────────────────────────────
 	writeRoadMode(buf, 0x14, le, RoadModeFields{
 		FloorCount:   uint32(len(cfg.MultiRoad.Floors)),
-		SpawnCount:   uint32(len(cfg.MultiRoad.SpawnTables)),
-		TablePtrCnt:  uint32(len(cfg.MultiRoad.SpawnTables)),
+		SpawnCount:   mSlotCount,
+		TablePtrCnt:  mSlotCount,
 		FloorPtr:     mFloorOff,
 		TablePtrsPtr: mPtrsOff,
 		CountPtrsPtr: mCntOff,
 	})
 	writeRoadMode(buf, 0x2C, le, RoadModeFields{
 		FloorCount:   uint32(len(cfg.SoloRoad.Floors)),
-		SpawnCount:   uint32(len(cfg.SoloRoad.SpawnTables)),
-		TablePtrCnt:  uint32(len(cfg.SoloRoad.SpawnTables)),
+		SpawnCount:   sSlotCount,
+		TablePtrCnt:  sSlotCount,
 		FloorPtr:     sFloorOff,
 		TablePtrsPtr: sPtrsOff,
 		CountPtrsPtr: sCntOff,
@@ -138,12 +150,22 @@ func BuildRengokuBinary(cfg RengokuConfig) ([]byte, error) {
 
 	// ── Data sections ────────────────────────────────────────────────────────
 	writeFloors(buf, cfg.MultiRoad.Floors, mFloorOff, le)
-	writeSpawnSection(buf, cfg.MultiRoad.SpawnTables, mPtrsOff, mTablesOff, le)
+	writeSpawnSection(buf, cfg.MultiRoad.SpawnPools, mPtrsOff, mCntOff, mTablesOff, le)
 
 	writeFloors(buf, cfg.SoloRoad.Floors, sFloorOff, le)
-	writeSpawnSection(buf, cfg.SoloRoad.SpawnTables, sPtrsOff, sTablesOff, le)
+	writeSpawnSection(buf, cfg.SoloRoad.SpawnPools, sPtrsOff, sCntOff, sTablesOff, le)
 
 	return buf, nil
+}
+
+// countCandidates returns the total number of candidate spawn tables across
+// all pools (i.e. the sum of each pool's length).
+func countCandidates(pools [][]SpawnTableConfig) uint32 {
+	var n uint32
+	for _, pool := range pools {
+		n += uint32(len(pool))
+	}
+	return n
 }
 
 // RoadModeFields carries the computed field values for one RoadMode struct.
@@ -173,35 +195,53 @@ func writeFloors(buf []byte, floors []FloorConfig, base uint32, le binary.ByteOr
 	}
 }
 
-func writeSpawnSection(buf []byte, tables []SpawnTableConfig, ptrsBase, tablesBase uint32, le binary.ByteOrder) {
-	for i, t := range tables {
-		tableOff := tablesBase + uint32(i)*spawnTableByteSize
-		// Pointer entry
+// writeSpawnSection writes, for each pool (slot): a pointer to the pool's
+// first candidate table, the candidate count (len(pool)), and the candidate
+// tables themselves, packed back to back across all pools.
+func writeSpawnSection(buf []byte, pools [][]SpawnTableConfig, ptrsBase, cntsBase, tablesBase uint32, le binary.ByteOrder) {
+	tableOff := tablesBase
+	for i, pool := range pools {
 		le.PutUint32(buf[ptrsBase+uint32(i)*spawnPtrEntrySize:], tableOff)
-		// SpawnTable (32 bytes)
-		le.PutUint32(buf[tableOff:], t.Monster1ID)
-		le.PutUint32(buf[tableOff+4:], t.Monster1Variant)
-		le.PutUint32(buf[tableOff+8:], t.Monster2ID)
-		le.PutUint32(buf[tableOff+12:], t.Monster2Variant)
-		le.PutUint32(buf[tableOff+16:], t.StatTable)
-		le.PutUint32(buf[tableOff+20:], t.MapZoneOverride)
-		le.PutUint32(buf[tableOff+24:], t.SpawnWeighting)
-		le.PutUint32(buf[tableOff+28:], t.AdditionalFlag)
+		le.PutUint32(buf[cntsBase+uint32(i)*spawnPtrEntrySize:], uint32(len(pool)))
+		for _, t := range pool {
+			writeSpawnTable(buf, tableOff, t, le)
+			tableOff += spawnTableByteSize
+		}
 	}
 }
 
+// writeSpawnTable writes one 32-byte SpawnTable entry at off.
+func writeSpawnTable(buf []byte, off uint32, t SpawnTableConfig, le binary.ByteOrder) {
+	le.PutUint32(buf[off:], t.Monster1ID)
+	le.PutUint32(buf[off+4:], t.Monster1Variant)
+	le.PutUint32(buf[off+8:], t.Monster2ID)
+	le.PutUint32(buf[off+12:], t.Monster2Variant)
+	le.PutUint32(buf[off+16:], t.StatTable)
+	le.PutUint32(buf[off+20:], t.MapZoneOverride)
+	le.PutUint32(buf[off+24:], t.SpawnWeighting)
+	le.PutUint32(buf[off+28:], t.AdditionalFlag)
+}
+
 // validateRengokuConfig checks that all spawn_table_index references are
-// within range for both road modes.
+// within range, and that every spawn pool has at least one candidate table,
+// for both road modes. A pool with zero candidates would be written with a
+// candidate count of 0, which crashes the real client on Hunting Road entry.
 func validateRengokuConfig(cfg RengokuConfig) error {
 	for _, road := range []struct {
 		name string
 		r    RoadConfig
 	}{{"multi_road", cfg.MultiRoad}, {"solo_road", cfg.SoloRoad}} {
-		n := len(road.r.SpawnTables)
+		n := len(road.r.SpawnPools)
 		for i, f := range road.r.Floors {
 			if int(f.SpawnTableIndex) >= n {
-				return fmt.Errorf("rengoku: %s floor %d: spawn_table_index %d out of range (have %d tables)",
+				return fmt.Errorf("rengoku: %s floor %d: spawn_table_index %d out of range (have %d spawn pools)",
 					road.name, i, f.SpawnTableIndex, n)
+			}
+		}
+		for i, pool := range road.r.SpawnPools {
+			if len(pool) == 0 {
+				return fmt.Errorf("rengoku: %s spawn_pools[%d]: pool is empty (need at least 1 candidate)",
+					road.name, i)
 			}
 		}
 	}

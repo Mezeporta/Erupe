@@ -55,6 +55,8 @@ func buildRengokuData(multiMonster1, multiMonster2, soloMonster1, soloMonster2 u
 
 	// multiDef spawnTablePtrs at 0x5C: points to SpawnTable at 0x68
 	le.PutUint32(buf[0x5C:], 0x68)
+	// multiDef spawnCountPtrs at 0x64: 1 candidate in this slot
+	le.PutUint32(buf[0x64:], 1)
 
 	// multiDef SpawnTable at 0x68 (32 bytes)
 	le.PutUint32(buf[0x68:], multiMonster1)
@@ -65,6 +67,8 @@ func buildRengokuData(multiMonster1, multiMonster2, soloMonster1, soloMonster2 u
 
 	// soloDef spawnTablePtrs at 0xA0: points to SpawnTable at 0xA8
 	le.PutUint32(buf[0xA0:], 0xA8)
+	// soloDef spawnCountPtrs at 0xA4: 1 candidate in this slot
+	le.PutUint32(buf[0xA4:], 1)
 
 	// soloDef SpawnTable at 0xA8 (32 bytes)
 	le.PutUint32(buf[0xA8:], soloMonster1)
@@ -165,6 +169,18 @@ func TestParseRengokuBinary_Errors(t *testing.T) {
 				return d
 			}(),
 			wantErr: "out of bounds",
+		},
+		{
+			// Regression for #206: a zeroed candidate count must be rejected
+			// rather than silently accepted, since it crashes the real client.
+			name: "zero_spawn_count",
+			data: func() []byte {
+				d := make([]byte, len(validData))
+				copy(d, validData)
+				binary.LittleEndian.PutUint32(d[0x64:], 0) // multiDef spawnCountPtrs[0]
+				return d
+			}(),
+			wantErr: "zero candidate count",
 		},
 	}
 
