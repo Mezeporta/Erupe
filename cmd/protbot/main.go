@@ -20,13 +20,14 @@ import (
 	"time"
 
 	"erupe-ce/cmd/protbot/scenario"
+	"erupe-ce/common/decryption"
 )
 
 func main() {
 	signAddr := flag.String("sign-addr", "127.0.0.1:53312", "Sign server address (host:port)")
 	user := flag.String("user", "", "Username")
 	pass := flag.String("pass", "", "Password")
-	action := flag.String("action", "login", "Action to perform: login, lobby, session, chat, quests, achievement, boost, gacha")
+	action := flag.String("action", "login", "Action to perform: login, lobby, session, chat, quests, achievement, boost, gacha, rengoku")
 	message := flag.String("message", "", "Chat message to send (used with --action chat)")
 	gachaID := flag.Uint("gacha-id", 1, "Gacha ID to roll (used with --action gacha)")
 	rollType := flag.Uint("roll-type", 0, "Gacha roll type: 0=single, 1=ten-pull (used with --action gacha)")
@@ -329,8 +330,71 @@ func main() {
 		}
 		_ = scenario.Logout(result.Channel)
 
+	case "rengoku":
+		result, err := scenario.Login(*signAddr, *user, *pass)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "login failed: %v\n", err)
+			os.Exit(1)
+		}
+		charID := result.Sign.CharIDs[0]
+		if _, err := scenario.SetupSession(result.Channel, charID); err != nil {
+			fmt.Fprintf(os.Stderr, "session setup failed: %v\n", err)
+			_ = result.Channel.Close()
+			os.Exit(1)
+		}
+		if err := scenario.EnterLobby(result.Channel); err != nil {
+			fmt.Fprintf(os.Stderr, "enter lobby failed: %v\n", err)
+			_ = result.Channel.Close()
+			os.Exit(1)
+		}
+
+		// Regression check for #206: fetch the Hunting Road binary exactly as
+		// the real client would, then verify no spawn slot has a zero
+		// candidate count (which crashes the client on Hunting Road entry).
+		raw, err := scenario.GetRengokuBinary(result.Channel)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "get rengoku binary failed: %v\n", err)
+			_ = scenario.Logout(result.Channel)
+			os.Exit(1)
+		}
+		fmt.Printf("[rengoku] Received %d bytes (ECD-encrypted)\n", len(raw))
+
+		decrypted, err := decryption.DecodeECD(raw)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ECD decode failed: %v\n", err)
+			_ = scenario.Logout(result.Channel)
+			os.Exit(1)
+		}
+		fmt.Printf("[rengoku] Decrypted %d bytes\n", len(decrypted))
+
+		roadModes, err := scenario.VerifyRengokuBinary(decrypted)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "rengoku binary verification failed: %v\n", err)
+			_ = scenario.Logout(result.Channel)
+			os.Exit(1)
+		}
+
+		allOK := true
+		for _, rm := range roadModes {
+			fmt.Printf("[rengoku] %s: %d slot(s), candidate counts=%v\n", rm.Label, len(rm.SlotCounts), rm.SlotCounts)
+			for i, c := range rm.SlotCounts {
+				if c == 0 {
+					allOK = false
+					fmt.Printf("[rengoku]   slot %d has a ZERO candidate count — real client would crash here (#206)\n", i)
+				}
+			}
+		}
+		if allOK {
+			fmt.Println("[rengoku] All spawn slots have >= 1 candidate — #206 fix OK")
+		} else {
+			fmt.Println("[rengoku] FAIL: at least one spawn slot has a zero candidate count")
+			_ = scenario.Logout(result.Channel)
+			os.Exit(1)
+		}
+		_ = scenario.Logout(result.Channel)
+
 	default:
-		fmt.Fprintf(os.Stderr, "unknown action: %s (supported: login, lobby, session, chat, quests, achievement, boost, gacha)\n", *action)
+		fmt.Fprintf(os.Stderr, "unknown action: %s (supported: login, lobby, session, chat, quests, achievement, boost, gacha, rengoku)\n", *action)
 		os.Exit(1)
 	}
 }

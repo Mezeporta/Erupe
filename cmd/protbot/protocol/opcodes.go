@@ -36,4 +36,7 @@ const (
 	MSG_MHF_GET_GACHA_POINT    uint16 = 0x0131
 	MSG_MHF_RECEIVE_GACHA_ITEM uint16 = 0x0137
 	MSG_MHF_PLAY_NORMAL_GACHA  uint16 = 0x0150
+
+	// Hunting Road / Rengoku (issue #206)
+	MSG_MHF_GET_RENGOKU_BINARY uint16 = 0x0197
 )
